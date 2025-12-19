@@ -25,9 +25,9 @@ services:
       # Different models are selected via the model parameter in API calls
       - FAST_AGENT_URL=${JARVIS_OLLAMA_URL:-http://localhost:11434}/v1
       - REASONING_AGENT_URL=${JARVIS_OLLAMA_URL:-http://localhost:11434}/v1
-      # Model names for Ollama
-      - FAST_AGENT_MODEL=qwen2.5:3b
-      - REASONING_AGENT_MODEL=qwen2.5:14b
+      # Model names for Ollama (Qwen3 - better reasoning than Qwen2.5)
+      - FAST_AGENT_MODEL=qwen3:4b
+      - REASONING_AGENT_MODEL=qwen3:14b
       # Increase timeouts for remote API calls
       - FAST_AGENT_TIMEOUT=60
       - REASONING_AGENT_TIMEOUT=180

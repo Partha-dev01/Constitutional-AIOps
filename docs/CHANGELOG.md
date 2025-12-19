@@ -9,9 +9,20 @@ All notable changes to this project will be documented in this file.
   - `docker/docker-compose.hybrid.yml` for local + remote LLM architecture
   - `scripts/setup-jarvis-ollama.sh` for model setup on Jarvis Labs
   - `docs/JARVIS_LABS_DEPLOYMENT.md` complete setup guide
+- `docs/plans/` folder for sub-implementation plans
+  - `docs/plans/jarvis-labs-qwen3-deployment.md` - Qwen3 migration plan
 
 ### Changed
+- **Model Upgrade**: Migrated from Qwen2.5 to Qwen3 models
+  - Fast Agent: qwen2.5:3b → qwen3:4b (better reasoning benchmarks)
+  - Reasoning Agent: qwen2.5:14b → qwen3:14b
+  - Research: Qwen3-4B outperforms Qwen2.5-7B (MMLU-Pro: 74 vs 45)
+- **Data Persistence Fix**: Models now stored in `/home/ollama-models`
+  - Only `/home` directory persists on Jarvis Labs pause/resume
+  - Setup script configures OLLAMA_MODELS environment variable
 - Updated deployment strategy from AWS-only to hybrid (Jarvis Labs + Local)
+- Added Windows PowerShell commands (Invoke-RestMethod) to documentation
+- Updated API endpoint format to `.notebooks.jarvislabs.net`
 - Added SSH private key protection to `.gitignore`
 - Updated README.md with hybrid deployment instructions
 - Updated CHECKLIST.md with Jarvis Labs testing tasks
@@ -314,6 +325,21 @@ All notable changes to this project will be documented in this file.
 ---
 
 ## Session History
+
+### Session 12: 2025-12-20 - Qwen3 Model Upgrade & Persistence Fix
+- Researched Qwen3 vs Qwen2.5 models - Qwen3-4B significantly outperforms Qwen2.5-7B
+  - MMLU-Pro: 74 vs 45, GPQA: 59 vs 36.4, MATH: 90 vs 49.8
+- Discovered critical data persistence issue on Jarvis Labs (only /home persists)
+- Created docs/plans/ folder for sub-implementation plans
+- Created docs/plans/jarvis-labs-qwen3-deployment.md
+- Updated all Jarvis Labs deployment files for Qwen3:
+  - docker/docker-compose.hybrid.yml: qwen3:4b + qwen3:14b
+  - scripts/setup-jarvis-ollama.sh: OLLAMA_MODELS=/home/ollama-models
+  - docs/JARVIS_LABS_DEPLOYMENT.md: Complete rewrite with persistence fix
+  - README.md: Updated hybrid deployment section
+- Added Windows PowerShell commands (Invoke-RestMethod)
+- VRAM verified: Both models fit on A5000 24GB with ~8-9GB free
+- **QWEN3 MIGRATION COMPLETE - READY FOR JARVIS LABS TESTING**
 
 ### Session 11: 2025-12-19 - Jarvis Labs Hybrid Deployment
 - Researched Jarvis Labs deployment options (Ollama template vs VM)

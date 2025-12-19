@@ -3,9 +3,24 @@
 > **Template**: Ollama
 > **GPU**: A5000 (24GB VRAM) - $0.49/hr
 > **Storage**: 100GB recommended
-> **Setup Time**: ~10 minutes
+> **Setup Time**: ~15 minutes
+> **Models**: Qwen3-4B + Qwen3-14B (simultaneous)
 
 This guide explains how to run Constitutional AIOps with LLMs on Jarvis Labs while keeping all other services (frontend, backend, Neo4j, monitoring) running locally for easy debugging.
+
+---
+
+## CRITICAL: Data Persistence
+
+**Only `/home` directory persists between pause/resume!** All other data is LOST.
+
+| Directory | Persists? | Notes |
+|-----------|-----------|-------|
+| `/home/*` | YES | Store models here |
+| `/root/*` | NO | Lost on pause/resume |
+| `/usr/share/ollama` | NO | Default Ollama location - LOST |
+
+**The setup script configures models to be stored in `/home/ollama-models` for persistence.**
 
 ---
 
@@ -13,7 +28,7 @@ This guide explains how to run Constitutional AIOps with LLMs on Jarvis Labs whi
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                    YOUR LOCAL MACHINE                            │
+│                    YOUR LOCAL MACHINE (Windows)                  │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐              │
 │  │  Frontend   │  │   Backend   │  │   Neo4j     │              │
 │  │ :3000       │  │  :8000      │  │  :7474      │              │
@@ -28,11 +43,20 @@ This guide explains how to run Constitutional AIOps with LLMs on Jarvis Labs whi
 ┌─────────────────────────────────────────────────────────────────┐
 │           JARVIS LABS - Ollama Template (A5000 24GB)            │
 │                                                                 │
-│  API Endpoint: https://[instance-id].jarvislabs.net             │
+│  API Endpoint: https://[id].notebooks.jarvislabs.net            │
 │                                                                 │
-│  Models:                                                        │
-│  • qwen2.5:3b   (Fast Agent - classification, annotation)       │
-│  • qwen2.5:14b  (Reasoning Agent - RCA, planning, chat)         │
+│  Models stored in: /home/ollama-models (PERSISTS!)              │
+│                                                                 │
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │                     Ollama Server                       │    │
+│  │  ┌─────────────────┐  ┌─────────────────────┐          │    │
+│  │  │ qwen3:4b        │  │ qwen3:14b           │          │    │
+│  │  │ (Fast Agent)    │  │ (Reasoning Agent)   │          │    │
+│  │  │ ~3GB VRAM       │  │ ~9GB VRAM           │          │    │
+│  │  └─────────────────┘  └─────────────────────┘          │    │
+│  └─────────────────────────────────────────────────────────┘    │
+│                                                                 │
+│  Total VRAM: ~15GB used / 24GB available                        │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -41,11 +65,26 @@ This guide explains how to run Constitutional AIOps with LLMs on Jarvis Labs whi
 
 ---
 
+## Models
+
+| Role | Model | VRAM | Download Size |
+|------|-------|------|---------------|
+| Fast Agent | qwen3:4b | ~3 GB | ~2.5 GB |
+| Reasoning Agent | qwen3:14b | ~9 GB | ~9.3 GB |
+
+**Why Qwen3?** Research shows Qwen3-4B outperforms Qwen2.5-7B on reasoning benchmarks:
+- MMLU-Pro: 74 vs 45
+- GPQA: 59 vs 36.4
+- MATH: 90 vs 49.8
+
+---
+
 ## Prerequisites
 
 - Docker Desktop installed locally
 - $10-20 credits on Jarvis Labs account
 - Git repository cloned locally
+- Windows PowerShell or Git Bash for testing
 
 ---
 
@@ -85,51 +124,106 @@ ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAUpDdcM1oSEwI9o+dsVbA9TDiTSoc5VvWd9hRuL7wp9
 
 ### Important: Copy These Values
 After launch, from the dashboard:
-- **SSH Address**: For terminal access (e.g., `root@ssh-xxx.jarvislabs.net`)
-- **API Endpoint**: For API access (e.g., `https://xxx.jarvislabs.net`)
+- **SSH Command**: For terminal access (e.g., `ssh -p 11414 root@sshg.jarvislabs.ai`)
+- **API Endpoint**: For API access (e.g., `https://62d7ad3655361.notebooks.jarvislabs.net`)
 
 ---
 
-## Step 4: Pull LLM Models via SSH
+## Step 4: Setup Models via SSH
 
-SSH into the instance and pull the required models:
+SSH into the instance and run the setup script:
 
 ```bash
-# Connect to Jarvis Labs instance
-ssh -i .ssh/jarvis_labs_key root@[SSH-ADDRESS]
+# SSH into the instance (use the port from dashboard)
+ssh -i .ssh/jarvis_labs_key -p [PORT] root@sshg.jarvislabs.ai
 
-# Pull Fast Agent model (~2GB, ~1-2 min)
-ollama pull qwen2.5:3b
-
-# Pull Reasoning Agent model (~9GB, ~5-8 min)
-ollama pull qwen2.5:14b
-
-# Verify models are installed
-ollama list
+# Or run the setup script directly
+ssh -i .ssh/jarvis_labs_key -p [PORT] root@sshg.jarvislabs.ai 'bash -s' < scripts/setup-jarvis-ollama.sh
 ```
 
-### Alternative: Run Setup Script
+### Manual Setup (if not using script)
+
 ```bash
-ssh root@[SSH-ADDRESS] 'bash -s' < scripts/setup-jarvis-ollama.sh
+# 1. Configure persistent storage (CRITICAL!)
+export OLLAMA_MODELS=/home/ollama-models
+mkdir -p /home/ollama-models
+echo 'export OLLAMA_MODELS=/home/ollama-models' >> ~/.bashrc
+
+# 2. Restart Ollama with new path
+pkill ollama
+OLLAMA_MODELS=/home/ollama-models ollama serve &
+sleep 5
+
+# 3. Pull Fast Agent model (~2.5GB, ~1-2 min)
+OLLAMA_MODELS=/home/ollama-models ollama pull qwen3:4b
+
+# 4. Pull Reasoning Agent model (~9.3GB, ~5-8 min)
+OLLAMA_MODELS=/home/ollama-models ollama pull qwen3:14b
+
+# 5. Verify models are installed
+OLLAMA_MODELS=/home/ollama-models ollama list
+
+# 6. Verify persistence
+ls -la /home/ollama-models/
 ```
 
 ---
 
 ## Step 5: Test Ollama API
 
-From your **local machine**, test the API endpoint:
+### From Windows PowerShell (Local Machine)
+
+```powershell
+# Test that Ollama is responding
+$response = Invoke-RestMethod `
+  -Uri "https://[YOUR-ENDPOINT].notebooks.jarvislabs.net/api/tags" `
+  -Method GET
+$response.models | Format-Table name, size
+
+# Test Fast Agent
+$body = @{
+    model = "qwen3:4b"
+    messages = @(@{role = "user"; content = "Say hello"})
+} | ConvertTo-Json -Depth 3
+
+$response = Invoke-RestMethod `
+  -Uri "https://[YOUR-ENDPOINT].notebooks.jarvislabs.net/v1/chat/completions" `
+  -Method POST `
+  -ContentType "application/json" `
+  -Body $body
+
+$response.choices[0].message.content
+
+# Test Reasoning Agent
+$body = @{
+    model = "qwen3:14b"
+    messages = @(@{role = "user"; content = "What is root cause analysis in IT operations?"})
+} | ConvertTo-Json -Depth 3
+
+$response = Invoke-RestMethod `
+  -Uri "https://[YOUR-ENDPOINT].notebooks.jarvislabs.net/v1/chat/completions" `
+  -Method POST `
+  -ContentType "application/json" `
+  -Body $body
+
+$response.choices[0].message.content
+```
+
+### From Git Bash / Linux
 
 ```bash
 # Test that Ollama is responding
-curl https://[API-ENDPOINT]/api/tags
+curl https://[YOUR-ENDPOINT].notebooks.jarvislabs.net/api/tags
 
 # Test Fast Agent
-curl -X POST https://[API-ENDPOINT]/v1/chat/completions \
+curl -X POST https://[YOUR-ENDPOINT].notebooks.jarvislabs.net/v1/chat/completions \
   -H "Content-Type: application/json" \
-  -d '{
-    "model": "qwen2.5:3b",
-    "messages": [{"role": "user", "content": "Say hello"}]
-  }'
+  -d '{"model": "qwen3:4b", "messages": [{"role": "user", "content": "Say hello"}]}'
+
+# Test Reasoning Agent
+curl -X POST https://[YOUR-ENDPOINT].notebooks.jarvislabs.net/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"model": "qwen3:14b", "messages": [{"role": "user", "content": "What is RCA?"}]}'
 ```
 
 ---
@@ -139,8 +233,8 @@ curl -X POST https://[API-ENDPOINT]/v1/chat/completions \
 Create or update your `.env` file:
 
 ```bash
-# Jarvis Labs Ollama endpoint
-JARVIS_OLLAMA_URL=https://[YOUR-API-ENDPOINT]
+# Jarvis Labs Ollama endpoint (replace with your actual endpoint)
+JARVIS_OLLAMA_URL=https://[YOUR-ENDPOINT].notebooks.jarvislabs.net
 
 # Neo4j (local)
 NEO4J_URI=bolt://localhost:7687
@@ -165,7 +259,13 @@ docker compose ps
 
 ## Step 8: Verify Everything Works
 
-### Check Backend Health
+### Check Backend Health (PowerShell)
+```powershell
+$response = Invoke-RestMethod -Uri "http://localhost:8000/api/v1/health"
+$response | ConvertTo-Json
+```
+
+### Check Backend Health (Git Bash)
 ```bash
 curl http://localhost:8000/api/v1/health
 ```
@@ -198,16 +298,17 @@ Expected response:
 When you're done developing:
 1. Go to Jarvis Labs Dashboard
 2. Click **Pause** on your instance
-3. Billing stops, data preserved
+3. Billing stops, **data in /home preserved**
 
 ### Resume Instance
 1. Click **Resume** on paused instance
-2. Same API endpoint, models still loaded
-3. Billing resumes
+2. Same API endpoint
+3. Models still available in /home/ollama-models
+4. Billing resumes
 
 ### Delete Instance (Data Lost)
 - Use when completely done
-- All data and models deleted
+- All data including /home deleted
 - Need to re-pull models next time
 
 ---
@@ -220,7 +321,7 @@ When you're done developing:
 | Storage (100GB) | ~$0.50/day |
 | **1 hour session** | ~$0.50 |
 | **8 hour day** | ~$4.50 |
-| **Month (8hr/day × 20 days)** | ~$90 |
+| **Month (8hr/day x 20 days)** | ~$90 |
 
 **Tip**: Always pause when not using!
 
@@ -232,22 +333,34 @@ When you're done developing:
 
 1. Check JARVIS_OLLAMA_URL is set correctly in `.env`
 2. Verify instance is running (not paused)
-3. Test API directly: `curl https://[endpoint]/api/tags`
+3. Test API directly:
+   ```powershell
+   Invoke-RestMethod -Uri "https://[endpoint].notebooks.jarvislabs.net/api/tags"
+   ```
 
 ### Models not responding
 
 SSH into instance and check:
 ```bash
-ollama list              # Are models installed?
-ollama ps                # Are models loaded?
-cat /home/ollama.log     # Check logs
+OLLAMA_MODELS=/home/ollama-models ollama list   # Are models installed?
+OLLAMA_MODELS=/home/ollama-models ollama ps     # Are models loaded?
+ls -la /home/ollama-models/                      # Check storage
+```
+
+### Models lost after pause/resume
+
+Models were not stored in /home. Re-run the setup:
+```bash
+export OLLAMA_MODELS=/home/ollama-models
+OLLAMA_MODELS=/home/ollama-models ollama pull qwen3:4b
+OLLAMA_MODELS=/home/ollama-models ollama pull qwen3:14b
 ```
 
 ### Slow responses
 
 - First request loads model into VRAM (~10-30s)
 - Subsequent requests are fast
-- 14B model is slower than 3B (expected)
+- 14B model is slower than 4B (expected)
 
 ### Backend can't reach Ollama
 
@@ -256,7 +369,18 @@ Check Docker environment:
 docker compose logs backend | grep -i agent
 ```
 
-Verify URL format: `https://xxx.jarvislabs.net/v1` (note the `/v1` path)
+Verify URL format: `https://xxx.notebooks.jarvislabs.net/v1` (note the `/v1` path)
+
+### PowerShell curl doesn't work
+
+PowerShell's `curl` is an alias for `Invoke-WebRequest`. Use `Invoke-RestMethod` instead:
+```powershell
+# Wrong (fails in PowerShell)
+curl -X POST https://...
+
+# Correct (PowerShell)
+Invoke-RestMethod -Uri "https://..." -Method POST -ContentType "application/json" -Body $body
+```
 
 ---
 
@@ -264,7 +388,7 @@ Verify URL format: `https://xxx.jarvislabs.net/v1` (note the `/v1` path)
 
 ### SSH Command
 ```bash
-ssh -i .ssh/jarvis_labs_key root@[SSH-ADDRESS]
+ssh -i .ssh/jarvis_labs_key -p [PORT] root@sshg.jarvislabs.ai
 ```
 
 ### Start Local Services
@@ -282,6 +406,12 @@ docker compose down
 docker compose logs -f backend
 ```
 
+### Check Model Status (on Jarvis Labs)
+```bash
+OLLAMA_MODELS=/home/ollama-models ollama list
+OLLAMA_MODELS=/home/ollama-models ollama ps
+```
+
 ---
 
 ## Next Steps
@@ -296,3 +426,4 @@ For full documentation, see:
 - [README.md](../README.md) - Project overview
 - [QUICKSTART.md](../QUICKSTART.md) - Quick start guide
 - [ARCHITECTURE.md](ARCHITECTURE.md) - System architecture
+- [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) - Full implementation plan

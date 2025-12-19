@@ -90,18 +90,19 @@ Best for development: Run LLMs on Jarvis Labs GPU cloud, everything else locally
 
 ```bash
 # 1. Launch Ollama template on Jarvis Labs (A5000 $0.49/hr)
-# 2. SSH in and pull models:
-ssh root@[jarvis-ssh-address]
-ollama pull qwen2.5:3b && ollama pull qwen2.5:14b
+# 2. SSH in and run the setup script (stores models in /home for persistence):
+ssh -i .ssh/jarvis_labs_key -p [PORT] root@sshg.jarvislabs.ai 'bash -s' < scripts/setup-jarvis-ollama.sh
 
 # 3. Set API endpoint in .env
-echo "JARVIS_OLLAMA_URL=https://[your-endpoint].jarvislabs.net" >> .env
+echo "JARVIS_OLLAMA_URL=https://[your-endpoint].notebooks.jarvislabs.net" >> .env
 
 # 4. Start local services
 docker compose -f docker-compose.yml -f docker/docker-compose.hybrid.yml up -d
 
 # 5. Open http://localhost:3000
 ```
+
+**Models**: Qwen3-4B (fast agent) + Qwen3-14B (reasoning agent) - both fit on A5000 24GB with 8GB free.
 
 See [Jarvis Labs Deployment Guide](docs/JARVIS_LABS_DEPLOYMENT.md) for detailed instructions.
 
