@@ -1,9 +1,10 @@
 # Constitutional AIOps - Development Checklist
 
-> **Last Updated**: 2025-12-16
+> **Last Updated**: 2025-12-19
 > **Current Phase**: Phase 4 - Deployment Package (FILES READY)
 > **Overall Progress**: ~98%
 > **Architecture**: Simultaneous Dual-Model (Qwen3-4B + Qwen3-14B on 24GB VRAM)
+> **Deployment**: Hybrid (Jarvis Labs A5000 GPU + Local Services)
 
 ---
 
@@ -229,15 +230,19 @@
 
 ---
 
-## 📋 Pending (Phase 4 - AWS Testing)
+## 📋 Pending (Phase 4 - Jarvis Labs Testing)
 
-### AWS Deployment Testing
-- [ ] Launch g6.xlarge Spot instance
-- [ ] Run installation wizard on AWS
-- [ ] Verify LLM model loading (~15GB VRAM)
+### Jarvis Labs Deployment Testing
+- [ ] Create Jarvis Labs account and add credits ($10-20)
+- [ ] Add SSH public key to Jarvis Labs account
+- [ ] Launch Ollama template instance (A5000 $0.49/hr)
+- [ ] SSH into instance and run `scripts/setup-jarvis-ollama.sh`
+- [ ] Verify models loaded (qwen2.5:3b + qwen2.5:14b)
+- [ ] Configure local `.env` with `JARVIS_OLLAMA_URL`
+- [ ] Start local services with `docker-compose.hybrid.yml`
 - [ ] Test all API endpoints
 - [ ] Run frontend end-to-end tests
-- [ ] Performance benchmarks (latency, throughput)
+- [ ] Performance benchmarks (latency over HTTPS)
 
 ### Optional Enhancements
 - [ ] User authentication (basic auth or OAuth)
@@ -249,7 +254,9 @@
 
 ## 🚫 Known Blockers
 
-None - All Phase 4 files are ready. Next step is AWS deployment and testing.
+None - All Phase 4 files are ready. Next step is Jarvis Labs deployment and testing.
+
+**Note**: AWS g6.xlarge quota requests were submitted but all G-family instances require quota increase approval. Jarvis Labs A5000 ($0.49/hr) is the recommended alternative for development.
 
 ---
 
@@ -279,7 +286,7 @@ None - All Phase 4 files are ready. Next step is AWS deployment and testing.
 | 4 | Deployment Files | ✅ 100% |
 | 4 | Docker Configs | ✅ 100% |
 | 4 | Documentation | ✅ 100% |
-| 4 | AWS Testing | ⬜ 0% |
+| 4 | Jarvis Labs Testing | ⬜ 0% |
 
 **Overall Phase 1**: ✅ 100% COMPLETE
 **Overall Phase 2**: ✅ 100% COMPLETE
@@ -291,15 +298,58 @@ None - All Phase 4 files are ready. Next step is AWS deployment and testing.
 
 ## 🎯 Next Steps (Priority Order)
 
-1. **AWS Deployment** - Launch g6.xlarge Spot instance and run install.sh
-2. **Model Loading Verification** - Confirm both Qwen3 models load (~15GB VRAM)
-3. **End-to-End Testing** - Test all API endpoints and frontend flows
-4. **Performance Benchmarks** - Measure LLM latency and throughput
-5. **Optional: User Authentication** - Add basic auth if time permits
+1. **Jarvis Labs Setup** - Create account, add SSH key, launch Ollama template
+2. **Model Pull** - SSH into instance and run `scripts/setup-jarvis-ollama.sh`
+3. **Local Services** - Configure `.env` and start with `docker-compose.hybrid.yml`
+4. **End-to-End Testing** - Test all API endpoints and frontend flows
+5. **Performance Benchmarks** - Measure LLM latency over HTTPS
+6. **Optional: User Authentication** - Add basic auth if time permits
+
+**Key Files for Jarvis Labs Setup:**
+- `docs/JARVIS_LABS_DEPLOYMENT.md` - Complete step-by-step guide
+- `scripts/setup-jarvis-ollama.sh` - Model pull script (run on Jarvis Labs)
+- `docker/docker-compose.hybrid.yml` - Local services config
 
 ---
 
 ## 📝 Session Log
+
+### 2025-12-19 - JARVIS LABS HYBRID DEPLOYMENT - Setup Complete
+**Completed**:
+- Researched Jarvis Labs deployment options
+- Discovered Ollama template (simpler than VM approach!)
+  - No Docker needed on remote
+  - No SSH tunnel needed (direct HTTPS API)
+  - Pre-configured Ollama server with OpenAI-compatible API
+- Updated .gitignore with SSH private key protection
+- Created scripts/setup-jarvis-ollama.sh
+  - Pulls qwen2.5:3b and qwen2.5:14b models
+  - Tests both models on instance
+  - Provides next steps
+- Created docker/docker-compose.hybrid.yml
+  - Disables llama-swap (uses remote Ollama)
+  - Configures backend to use JARVIS_OLLAMA_URL
+- Created docs/JARVIS_LABS_DEPLOYMENT.md
+  - Complete step-by-step guide
+  - Architecture diagram
+  - Cost breakdown and troubleshooting
+- Updated README.md with hybrid deployment section
+- Updated CHECKLIST.md for Jarvis Labs (this file)
+- Generated SSH key pair for Jarvis Labs authentication
+
+**Key Architecture Change**:
+- From: AWS g6.xlarge (pending quota approval)
+- To: Jarvis Labs A5000 Ollama template ($0.49/hr)
+- Benefit: No quota wait, direct HTTPS API, simpler setup
+
+**SSH Public Key** (add to Jarvis Labs):
+```
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAUpDdcM1oSEwI9o+dsVbA9TDiTSoc5VvWd9hRuL7wp9 constitutional-aiops-jarvis
+```
+
+**Next Session**: Launch Jarvis Labs instance and test end-to-end
+
+---
 
 ### 2025-12-17 - PHASE 4 FILES READY - Deployment Package Complete
 **Completed**:
