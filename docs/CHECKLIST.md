@@ -1,0 +1,491 @@
+# Constitutional AIOps - Development Checklist
+
+> **Last Updated**: 2025-12-16
+> **Current Phase**: Phase 4 - Deployment Package (FILES READY)
+> **Overall Progress**: ~98%
+> **Architecture**: Simultaneous Dual-Model (Qwen3-4B + Qwen3-14B on 24GB VRAM)
+
+---
+
+## ✅ Completed Tasks
+
+### Documentation & Planning
+- [x] CLAUDE.md - AI development instructions
+- [x] PROJECT_SUMMARY.md - Complete requirements history
+- [x] README.md - Project overview
+- [x] MEGA_PROMPT.md (Parts 1-3) - Implementation guide
+- [x] Architecture diagrams (SVG)
+- [x] references.bib - 40+ BibTeX citations
+
+### Project Structure
+- [x] Directory structure created
+- [x] Python package initialized (src/)
+- [x] React app initialized (frontend/)
+- [x] Docker configurations created
+- [x] Configuration files (.env.example, pyproject.toml)
+
+### Core Source Files
+- [x] src/config.py - Configuration management
+- [x] src/main.py - FastAPI entry point (updated with routers)
+- [x] src/agents/model_router.py - Dual-endpoint routing
+- [x] src/agents/base_agent.py - Base agent class
+- [x] src/agents/fast_annotator.py - Qwen3-4B agent
+- [x] src/agents/reasoning_agent.py - Qwen3-14B agent
+- [x] src/constitutional/principles.py - 11 principles, 3 tiers
+- [x] src/constitutional/validator.py - Action validation
+- [x] src/utils/logging.py - Logging setup
+
+### Backend API Routes [100%]
+- [x] src/api/routes/health.py - Health endpoints (Kubernetes probes, agent status)
+- [x] src/api/routes/chat.py - Chat endpoints (conversations, RCA, planning)
+- [x] src/api/routes/incidents.py - Incident CRUD (create, list, update, analyze)
+- [x] src/api/routes/actions.py - Action management (validation, approval, execution)
+
+### API Schemas [100%]
+- [x] src/api/schemas/chat.py - Chat models (ChatRequest, ChatResponse, AnalysisRequest)
+- [x] src/api/schemas/incident.py - Incident models (Incident, RCAResult, RemediationPlan)
+- [x] src/api/schemas/action.py - Action models (Action, ConstitutionalValidation, ActionApproval)
+
+### Docker & Deployment
+- [x] docker-compose.yml - Main composition
+- [x] docker/docker-compose.gpu.yml - GPU deployment
+- [x] docker/docker-compose.local.yml - Local development
+- [x] docker/Dockerfile.backend
+- [x] docker/Dockerfile.frontend
+- [x] docker/configs/llama-swap.yaml
+- [x] docker/configs/prometheus.yml
+- [x] docker/configs/otel-collector.yaml
+- [x] docker/configs/tempo-config.yaml
+
+### Frontend (Basic)
+- [x] package.json - Dependencies
+- [x] vite.config.ts - Build config
+- [x] tailwind.config.js - Styling
+- [x] src/App.tsx - Main app
+- [x] src/components/Layout.tsx - Navigation
+- [x] src/pages/Dashboard.tsx - Overview page
+- [x] src/pages/Incidents.tsx - Incident list
+- [x] src/pages/Chat.tsx - Chat interface
+- [x] src/pages/Settings.tsx - Configuration
+
+### Scripts
+- [x] scripts/download-models.sh
+- [x] scripts/setup.sh
+- [x] scripts/mock_llm_server.py
+
+### Tests (Basic)
+- [x] tests/conftest.py - Pytest fixtures
+- [x] tests/test_agents/test_model_router.py
+- [x] tests/test_constitutional/test_validator.py
+
+---
+
+## ✅ Completed (Phase 1)
+
+### Memory Integration [100%]
+- [x] src/memory/neo4j_client.py - Neo4j async client with schema, incidents, actions
+- [x] src/memory/episode_store.py - Episode dataclass, in-memory store with similarity search
+- [x] src/memory/retrieval.py - ContextRetriever with RAG patterns for RCA
+
+### Telemetry Processing [100%]
+- [x] src/telemetry/collector.py - LGTM stack integration (Loki, Prometheus, Tempo)
+- [x] src/telemetry/compressor.py - Token compression for LLM context windows
+- [x] src/telemetry/aggregator.py - Telemetry aggregation with health scoring
+
+### Tests [100%]
+- [x] tests/test_api/test_routes.py - Comprehensive API route tests
+- [x] tests/conftest.py - Updated with all fixtures
+
+---
+
+## ✅ Completed (Phase 2)
+
+### MCP Action Server [100%]
+- [x] src/mcp/server.py - MCP Action Server with 5 tools
+  - [x] find_similar - Find similar incidents from episodic memory
+  - [x] get_dependencies - Get service dependency graph
+  - [x] restart_service - Restart a service (with approval)
+  - [x] scale_service - Scale service replicas (with approval)
+  - [x] analyze_logs - Analyze logs for patterns
+- [x] src/api/routes/tools.py - Tools API endpoint
+
+### Frontend Integration [100%]
+- [x] frontend/src/lib/api.ts - Type-safe API client
+- [x] frontend/src/pages/Dashboard.tsx - Connected to API with auto-refresh
+- [x] frontend/src/pages/Incidents.tsx - Full CRUD with approval workflow
+- [x] frontend/src/pages/Chat.tsx - Connected to chat API
+
+### Approval Workflow UI [100%]
+- [x] ApprovalModal component - Review Constitutional AI validation
+- [x] Pending approvals banner - Dashboard integration
+- [x] Action status tracking - Full workflow visibility
+
+### Audit Logging [100%]
+- [x] src/utils/audit.py - Comprehensive audit logging system
+  - Incident events, action events, Constitutional AI validation
+  - File-based logging (JSON lines format)
+  - Query interface for audit trail
+
+### Testing Scripts [100%]
+- [x] scripts/inject_anomaly.py - Anomaly injection for testing
+  - CPU spike, memory leak, DB connection issues
+  - Latency spike, error rate spike, disk warning
+  - Cascading failure scenario
+  - Load test scenario
+
+### Real-time Updates [100%]
+- [x] src/utils/websocket.py - WebSocket connection manager
+  - Event broadcasting with room-based subscriptions
+  - Connection tracking and automatic cleanup
+  - Broadcast functions for incidents, actions, RCA, alerts
+- [x] frontend/src/lib/websocket.ts - React WebSocket hook
+  - Auto-connect with reconnection support
+  - Event subscription system
+  - Type-safe event handlers
+- [x] WebSocket endpoint in main.py (/ws)
+- [x] Dashboard real-time activity feed
+- [x] Connection status indicator (Live/Offline)
+
+---
+
+## ✅ Completed (Phase 3)
+
+### Visualization Components [100%]
+- [x] frontend/src/components/IncidentTimeline.tsx - Incident event timeline
+  - Visual history of incident events with expandable details
+  - Status changes, RCA, actions, resolution tracking
+  - Actor tracking (user/system/agent)
+  - generateTimelineFromIncident helper function
+- [x] frontend/src/components/DependencyGraph.tsx - Service dependency visualization
+  - Interactive service nodes with health status
+  - CSS-based layered layout (no external dependencies)
+  - Service metrics display (CPU, memory, latency, error rate)
+  - Zoom controls and service selection
+  - generateSampleServices for demo data
+- [x] frontend/src/components/index.ts - Component exports
+
+### Enhanced Settings UI [100%]
+- [x] Tabbed interface (Constitutional AI, Notifications, Telemetry, Models)
+- [x] Visual authorization matrix with sliders
+- [x] Notification channels (Email, Slack, Webhook)
+- [x] LGTM stack configuration (Loki, Prometheus, Tempo)
+- [x] Model status cards with health check
+- [x] Neo4j connection status display
+- [x] Custom toggle switch components
+
+---
+
+## ✅ Completed (Phase 4 - Deployment Package)
+
+### Deployment Files [100%]
+- [x] scripts/install.sh - Installation wizard script
+  - Hardware auto-detection (GPU, memory, CPU)
+  - Prerequisites checking (Docker, Docker Compose, curl)
+  - Automatic deployment mode selection (GPU/local)
+  - Environment file generation
+  - Model download for GPU mode
+  - Service startup and health verification
+- [x] scripts/detect_hardware.py - Hardware detection script (Python)
+  - Cross-platform support (Linux, macOS, Windows)
+  - GPU detection with NVIDIA Container Toolkit check
+  - JSON output mode for automation
+  - Deployment recommendations
+- [x] scripts/download-models.sh - Model download script
+  - Qwen3-4B and Qwen3-14B model download
+  - Progress indication and verification
+  - Resume support for interrupted downloads
+- [x] scripts/mock_llm_server.py - Mock LLM server (updated)
+  - Health proxy on port 8080
+  - /v1/models endpoint for both agents
+  - OpenAI-compatible chat completions
+
+### Docker Configurations [100%]
+- [x] docker-compose.yml - Main composition
+- [x] docker/docker-compose.gpu.yml - GPU deployment (llama-swap)
+- [x] docker/docker-compose.local.yml - Local development (mock LLM)
+- [x] docker/docker-compose.production.yml - Production deployment
+  - Resource limits and reservations
+  - Security hardening (internal ports)
+  - Logging configuration
+  - Health checks for all services
+- [x] docker/Dockerfile.mock-llm - Mock LLM server image
+- [x] docker/Dockerfile.backend - Backend API
+- [x] docker/Dockerfile.frontend - Frontend app
+
+### Documentation [100%]
+- [x] QUICKSTART.md - Quick start guide
+  - One-command install instructions
+  - Manual setup steps
+  - Access points and credentials
+  - Common commands and troubleshooting
+- [x] docs/AWS_DEPLOYMENT.md - AWS deployment guide
+  - EC2 g6.xlarge setup instructions
+  - Security group configuration
+  - NVIDIA Container Toolkit setup
+  - Production hardening (HTTPS, auto-start)
+  - Cost optimization (Spot instances)
+  - Backup and monitoring setup
+- [x] .env.example - Environment template
+
+---
+
+## 📋 Pending (Phase 4 - AWS Testing)
+
+### AWS Deployment Testing
+- [ ] Launch g6.xlarge Spot instance
+- [ ] Run installation wizard on AWS
+- [ ] Verify LLM model loading (~15GB VRAM)
+- [ ] Test all API endpoints
+- [ ] Run frontend end-to-end tests
+- [ ] Performance benchmarks (latency, throughput)
+
+### Optional Enhancements
+- [ ] User authentication (basic auth or OAuth)
+- [ ] CI/CD pipeline (GitHub Actions)
+- [ ] Automated backup scripts
+- [ ] Custom Grafana dashboards
+
+---
+
+## 🚫 Known Blockers
+
+None - All Phase 4 files are ready. Next step is AWS deployment and testing.
+
+---
+
+## 📊 Progress Summary
+
+| Phase | Component | Progress |
+|-------|-----------|----------|
+| 1 | Documentation | ✅ 100% |
+| 1 | Project Structure | ✅ 100% |
+| 1 | Core Agents | ✅ 100% |
+| 1 | Constitutional AI | ✅ 100% |
+| 1 | Docker Setup | ✅ 100% |
+| 1 | Frontend (Basic) | ✅ 100% |
+| 1 | API Routes | ✅ 100% |
+| 1 | API Schemas | ✅ 100% |
+| 1 | Memory Integration | ✅ 100% |
+| 1 | Telemetry Processing | ✅ 100% |
+| 1 | API Tests | ✅ 100% |
+| 2 | MCP Tools | ✅ 100% |
+| 2 | Frontend Integration | ✅ 100% |
+| 2 | Approval Workflow UI | ✅ 100% |
+| 2 | Audit Logging | ✅ 100% |
+| 2 | Real-time WebSocket | ✅ 100% |
+| 3 | Visualization Components | ✅ 100% |
+| 3 | Enhanced Settings UI | ✅ 100% |
+| 3 | User Authentication | ⬜ 0% (optional) |
+| 4 | Deployment Files | ✅ 100% |
+| 4 | Docker Configs | ✅ 100% |
+| 4 | Documentation | ✅ 100% |
+| 4 | AWS Testing | ⬜ 0% |
+
+**Overall Phase 1**: ✅ 100% COMPLETE
+**Overall Phase 2**: ✅ 100% COMPLETE
+**Overall Phase 3**: ✅ 95% COMPLETE (auth optional)
+**Overall Phase 4**: 🔄 75% COMPLETE (files ready, testing pending)
+**Overall Project**: ~98%
+
+---
+
+## 🎯 Next Steps (Priority Order)
+
+1. **AWS Deployment** - Launch g6.xlarge Spot instance and run install.sh
+2. **Model Loading Verification** - Confirm both Qwen3 models load (~15GB VRAM)
+3. **End-to-End Testing** - Test all API endpoints and frontend flows
+4. **Performance Benchmarks** - Measure LLM latency and throughput
+5. **Optional: User Authentication** - Add basic auth if time permits
+
+---
+
+## 📝 Session Log
+
+### 2025-12-17 - PHASE 4 FILES READY - Deployment Package Complete
+**Completed**:
+- Created scripts/install.sh - Installation wizard
+  - Hardware auto-detection (GPU, memory, CPU cores)
+  - Prerequisites checking (Docker, Compose, curl)
+  - Environment file generation
+  - Model download for GPU mode
+  - Service startup with health verification
+- Created scripts/detect_hardware.py - Python hardware detection
+  - Cross-platform (Linux, macOS, Windows)
+  - GPU detection with NVIDIA toolkit check
+  - JSON output mode for automation
+- Created docker/docker-compose.production.yml
+  - Resource limits and reservations
+  - Security hardening (internal-only ports)
+  - Logging configuration with rotation
+  - Health checks for all services
+- Created docker/Dockerfile.mock-llm
+  - Lightweight Python image
+  - Health check on port 8080
+- Updated scripts/mock_llm_server.py
+  - Added health proxy on port 8080
+  - Added /v1/models endpoints for both agents
+- Created QUICKSTART.md - Quick start guide
+  - One-command install
+  - Manual setup steps
+  - Troubleshooting section
+- Created docs/AWS_DEPLOYMENT.md - AWS guide
+  - g6.xlarge setup instructions
+  - Security group configuration
+  - NVIDIA Container Toolkit setup
+  - Production hardening (HTTPS, systemd)
+  - Cost optimization tips
+- Updated docs/CHECKLIST.md with Phase 4 status
+
+**Key Files Created**:
+- scripts/install.sh (installation wizard)
+- scripts/detect_hardware.py (hardware detection)
+- docker/docker-compose.production.yml (production config)
+- docker/Dockerfile.mock-llm (mock LLM image)
+- QUICKSTART.md (quick start guide)
+- docs/AWS_DEPLOYMENT.md (AWS deployment guide)
+
+**Phase 4 Status**: 75% COMPLETE (files ready, AWS testing pending)
+
+**Next Session**: AWS g6.xlarge deployment and testing
+
+---
+
+### 2025-12-16 - PHASE 3 IN PROGRESS - Visualization & Settings
+**Completed**:
+- Created frontend/src/components/IncidentTimeline.tsx
+  - Visual timeline of incident events with expandable details
+  - Event types: created, updated, status_change, rca_started, rca_completed, action_*, resolved
+  - Actor tracking (user/system/agent) with icons
+  - generateTimelineFromIncident helper for data transformation
+- Created frontend/src/components/DependencyGraph.tsx
+  - Interactive service dependency visualization
+  - CSS-based layered layout (gateway -> api -> database)
+  - Service status indicators (healthy, degraded, down)
+  - Metrics display (CPU, memory, latency, error rate)
+  - Zoom controls and service selection panel
+  - generateSampleServices for demo data
+- Enhanced frontend/src/pages/Settings.tsx
+  - Tabbed interface (Constitutional AI, Notifications, Telemetry, Models)
+  - Visual authorization matrix with confidence sliders
+  - Notification channels configuration
+  - LGTM stack URL configuration
+  - Model status cards with health check
+  - Custom toggle switch components
+- Created frontend/src/components/index.ts for exports
+
+**Key Features Added**:
+- IncidentTimeline with 10 event types and actor tracking
+- DependencyGraph with 7 service types and 4 status states
+- Settings page with 4 configuration tabs
+- All components use Lucide React icons
+- No external visualization library dependencies
+
+**Phase 3 Status**: 80% COMPLETE (User auth remaining, optional for demo)
+
+**Next Session**: Phase 4 - AWS deployment and packaging
+
+---
+
+### 2025-12-16 - PHASE 2 COMPLETE - WebSocket Real-time Updates
+**Completed**:
+- Implemented src/utils/websocket.py (WebSocket connection manager)
+  - Event broadcasting with room-based subscriptions
+  - Connection tracking with automatic cleanup
+  - Broadcast functions for all event types (incidents, actions, RCA, alerts)
+- Implemented frontend/src/lib/websocket.ts (React WebSocket hook)
+  - useWebSocket hook with auto-connect and reconnection
+  - Event subscription system with type-safe handlers
+  - useIncidentEvents, useActionEvents, useSystemEvents convenience hooks
+- Added WebSocket endpoint to main.py (/ws)
+- Updated Dashboard.tsx with real-time activity feed
+  - Live connection status indicator (Wifi icon)
+  - Real-time activity updates via WebSocket
+  - formatRelativeTime helper for timestamps
+- Updated src/utils/__init__.py with all exports
+
+**Key Features Added**:
+- Real-time event streaming via WebSocket
+- Room-based subscriptions for specific incidents
+- Automatic reconnection with configurable attempts
+- Dashboard shows live status and real-time activity
+- Fallback to mock data when WebSocket disconnected
+
+**Phase 2 Status**: 100% COMPLETE
+
+**Next Session**: Begin Phase 3 - Dashboard polish (timeline, dependency graph)
+
+---
+
+### 2025-12-15 - PHASE 1 COMPLETE - Memory, Telemetry, Tests
+**Completed**:
+- Implemented src/memory/neo4j_client.py (async Neo4j client with schema management)
+- Implemented src/memory/episode_store.py (Episode dataclass, similarity search, patterns)
+- Implemented src/memory/retrieval.py (ContextRetriever for RAG-based prompts)
+- Implemented src/telemetry/collector.py (LGTM stack integration)
+- Implemented src/telemetry/compressor.py (Token compression for LLM contexts)
+- Implemented src/telemetry/aggregator.py (Health scoring and aggregation)
+- Updated src/main.py with full lifespan management
+- Created comprehensive tests/test_api/test_routes.py
+- Updated tests/conftest.py with new fixtures
+- Verified all module imports and exports
+
+**Key Features Added**:
+- Neo4j graceful fallback (NEO4J_AVAILABLE flag for in-memory mode)
+- Episode similarity using cosine distance on signatures
+- Token compression with configurable targets (500 fast, 1500 reasoning)
+- Health score calculation (error rate, latency, availability weighted)
+- RAG context retrieval for RCA and remediation planning
+
+**Phase 1 Status**: 100% COMPLETE
+
+**Next Session**: Begin Phase 2 - MCP Action Server implementation
+
+---
+
+### 2025-12-15 - API Routes & Schemas Complete
+**Completed**:
+- Created all API schemas (chat.py, incident.py, action.py)
+- Implemented health.py with Kubernetes probes and agent health
+- Implemented chat.py with conversations, RCA, and planning endpoints
+- Implemented incidents.py with full CRUD and analysis triggers
+- Implemented actions.py with Constitutional AI validation workflow
+- Updated main.py to include all routers and initialize components
+- Updated __init__.py files for proper exports
+
+**API Endpoints Added**:
+- `GET /api/v1/health` - System health check
+- `GET /api/v1/health/ready` - Kubernetes readiness probe
+- `GET /api/v1/health/live` - Kubernetes liveness probe
+- `GET /api/v1/health/agents` - LLM agent status
+- `POST /api/v1/chat` - Send chat message
+- `POST /api/v1/chat/analyze` - Run RCA or planning
+- `GET /api/v1/chat/conversations` - List conversations
+- `POST /api/v1/incidents` - Create incident
+- `GET /api/v1/incidents` - List incidents with filters
+- `GET /api/v1/incidents/{id}` - Get incident
+- `PATCH /api/v1/incidents/{id}` - Update incident
+- `POST /api/v1/incidents/{id}/analyze` - Trigger RCA
+- `POST /api/v1/actions` - Create and validate action
+- `GET /api/v1/actions/pending` - Get pending approvals
+- `POST /api/v1/actions/{id}/approve` - Approve/reject action
+- `POST /api/v1/actions/{id}/execute` - Execute approved action
+
+**Next Session**: Implement Neo4j client and memory integration
+
+---
+
+### 2025-12-14 - Documentation & Structure Complete
+**Completed**:
+- Created PROJECT_SUMMARY.md with complete requirements history
+- Updated CLAUDE.md with 24GB simultaneous architecture
+- Created all core source files (agents, constitutional)
+- Set up Docker configurations for GPU and local
+- Created basic frontend with all pages
+- Added test files and configuration
+
+**Architecture Decision**:
+- Finalized 24GB simultaneous dual-model (NOT hot-swap)
+- Qwen3-4B (fast) + Qwen3-14B (reasoning)
+- Target: AWS g6.xlarge (L4 24GB)
+
+**Next Session**: Implement API routes and Neo4j integration

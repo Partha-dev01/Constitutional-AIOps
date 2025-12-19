@@ -1,0 +1,59 @@
+# Constitutional AIOps - Docker Compose Local Override
+# Use with: docker-compose -f docker-compose.yml -f docker/docker-compose.local.yml up
+#
+# For local development WITHOUT GPU
+# Uses mock LLM endpoints or remote API
+
+version: "3.9"
+
+services:
+  # ==========================================================================
+  # Mock LLM Server (for development without GPU)
+  # ==========================================================================
+  
+  mock-llm:
+    image: python:3.11-slim
+    container_name: aiops-mock-llm
+    ports:
+      - "8081:8081"  # Fast Agent mock
+      - "8082:8082"  # Reasoning Agent mock
+    volumes:
+      - ./scripts/mock_llm_server.py:/app/server.py:ro
+    working_dir: /app
+    command: >
+      bash -c "pip install fastapi uvicorn && python server.py"
+    networks:
+      - aiops-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Override backend to use mock LLM
+  backend:
+    environment:
+      - FAST_AGENT_URL=http://mock-llm:8081/v1
+      - REASONING_AGENT_URL=http://mock-llm:8082/v1
+      - DEBUG=true
+      - LOG_LEVEL=DEBUG
+    depends_on:
+      mock-llm:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+
+  # Development mode for frontend with hot reload
+  frontend:
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:8000
+      - NODE_ENV=development
+    command: npm run dev -- --host 0.0.0.0
+
+# Note: For actual LLM testing, either:
+# 1. Use docker-compose.gpu.yml with local GPU
+# 2. Set FAST_AGENT_URL and REASONING_AGENT_URL to remote endpoints
