@@ -5,7 +5,84 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
-- Nothing yet
+- Jarvis Labs hybrid deployment support
+  - `docker/docker-compose.hybrid.yml` for local + remote LLM architecture
+  - `scripts/setup-jarvis-ollama.sh` for model setup on Jarvis Labs
+  - `docs/JARVIS_LABS_DEPLOYMENT.md` complete setup guide
+
+### Changed
+- Updated deployment strategy from AWS-only to hybrid (Jarvis Labs + Local)
+- Added SSH private key protection to `.gitignore`
+- Updated README.md with hybrid deployment instructions
+- Updated CHECKLIST.md with Jarvis Labs testing tasks
+
+---
+
+## [0.3.0-alpha] - 2025-12-19 (Phase 4 - Deployment Package)
+
+### Added
+
+#### Deployment Scripts
+- **scripts/install.sh**: One-command installation wizard
+  - Hardware auto-detection (GPU, memory, CPU)
+  - Prerequisites checking (Docker, Docker Compose, curl)
+  - Automatic deployment mode selection
+  - Environment file generation
+  - Model download for GPU mode
+  - Service startup with health verification
+
+- **scripts/detect_hardware.py**: Python hardware detection
+  - Cross-platform support (Linux, macOS, Windows)
+  - GPU detection with NVIDIA Container Toolkit check
+  - JSON output mode for automation
+  - Deployment recommendations
+
+- **scripts/inject_anomaly.py**: Anomaly injection for testing
+  - CPU spike, memory leak, DB connection issues
+  - Latency spike, error rate spike, disk warning
+  - Cascading failure scenario
+  - Load test scenario
+
+#### Docker Configurations
+- **docker/docker-compose.production.yml**: Production deployment
+  - Resource limits and reservations
+  - Security hardening (internal-only ports)
+  - Logging configuration with rotation
+  - Health checks for all services
+
+- **docker/docker-compose.hybrid.yml**: Jarvis Labs hybrid mode
+  - Disables llama-swap (uses remote Ollama)
+  - Configures backend for JARVIS_OLLAMA_URL
+
+- **docker/Dockerfile.mock-llm**: Mock LLM server image
+
+#### Documentation
+- **QUICKSTART.md**: Quick start guide
+- **docs/AWS_DEPLOYMENT.md**: AWS deployment guide
+- **docs/JARVIS_LABS_DEPLOYMENT.md**: Jarvis Labs deployment guide
+- **docs/Cloud_provider_discussions.md**: Cloud provider research
+
+#### Phase 2 Features (MCP, WebSocket, Audit)
+- **src/mcp/server.py**: MCP Action Server with 5 tools
+  - find_similar, get_dependencies, restart_service, scale_service, analyze_logs
+- **src/api/routes/tools.py**: Tools API endpoint
+- **src/utils/websocket.py**: WebSocket connection manager
+- **src/utils/audit.py**: Comprehensive audit logging
+- **frontend/src/lib/api.ts**: Type-safe API client
+- **frontend/src/lib/websocket.ts**: React WebSocket hook
+
+#### Phase 3 Features (Visualization)
+- **frontend/src/components/IncidentTimeline.tsx**: Incident event timeline
+- **frontend/src/components/DependencyGraph.tsx**: Service dependency visualization
+- **frontend/src/pages/Settings.tsx**: Enhanced settings with 4 tabs
+
+### Changed
+- Updated mock_llm_server.py with health proxy and /v1/models endpoints
+- Updated frontend pages with API integration and real-time updates
+- Updated main.py with WebSocket endpoint
+
+### Milestone
+**Phase 4: Deployment Package - Files Ready (Jarvis Labs testing pending)**
 
 ---
 
@@ -238,6 +315,34 @@ All notable changes to this project will be documented in this file.
 
 ## Session History
 
+### Session 11: 2025-12-19 - Jarvis Labs Hybrid Deployment
+- Researched Jarvis Labs deployment options (Ollama template vs VM)
+- Discovered Ollama template provides direct HTTPS API (no SSH tunnel!)
+- Created docker/docker-compose.hybrid.yml for local + remote architecture
+- Created scripts/setup-jarvis-ollama.sh for model setup
+- Created docs/JARVIS_LABS_DEPLOYMENT.md complete guide
+- Updated .gitignore with SSH private key protection
+- Updated README.md with hybrid deployment section
+- Updated CHECKLIST.md with Jarvis Labs testing tasks
+- Generated SSH key pair for authentication
+- **JARVIS LABS SETUP FILES READY**
+
+### Session 10: 2025-12-18 - Cloud Provider Research & GitHub Setup
+- Researched AWS quota issues (all G-family need approval)
+- Explored alternative cloud providers (Jarvis Labs, Lambda Labs, Vast.ai)
+- Created docs/Cloud_provider_discussions.md
+- Pushed codebase to GitHub (Partha-dev01/Aiops_Final)
+- Discussed hybrid architecture (local dev + remote GPU)
+
+### Session 9: 2025-12-17 - Phase 4 Deployment Package
+- Created scripts/install.sh (installation wizard)
+- Created scripts/detect_hardware.py (hardware detection)
+- Created docker/docker-compose.production.yml
+- Created docker/Dockerfile.mock-llm
+- Created QUICKSTART.md
+- Created docs/AWS_DEPLOYMENT.md
+- **PHASE 4: FILES READY**
+
 ### Session 8: 2025-12-15 - Phase 1 Complete (Memory, Telemetry, Tests)
 - Implemented Neo4j async client with graceful fallback
 - Implemented episode store with similarity search
@@ -300,4 +405,4 @@ This project uses [Semantic Versioning](https://semver.org/):
 - MINOR: Backward-compatible functionality
 - PATCH: Backward-compatible bug fixes
 
-Current: **0.2.0-alpha** (Phase 1 complete, ready for Phase 2)
+Current: **0.3.0-alpha** (Phase 4 files ready, Jarvis Labs testing pending)
