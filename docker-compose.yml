@@ -1,0 +1,182 @@
+# Constitutional AIOps - Docker Compose
+# Main composition file for full stack deployment
+#
+# Usage:
+#   Local (no GPU):   docker-compose -f docker-compose.yml -f docker/docker-compose.local.yml up
+#   GPU deployment:   docker-compose -f docker-compose.yml -f docker/docker-compose.gpu.yml up
+
+version: "3.9"
+
+services:
+  # ==========================================================================
+  # Core Application
+  # ==========================================================================
+  
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    container_name: aiops-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - FAST_AGENT_URL=http://llama-swap:8081/v1
+      - REASONING_AGENT_URL=http://llama-swap:8082/v1
+      - NEO4J_URI=bolt://neo4j:7687
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD:-constitutional_aiops_2025}
+      - LOKI_URL=http://loki:3100
+      - PROMETHEUS_URL=http://prometheus:9090
+    depends_on:
+      - neo4j
+      - loki
+      - prometheus
+    networks:
+      - aiops-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend
+    container_name: aiops-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    depends_on:
+      - backend
+    networks:
+      - aiops-network
+    restart: unless-stopped
+
+  # ==========================================================================
+  # Graph Memory (Neo4j)
+  # ==========================================================================
+  
+  neo4j:
+    image: neo4j:5.15-community
+    container_name: aiops-neo4j
+    ports:
+      - "7474:7474"  # Browser
+      - "7687:7687"  # Bolt
+    environment:
+      - NEO4J_AUTH=neo4j/${NEO4J_PASSWORD:-constitutional_aiops_2025}
+      - NEO4J_PLUGINS=["apoc"]
+      - NEO4J_dbms_memory_heap_initial__size=512m
+      - NEO4J_dbms_memory_heap_max__size=1G
+    volumes:
+      - neo4j-data:/data
+      - neo4j-logs:/logs
+    networks:
+      - aiops-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7474"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # ==========================================================================
+  # Observability Stack (LGTM)
+  # ==========================================================================
+  
+  loki:
+    image: grafana/loki:2.9.3
+    container_name: aiops-loki
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - loki-data:/loki
+    networks:
+      - aiops-network
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v2.48.0
+    container_name: aiops-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./docker/configs/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.enable-lifecycle'
+    networks:
+      - aiops-network
+    restart: unless-stopped
+
+  tempo:
+    image: grafana/tempo:2.3.1
+    container_name: aiops-tempo
+    ports:
+      - "3200:3200"   # Tempo
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+    command: -config.file=/etc/tempo/tempo.yaml
+    volumes:
+      - ./docker/configs/tempo-config.yaml:/etc/tempo/tempo.yaml:ro
+      - tempo-data:/tmp/tempo
+    networks:
+      - aiops-network
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:10.2.3
+    container_name: aiops-grafana
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - loki
+      - prometheus
+      - tempo
+    networks:
+      - aiops-network
+    restart: unless-stopped
+
+  # ==========================================================================
+  # OpenTelemetry Collector
+  # ==========================================================================
+  
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.91.0
+    container_name: aiops-otel-collector
+    ports:
+      - "4319:4317"   # OTLP gRPC (remapped to avoid conflict with Tempo)
+      - "4320:4318"   # OTLP HTTP
+      - "8888:8888"   # Prometheus metrics
+    volumes:
+      - ./docker/configs/otel-collector.yaml:/etc/otel/config.yaml:ro
+    command: --config=/etc/otel/config.yaml
+    depends_on:
+      - loki
+      - prometheus
+      - tempo
+    networks:
+      - aiops-network
+    restart: unless-stopped
+
+networks:
+  aiops-network:
+    driver: bridge
+
+volumes:
+  neo4j-data:
+  neo4j-logs:
+  loki-data:
+  prometheus-data:
+  tempo-data:
+  grafana-data:
+  models:

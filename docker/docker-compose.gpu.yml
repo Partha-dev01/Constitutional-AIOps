@@ -1,0 +1,54 @@
+# Constitutional AIOps - Docker Compose GPU Override
+# Use with: docker-compose -f docker-compose.yml -f docker/docker-compose.gpu.yml up
+#
+# Target: AWS g6.xlarge (NVIDIA L4 24GB) or g5.xlarge (A10G 24GB)
+# Architecture: Simultaneous Dual-Model (Qwen3-4B + Qwen3-14B)
+
+version: "3.9"
+
+services:
+  # ==========================================================================
+  # LLM Inference (llama-swap with dual models)
+  # ==========================================================================
+  
+  llama-swap:
+    image: ghcr.io/mostlygeek/llama-swap:latest
+    container_name: aiops-llama-swap
+    ports:
+      - "8080:8080"  # llama-swap proxy
+      - "8081:8081"  # Fast Agent (Qwen3-4B)
+      - "8082:8082"  # Reasoning Agent (Qwen3-14B)
+    volumes:
+      - ./docker/configs/llama-swap.yaml:/config.yaml:ro
+      - ./models:/models:ro
+    command: --config /config.yaml
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - CUDA_VISIBLE_DEVICES=0
+    networks:
+      - aiops-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s  # Models need time to load
+
+  # Override backend to depend on llama-swap
+  backend:
+    depends_on:
+      llama-swap:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+
+# Additional GPU-specific configurations
+# Note: Ensure NVIDIA Container Toolkit is installed on the host

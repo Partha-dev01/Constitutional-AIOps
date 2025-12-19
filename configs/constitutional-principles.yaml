@@ -1,0 +1,199 @@
+# Constitutional AIOps - Constitutional Principles Configuration
+# 
+# This file defines the 11 constitutional principles organized into 3 tiers.
+# These principles govern all autonomous actions taken by the system.
+#
+# Tier 1 (Safety-Critical): NEVER violate under any circumstances
+# Tier 2 (Operational): Best practices, require approval to violate
+# Tier 3 (Learning): Soft guidelines for continuous improvement
+
+version: "1.0"
+last_updated: "2025-12-14"
+
+# Authorization thresholds
+authorization:
+  automatic_threshold: 0.90      # >90% confidence = automatic action
+  approval_threshold: 0.70       # 70-89% = requires human approval
+  alert_only_threshold: 0.00     # <70% = alert only, no action
+
+# Tier 1: Safety-Critical Principles
+# These MUST NEVER be violated under any circumstances
+tier_1_safety:
+  - id: P1.1
+    name: Data Protection
+    description: Never execute actions that could cause data loss or corruption
+    violation_action: BLOCK_ALWAYS
+    detection_patterns:
+      - "DELETE.*FROM"
+      - "DROP TABLE"
+      - "TRUNCATE"
+      - "rm -rf"
+      - "format"
+    blocked_actions:
+      - delete_data
+      - drop_table
+      - truncate_logs
+      - format_disk
+    
+  - id: P1.2
+    name: Active Incident Safety
+    description: Never take destructive actions during active incidents without explicit approval
+    violation_action: BLOCK_ALWAYS
+    conditions:
+      - active_incident: true
+      - action_type: [restart, scale_down, deploy, rollback]
+    requires_explicit_approval: true
+    
+  - id: P1.3
+    name: Cascade Prevention
+    description: Never exceed resource limits that could cause cascade failures
+    violation_action: BLOCK_ALWAYS
+    thresholds:
+      max_cpu_percent: 95
+      max_memory_percent: 90
+      max_connections_percent: 85
+      max_disk_percent: 90
+    blocked_when_exceeded:
+      - scale_up
+      - spawn_process
+      - create_connection
+      
+  - id: P1.4
+    name: Security Integrity
+    description: Never modify security configurations without explicit approval
+    violation_action: BLOCK_ALWAYS
+    protected_resources:
+      - firewall_rules
+      - authentication_config
+      - tls_certificates
+      - access_control_lists
+      - encryption_keys
+    requires_explicit_approval: true
+
+# Tier 2: Operational Principles
+# Best practices that require approval to violate
+tier_2_operational:
+  - id: P2.1
+    name: Minimal Intervention
+    description: Prefer the smallest effective action to resolve issues
+    violation_action: REQUIRE_APPROVAL
+    preference_order:
+      - single_pod_restart
+      - deployment_restart
+      - service_restart
+      - full_cluster_action
+    escalation_requires_approval: true
+    
+  - id: P2.2
+    name: Evidence-Based Actions
+    description: Require telemetry evidence before taking action
+    violation_action: REQUIRE_APPROVAL
+    required_evidence:
+      - metric_anomaly: true
+      - log_correlation: true
+      - trace_confirmation: optional
+    minimum_confidence: 0.70
+    
+  - id: P2.3
+    name: Audit Trail
+    description: Log all actions for audit and rollback capability
+    violation_action: REQUIRE_APPROVAL
+    required_logging:
+      - timestamp
+      - action_type
+      - target_resource
+      - pre_action_state
+      - post_action_state
+      - decision_reasoning
+      - confidence_score
+      - approver_id (if applicable)
+    retention_days: 90
+    
+  - id: P2.4
+    name: Uncertainty Escalation
+    description: Escalate to humans when confidence is below threshold
+    violation_action: REQUIRE_APPROVAL
+    escalation_triggers:
+      - confidence_below: 0.70
+      - novel_pattern: true
+      - multi_service_impact: true
+      - first_occurrence: true
+    escalation_channels:
+      - dashboard_alert
+      - slack_notification
+      - pagerduty (critical only)
+
+# Tier 3: Learning Principles
+# Soft guidelines for continuous improvement
+tier_3_learning:
+  - id: P3.1
+    name: Outcome Tracking
+    description: Track outcomes of actions for continuous improvement
+    violation_action: LOG_WARNING
+    tracked_metrics:
+      - resolution_success
+      - resolution_time
+      - recurrence_rate
+      - false_positive_rate
+      - human_override_rate
+    feedback_loop: enabled
+    
+  - id: P3.2
+    name: Human Correction Learning
+    description: Learn from human corrections and overrides
+    violation_action: LOG_WARNING
+    learning_triggers:
+      - human_override
+      - action_rejection
+      - confidence_correction
+    model_update_frequency: weekly
+    
+  - id: P3.3
+    name: Long-term Optimization
+    description: Optimize for long-term system health over short-term fixes
+    violation_action: LOG_WARNING
+    considerations:
+      - root_cause_vs_symptom
+      - prevention_planning
+      - technical_debt_tracking
+      - system_resilience_score
+
+# Action classification
+action_categories:
+  safe:
+    - query_status
+    - get_logs
+    - analyze_metrics
+    - suggest_action
+    
+  low_risk:
+    - clear_cache
+    - restart_single_pod
+    - increase_replicas
+    - adjust_timeout
+    
+  medium_risk:
+    - restart_deployment
+    - scale_service
+    - update_config
+    - rollback_deployment
+    
+  high_risk:
+    - restart_cluster
+    - modify_database
+    - change_network
+    - update_security
+    
+  critical:
+    - delete_data
+    - modify_encryption
+    - change_authentication
+    - production_deployment
+
+# Human approval requirements
+approval_matrix:
+  safe: never
+  low_risk: confidence < 0.90
+  medium_risk: always
+  high_risk: always + senior_approval
+  critical: always + multiple_approvals
