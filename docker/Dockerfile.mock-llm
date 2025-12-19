@@ -1,0 +1,25 @@
+# Constitutional AIOps - Mock LLM Server Dockerfile
+# Provides mock OpenAI-compatible endpoints for local development
+
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install dependencies
+RUN pip install --no-cache-dir \
+    fastapi==0.109.0 \
+    uvicorn[standard]==0.27.0 \
+    httpx==0.26.0
+
+# Copy mock server script
+COPY scripts/mock_llm_server.py /app/server.py
+
+# Health check endpoint
+HEALTHCHECK --interval=10s --timeout=5s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8080/health || exit 1
+
+# Expose ports for Fast Agent and Reasoning Agent mocks
+EXPOSE 8080 8081 8082
+
+# Run the mock server
+CMD ["python", "server.py"]

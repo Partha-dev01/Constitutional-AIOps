@@ -1,0 +1,61 @@
+# Constitutional AIOps - llama-swap Configuration
+# Simultaneous Dual-Model Setup (24GB VRAM)
+#
+# Both models run simultaneously with TTL=-1 (never unload)
+# No hot-swapping needed - direct port-based routing
+
+models:
+  # Fast Agent: Qwen3-4B Q4_K_M
+  # High-throughput telemetry annotation and classification
+  fast-agent:
+    cmd: >
+      llama-server
+      --model /models/qwen3-4b-q4_k_m.gguf
+      --ctx-size 8192
+      --n-gpu-layers 99
+      --port 8081
+      --host 0.0.0.0
+      --threads 4
+      --batch-size 512
+      --embedding
+    proxy: http://localhost:8081
+    ttl: -1  # Never unload
+    checksum: ""  # Optional: Add SHA256 of model file
+    
+  # Reasoning Agent: Qwen3-14B Q4_K_M
+  # Complex RCA, remediation planning, human chat
+  reasoning-agent:
+    cmd: >
+      llama-server
+      --model /models/qwen3-14b-q4_k_m.gguf
+      --ctx-size 4096
+      --n-gpu-layers 99
+      --port 8082
+      --host 0.0.0.0
+      --threads 4
+      --batch-size 256
+    proxy: http://localhost:8082
+    ttl: -1  # Never unload
+    checksum: ""  # Optional: Add SHA256 of model file
+
+# Health check configuration
+healthcheck:
+  enabled: true
+  interval: 30s
+  timeout: 10s
+  retries: 3
+
+# Logging configuration
+logging:
+  level: info
+  format: json
+
+# Server configuration
+server:
+  host: 0.0.0.0
+  port: 8080
+  
+# VRAM Budget (24GB L4/A10G):
+# - Fast Agent (4B Q4_K_M): ~2.5GB model + ~1GB KV cache = ~4GB
+# - Reasoning Agent (14B Q4_K_M): ~9GB model + ~1.5GB KV cache = ~11GB
+# - Total: ~15GB used, ~9GB free for batch processing/overhead

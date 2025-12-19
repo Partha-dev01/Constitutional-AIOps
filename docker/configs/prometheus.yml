@@ -1,0 +1,49 @@
+# Constitutional AIOps - Prometheus Configuration
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Constitutional AIOps Backend
+  - job_name: 'aiops-backend'
+    static_configs:
+      - targets: ['backend:8000']
+    metrics_path: /metrics
+
+  # LLM Inference Servers
+  - job_name: 'llama-swap'
+    static_configs:
+      - targets: ['llama-swap:8080']
+    metrics_path: /metrics
+
+  # Neo4j
+  - job_name: 'neo4j'
+    static_configs:
+      - targets: ['neo4j:2004']
+    metrics_path: /metrics
+
+  # OpenTelemetry Collector
+  - job_name: 'otel-collector'
+    static_configs:
+      - targets: ['otel-collector:8888']
+
+  # Grafana
+  - job_name: 'grafana'
+    static_configs:
+      - targets: ['grafana:3000']
+
+# Alerting rules (to be expanded)
+rule_files:
+  # - /etc/prometheus/rules/*.yml
+
+# Alertmanager configuration (optional)
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets: ['alertmanager:9093']
