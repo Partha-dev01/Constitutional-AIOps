@@ -85,3 +85,7 @@ data/
 tmp/
 temp/
 *.tmp
+
+# SSH Keys (protect private key, allow public key)
+.ssh/jarvis_labs_key
+!.ssh/jarvis_labs_key.pub
