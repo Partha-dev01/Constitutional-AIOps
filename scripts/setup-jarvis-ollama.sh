@@ -2,15 +2,18 @@
 # Constitutional AIOps - Jarvis Labs Ollama Setup Script
 #
 # Run this ON the Jarvis Labs instance via SSH:
-#   ssh root@[jarvis-ssh-address] 'bash -s' < scripts/setup-jarvis-ollama.sh
+#   ssh -p [PORT] root@sshg.jarvislabs.ai 'bash -s' < scripts/setup-jarvis-ollama.sh
 #
 # Or copy and paste commands manually after SSH-ing in.
 
 set -e
 
 echo "=============================================="
-echo "Constitutional AIOps - Jarvis Labs Ollama Setup"
+echo "Constitutional AIOps - Jarvis Labs Setup"
 echo "=============================================="
+echo ""
+echo "Models: Qwen3-4B (Fast) + Qwen3-14B (Reasoning)"
+echo "Storage: /home/ollama-models (PERSISTS!)"
 echo ""
 
 # Check if Ollama is running
@@ -19,67 +22,104 @@ if ! command -v ollama &> /dev/null; then
     exit 1
 fi
 
-echo "Ollama detected. Checking server status..."
-ollama list 2>/dev/null || echo "Ollama server starting..."
+echo "Ollama detected. Setting up..."
+
+# CRITICAL: Configure persistent model storage FIRST
+echo ""
+echo "=============================================="
+echo "Step 0: Setting up persistent model storage"
+echo "=============================================="
+echo ""
+echo "IMPORTANT: Only /home directory persists between pause/resume!"
+echo ""
+
+export OLLAMA_MODELS=/home/ollama-models
+mkdir -p /home/ollama-models
+echo "Models will be stored in: $OLLAMA_MODELS"
+
+# Add to .bashrc for future sessions
+if ! grep -q "OLLAMA_MODELS" ~/.bashrc 2>/dev/null; then
+    echo 'export OLLAMA_MODELS=/home/ollama-models' >> ~/.bashrc
+    echo "Added OLLAMA_MODELS to ~/.bashrc"
+fi
+
+# Restart Ollama with new model path
+echo ""
+echo "Restarting Ollama with persistent storage..."
+pkill ollama 2>/dev/null || true
 sleep 2
+OLLAMA_MODELS=/home/ollama-models ollama serve &
+sleep 5
 
 echo ""
 echo "=============================================="
-echo "Step 1: Pulling Qwen 2.5 3B (Fast Agent)"
+echo "Step 1: Pulling Qwen3 4B (Fast Agent)"
 echo "=============================================="
-echo "This model is used for quick telemetry annotation and classification."
-echo "Size: ~2GB, Time: ~1-2 minutes"
+echo "Purpose: Telemetry annotation, classification"
+echo "Size: ~2.5GB, Time: ~1-2 minutes"
 echo ""
-ollama pull qwen2.5:3b
+OLLAMA_MODELS=/home/ollama-models ollama pull qwen3:4b
 
 echo ""
 echo "=============================================="
-echo "Step 2: Pulling Qwen 2.5 14B (Reasoning Agent)"
+echo "Step 2: Pulling Qwen3 14B (Reasoning Agent)"
 echo "=============================================="
-echo "This model is used for RCA, remediation planning, and chat."
-echo "Size: ~9GB, Time: ~5-8 minutes"
+echo "Purpose: RCA, remediation planning, chat"
+echo "Size: ~9.3GB, Time: ~5-8 minutes"
 echo ""
-ollama pull qwen2.5:14b
+OLLAMA_MODELS=/home/ollama-models ollama pull qwen3:14b
 
 echo ""
 echo "=============================================="
 echo "Step 3: Verifying Installed Models"
 echo "=============================================="
-ollama list
+OLLAMA_MODELS=/home/ollama-models ollama list
 
 echo ""
 echo "=============================================="
-echo "Step 4: Testing Fast Agent (qwen2.5:3b)"
+echo "Step 4: Verifying Persistence"
+echo "=============================================="
+echo "Model storage location:"
+ls -la /home/ollama-models/
+echo ""
+echo "Total size:"
+du -sh /home/ollama-models/
+
+echo ""
+echo "=============================================="
+echo "Step 5: Testing Fast Agent (qwen3:4b)"
 echo "=============================================="
 echo "Sending test prompt..."
 curl -s http://localhost:11434/api/generate -d '{
-  "model": "qwen2.5:3b",
-  "prompt": "Respond with only: Hello from Constitutional AIOps!",
+  "model": "qwen3:4b",
+  "prompt": "Respond with only: Constitutional AIOps Fast Agent Ready!",
   "stream": false
 }' | python3 -c "import sys,json; print(json.load(sys.stdin).get('response','No response')[:100])" 2>/dev/null || echo "Test request sent"
 
 echo ""
 echo "=============================================="
-echo "Step 5: Testing Reasoning Agent (qwen2.5:14b)"
+echo "Step 6: Testing Reasoning Agent (qwen3:14b)"
 echo "=============================================="
 echo "Sending test prompt..."
 curl -s http://localhost:11434/api/generate -d '{
-  "model": "qwen2.5:14b",
-  "prompt": "Respond with only: Reasoning agent ready!",
+  "model": "qwen3:14b",
+  "prompt": "Respond with only: Constitutional AIOps Reasoning Agent Ready!",
   "stream": false
 }' | python3 -c "import sys,json; print(json.load(sys.stdin).get('response','No response')[:100])" 2>/dev/null || echo "Test request sent"
 
 echo ""
 echo "=============================================="
-echo "Setup Complete!"
+echo "SETUP COMPLETE!"
 echo "=============================================="
 echo ""
-echo "Your models are ready. Now:"
+echo "Models stored in /home/ollama-models (PERSISTS on pause/resume!)"
+echo ""
+echo "Next steps:"
 echo ""
 echo "1. Go to Jarvis Labs dashboard"
-echo "2. Copy your API endpoint URL (looks like: https://xxxxx.jarvislabs.net)"
+echo "2. Copy your API endpoint URL (looks like: https://xxxxx.notebooks.jarvislabs.net)"
 echo "3. On your LOCAL machine, set in .env:"
-echo "   JARVIS_OLLAMA_URL=https://xxxxx.jarvislabs.net"
+echo "   JARVIS_OLLAMA_URL=https://xxxxx.notebooks.jarvislabs.net"
 echo ""
 echo "4. Start local services:"
 echo "   docker compose -f docker-compose.yml -f docker/docker-compose.hybrid.yml up -d"
@@ -87,5 +127,6 @@ echo ""
 echo "5. Open http://localhost:3000 in your browser"
 echo ""
 echo "=============================================="
-echo "Cost Reminder: Pause instance when not using!"
+echo "COST REMINDER: Pause instance when not using!"
+echo "A5000 costs \$0.49/hr - pause to stop billing"
 echo "=============================================="

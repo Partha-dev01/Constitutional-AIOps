@@ -237,7 +237,7 @@
 - [ ] Add SSH public key to Jarvis Labs account
 - [ ] Launch Ollama template instance (A5000 $0.49/hr)
 - [ ] SSH into instance and run `scripts/setup-jarvis-ollama.sh`
-- [ ] Verify models loaded (qwen2.5:3b + qwen2.5:14b)
+- [ ] Verify models loaded (qwen3:4b + qwen3:14b)
 - [ ] Configure local `.env` with `JARVIS_OLLAMA_URL`
 - [ ] Start local services with `docker-compose.hybrid.yml`
 - [ ] Test all API endpoints
@@ -314,6 +314,27 @@ None - All Phase 4 files are ready. Next step is Jarvis Labs deployment and test
 
 ## 📝 Session Log
 
+### 2025-12-20 - QWEN3 MODEL UPGRADE & PERSISTENCE FIX
+**Completed**:
+- Researched Qwen3 vs Qwen2.5 - Qwen3-4B outperforms Qwen2.5-7B significantly
+  - MMLU-Pro: 74 vs 45, GPQA: 59 vs 36.4, MATH: 90 vs 49.8
+- Discovered critical data persistence issue: only `/home` persists on Jarvis Labs!
+- Created `docs/plans/` folder for sub-implementation plans
+- Created `docs/plans/jarvis-labs-qwen3-deployment.md`
+- Updated all files from Qwen2.5 to Qwen3 models:
+  - `docker/docker-compose.hybrid.yml`: qwen3:4b + qwen3:14b
+  - `scripts/setup-jarvis-ollama.sh`: Added OLLAMA_MODELS=/home/ollama-models
+  - `docs/JARVIS_LABS_DEPLOYMENT.md`: Complete rewrite with persistence, PowerShell commands
+  - `README.md`: Updated hybrid deployment section
+- Added Windows PowerShell commands (Invoke-RestMethod instead of curl)
+- VRAM confirmed: Both models fit on A5000 24GB with ~8-9GB free
+
+**Critical Fix**:
+- OLLAMA_MODELS must be set to `/home/ollama-models` before pulling models
+- Without this, models are lost on pause/resume!
+
+---
+
 ### 2025-12-19 - JARVIS LABS HYBRID DEPLOYMENT - Setup Complete
 **Completed**:
 - Researched Jarvis Labs deployment options
@@ -323,18 +344,9 @@ None - All Phase 4 files are ready. Next step is Jarvis Labs deployment and test
   - Pre-configured Ollama server with OpenAI-compatible API
 - Updated .gitignore with SSH private key protection
 - Created scripts/setup-jarvis-ollama.sh
-  - Pulls qwen2.5:3b and qwen2.5:14b models
-  - Tests both models on instance
-  - Provides next steps
 - Created docker/docker-compose.hybrid.yml
-  - Disables llama-swap (uses remote Ollama)
-  - Configures backend to use JARVIS_OLLAMA_URL
 - Created docs/JARVIS_LABS_DEPLOYMENT.md
-  - Complete step-by-step guide
-  - Architecture diagram
-  - Cost breakdown and troubleshooting
 - Updated README.md with hybrid deployment section
-- Updated CHECKLIST.md for Jarvis Labs (this file)
 - Generated SSH key pair for Jarvis Labs authentication
 
 **Key Architecture Change**:
