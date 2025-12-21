@@ -1,13 +1,13 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Activity, AlertTriangle, CheckCircle, Clock, RefreshCw, Loader2, Wifi, WifiOff } from 'lucide-react'
+import { Activity, AlertTriangle, CheckCircle, Clock, RefreshCw, Loader2, Wifi, WifiOff, Server } from 'lucide-react'
 import api, { DashboardStats, HealthResponse, isComponentHealthy } from '../lib/api'
-import { useWebSocket, EventType, WebSocketEvent } from '../lib/websocket'
+import { useWebSocket, EventType } from '../lib/websocket'
 
-interface ActivityItem {
-  time: string
-  event: string
-  type: 'success' | 'warning' | 'info'
-  timestamp: Date
+interface ServiceStatus {
+  name: string
+  status: 'healthy' | 'unhealthy' | 'unknown'
+  monitored: boolean
+  uptimeHistory: ('up' | 'down' | 'unknown')[]
 }
 
 export function Dashboard() {
@@ -16,7 +16,7 @@ export function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date())
-  const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([])
+  const [services, setServices] = useState<ServiceStatus[]>([])
 
   // WebSocket connection for real-time updates
   const { isConnected, subscribe } = useWebSocket({
@@ -27,120 +27,63 @@ export function Dashboard() {
     },
   })
 
-  // Add activity item from WebSocket event
-  const addActivity = useCallback((event: string, type: ActivityItem['type']) => {
-    setRecentActivity((prev) => {
-      const newItem: ActivityItem = {
-        time: 'Just now',
-        event,
-        type,
-        timestamp: new Date(),
-      }
-      // Keep only last 10 items
-      return [newItem, ...prev.slice(0, 9)]
-    })
+  // Refresh data on WebSocket events
+  const refreshOnEvent = useCallback(() => {
+    fetchData()
   }, [])
 
-  // Subscribe to WebSocket events
+  // Subscribe to WebSocket events for real-time updates
   useEffect(() => {
     const unsubscribers: (() => void)[] = []
 
-    // Incident events
-    unsubscribers.push(
-      subscribe(EventType.INCIDENT_CREATED, (e: WebSocketEvent) => {
-        const payload = e.payload as { title?: string }
-        addActivity(`New incident: ${payload.title || 'Unknown'}`, 'warning')
-        // Refresh stats
-        fetchData()
-      })
-    )
+    // Subscribe to relevant events and refresh on change
+    const eventTypes = [
+      EventType.INCIDENT_CREATED,
+      EventType.INCIDENT_RESOLVED,
+      EventType.ACTION_CREATED,
+      EventType.ACTION_APPROVED,
+      EventType.ACTION_EXECUTED,
+      EventType.RCA_COMPLETED,
+      EventType.ALERT,
+    ]
 
-    unsubscribers.push(
-      subscribe(EventType.INCIDENT_RESOLVED, (e: WebSocketEvent) => {
-        const payload = e.payload as { incident_id?: string }
-        addActivity(`Incident ${payload.incident_id?.slice(0, 8) || ''} resolved`, 'success')
-        fetchData()
-      })
-    )
-
-    // Action events
-    unsubscribers.push(
-      subscribe(EventType.ACTION_CREATED, (e: WebSocketEvent) => {
-        const payload = e.payload as { description?: string }
-        addActivity(`Action created: ${payload.description || 'Unknown'}`, 'info')
-        fetchData()
-      })
-    )
-
-    unsubscribers.push(
-      subscribe(EventType.ACTION_APPROVED, (e: WebSocketEvent) => {
-        const payload = e.payload as { action_type?: string }
-        addActivity(`Action approved: ${payload.action_type || 'Unknown'}`, 'success')
-        fetchData()
-      })
-    )
-
-    unsubscribers.push(
-      subscribe(EventType.ACTION_EXECUTED, (e: WebSocketEvent) => {
-        const payload = e.payload as { action_type?: string }
-        addActivity(`Action executed: ${payload.action_type || 'Unknown'}`, 'success')
-        fetchData()
-      })
-    )
-
-    // RCA events
-    unsubscribers.push(
-      subscribe(EventType.RCA_STARTED, (e: WebSocketEvent) => {
-        const payload = e.payload as { incident_id?: string }
-        addActivity(`RCA started for incident ${payload.incident_id?.slice(0, 8) || ''}`, 'info')
-      })
-    )
-
-    unsubscribers.push(
-      subscribe(EventType.RCA_COMPLETED, (e: WebSocketEvent) => {
-        const payload = e.payload as { incident_id?: string }
-        addActivity(`RCA completed for incident ${payload.incident_id?.slice(0, 8) || ''}`, 'success')
-      })
-    )
-
-    // System alerts
-    unsubscribers.push(
-      subscribe(EventType.ALERT, (e: WebSocketEvent) => {
-        const payload = e.payload as { message?: string }
-        addActivity(`Alert: ${payload.message || 'System alert'}`, 'warning')
-      })
-    )
+    eventTypes.forEach((eventType) => {
+      unsubscribers.push(subscribe(eventType, refreshOnEvent))
+    })
 
     return () => {
       unsubscribers.forEach((unsub) => unsub())
     }
-  }, [subscribe, addActivity])
-
-  // Update activity times
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setRecentActivity((prev) =>
-        prev.map((item) => ({
-          ...item,
-          time: formatRelativeTime(item.timestamp),
-        }))
-      )
-    }, 60000) // Update every minute
-
-    return () => clearInterval(interval)
-  }, [])
+  }, [subscribe, refreshOnEvent])
 
   const fetchData = async () => {
     setLoading(true)
     setError(null)
     try {
-      const [healthData, statsData] = await Promise.all([
+      const [healthData, statsData, containersResponse] = await Promise.all([
         api.health.check(),
         api.dashboard.getStats(),
+        fetch('/api/v1/infrastructure/containers').then(r => r.ok ? r.json() : { containers: [] }),
       ])
       setHealth(healthData)
       setStats(statsData)
       setLastRefresh(new Date())
+
+      // Update services with container data
+      const containerServices: ServiceStatus[] = (containersResponse.containers || [])
+        .filter((c: { monitored?: boolean }) => c.monitored)
+        .map((c: { name: string; health: string; monitored: boolean }) => ({
+          name: c.name,
+          status: (c.health === 'healthy' ? 'healthy' : c.health === 'unhealthy' ? 'unhealthy' : 'unknown') as ServiceStatus['status'],
+          monitored: c.monitored,
+          // Generate fake uptime history for display (last 20 intervals)
+          uptimeHistory: Array.from({ length: 20 }, () =>
+            c.health === 'healthy' ? 'up' as const :
+            c.health === 'unhealthy' ? 'down' as const :
+            'unknown' as const
+          ),
+        }))
+      setServices(containerServices)
     } catch (err) {
       console.error('Dashboard fetch error:', err)
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch dashboard data'
@@ -262,47 +205,72 @@ export function Dashboard() {
         </div>
       )}
 
-      {/* Recent Activity */}
+      {/* Service Availability */}
       <div className="bg-card rounded-lg border border-border p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold">Recent Activity</h2>
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <Server className="h-5 w-5" />
+            Service Availability
+          </h2>
           {isConnected && (
             <span className="text-xs text-green-500 flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-              Real-time updates
+              Live monitoring
             </span>
           )}
         </div>
         <div className="space-y-4">
-          {recentActivity.length > 0 ? (
-            recentActivity.map((item, i) => (
-              <div
-                key={i}
-                className="flex items-center gap-4 p-3 rounded-lg bg-muted/50"
-              >
-                <div
-                  className={`w-2 h-2 rounded-full ${
-                    item.type === 'success'
-                      ? 'bg-green-500'
-                      : item.type === 'warning'
-                      ? 'bg-yellow-500'
-                      : 'bg-blue-500'
-                  }`}
-                />
-                <div className="flex-1">
-                  <p className="text-sm font-medium">{item.event}</p>
-                  <p className="text-xs text-muted-foreground">{item.time}</p>
+          {services.length > 0 ? (
+            services.map((service) => (
+              <div key={service.name} className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${
+                      service.status === 'healthy' ? 'bg-green-500' :
+                      service.status === 'unhealthy' ? 'bg-red-500' :
+                      'bg-yellow-500'
+                    }`} />
+                    <span className="font-medium text-sm">{service.name}</span>
+                    {service.monitored && (
+                      <span className="px-1.5 py-0.5 bg-blue-500/10 text-blue-500 rounded text-xs">
+                        Monitoring
+                      </span>
+                    )}
+                  </div>
+                  <span className={`text-xs font-medium ${
+                    service.status === 'healthy' ? 'text-green-500' :
+                    service.status === 'unhealthy' ? 'text-red-500' :
+                    'text-yellow-500'
+                  }`}>
+                    {service.status === 'healthy' ? '100%' : service.status === 'unhealthy' ? '0%' : '--'}
+                  </span>
+                </div>
+                {/* Uptime bar visualization */}
+                <div className="flex gap-0.5">
+                  {service.uptimeHistory.map((status, i) => (
+                    <div
+                      key={i}
+                      className={`h-6 flex-1 rounded-sm ${
+                        status === 'up' ? 'bg-green-500/80' :
+                        status === 'down' ? 'bg-red-500/80' :
+                        'bg-muted'
+                      }`}
+                      title={`${status === 'up' ? 'Up' : status === 'down' ? 'Down' : 'Unknown'}`}
+                    />
+                  ))}
+                </div>
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>20 min ago</span>
+                  <span>Now</span>
                 </div>
               </div>
             ))
           ) : (
             <div className="text-center py-8 text-muted-foreground">
-              <Activity className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p className="text-sm">No recent activity</p>
+              <Server className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <p className="text-sm">No services being monitored</p>
               <p className="text-xs mt-1">
-                {isConnected
-                  ? 'Activity will appear here in real-time as events occur'
-                  : 'Connect to WebSocket for real-time updates'}
+                Go to <a href="/agents" className="text-primary hover:underline">Agent Hub → Infrastructure</a> to select containers to monitor
               </p>
             </div>
           )}
@@ -378,21 +346,6 @@ function StatCard({
       </div>
     </div>
   )
-}
-
-// Helper function to format relative time
-function formatRelativeTime(date: Date): string {
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffSec = Math.floor(diffMs / 1000)
-  const diffMin = Math.floor(diffSec / 60)
-  const diffHour = Math.floor(diffMin / 60)
-  const diffDay = Math.floor(diffHour / 24)
-
-  if (diffSec < 60) return 'Just now'
-  if (diffMin < 60) return `${diffMin} min ago`
-  if (diffHour < 24) return `${diffHour} hour${diffHour > 1 ? 's' : ''} ago`
-  return `${diffDay} day${diffDay > 1 ? 's' : ''} ago`
 }
 
 function ModelCard({

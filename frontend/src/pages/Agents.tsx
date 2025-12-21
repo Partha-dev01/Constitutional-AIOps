@@ -32,6 +32,7 @@ interface ContainerInfo {
   port: string | null
   image: string | null
   description: string | null
+  monitored: boolean
 }
 
 // Activity item type for agent activity streams
@@ -307,7 +308,15 @@ export function Agents() {
       const response = await fetch('/api/v1/infrastructure/containers')
       if (response.ok) {
         const data = await response.json()
-        setContainers(data.containers || [])
+        // Sort containers: monitored first, then by name
+        const sortedContainers = (data.containers || []).sort((a: ContainerInfo, b: ContainerInfo) => {
+          // Monitored containers first
+          if (a.monitored && !b.monitored) return -1
+          if (!a.monitored && b.monitored) return 1
+          // Then sort by name
+          return a.name.localeCompare(b.name)
+        })
+        setContainers(sortedContainers)
         setInfrastructureStats({
           total: data.total || 0,
           healthy: data.healthy || 0,
@@ -1166,7 +1175,14 @@ export function Agents() {
                             }`} />
                           </div>
                           <div>
-                            <h4 className="font-semibold">{container.name}</h4>
+                            <div className="flex items-center gap-2">
+                              <h4 className="font-semibold">{container.name}</h4>
+                              {container.monitored && (
+                                <span className="px-2 py-0.5 bg-blue-500/10 text-blue-500 rounded-full text-xs font-medium">
+                                  Monitoring
+                                </span>
+                              )}
+                            </div>
                             <p className="text-sm text-muted-foreground">{container.description}</p>
                           </div>
                         </div>
