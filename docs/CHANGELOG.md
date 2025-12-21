@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed (2025-12-21)
+- **CRITICAL: Incidents Page NetworkError**: Removed hardcoded `VITE_API_URL=http://localhost:8000` from docker-compose.yml - frontend now uses relative `/api/v1` path which nginx proxies correctly
+- **Infrastructure Tab "Unknown" Status**: Running containers without HEALTHCHECK directive now show as "healthy" instead of "unknown" (grafana, loki, prometheus, nextcloud)
+- **Dashboard Hardcoded 45min**: Replaced mock MTTR value with actual LLM response latency from health endpoint
+- **Dashboard Empty States**: Remediation Performance section now shows "N/A" / "None" / "No actions today" instead of "0%" and "0"
+- **Graph Explorer No Edges**: Added default service dependencies that are always shown (frontend→backend, backend→neo4j/loki/prometheus, etc.)
+- **Service Availability Bars**: Fixed health status mapping - running containers now display green bars
+
+### Added
+- **Promtail Log Shipping**: Added Promtail container to ship Docker container logs to Loki (LGTM stack)
+- **Jarvis Labs LLM Integration**: docker-compose.yml now defaults to Jarvis Labs Ollama endpoint for qwen3:4b and qwen3:14b models
+
+### Changed
+- **Dashboard Metrics Labels**: Changed "Mean time to resolve" to "LLM response latency" for clarity
+- **DashboardStats Interface**: `mttr_minutes` now accepts `number | null` type
+
 ### Added
 - **Agents Page** (`/agents`): New comprehensive agent management interface with 5 tabs:
   - Fast Agent Activity: Real-time telemetry annotation stream

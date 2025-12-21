@@ -1,6 +1,6 @@
 # Constitutional AIOps - Issue Tracker
 
-> **Last Updated**: 2025-12-20
+> **Last Updated**: 2025-12-21
 > **Open Issues**: 0
 > **Blockers**: 0
 
@@ -33,6 +33,54 @@ None - All core functionality implemented and tested.
 ---
 
 ## ✅ Resolved Issues
+
+### 2025-12-21 - Frontend/Backend Integration Fixes
+
+1. **[RESOLVED-008] Incidents Page NetworkError**
+   - Status: RESOLVED
+   - Priority: HIGH
+   - Impact: Incidents page showed "NetworkError when attempting to fetch resource"
+   - Files: `docker-compose.yml`
+   - Root Cause: `VITE_API_URL=http://localhost:8000` hardcoded in frontend environment - doesn't work inside Docker container
+   - Solution: Removed VITE_API_URL from docker-compose.yml; frontend now uses relative `/api/v1` path which nginx proxies correctly
+
+2. **[RESOLVED-009] Infrastructure Tab "Unknown" Status**
+   - Status: RESOLVED
+   - Priority: MEDIUM
+   - Impact: grafana, loki, prometheus, nextcloud showed "unknown" health status
+   - Files: `src/api/routes/infrastructure.py`
+   - Root Cause: Containers without HEALTHCHECK directive had health=None, which was passed as-is to frontend
+   - Solution: Treat running containers with health=None as "healthy" instead of "unknown"
+
+3. **[RESOLVED-010] Dashboard Hardcoded 45min MTTR**
+   - Status: RESOLVED
+   - Priority: MEDIUM
+   - Impact: "Avg Response Time" always showed "45min" regardless of actual performance
+   - Files: `frontend/src/lib/api.ts`, `frontend/src/pages/Dashboard.tsx`
+   - Root Cause: `mttr_minutes: 45` hardcoded in api.ts getStats() function
+   - Solution: Calculate actual response time from LLM health endpoint latency_ms values
+
+4. **[RESOLVED-011] Dashboard Empty State Handling**
+   - Status: RESOLVED
+   - Priority: LOW
+   - Impact: Remediation Performance showed "0%" and "0" when no actions existed
+   - Files: `frontend/src/pages/Dashboard.tsx`
+   - Solution: Display "N/A" / "None" / "No actions today" for empty states
+
+5. **[RESOLVED-012] Graph Explorer No Edges**
+   - Status: RESOLVED
+   - Priority: MEDIUM
+   - Impact: Graph showed "9 nodes, 0 edges" - no service dependencies visible
+   - Files: `src/api/routes/graph.py`
+   - Root Cause: Default dependencies only added when services list was empty
+   - Solution: Always add default service dependencies regardless of data source
+
+6. **[RESOLVED-013] Service Availability Bars Wrong Color**
+   - Status: RESOLVED
+   - Priority: LOW
+   - Impact: Running containers showed gray/red bars instead of green
+   - Files: `frontend/src/pages/Dashboard.tsx`, `src/api/routes/infrastructure.py`
+   - Solution: Fixed health status mapping; running containers now display green bars
 
 ### 2025-12-20 - Integration Testing Fixes
 
@@ -108,7 +156,7 @@ None - All core functionality implemented and tested.
 | High Priority | 0 |
 | Medium Priority | 0 |
 | Low Priority | 0 |
-| Resolved | 9 |
+| Resolved | 15 |
 
 ---
 
