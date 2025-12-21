@@ -20,17 +20,25 @@ class LLMConfig:
     fast_agent_url: str = field(
         default_factory=lambda: os.getenv("FAST_AGENT_URL", "http://localhost:8081/v1")
     )
-    fast_agent_model: str = "qwen3-4b"
+    fast_agent_model: str = field(
+        default_factory=lambda: os.getenv("FAST_AGENT_MODEL", "qwen3:4b")
+    )
     fast_agent_context: int = 8192  # 8K context window
-    fast_agent_timeout: float = 30.0  # seconds
-    
+    fast_agent_timeout: float = field(
+        default_factory=lambda: float(os.getenv("FAST_AGENT_TIMEOUT", "30"))
+    )
+
     # Reasoning Agent (Qwen3-14B) - Always loaded at port 8082
     reasoning_agent_url: str = field(
         default_factory=lambda: os.getenv("REASONING_AGENT_URL", "http://localhost:8082/v1")
     )
-    reasoning_agent_model: str = "qwen3-14b"
+    reasoning_agent_model: str = field(
+        default_factory=lambda: os.getenv("REASONING_AGENT_MODEL", "qwen3:14b")
+    )
     reasoning_agent_context: int = 4096  # 4K context window
-    reasoning_agent_timeout: float = 120.0  # seconds (longer for complex reasoning)
+    reasoning_agent_timeout: float = field(
+        default_factory=lambda: float(os.getenv("REASONING_AGENT_TIMEOUT", "120"))
+    )
 
 
 @dataclass

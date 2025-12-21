@@ -23,8 +23,9 @@ services:
     environment:
       # Point both agents to the same Ollama endpoint
       # Different models are selected via the model parameter in API calls
-      - FAST_AGENT_URL=${JARVIS_OLLAMA_URL:-http://localhost:11434}/v1
-      - REASONING_AGENT_URL=${JARVIS_OLLAMA_URL:-http://localhost:11434}/v1
+      # Trailing slash is required for httpx relative URL resolution
+      - FAST_AGENT_URL=${JARVIS_OLLAMA_URL:-http://localhost:11434}/v1/
+      - REASONING_AGENT_URL=${JARVIS_OLLAMA_URL:-http://localhost:11434}/v1/
       # Model names for Ollama (Qwen3 - better reasoning than Qwen2.5)
       - FAST_AGENT_MODEL=qwen3:4b
       - REASONING_AGENT_MODEL=qwen3:14b
@@ -33,6 +34,8 @@ services:
       - REASONING_AGENT_TIMEOUT=180
       # Enable debug mode for development
       - DEBUG=true
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
     # For Windows Docker Desktop, use host.docker.internal if needed
     extra_hosts:
       - "host.docker.internal:host-gateway"

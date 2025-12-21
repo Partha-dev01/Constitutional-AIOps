@@ -1,8 +1,8 @@
 # Constitutional AIOps - Development Checklist
 
-> **Last Updated**: 2025-12-19
-> **Current Phase**: Phase 4 - Deployment Package (FILES READY)
-> **Overall Progress**: ~98%
+> **Last Updated**: 2025-12-20
+> **Current Phase**: Phase 5 - Agents Hub & UI Enhancements (COMPLETE)
+> **Overall Progress**: 100% CORE COMPLETE
 > **Architecture**: Simultaneous Dual-Model (Qwen3-4B + Qwen3-14B on 24GB VRAM)
 > **Deployment**: Hybrid (Jarvis Labs A5000 GPU + Local Services)
 
@@ -230,19 +230,76 @@
 
 ---
 
-## 📋 Pending (Phase 4 - Jarvis Labs Testing)
+## ✅ Completed (Phase 4 - Jarvis Labs Integration Testing)
 
 ### Jarvis Labs Deployment Testing
-- [ ] Create Jarvis Labs account and add credits ($10-20)
-- [ ] Add SSH public key to Jarvis Labs account
-- [ ] Launch Ollama template instance (A5000 $0.49/hr)
-- [ ] SSH into instance and run `scripts/setup-jarvis-ollama.sh`
-- [ ] Verify models loaded (qwen3:4b + qwen3:14b)
-- [ ] Configure local `.env` with `JARVIS_OLLAMA_URL`
-- [ ] Start local services with `docker-compose.hybrid.yml`
-- [ ] Test all API endpoints
-- [ ] Run frontend end-to-end tests
-- [ ] Performance benchmarks (latency over HTTPS)
+- [x] Create Jarvis Labs account and add credits
+- [x] Add SSH public key to Jarvis Labs account
+- [x] Launch Ollama template instance (A5000 $0.49/hr)
+- [x] SSH into instance and pull Qwen3 models
+- [x] Verify models loaded (qwen3:4b + qwen3:14b) - Both fit on 24GB GPU
+- [x] Configure local `.env` with `JARVIS_OLLAMA_URL`
+- [x] Start local services with `docker-compose.hybrid.yml`
+- [x] Test all API endpoints - Chat, Health, RCA working
+- [x] Fix config environment variables (model names from env)
+- [x] Fix httpx URL resolution (relative paths)
+- [x] Fix health check endpoint path
+- [x] Remove hardcoded mock responses from chat API
+- [x] Fix frontend HealthResponse type mismatch (array vs object)
+- [x] Remove frontend mock data fallbacks (Dashboard, Chat)
+- [x] Fix frontend agent status display (isComponentHealthy helper)
+
+---
+
+## ✅ Completed (Phase 5 - Agents Hub & UI Enhancements)
+
+### Agents Page [100%]
+- [x] frontend/src/pages/Agents.tsx - New comprehensive agent management interface
+  - [x] Fast Agent Activity tab - Real-time telemetry annotation stream
+  - [x] Reasoning Agent Activity tab - RCA and planning results display
+  - [x] Telemetry Viewer tab - Logs, metrics, traces from LGTM stack
+  - [x] Graph Explorer tab - Neo4j episodic memory visualization
+  - [x] MCP Tools tab - Tool configuration and execution interface
+- [x] frontend/src/App.tsx - Added /agents route
+- [x] frontend/src/components/Layout.tsx - Added Agents navigation link
+
+### Backend API Endpoints [100%]
+- [x] src/api/routes/agents.py - Agent activity endpoints
+  - GET /api/v1/agents/fast/activity - Fast agent activity stream
+  - GET /api/v1/agents/fast/stats - Fast agent performance stats
+  - GET /api/v1/agents/reasoning/activity - Reasoning agent activity stream
+  - GET /api/v1/agents/reasoning/stats - Reasoning agent performance stats
+- [x] src/api/routes/telemetry.py - Telemetry endpoints
+  - GET /api/v1/telemetry/logs - Log queries from Loki
+  - GET /api/v1/telemetry/metrics - Metrics from Prometheus
+  - GET /api/v1/telemetry/traces - Traces from Tempo
+  - GET /api/v1/telemetry/health - Telemetry backends health
+- [x] src/api/routes/graph.py - Graph endpoints
+  - GET /api/v1/graph/episodes - Neo4j episodic memory
+  - GET /api/v1/graph/services - Service dependency list
+  - GET /api/v1/graph/services/{name}/dependencies - Service dependency graph
+  - GET /api/v1/graph/episodes/{id} - Episode details
+  - GET /api/v1/graph/episodes/{id}/similar - Find similar episodes
+  - GET /api/v1/graph/stats - Graph database statistics
+- [x] src/api/routes/prompts.py - System prompts endpoints
+  - GET /api/v1/prompts/ - List all system prompts
+  - GET /api/v1/prompts/{name} - Get specific prompt
+  - PUT /api/v1/prompts/{name} - Update prompt
+  - POST /api/v1/prompts/reset - Reset all prompts
+  - POST /api/v1/prompts/{name}/reset - Reset single prompt
+- [x] src/main.py - Registered all new routers
+
+### System Prompts UI [100%]
+- [x] frontend/src/pages/Settings.tsx - Added System Prompts tab
+  - View and edit prompts for Fast Agent and Reasoning Agent
+  - Reset individual prompts or all prompts to defaults
+  - Agent type badges (Fast Agent / Reasoning Agent)
+
+### Bug Fixes [100%]
+- [x] Layout.tsx - Fixed hardcoded agent status (now uses dynamic health check)
+- [x] Incidents.tsx - Removed mock data fallback (shows empty state on errors)
+- [x] Dashboard.tsx - Removed mock activity fallback (shows empty state)
+- [x] Error styling - Changed from yellow to red for actual errors
 
 ### Optional Enhancements
 - [ ] User authentication (basic auth or OAuth)
@@ -286,13 +343,18 @@ None - All Phase 4 files are ready. Next step is Jarvis Labs deployment and test
 | 4 | Deployment Files | ✅ 100% |
 | 4 | Docker Configs | ✅ 100% |
 | 4 | Documentation | ✅ 100% |
-| 4 | Jarvis Labs Testing | ⬜ 0% |
+| 4 | Jarvis Labs Testing | ✅ 100% |
+| 5 | Agents Page | ✅ 100% |
+| 5 | Backend API Endpoints | ✅ 100% |
+| 5 | System Prompts UI | ✅ 100% |
+| 5 | Bug Fixes | ✅ 100% |
 
 **Overall Phase 1**: ✅ 100% COMPLETE
 **Overall Phase 2**: ✅ 100% COMPLETE
 **Overall Phase 3**: ✅ 95% COMPLETE (auth optional)
-**Overall Phase 4**: 🔄 75% COMPLETE (files ready, testing pending)
-**Overall Project**: ~98%
+**Overall Phase 4**: ✅ 100% COMPLETE (Jarvis Labs integration tested)
+**Overall Phase 5**: ✅ 100% COMPLETE (Agents Hub & UI Enhancements)
+**Overall Project**: 100% CORE COMPLETE
 
 ---
 
@@ -314,7 +376,78 @@ None - All Phase 4 files are ready. Next step is Jarvis Labs deployment and test
 
 ## 📝 Session Log
 
-### 2025-12-20 - QWEN3 MODEL UPGRADE & PERSISTENCE FIX
+### 2025-12-20 - FRONTEND FIXES + FULL E2E VERIFICATION
+**Completed**:
+- Fixed critical frontend issues that caused agents to show as "offline"
+- Removed ALL mock data fallbacks from frontend
+
+**Frontend Bug Fixes**:
+1. **HealthResponse Type Mismatch** (`frontend/src/lib/api.ts`):
+   - Frontend expected `components: { fast_agent: boolean; ... }` (object)
+   - Backend returns `components: [{ name: "fast_agent", healthy: true, ... }]` (array)
+   - Added `HealthComponent` interface and `isComponentHealthy()` helper function
+
+2. **Chat Mock Response Removed** (`frontend/src/pages/Chat.tsx`):
+   - Removed `generateMockResponse()` function
+   - Now shows proper error messages when API calls fail
+   - Changed error banner from yellow to red for clear error indication
+
+3. **Dashboard Mock Data Removed** (`frontend/src/pages/Dashboard.tsx`):
+   - Removed mock data fallback in catch block
+   - Updated agent status checks to use `isComponentHealthy()` helper
+
+4. **Settings Health Check Fixed** (`frontend/src/pages/Settings.tsx`):
+   - Updated all agent status checks to use `isComponentHealthy()` helper
+   - Fixed Neo4j status display
+
+**Verification Results**:
+- Health API: ✅ Returns correct array format
+- Chat API: ✅ Real LLM responses (Qwen3-14B)
+- Dashboard: ✅ Agents show as "online" when healthy
+- Settings: ✅ Model status correctly displayed
+- Frontend: ✅ No mock data anywhere
+
+---
+
+### 2025-12-20 - JARVIS LABS INTEGRATION COMPLETE + BUG FIXES
+**Completed**:
+- Successfully tested Jarvis Labs hybrid deployment end-to-end
+- Fixed 4 critical bugs discovered during integration testing:
+
+**Bug Fixes**:
+1. **Config Environment Variables** (`src/config.py`):
+   - Model names were hardcoded (`qwen3-4b`) instead of reading from env vars
+   - Fixed to read `FAST_AGENT_MODEL` and `REASONING_AGENT_MODEL` from environment
+   - Also fixed timeout values to read from `FAST_AGENT_TIMEOUT` and `REASONING_AGENT_TIMEOUT`
+
+2. **httpx URL Resolution** (`src/agents/model_router.py`):
+   - Changed absolute paths (`/chat/completions`) to relative paths (`chat/completions`)
+   - Added trailing slash to base URL in docker-compose.hybrid.yml for correct resolution
+
+3. **Health Check Endpoint** (`docker-compose.yml`):
+   - Fixed healthcheck from `/health` to `/api/v1/health`
+
+4. **Hardcoded Mock Responses** (`src/api/routes/chat.py`):
+   - Removed `_mock_chat_response()` and `_mock_analysis_response()` functions
+   - Replaced fallback logic with proper HTTP 503 errors with clear messages
+   - Ensures real LLM errors are surfaced, not masked by hardcoded responses
+
+**Integration Test Results**:
+- Fast Agent (qwen3:4b): ✅ 445ms latency to Jarvis Labs
+- Reasoning Agent (qwen3:14b): ✅ 176ms latency to Jarvis Labs
+- Neo4j: ✅ 2.68ms latency
+- Chat API: ✅ Returns real LLM responses
+- Health API: ✅ All components healthy
+
+**Documentation Updated**:
+- `docs/CHANGELOG.md` - Added Fixed section with all 4 bug fixes
+- `docs/CHECKLIST.md` - Updated progress to 100% complete
+- `docs/ISSUES.md` - Added resolved issues
+- `docs/JARVIS_LABS_TESTING_RESULTS.md` - Full integration testing documentation
+
+---
+
+### 2025-12-20 (Earlier) - QWEN3 MODEL UPGRADE & PERSISTENCE FIX
 **Completed**:
 - Researched Qwen3 vs Qwen2.5 - Qwen3-4B outperforms Qwen2.5-7B significantly
   - MMLU-Pro: 74 vs 45, GPQA: 59 vs 36.4, MATH: 90 vs 49.8

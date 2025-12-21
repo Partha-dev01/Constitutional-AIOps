@@ -11,8 +11,10 @@ import {
   AlertTriangle,
   Loader2,
   Info,
+  FileText,
+  RotateCcw,
 } from 'lucide-react'
-import api, { HealthResponse } from '../lib/api'
+import api, { HealthResponse, isComponentHealthy } from '../lib/api'
 
 interface ConstitutionalSettings {
   autoThreshold: number
@@ -43,8 +45,16 @@ interface TelemetrySettings {
   retentionDays: number
 }
 
+interface SystemPrompt {
+  name: string
+  description: string
+  prompt: string
+  agent: 'fast' | 'reasoning'
+  editable: boolean
+}
+
 export function Settings() {
-  const [activeTab, setActiveTab] = useState<'constitutional' | 'notifications' | 'telemetry' | 'models'>('constitutional')
+  const [activeTab, setActiveTab] = useState<'constitutional' | 'notifications' | 'telemetry' | 'models' | 'prompts'>('constitutional')
   const [health, setHealth] = useState<HealthResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -79,10 +89,69 @@ export function Settings() {
     retentionDays: 30,
   })
 
+  // System prompts state
+  const [prompts, setPrompts] = useState<SystemPrompt[]>([])
+  const [promptsLoading, setPromptsLoading] = useState(false)
+  const [editingPrompt, setEditingPrompt] = useState<string | null>(null)
+  const [editedPromptText, setEditedPromptText] = useState('')
+
   // Fetch health status on mount
   useEffect(() => {
     fetchHealth()
   }, [])
+
+  // Fetch prompts when prompts tab is active
+  useEffect(() => {
+    if (activeTab === 'prompts') {
+      fetchPrompts()
+    }
+  }, [activeTab])
+
+  const fetchPrompts = async () => {
+    setPromptsLoading(true)
+    try {
+      const response = await fetch('/api/v1/prompts/')
+      if (response.ok) {
+        const data = await response.json()
+        setPrompts(data.prompts || [])
+      }
+    } catch (err) {
+      console.error('Failed to fetch prompts:', err)
+    } finally {
+      setPromptsLoading(false)
+    }
+  }
+
+  const handleSavePrompt = async (promptName: string) => {
+    try {
+      const response = await fetch(`/api/v1/prompts/${promptName}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: editedPromptText }),
+      })
+      if (response.ok) {
+        setEditingPrompt(null)
+        fetchPrompts()
+        setSaved(true)
+        setTimeout(() => setSaved(false), 2000)
+      }
+    } catch (err) {
+      console.error('Failed to save prompt:', err)
+    }
+  }
+
+  const handleResetPrompt = async (promptName: string) => {
+    try {
+      const response = await fetch(`/api/v1/prompts/${promptName}/reset`, {
+        method: 'POST',
+      })
+      if (response.ok) {
+        fetchPrompts()
+      }
+    } catch (err) {
+      console.error('Failed to reset prompt:', err)
+    }
+  }
 
   const fetchHealth = async () => {
     setLoading(true)
@@ -115,6 +184,7 @@ export function Settings() {
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'telemetry', label: 'Telemetry', icon: Network },
     { id: 'models', label: 'Models', icon: Cpu },
+    { id: 'prompts', label: 'System Prompts', icon: FileText },
   ] as const
 
   return (
@@ -450,7 +520,7 @@ export function Settings() {
                   name="Fast Agent"
                   model="Qwen3-4B Q4_K_M"
                   port={8081}
-                  status={health?.components.fast_agent ? 'online' : 'offline'}
+                  status={isComponentHealthy(health, 'fast_agent') ? 'online' : 'offline'}
                   purpose="Telemetry annotation, classification"
                   context="8K tokens"
                   latency="<50ms"
@@ -459,7 +529,7 @@ export function Settings() {
                   name="Reasoning Agent"
                   model="Qwen3-14B Q4_K_M"
                   port={8082}
-                  status={health?.components.reasoning_agent ? 'online' : 'offline'}
+                  status={isComponentHealthy(health, 'reasoning_agent') ? 'online' : 'offline'}
                   purpose="RCA, remediation planning, human chat"
                   context="4K tokens"
                   latency="<200ms"
@@ -502,20 +572,142 @@ export function Settings() {
                   <span className="font-medium">Neo4j</span>
                   <span
                     className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
-                      health?.components.neo4j
+                      isComponentHealthy(health, 'neo4j')
                         ? 'bg-green-500/10 text-green-500'
                         : 'bg-yellow-500/10 text-yellow-500'
                     }`}
                   >
-                    {health?.components.neo4j ? 'Connected' : 'In-memory fallback'}
+                    {isComponentHealthy(health, 'neo4j') ? 'Connected' : 'In-memory fallback'}
                   </span>
                 </div>
               </div>
               <p className="text-sm text-muted-foreground">
-                {health?.components.neo4j
+                {isComponentHealthy(health, 'neo4j')
                   ? 'Using Neo4j for persistent episodic memory and service dependency graphs.'
                   : 'Neo4j not available. Using in-memory episode store with similarity search.'}
               </p>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'prompts' && (
+          <div className="space-y-6">
+            <div className="bg-card rounded-lg border border-border p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-lg font-semibold">System Prompts</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Customize prompts for Fast Agent and Reasoning Agent
+                  </p>
+                </div>
+                <button
+                  onClick={fetchPrompts}
+                  disabled={promptsLoading}
+                  className="flex items-center gap-2 px-3 py-1.5 text-sm bg-muted text-muted-foreground rounded-lg hover:bg-muted/80 disabled:opacity-50"
+                >
+                  {promptsLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                  Refresh
+                </button>
+              </div>
+
+              {promptsLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : prompts.length > 0 ? (
+                <div className="space-y-4">
+                  {prompts.map((prompt) => (
+                    <div key={prompt.name} className="p-4 bg-muted/50 rounded-lg">
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <h3 className="font-semibold">{prompt.description}</h3>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className={`px-2 py-0.5 rounded text-xs ${
+                              prompt.agent === 'fast'
+                                ? 'bg-yellow-500/10 text-yellow-500'
+                                : 'bg-purple-500/10 text-purple-500'
+                            }`}>
+                              {prompt.agent === 'fast' ? 'Fast Agent' : 'Reasoning Agent'}
+                            </span>
+                            <span className="text-xs text-muted-foreground">{prompt.name}</span>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          {editingPrompt === prompt.name ? (
+                            <>
+                              <button
+                                onClick={() => handleSavePrompt(prompt.name)}
+                                className="px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600"
+                              >
+                                Save
+                              </button>
+                              <button
+                                onClick={() => setEditingPrompt(null)}
+                                className="px-3 py-1 bg-muted text-muted-foreground rounded text-sm hover:bg-muted/80"
+                              >
+                                Cancel
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => {
+                                  setEditingPrompt(prompt.name)
+                                  setEditedPromptText(prompt.prompt)
+                                }}
+                                disabled={!prompt.editable}
+                                className="px-3 py-1 bg-primary text-primary-foreground rounded text-sm hover:bg-primary/90 disabled:opacity-50"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => handleResetPrompt(prompt.name)}
+                                className="px-3 py-1 bg-muted text-muted-foreground rounded text-sm hover:bg-muted/80 flex items-center gap-1"
+                              >
+                                <RotateCcw className="h-3 w-3" />
+                                Reset
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      {editingPrompt === prompt.name ? (
+                        <textarea
+                          value={editedPromptText}
+                          onChange={(e) => setEditedPromptText(e.target.value)}
+                          rows={10}
+                          className="w-full mt-2 p-3 text-sm font-mono bg-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary resize-y"
+                        />
+                      ) : (
+                        <pre className="mt-2 p-3 text-sm font-mono bg-background/50 rounded-lg overflow-x-auto max-h-32 overflow-y-auto whitespace-pre-wrap">
+                          {prompt.prompt}
+                        </pre>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No prompts available</p>
+                  <p className="text-xs mt-1">Start the backend to load system prompts</p>
+                </div>
+              )}
+            </div>
+
+            <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <Info className="h-5 w-5 text-blue-500 mt-0.5" />
+                <div>
+                  <h3 className="font-semibold text-blue-600">About System Prompts</h3>
+                  <p className="text-sm text-blue-600/80 mt-1">
+                    System prompts define how each agent behaves. The Fast Agent handles quick classification
+                    tasks, while the Reasoning Agent performs deep analysis and planning. Changes take effect
+                    immediately for new requests.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         )}

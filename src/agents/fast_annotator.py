@@ -18,12 +18,17 @@ Performance Targets:
 
 import json
 import logging
+import time
+from datetime import datetime
 from typing import Any, Optional
 
 from src.agents.base_agent import AgentResponse, AgentRole, BaseAgent
 from src.agents.model_router import ModelRouter
 
 logger = logging.getLogger(__name__)
+
+# Maximum activity log entries to keep (prevent memory growth)
+MAX_ACTIVITY_LOG_SIZE = 50
 
 
 # System prompt for fast annotation
@@ -62,12 +67,24 @@ class FastAnnotator(BaseAgent):
     def __init__(self, model_router: Optional[ModelRouter] = None):
         """
         Initialize the fast annotator.
-        
+
         Args:
             model_router: ModelRouter instance (creates new if not provided)
         """
         super().__init__(AgentRole.FAST_ANNOTATOR)
         self.model_router = model_router or ModelRouter()
+
+        # Activity logging for API visibility
+        self.activity_log: list[dict[str, Any]] = []
+        self.stats: dict[str, Any] = {
+            "total_requests": 0,
+            "success_count": 0,
+            "error_count": 0,
+            "avg_latency_ms": 0.0,
+            "requests_per_minute": 0.0,
+            "_latency_sum": 0.0,
+            "_first_request_time": None,
+        }
     
     def get_system_prompt(self) -> str:
         """Get the system prompt for fast annotation."""
@@ -76,19 +93,24 @@ class FastAnnotator(BaseAgent):
     async def process(self, input_data: dict[str, Any]) -> AgentResponse:
         """
         Process telemetry data and return annotation.
-        
+
         Args:
             input_data: Dictionary containing:
                 - telemetry_type: "log" | "metric" | "trace"
                 - content: The telemetry data to analyze
                 - context: Optional additional context
-                
+
         Returns:
             AgentResponse with classification and confidence
         """
         # Build prompt
         prompt = self._build_prompt(input_data)
-        
+        telemetry_type = input_data.get("telemetry_type", "unknown")
+        input_content = input_data.get("content", "")
+
+        # Track timing for activity logging
+        start_time = time.perf_counter()
+
         try:
             # Get completion from fast agent
             response = await self.model_router.fast_completion(
@@ -96,14 +118,15 @@ class FastAnnotator(BaseAgent):
                 max_tokens=512,
                 temperature=0.1,  # Low temp for consistent classification
             )
-            
+
             # Parse response
             content = response["choices"][0]["message"]["content"]
             annotation = self._parse_annotation(content)
-            
+            latency_ms = (time.perf_counter() - start_time) * 1000
+
             # Build agent response
             confidence = annotation.get("confidence", 0.5)
-            return AgentResponse(
+            result = AgentResponse(
                 content=annotation.get("summary", "Unknown"),
                 confidence=confidence,
                 confidence_level=self.calculate_confidence_level(confidence),
@@ -117,9 +140,31 @@ class FastAnnotator(BaseAgent):
                     "needs_reasoning": annotation.get("needs_reasoning", False),
                 },
             )
-            
+
+            # Log successful activity
+            self._log_activity(
+                activity_type=f"annotation:{telemetry_type}",
+                input_text=input_content,
+                output_text=content,
+                latency_ms=latency_ms,
+                status="success",
+            )
+
+            return result
+
         except Exception as e:
+            latency_ms = (time.perf_counter() - start_time) * 1000
             self.logger.error(f"Fast annotation failed: {e}")
+
+            # Log failed activity
+            self._log_activity(
+                activity_type=f"annotation:{telemetry_type}",
+                input_text=input_content,
+                output_text=str(e),
+                latency_ms=latency_ms,
+                status="error",
+            )
+
             # Return safe default on error
             return AgentResponse(
                 content=f"Annotation failed: {str(e)}",
@@ -167,6 +212,61 @@ class FastAnnotator(BaseAgent):
                 "summary": content[:200],
                 "needs_reasoning": True,
             }
+
+    def _log_activity(
+        self,
+        activity_type: str,
+        input_text: str,
+        output_text: str,
+        latency_ms: float,
+        status: str = "success",
+    ) -> None:
+        """
+        Log an activity entry for API visibility.
+
+        Args:
+            activity_type: Type of activity (annotation:log, annotation:metric, etc.)
+            input_text: Input telemetry data
+            output_text: Output response
+            latency_ms: Request latency in milliseconds
+            status: Status of the request (success/error)
+        """
+        # Create activity entry
+        entry = {
+            "timestamp": datetime.utcnow(),
+            "type": activity_type,
+            "input": input_text[:500] if input_text else "",  # Truncate for storage
+            "output": output_text[:1000] if output_text else "",
+            "latency_ms": round(latency_ms, 2),
+            "status": status,
+        }
+
+        # Add to log (maintain max size)
+        self.activity_log.append(entry)
+        if len(self.activity_log) > MAX_ACTIVITY_LOG_SIZE:
+            self.activity_log = self.activity_log[-MAX_ACTIVITY_LOG_SIZE:]
+
+        # Update stats
+        self.stats["total_requests"] += 1
+        if status == "success":
+            self.stats["success_count"] += 1
+        else:
+            self.stats["error_count"] += 1
+
+        self.stats["_latency_sum"] += latency_ms
+        self.stats["avg_latency_ms"] = (
+            self.stats["_latency_sum"] / self.stats["total_requests"]
+        )
+
+        # Calculate requests per minute
+        if self.stats["_first_request_time"] is None:
+            self.stats["_first_request_time"] = datetime.utcnow()
+        else:
+            elapsed = (datetime.utcnow() - self.stats["_first_request_time"]).total_seconds()
+            if elapsed > 0:
+                self.stats["requests_per_minute"] = (
+                    self.stats["total_requests"] / elapsed * 60
+                )
 
 
 __all__ = ["FastAnnotator", "FAST_ANNOTATOR_SYSTEM_PROMPT"]

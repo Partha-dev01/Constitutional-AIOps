@@ -3,7 +3,32 @@
     "allow": [
       "Bash(git init:*)",
       "Bash(git config:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nInitial commit - Constitutional AIOps complete codebase\n\nFeatures:\n- Dual-agent LLM architecture (Qwen3-4B + Qwen3-14B)\n- Constitutional AI safety framework (11 principles, 3 tiers)\n- Graph-episodic memory with Neo4j\n- Human-in-the-loop approval workflows\n- React frontend with TypeScript\n- FastAPI backend with WebSocket support\n- Docker Compose deployment (GPU/local/production)\n- Comprehensive documentation and deployment guides\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git branch:*)",
+      "Bash(git remote add:*)",
+      "Bash(git push:*)",
+      "Bash(cat:*)",
+      "Bash(git commit:*)",
+      "Bash(curl -s https://251c243656751.notebooks.jarvislabs.net/api/tags)",
+      "Bash(ssh:*)",
+      "Bash(curl -s -X POST \"https://251c243656751.notebooks.jarvislabs.net/v1/chat/completions\" -H \"Content-Type: application/json\" -d '{\"\"model\"\": \"\"qwen3:4b\"\", \"\"messages\"\": [{\"\"role\"\": \"\"user\"\", \"\"content\"\": \"\"You are a Fast Telemetry Annotator. Classify this log: ERROR 2025-01-15 Connection timeout to database server db-primary-01. Respond with JSON: {\\\"\"severity\\\"\": \\\"\"...\\\"\", \\\"\"category\\\"\": \\\"\"...\\\"\", \\\"\"affected_service\\\"\": \\\"\"...\\\"\"}\"\"}], \"\"max_tokens\"\": 200}')",
+      "Bash(curl -s -X POST \"https://251c243656751.notebooks.jarvislabs.net/v1/chat/completions\" -H \"Content-Type: application/json\" -d '{\"\"model\"\": \"\"qwen3:14b\"\", \"\"messages\"\": [{\"\"role\"\": \"\"user\"\", \"\"content\"\": \"\"You are an RCA Agent. Given these telemetry signals:\\n\\nLogs:\\n- ERROR 10:05:32 db-primary: Connection pool exhausted\\n- ERROR 10:05:35 api-gateway: Request timeout after 30s\\n- WARN 10:05:40 payment-service: Retrying transaction 3/5\\n\\nMetrics:\\n- db-primary CPU: 95%\\n- db-primary connections: 500/500\\n- api-gateway latency: 32000ms (normal: 200ms)\\n\\nPerform Root Cause Analysis. What is the root cause? What remediation do you suggest?\"\"}], \"\"max_tokens\"\": 500}')",
+      "Bash(time curl -s -X POST \"https://251c243656751.notebooks.jarvislabs.net/v1/chat/completions\" -H \"Content-Type: application/json\" -d '{\"\"\"\"model\"\"\"\": \"\"\"\"qwen3:4b\"\"\"\", \"\"\"\"messages\"\"\"\": [{\"\"\"\"role\"\"\"\": \"\"\"\"system\"\"\"\", \"\"\"\"content\"\"\"\": \"\"\"\"You are a Fast Telemetry Annotator. Classify telemetry into structured JSON. Be concise. /no_think\"\"\"\"}, {\"\"\"\"role\"\"\"\": \"\"\"\"user\"\"\"\", \"\"\"\"content\"\"\"\": \"\"\"\"Classify these signals:\\n\\nLogs:\\n1. ERROR db-primary: Connection pool exhausted\\n2. WARN api-gateway: High latency detected\\n3. ERROR payment-service: Transaction failed\\n\\nMetrics:\\n- db-primary CPU: 95%\\n- api-gateway latency: 32000ms\\n\\nRespond with JSON array of classifications.\"\"\"\"}], \"\"\"\"max_tokens\"\"\"\": 300}')",
+      "Bash(python3:*)",
+      "Bash(time curl -s -X POST \"https://251c243656751.notebooks.jarvislabs.net/v1/chat/completions\" -H \"Content-Type: application/json\" -d '{\"\"\"\"model\"\"\"\": \"\"\"\"qwen3:14b\"\"\"\", \"\"\"\"messages\"\"\"\": [{\"\"\"\"role\"\"\"\": \"\"\"\"system\"\"\"\", \"\"\"\"content\"\"\"\": \"\"\"\"You are an RCA Agent for AIOps. Perform deep root cause analysis and suggest remediation actions. /no_think\"\"\"\"}, {\"\"\"\"role\"\"\"\": \"\"\"\"user\"\"\"\", \"\"\"\"content\"\"\"\": \"\"\"\"Given these classified telemetry signals:\\n\\n1. {\\\"\"\"\"source\\\"\"\"\": \\\"\"\"\"db-primary\\\"\"\"\", \\\"\"\"\"level\\\"\"\"\": \\\"\"\"\"ERROR\\\"\"\"\", \\\"\"\"\"category\\\"\"\"\": \\\"\"\"\"database\\\"\"\"\", \\\"\"\"\"issue\\\"\"\"\": \\\"\"\"\"Connection pool exhausted\\\"\"\"\"}\\n2. {\\\"\"\"\"source\\\"\"\"\": \\\"\"\"\"api-gateway\\\"\"\"\", \\\"\"\"\"level\\\"\"\"\": \\\"\"\"\"WARN\\\"\"\"\", \\\"\"\"\"category\\\"\"\"\": \\\"\"\"\"network\\\"\"\"\", \\\"\"\"\"issue\\\"\"\"\": \\\"\"\"\"High latency (32000ms)\\\"\"\"\"}\\n3. {\\\"\"\"\"source\\\"\"\"\": \\\"\"\"\"payment-service\\\"\"\"\", \\\"\"\"\"level\\\"\"\"\": \\\"\"\"\"ERROR\\\"\"\"\", \\\"\"\"\"category\\\"\"\"\": \\\"\"\"\"transaction\\\"\"\"\", \\\"\"\"\"issue\\\"\"\"\": \\\"\"\"\"Transaction failed\\\"\"\"\"}\\n\\nMetrics: db-primary CPU 95%, connections 500/500\\n\\nProvide:\\n1. Root Cause\\n2. Impact Chain\\n3. Recommended Remediation\\n4. Confidence Score (0-100)\"\"\"\"}], \"\"\"\"max_tokens\"\"\"\": 600}')",
+      "Bash(docker --version:*)",
+      "Bash(docker compose:*)",
+      "Bash(\"/c/Program Files/Docker/Docker/resources/bin/docker\" --version)",
+      "Bash(\"/mnt/c/Program Files/Docker/Docker/resources/bin/docker\" --version)",
+      "Bash(tasklist.exe:*)",
+      "Bash(docker ps:*)",
+      "Bash(curl:*)",
+      "Bash(docker logs:*)",
+      "Bash(docker exec:*)",
+      "Bash(docker stop:*)",
+      "Bash(docker run:*)",
+      "Bash(docker start:*)"
     ]
   }
 }

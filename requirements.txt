@@ -41,3 +41,6 @@ python-dateutil>=2.8.2
 # Data Processing
 numpy>=1.26.0
 pandas>=2.1.0
+
+# Docker SDK (for container discovery and demo mode)
+docker>=7.0.0
