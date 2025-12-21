@@ -23,12 +23,17 @@ Modes:
 
 import json
 import logging
+import time
+from datetime import datetime
 from typing import Any, Optional
 
 from src.agents.base_agent import AgentResponse, AgentRole, BaseAgent
 from src.agents.model_router import ModelRouter
 
 logger = logging.getLogger(__name__)
+
+# Maximum activity log entries to keep (prevent memory growth)
+MAX_ACTIVITY_LOG_SIZE = 50
 
 
 # System prompts for different modes
@@ -66,24 +71,88 @@ Respond in JSON format:
 }
 """
 
-CHAT_SYSTEM_PROMPT = """You are an AI operations assistant helping infrastructure operators.
+CHAT_SYSTEM_PROMPT = """You are the Constitutional AIOps Reasoning Agent, an AI operations assistant for infrastructure management.
 
-You have access to:
-- Telemetry data (logs, metrics, traces)
-- Incident history
-- Service dependency graphs
-- Remediation capabilities
+## Your Identity
+- Name: Constitutional AIOps Reasoning Agent
+- Model: Qwen3-14B (Reasoning Agent)
+- Role: Root Cause Analysis, Remediation Planning, Operator Chat
 
-When helping operators:
-1. Be concise but thorough
-2. Explain technical details clearly
-3. Suggest actionable next steps
-4. Always prioritize safety
-5. Escalate when uncertain
+## System Architecture
+You are part of a dual-agent architecture:
+- **Fast Agent (Qwen3-4B)**: Telemetry annotation, log classification, metric anomaly detection
+- **Reasoning Agent (You)**: Deep analysis, RCA, remediation planning, human interaction
 
-Remember: You operate under Constitutional AI principles. Never take actions that 
-could cause data loss, cascade failures, or security breaches without explicit approval.
+## Constitutional AI Framework
+You operate under 11 safety principles across 3 tiers:
+- **Tier 1 (Safety)**: NEVER violate - human safety, data protection, service availability
+- **Tier 2 (Operational)**: Require approval if uncertain
+- **Tier 3 (Learning)**: Soft guidelines for improvement
+
+## Your Capabilities
+1. Analyze telemetry (logs, metrics, traces) from the LGTM stack
+2. Perform Root Cause Analysis on incidents
+3. Suggest remediation actions (with confidence scores)
+4. Access service dependency graphs from Neo4j
+5. Query incident history and similar past events
+6. Monitor Docker containers in real-time
+
+## Response Guidelines
+- Be concise but thorough
+- Always provide confidence levels (0-100%) when suggesting actions
+- For actions with <90% confidence, recommend human approval
+- Reference specific services, containers, and metrics by name
+- Use the runtime context provided below to give accurate, current information
+
+{runtime_context}
 """
+
+# Service-level knowledge for monitored containers
+SERVICE_KNOWLEDGE = {
+    "nextcloud": """
+### Nextcloud Service
+- Type: Self-hosted cloud storage and collaboration
+- Container: nextcloud
+- Port: 80 (mapped to host 8080)
+- Common issues: High CPU during sync, memory pressure, DB connection issues
+- Remediation: Restart container, clear cache, check database""",
+
+    "neo4j": """
+### Neo4j Database
+- Type: Graph database for episodic memory
+- Container: aiops-neo4j
+- Ports: 7474 (HTTP), 7687 (Bolt)
+- Purpose: Store incidents, dependencies, RCA history
+- Common issues: Memory exhaustion, slow queries""",
+
+    "loki": """
+### Grafana Loki
+- Type: Log aggregation system
+- Container: aiops-loki
+- Port: 3100
+- Purpose: Centralized log storage and querying""",
+
+    "prometheus": """
+### Prometheus
+- Type: Metrics collection and alerting
+- Container: aiops-prometheus
+- Port: 9090
+- Purpose: Time-series metrics, alerting rules""",
+
+    "grafana": """
+### Grafana
+- Type: Observability dashboard
+- Container: aiops-grafana
+- Port: 3001
+- Purpose: Visualization of metrics, logs, traces""",
+
+    "tempo": """
+### Grafana Tempo
+- Type: Distributed tracing backend
+- Container: aiops-tempo
+- Port: 3200
+- Purpose: Store and query distributed traces""",
+}
 
 PLANNING_SYSTEM_PROMPT = """You are a remediation planning specialist.
 
@@ -131,12 +200,24 @@ class ReasoningAgent(BaseAgent):
     def __init__(self, model_router: Optional[ModelRouter] = None):
         """
         Initialize the reasoning agent.
-        
+
         Args:
             model_router: ModelRouter instance (creates new if not provided)
         """
         super().__init__(AgentRole.REASONING)
         self.model_router = model_router or ModelRouter()
+
+        # Activity logging for API visibility
+        self.activity_log: list[dict[str, Any]] = []
+        self.stats: dict[str, Any] = {
+            "total_requests": 0,
+            "success_count": 0,
+            "error_count": 0,
+            "avg_latency_ms": 0.0,
+            "requests_per_minute": 0.0,
+            "_latency_sum": 0.0,
+            "_first_request_time": None,
+        }
     
     def get_system_prompt(self, mode: str = "chat") -> str:
         """
@@ -155,25 +236,29 @@ class ReasoningAgent(BaseAgent):
     async def process(self, input_data: dict[str, Any]) -> AgentResponse:
         """
         Process input and return reasoned response.
-        
+
         Args:
             input_data: Dictionary containing:
                 - mode: "rca" | "chat" | "planning"
                 - query: The question or data to analyze
                 - context: Additional context (incident data, etc.)
                 - enable_thinking: Whether to use extended thinking
-                
+
         Returns:
             AgentResponse with analysis and confidence
         """
         mode = input_data.get("mode", "chat")
         query = input_data.get("query", "")
         context = input_data.get("context", "")
+        runtime_context = input_data.get("runtime_context")
         enable_thinking = input_data.get("enable_thinking", False)
-        
-        # Build prompt
-        prompt = self._build_prompt(mode, query, context)
-        
+
+        # Build prompt with runtime context
+        prompt = self._build_prompt(mode, query, context, runtime_context)
+
+        # Track timing for activity logging
+        start_time = time.perf_counter()
+
         try:
             # Get completion from reasoning agent
             response = await self.model_router.reasoning_completion(
@@ -182,14 +267,15 @@ class ReasoningAgent(BaseAgent):
                 temperature=0.3,
                 enable_thinking=enable_thinking,
             )
-            
+
             content = response["choices"][0]["message"]["content"]
-            
+            latency_ms = (time.perf_counter() - start_time) * 1000
+
             # Parse based on mode
             if mode in ("rca", "planning"):
                 parsed = self._parse_json_response(content)
                 confidence = parsed.get("confidence", 0.7)
-                return AgentResponse(
+                result = AgentResponse(
                     content=content,
                     confidence=confidence,
                     confidence_level=self.calculate_confidence_level(confidence),
@@ -199,7 +285,7 @@ class ReasoningAgent(BaseAgent):
                 )
             else:
                 # Chat mode - return as-is
-                return AgentResponse(
+                result = AgentResponse(
                     content=content,
                     confidence=0.8,  # Default confidence for chat
                     confidence_level=self.calculate_confidence_level(0.8),
@@ -207,9 +293,31 @@ class ReasoningAgent(BaseAgent):
                     suggested_action=None,
                     metadata={"mode": "chat"},
                 )
-                
+
+            # Log successful activity
+            self._log_activity(
+                activity_type=mode,
+                input_text=query,
+                output_text=content,
+                latency_ms=latency_ms,
+                status="success",
+            )
+
+            return result
+
         except Exception as e:
+            latency_ms = (time.perf_counter() - start_time) * 1000
             self.logger.error(f"Reasoning failed: {e}")
+
+            # Log failed activity
+            self._log_activity(
+                activity_type=mode,
+                input_text=query,
+                output_text=str(e),
+                latency_ms=latency_ms,
+                status="error",
+            )
+
             return AgentResponse(
                 content=f"Analysis failed: {str(e)}",
                 confidence=0.0,
@@ -266,14 +374,16 @@ class ReasoningAgent(BaseAgent):
         self,
         message: str,
         conversation_history: Optional[list[dict]] = None,
+        runtime_context: Optional[str] = None,
     ) -> AgentResponse:
         """
         Handle chat interaction with operator.
-        
+
         Args:
             message: User's message
             conversation_history: Previous messages in conversation
-            
+            runtime_context: Runtime system context (containers, agents, etc.)
+
         Returns:
             AgentResponse with chat reply
         """
@@ -283,25 +393,39 @@ class ReasoningAgent(BaseAgent):
                 f"{msg['role']}: {msg['content']}"
                 for msg in conversation_history[-5:]  # Last 5 messages
             ])
-        
+
         return await self.process({
             "mode": "chat",
             "query": message,
             "context": context,
+            "runtime_context": runtime_context,
             "enable_thinking": False,  # Chat doesn't need thinking mode
         })
     
-    def _build_prompt(self, mode: str, query: str, context: str) -> str:
-        """Build prompt with system context."""
+    def _build_prompt(
+        self,
+        mode: str,
+        query: str,
+        context: str,
+        runtime_context: Optional[str] = None,
+    ) -> str:
+        """Build prompt with system context and runtime information."""
         system_prompt = self.get_system_prompt(mode)
-        
+
+        # Inject runtime context into system prompt (for chat mode)
+        if mode == "chat" and runtime_context:
+            system_prompt = system_prompt.replace("{runtime_context}", runtime_context)
+        else:
+            # Remove the placeholder if no runtime context
+            system_prompt = system_prompt.replace("{runtime_context}", "")
+
         prompt = f"""{system_prompt}
 
 User Query: {query}
 """
         if context:
-            prompt += f"\nContext:\n{context}"
-        
+            prompt += f"\nConversation Context:\n{context}"
+
         return prompt
     
     def _parse_json_response(self, content: str) -> dict[str, Any]:
@@ -327,6 +451,61 @@ User Query: {query}
             if steps:
                 return steps[0].get("action")
         return None
+
+    def _log_activity(
+        self,
+        activity_type: str,
+        input_text: str,
+        output_text: str,
+        latency_ms: float,
+        status: str = "success",
+    ) -> None:
+        """
+        Log an activity entry for API visibility.
+
+        Args:
+            activity_type: Type of activity (rca, chat, planning)
+            input_text: Input prompt/message
+            output_text: Output response
+            latency_ms: Request latency in milliseconds
+            status: Status of the request (success/error)
+        """
+        # Create activity entry
+        entry = {
+            "timestamp": datetime.utcnow(),
+            "type": activity_type,
+            "input": input_text[:500] if input_text else "",  # Truncate for storage
+            "output": output_text[:1000] if output_text else "",
+            "latency_ms": round(latency_ms, 2),
+            "status": status,
+        }
+
+        # Add to log (maintain max size)
+        self.activity_log.append(entry)
+        if len(self.activity_log) > MAX_ACTIVITY_LOG_SIZE:
+            self.activity_log = self.activity_log[-MAX_ACTIVITY_LOG_SIZE:]
+
+        # Update stats
+        self.stats["total_requests"] += 1
+        if status == "success":
+            self.stats["success_count"] += 1
+        else:
+            self.stats["error_count"] += 1
+
+        self.stats["_latency_sum"] += latency_ms
+        self.stats["avg_latency_ms"] = (
+            self.stats["_latency_sum"] / self.stats["total_requests"]
+        )
+
+        # Calculate requests per minute
+        if self.stats["_first_request_time"] is None:
+            self.stats["_first_request_time"] = datetime.utcnow()
+        else:
+            elapsed = (datetime.utcnow() - self.stats["_first_request_time"]).total_seconds()
+            if elapsed > 0:
+                self.stats["requests_per_minute"] = (
+                    self.stats["total_requests"] / elapsed * 60
+                )
 
 
 __all__ = [

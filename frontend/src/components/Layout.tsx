@@ -1,21 +1,34 @@
-import { ReactNode } from 'react'
+import { ReactNode, useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { 
-  LayoutDashboard, 
-  AlertTriangle, 
-  MessageSquare, 
+import {
+  LayoutDashboard,
+  AlertTriangle,
+  MessageSquare,
   Settings,
   Activity,
-  Shield
+  Shield,
+  Cpu,
+  Play,
+  RotateCcw,
+  Loader2
 } from 'lucide-react'
 import { cn } from '../lib/utils'
+import api, { HealthResponse, isComponentHealthy } from '../lib/api'
 
 interface LayoutProps {
   children: ReactNode
 }
 
+interface DemoStatus {
+  active: boolean
+  started_at: string | null
+  anomalies_triggered: number
+  container_name: string
+}
+
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+  { name: 'Agents', href: '/agents', icon: Cpu },
   { name: 'Incidents', href: '/incidents', icon: AlertTriangle },
   { name: 'Chat', href: '/chat', icon: MessageSquare },
   { name: 'Settings', href: '/settings', icon: Settings },
@@ -23,6 +36,101 @@ const navigation = [
 
 export function Layout({ children }: LayoutProps) {
   const location = useLocation()
+  const [health, setHealth] = useState<HealthResponse | null>(null)
+  const [demoStatus, setDemoStatus] = useState<DemoStatus | null>(null)
+  const [demoLoading, setDemoLoading] = useState(false)
+
+  // Fetch health status periodically
+  useEffect(() => {
+    const fetchHealth = async () => {
+      try {
+        const data = await api.health.check()
+        setHealth(data)
+      } catch (err) {
+        console.error('Health check failed:', err)
+        setHealth(null)
+      }
+    }
+    fetchHealth()
+    const interval = setInterval(fetchHealth, 30000) // Every 30 seconds
+    return () => clearInterval(interval)
+  }, [])
+
+  // Fetch demo status periodically
+  useEffect(() => {
+    const fetchDemoStatus = async () => {
+      try {
+        const response = await fetch('/api/v1/demo/status')
+        if (response.ok) {
+          const data = await response.json()
+          setDemoStatus(data)
+        }
+      } catch (err) {
+        console.error('Demo status check failed:', err)
+      }
+    }
+    fetchDemoStatus()
+    const interval = setInterval(fetchDemoStatus, 10000) // Every 10 seconds
+    return () => clearInterval(interval)
+  }, [])
+
+  const fastAgentOnline = isComponentHealthy(health, 'fast_agent')
+  const reasoningAgentOnline = isComponentHealthy(health, 'reasoning_agent')
+  const systemHealthy = fastAgentOnline && reasoningAgentOnline
+
+  const handleStartDemo = async () => {
+    setDemoLoading(true)
+    try {
+      const response = await fetch('/api/v1/demo/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+      if (response.ok) {
+        const data = await response.json()
+        console.log('Demo started:', data)
+        // Refresh demo status
+        const statusResponse = await fetch('/api/v1/demo/status')
+        if (statusResponse.ok) {
+          setDemoStatus(await statusResponse.json())
+        }
+      } else {
+        const error = await response.json()
+        alert(`Failed to start demo: ${error.detail || 'Unknown error'}`)
+      }
+    } catch (err) {
+      console.error('Failed to start demo:', err)
+      alert('Failed to start demo. Check console for details.')
+    } finally {
+      setDemoLoading(false)
+    }
+  }
+
+  const handleResetDemo = async () => {
+    setDemoLoading(true)
+    try {
+      const response = await fetch('/api/v1/demo/reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+      if (response.ok) {
+        const data = await response.json()
+        console.log('Demo reset:', data)
+        // Refresh demo status
+        const statusResponse = await fetch('/api/v1/demo/status')
+        if (statusResponse.ok) {
+          setDemoStatus(await statusResponse.json())
+        }
+      } else {
+        const error = await response.json()
+        alert(`Failed to reset demo: ${error.detail || 'Unknown error'}`)
+      }
+    } catch (err) {
+      console.error('Failed to reset demo:', err)
+      alert('Failed to reset demo. Check console for details.')
+    } finally {
+      setDemoLoading(false)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -59,15 +167,69 @@ export function Layout({ children }: LayoutProps) {
           })}
         </nav>
 
-        {/* Status */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-border">
-          <div className="flex items-center gap-2 text-sm">
-            <Activity className="h-4 w-4 text-green-500" />
-            <span className="text-muted-foreground">System Healthy</span>
+        {/* Demo Mode + Status */}
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-border space-y-3">
+          {/* Demo Mode Controls */}
+          <div className="p-2 bg-muted/50 rounded-lg">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-medium">Demo Mode</span>
+              {demoStatus?.active && (
+                <span className="text-xs text-orange-500 animate-pulse">Active</span>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={handleStartDemo}
+                disabled={demoLoading || demoStatus?.active}
+                className={cn(
+                  'flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs rounded',
+                  'bg-green-600 text-white hover:bg-green-700',
+                  'disabled:opacity-50 disabled:cursor-not-allowed'
+                )}
+              >
+                {demoLoading ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Play className="h-3 w-3" />
+                )}
+                Start
+              </button>
+              <button
+                onClick={handleResetDemo}
+                disabled={demoLoading}
+                className={cn(
+                  'flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs rounded',
+                  'bg-orange-600 text-white hover:bg-orange-700',
+                  'disabled:opacity-50 disabled:cursor-not-allowed'
+                )}
+              >
+                {demoLoading ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <RotateCcw className="h-3 w-3" />
+                )}
+                Reset
+              </button>
+            </div>
+            {demoStatus?.active && demoStatus.anomalies_triggered > 0 && (
+              <div className="mt-2 text-xs text-muted-foreground">
+                {demoStatus.anomalies_triggered} anomalies triggered
+              </div>
+            )}
           </div>
-          <div className="mt-2 text-xs text-muted-foreground">
-            Fast Agent: <span className="text-green-500">●</span> Online<br />
-            Reasoning Agent: <span className="text-green-500">●</span> Online
+
+          {/* System Health Status */}
+          <div className="flex items-center gap-2 text-sm">
+            <Activity className={cn('h-4 w-4', systemHealthy ? 'text-green-500' : 'text-red-500')} />
+            <span className="text-muted-foreground">
+              {health === null ? 'Checking...' : systemHealthy ? 'System Healthy' : 'System Degraded'}
+            </span>
+          </div>
+          <div className="text-xs text-muted-foreground">
+            Fast Agent: <span className={fastAgentOnline ? 'text-green-500' : 'text-red-500'}>●</span>
+            {fastAgentOnline ? ' Online' : ' Offline'}<br />
+            Reasoning Agent: <span className={reasoningAgentOnline ? 'text-green-500' : 'text-red-500'}>●</span>
+            {reasoningAgentOnline ? ' Online' : ' Offline'}
           </div>
         </div>
       </div>
