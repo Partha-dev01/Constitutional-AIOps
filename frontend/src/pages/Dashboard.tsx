@@ -168,9 +168,9 @@ export function Dashboard() {
         />
         <StatCard
           title="Avg Response Time"
-          value={`${stats?.incidents.mttr_minutes || 0}min`}
+          value={stats?.incidents.mttr_minutes != null ? `${stats.incidents.mttr_minutes}s` : 'N/A'}
           icon={Clock}
-          trend="Mean time to resolve"
+          trend="LLM response latency"
           color="text-blue-500"
         />
         <StatCard
@@ -230,18 +230,36 @@ export function Dashboard() {
         <h2 className="text-lg font-semibold mb-4">Remediation Performance</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="text-center p-4 bg-muted/50 rounded-lg">
-            <p className="text-3xl font-bold text-green-500">
-              {((stats?.actions.success_rate || 0) * 100).toFixed(0)}%
+            <p className={`text-3xl font-bold ${
+              stats?.actions.executed_today === 0
+                ? 'text-muted-foreground'
+                : (stats?.actions.success_rate || 0) >= 0.9
+                  ? 'text-green-500'
+                  : 'text-yellow-500'
+            }`}>
+              {stats?.actions.executed_today === 0
+                ? 'N/A'
+                : `${((stats?.actions.success_rate || 0) * 100).toFixed(0)}%`}
             </p>
             <p className="text-sm text-muted-foreground">Success Rate</p>
           </div>
           <div className="text-center p-4 bg-muted/50 rounded-lg">
-            <p className="text-3xl font-bold">{stats?.actions.executed_today || 0}</p>
-            <p className="text-sm text-muted-foreground">Actions Today</p>
+            <p className="text-3xl font-bold">
+              {stats?.actions.executed_today === 0
+                ? 'None'
+                : stats?.actions.executed_today || 0}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {stats?.actions.executed_today === 0 ? 'No actions today' : 'Actions Today'}
+            </p>
           </div>
           <div className="text-center p-4 bg-muted/50 rounded-lg">
-            <p className="text-3xl font-bold">{stats?.incidents.mttr_minutes || 0}min</p>
-            <p className="text-sm text-muted-foreground">Avg Resolution Time</p>
+            <p className="text-3xl font-bold">
+              {stats?.incidents.mttr_minutes != null
+                ? `${stats.incidents.mttr_minutes}s`
+                : 'N/A'}
+            </p>
+            <p className="text-sm text-muted-foreground">Avg Response Time</p>
           </div>
         </div>
       </div>
