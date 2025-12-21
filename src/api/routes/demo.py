@@ -339,19 +339,88 @@ async def reset_demo(request: Request) -> dict[str, Any]:
 
 
 async def _log_demo_incidents(request: Request, anomaly_results: list[dict]) -> None:
-    """Log demo incidents to the incident store for visibility."""
-    # Get the incident store if available
+    """Create real incidents in the incident store for each triggered anomaly."""
+    from src.api.routes.incidents import _generate_incident_id, _incidents, _trigger_analysis
+    from src.api.schemas.incident import (
+        Incident,
+        IncidentSeverity,
+        IncidentStatus,
+        IncidentCategory,
+        ServiceInfo,
+    )
+
+    # Mapping of anomaly types to incident properties
+    anomaly_mapping = {
+        "CPU Stress": {
+            "severity": IncidentSeverity.HIGH,
+            "category": IncidentCategory.PERFORMANCE,
+            "description": "Detected high CPU utilization causing potential service degradation",
+        },
+        "Memory Pressure": {
+            "severity": IncidentSeverity.MEDIUM,
+            "category": IncidentCategory.PERFORMANCE,
+            "description": "Memory pressure detected - potential for OOM conditions",
+        },
+        "Disk I/O Saturation": {
+            "severity": IncidentSeverity.MEDIUM,
+            "category": IncidentCategory.INFRASTRUCTURE,
+            "description": "High disk I/O operations detected, may impact service responsiveness",
+        },
+        "Network Latency": {
+            "severity": IncidentSeverity.LOW,
+            "category": IncidentCategory.NETWORK,
+            "description": "Network latency increased, affecting inter-service communication",
+        },
+        "Service Crash": {
+            "severity": IncidentSeverity.HIGH,
+            "category": IncidentCategory.APPLICATION,
+            "description": "Service process crashed and restarted - potential instability",
+        },
+    }
+
     try:
-        # Create incident entries for each anomaly
         for result in anomaly_results:
-            if result["success"]:
-                # Log as a simulated incident
-                logger.info(
-                    f"[DEMO INCIDENT] {result['name']}: {result['message']} "
-                    f"(container: {_demo_state['container_name']})"
-                )
+            if not result["success"]:
+                continue
+
+            anomaly_name = result["name"]
+            mapping = anomaly_mapping.get(anomaly_name, {
+                "severity": IncidentSeverity.MEDIUM,
+                "category": IncidentCategory.INFRASTRUCTURE,
+                "description": f"Anomaly detected: {result['message']}",
+            })
+
+            now = datetime.utcnow()
+            incident_id = _generate_incident_id()
+
+            incident = Incident(
+                id=incident_id,
+                title=f"[DEMO] {anomaly_name} on {_demo_state['container_name']}",
+                description=mapping["description"],
+                severity=mapping["severity"],
+                category=mapping["category"],
+                affected_services=[ServiceInfo(name=_demo_state["container_name"])],
+                tags=["demo", "auto-generated", anomaly_name.lower().replace(" ", "-")],
+                source="demo-mode",
+                status=IncidentStatus.DETECTING,
+                created_at=now,
+                updated_at=now,
+                detected_at=now,
+            )
+
+            # Store the incident
+            _incidents[incident_id] = incident
+            logger.info(f"Created demo incident: {incident_id} - {anomaly_name}")
+
+            # Trigger RCA analysis
+            try:
+                await _trigger_analysis(request, incident, enable_thinking=False)
+                logger.info(f"Triggered RCA for demo incident: {incident_id}")
+            except Exception as e:
+                logger.warning(f"Failed to trigger RCA for {incident_id}: {e}")
+
     except Exception as e:
-        logger.warning(f"Failed to log demo incidents: {e}")
+        logger.warning(f"Failed to create demo incidents: {e}")
 
 
 @router.post(

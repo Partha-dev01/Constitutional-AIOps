@@ -34,6 +34,36 @@ None - All core functionality implemented and tested.
 
 ## ✅ Resolved Issues
 
+### 2025-12-21 (Session 2) - UX & Functionality Fixes
+
+1. **[RESOLVED-014] Success Rate Shows N/A**
+   - Status: RESOLVED
+   - Priority: MEDIUM
+   - Impact: Success Rate showed "N/A" when no actions existed instead of 100%
+   - Files: `frontend/src/pages/Dashboard.tsx`
+   - Solution: Changed to show "100%" by default, decreasing when failures occur
+
+2. **[RESOLVED-015] New Incident Button Non-Functional**
+   - Status: RESOLVED
+   - Priority: HIGH
+   - Impact: "New Incident" button had no onClick handler
+   - Files: `frontend/src/pages/Incidents.tsx`
+   - Solution: Added CreateIncidentModal component and handler for creating incidents
+
+3. **[RESOLVED-016] Empty Incidents State Unclear**
+   - Status: RESOLVED
+   - Priority: LOW
+   - Impact: Empty state just showed "No incidents found" - not encouraging
+   - Files: `frontend/src/pages/Incidents.tsx`
+   - Solution: Shows "All Systems Operational" with green checkmark and helpful text
+
+4. **[RESOLVED-017] Demo Mode Not Creating Real Incidents**
+   - Status: RESOLVED
+   - Priority: HIGH
+   - Impact: Demo mode only logged to console, didn't create actual incidents
+   - Files: `src/api/routes/demo.py`
+   - Solution: Demo mode now creates 5 real incidents with appropriate severity, category, and triggers RCA analysis
+
 ### 2025-12-21 - Frontend/Backend Integration Fixes
 
 1. **[RESOLVED-008] Incidents Page NetworkError**
@@ -156,7 +186,7 @@ None - All core functionality implemented and tested.
 | High Priority | 0 |
 | Medium Priority | 0 |
 | Low Priority | 0 |
-| Resolved | 15 |
+| Resolved | 19 |
 
 ---
 

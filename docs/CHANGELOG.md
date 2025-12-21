@@ -4,11 +4,21 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed (2025-12-21 - Session 2)
+- **Success Rate Display**: Changed from "N/A" to "100%" by default when no actions exist - decreases from 100% when failures occur
+- **New Incident Button**: Added functional "New Incident" button with full create incident modal form
+- **Incidents Empty State**: Shows "All Systems Operational" with green checkmark when no incidents, replacing plain "No incidents found" text
+- **Demo Mode Real Incidents**: Demo mode now creates actual incidents in the incident store with RCA analysis, instead of just logging
+
+### Added (2025-12-21 - Session 2)
+- **CreateIncidentModal Component**: Full form for creating incidents with title, description, severity, category, affected service, and auto-analyze option
+- **Demo Incident Generation**: Demo mode creates 5 real incidents (CPU Stress, Memory Pressure, Disk I/O, Network Latency, Service Crash) with appropriate severity and category
+
 ### Fixed (2025-12-21)
 - **CRITICAL: Incidents Page NetworkError**: Removed hardcoded `VITE_API_URL=http://localhost:8000` from docker-compose.yml - frontend now uses relative `/api/v1` path which nginx proxies correctly
 - **Infrastructure Tab "Unknown" Status**: Running containers without HEALTHCHECK directive now show as "healthy" instead of "unknown" (grafana, loki, prometheus, nextcloud)
 - **Dashboard Hardcoded 45min**: Replaced mock MTTR value with actual LLM response latency from health endpoint
-- **Dashboard Empty States**: Remediation Performance section now shows "N/A" / "None" / "No actions today" instead of "0%" and "0"
+- **Dashboard Empty States**: Remediation Performance section shows appropriate empty state messages
 - **Graph Explorer No Edges**: Added default service dependencies that are always shown (frontend→backend, backend→neo4j/loki/prometheus, etc.)
 - **Service Availability Bars**: Fixed health status mapping - running containers now display green bars
 
