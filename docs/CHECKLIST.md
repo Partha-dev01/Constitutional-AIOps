@@ -1,7 +1,7 @@
 # Constitutional AIOps - Development Checklist
 
-> **Last Updated**: 2025-12-20
-> **Current Phase**: Phase 5 - Agents Hub & UI Enhancements (COMPLETE)
+> **Last Updated**: 2025-12-21
+> **Current Phase**: Phase 6 - Frontend/Backend Integration Fixes (COMPLETE)
 > **Overall Progress**: 100% CORE COMPLETE
 > **Architecture**: Simultaneous Dual-Model (Qwen3-4B + Qwen3-14B on 24GB VRAM)
 > **Deployment**: Hybrid (Jarvis Labs A5000 GPU + Local Services)
@@ -297,6 +297,36 @@
 
 ### Bug Fixes [100%]
 - [x] Layout.tsx - Fixed hardcoded agent status (now uses dynamic health check)
+
+---
+
+## ✅ Completed (Phase 6 - Frontend/Backend Integration Fixes)
+
+### Dashboard Fixes [100%]
+- [x] Replaced hardcoded 45min MTTR with actual LLM response latency
+- [x] Fixed empty state handling (N/A, None, No actions today)
+- [x] Updated metric labels (LLM response latency vs Mean time to resolve)
+- [x] Fixed Service Availability bars showing wrong colors
+
+### Infrastructure Fixes [100%]
+- [x] Running containers without HEALTHCHECK now show as "healthy"
+- [x] Non-running containers explicitly marked as "unhealthy"
+- [x] Fixed grafana, loki, prometheus, nextcloud showing "unknown"
+
+### Graph Explorer Fixes [100%]
+- [x] Default service dependencies always added (not just when services list empty)
+- [x] Added promtail → loki dependency
+- [x] Graph now shows edges between services
+
+### Incidents Page Fix [100%]
+- [x] Removed VITE_API_URL from docker-compose.yml
+- [x] Frontend now uses relative /api/v1 path
+- [x] Nginx proxies requests correctly
+
+### LGTM Stack Integration [100%]
+- [x] Added Promtail container for log shipping to Loki
+- [x] Verified log shipping working (labels: job, level, stream, filename)
+- [x] Jarvis Labs LLM endpoints configured as default
 - [x] Incidents.tsx - Removed mock data fallback (shows empty state on errors)
 - [x] Dashboard.tsx - Removed mock activity fallback (shows empty state)
 - [x] Error styling - Changed from yellow to red for actual errors
