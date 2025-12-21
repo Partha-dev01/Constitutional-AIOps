@@ -29,7 +29,8 @@
       "Bash(docker stop:*)",
       "Bash(docker run:*)",
       "Bash(docker start:*)",
-      "Bash(powershell.exe:*)"
+      "Bash(powershell.exe:*)",
+      "Bash(cd:*)"
     ]
   }
 }

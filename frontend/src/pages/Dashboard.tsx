@@ -205,7 +205,48 @@ export function Dashboard() {
         </div>
       )}
 
-      {/* Service Availability */}
+      {/* Model Status */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <ModelCard
+          name="Fast Agent"
+          model="Qwen3-4B Q4_K_M"
+          port={8081}
+          status={isComponentHealthy(health, 'fast_agent') ? 'online' : 'offline'}
+          latency="42ms"
+          requests={1247}
+        />
+        <ModelCard
+          name="Reasoning Agent"
+          model="Qwen3-14B Q4_K_M"
+          port={8082}
+          status={isComponentHealthy(health, 'reasoning_agent') ? 'online' : 'offline'}
+          latency="156ms"
+          requests={89}
+        />
+      </div>
+
+      {/* Action Success Rate */}
+      <div className="bg-card rounded-lg border border-border p-6">
+        <h2 className="text-lg font-semibold mb-4">Remediation Performance</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="text-center p-4 bg-muted/50 rounded-lg">
+            <p className="text-3xl font-bold text-green-500">
+              {((stats?.actions.success_rate || 0) * 100).toFixed(0)}%
+            </p>
+            <p className="text-sm text-muted-foreground">Success Rate</p>
+          </div>
+          <div className="text-center p-4 bg-muted/50 rounded-lg">
+            <p className="text-3xl font-bold">{stats?.actions.executed_today || 0}</p>
+            <p className="text-sm text-muted-foreground">Actions Today</p>
+          </div>
+          <div className="text-center p-4 bg-muted/50 rounded-lg">
+            <p className="text-3xl font-bold">{stats?.incidents.mttr_minutes || 0}min</p>
+            <p className="text-sm text-muted-foreground">Avg Resolution Time</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Service Availability - Moved to bottom */}
       <div className="bg-card rounded-lg border border-border p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold flex items-center gap-2">
@@ -274,47 +315,6 @@ export function Dashboard() {
               </p>
             </div>
           )}
-        </div>
-      </div>
-
-      {/* Model Status */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <ModelCard
-          name="Fast Agent"
-          model="Qwen3-4B Q4_K_M"
-          port={8081}
-          status={isComponentHealthy(health, 'fast_agent') ? 'online' : 'offline'}
-          latency="42ms"
-          requests={1247}
-        />
-        <ModelCard
-          name="Reasoning Agent"
-          model="Qwen3-14B Q4_K_M"
-          port={8082}
-          status={isComponentHealthy(health, 'reasoning_agent') ? 'online' : 'offline'}
-          latency="156ms"
-          requests={89}
-        />
-      </div>
-
-      {/* Action Success Rate */}
-      <div className="bg-card rounded-lg border border-border p-6">
-        <h2 className="text-lg font-semibold mb-4">Remediation Performance</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="text-center p-4 bg-muted/50 rounded-lg">
-            <p className="text-3xl font-bold text-green-500">
-              {((stats?.actions.success_rate || 0) * 100).toFixed(0)}%
-            </p>
-            <p className="text-sm text-muted-foreground">Success Rate</p>
-          </div>
-          <div className="text-center p-4 bg-muted/50 rounded-lg">
-            <p className="text-3xl font-bold">{stats?.actions.executed_today || 0}</p>
-            <p className="text-sm text-muted-foreground">Actions Today</p>
-          </div>
-          <div className="text-center p-4 bg-muted/50 rounded-lg">
-            <p className="text-3xl font-bold">{stats?.incidents.mttr_minutes || 0}min</p>
-            <p className="text-sm text-muted-foreground">Avg Resolution Time</p>
-          </div>
         </div>
       </div>
     </div>
