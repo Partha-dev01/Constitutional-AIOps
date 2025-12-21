@@ -30,7 +30,8 @@
       "Bash(docker run:*)",
       "Bash(docker start:*)",
       "Bash(powershell.exe:*)",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "Bash(find:*)"
     ]
   }
 }

@@ -222,28 +222,34 @@ async def get_episodes(
                 status="healthy",
             ))
 
-        # Add default service dependencies
-        default_deps = [
-            ("frontend", "backend"),
-            ("backend", "neo4j"),
-            ("backend", "loki"),
-            ("backend", "prometheus"),
-            ("grafana", "loki"),
-            ("grafana", "prometheus"),
-            ("grafana", "tempo"),
-            ("otel-collector", "loki"),
-            ("otel-collector", "prometheus"),
-            ("otel-collector", "tempo"),
-        ]
+    # Always add default service dependencies if they don't exist
+    # This ensures edges are shown even when Neo4j has no DEPENDS_ON relationships
+    default_deps = [
+        ("frontend", "backend"),
+        ("backend", "neo4j"),
+        ("backend", "loki"),
+        ("backend", "prometheus"),
+        ("grafana", "loki"),
+        ("grafana", "prometheus"),
+        ("grafana", "tempo"),
+        ("otel-collector", "loki"),
+        ("otel-collector", "prometheus"),
+        ("otel-collector", "tempo"),
+        ("promtail", "loki"),
+    ]
 
-        service_names = {s.name for s in services}
-        for from_svc, to_svc in default_deps:
-            if from_svc in service_names and to_svc in service_names:
-                edges.append({
-                    "from": f"service-{from_svc}",
-                    "to": f"service-{to_svc}",
-                    "label": "depends_on",
-                })
+    # Get existing edge pairs to avoid duplicates
+    existing_edges = {(e.get("from"), e.get("to")) for e in edges}
+    service_names = {s.name for s in services}
+
+    for from_svc, to_svc in default_deps:
+        edge_pair = (f"service-{from_svc}", f"service-{to_svc}")
+        if from_svc in service_names and to_svc in service_names and edge_pair not in existing_edges:
+            edges.append({
+                "from": f"service-{from_svc}",
+                "to": f"service-{to_svc}",
+                "label": "depends_on",
+            })
 
     return GraphData(services=services, episodes=episodes, edges=edges)
 
