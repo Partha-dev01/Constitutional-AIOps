@@ -231,15 +231,13 @@ export function Dashboard() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="text-center p-4 bg-muted/50 rounded-lg">
             <p className={`text-3xl font-bold ${
-              stats?.actions.executed_today === 0
-                ? 'text-muted-foreground'
-                : (stats?.actions.success_rate || 0) >= 0.9
-                  ? 'text-green-500'
-                  : 'text-yellow-500'
+              (stats?.actions.success_rate ?? 1) >= 0.9
+                ? 'text-green-500'
+                : (stats?.actions.success_rate ?? 1) >= 0.7
+                  ? 'text-yellow-500'
+                  : 'text-red-500'
             }`}>
-              {stats?.actions.executed_today === 0
-                ? 'N/A'
-                : `${((stats?.actions.success_rate || 0) * 100).toFixed(0)}%`}
+              {`${(((stats?.actions.success_rate ?? 1)) * 100).toFixed(0)}%`}
             </p>
             <p className="text-sm text-muted-foreground">Success Rate</p>
           </div>

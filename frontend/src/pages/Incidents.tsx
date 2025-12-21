@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { AlertTriangle, CheckCircle, Clock, Search, Plus, Eye, Play, X, Loader2, RefreshCw } from 'lucide-react'
 import { formatRelativeTime } from '../lib/utils'
-import api, { Incident, IncidentSeverity, IncidentStatus, Action } from '../lib/api'
+import api, { Incident, IncidentSeverity, IncidentStatus, Action, IncidentCreate } from '../lib/api'
 
 export function Incidents() {
   const [incidents, setIncidents] = useState<Incident[]>([])
@@ -14,6 +14,8 @@ export function Incidents() {
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null)
   const [showApprovalModal, setShowApprovalModal] = useState(false)
   const [selectedAction, setSelectedAction] = useState<Action | null>(null)
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [creating, setCreating] = useState(false)
 
   const fetchData = async () => {
     setLoading(true)
@@ -77,6 +79,20 @@ export function Incidents() {
     }
   }
 
+  const handleCreateIncident = async (data: IncidentCreate) => {
+    setCreating(true)
+    try {
+      await api.incidents.create(data)
+      setShowCreateModal(false)
+      fetchData()
+    } catch (err) {
+      console.error('Create error:', err)
+      alert('Failed to create incident')
+    } finally {
+      setCreating(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -94,7 +110,10 @@ export function Incidents() {
           >
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90">
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90"
+          >
             <Plus className="h-4 w-4" />
             New Incident
           </button>
@@ -193,8 +212,17 @@ export function Incidents() {
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         ) : filteredIncidents.length === 0 ? (
-          <div className="text-center p-8 text-muted-foreground">
-            No incidents found
+          <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-8">
+            <div className="flex flex-col items-center text-center">
+              <CheckCircle className="h-12 w-12 text-green-500 mb-4" />
+              <h3 className="text-lg font-semibold text-green-600 mb-2">All Systems Operational</h3>
+              <p className="text-muted-foreground mb-4">
+                No active incidents. Your infrastructure is running smoothly.
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Click <strong>"New Incident"</strong> to create a test incident, or use <strong>"Demo Mode"</strong> from the Agent Hub to trigger real anomalies.
+              </p>
+            </div>
           </div>
         ) : (
           filteredIncidents.map((incident) => (
@@ -226,6 +254,15 @@ export function Incidents() {
             setShowApprovalModal(false)
             setSelectedAction(null)
           }}
+        />
+      )}
+
+      {/* Create Incident Modal */}
+      {showCreateModal && (
+        <CreateIncidentModal
+          onSubmit={handleCreateIncident}
+          onClose={() => setShowCreateModal(false)}
+          loading={creating}
         />
       )}
     </div>
@@ -521,6 +558,155 @@ function ApprovalModal({
             </button>
           </div>
         </div>
+      </div>
+    </div>
+  )
+}
+
+function CreateIncidentModal({
+  onSubmit,
+  onClose,
+  loading,
+}: {
+  onSubmit: (data: IncidentCreate) => void
+  onClose: () => void
+  loading: boolean
+}) {
+  const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
+  const [severity, setSeverity] = useState<IncidentSeverity>('medium')
+  const [category, setCategory] = useState('infrastructure')
+  const [serviceName, setServiceName] = useState('nextcloud')
+  const [autoAnalyze, setAutoAnalyze] = useState(true)
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!title.trim()) return
+
+    onSubmit({
+      title: title.trim(),
+      description: description.trim() || undefined,
+      severity,
+      category,
+      affected_services: [{ name: serviceName }],
+      tags: [category, severity],
+      auto_analyze: autoAnalyze,
+    })
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-card rounded-lg border border-border p-6 max-w-lg w-full mx-4">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold">Create New Incident</h2>
+          <button onClick={onClose} className="p-2 hover:bg-muted rounded-lg">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Title *</label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+              placeholder="e.g., High CPU usage on database server"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Description</label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+              rows={3}
+              placeholder="Describe the incident in detail..."
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Severity</label>
+              <select
+                value={severity}
+                onChange={(e) => setSeverity(e.target.value as IncidentSeverity)}
+                className="w-full px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="critical">Critical</option>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+                <option value="info">Info</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Category</label>
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="infrastructure">Infrastructure</option>
+                <option value="application">Application</option>
+                <option value="database">Database</option>
+                <option value="network">Network</option>
+                <option value="security">Security</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Affected Service</label>
+            <input
+              type="text"
+              value={serviceName}
+              onChange={(e) => setServiceName(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+              placeholder="e.g., nextcloud, backend, neo4j"
+            />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="autoAnalyze"
+              checked={autoAnalyze}
+              onChange={(e) => setAutoAnalyze(e.target.checked)}
+              className="rounded border-border"
+            />
+            <label htmlFor="autoAnalyze" className="text-sm">
+              Auto-analyze with AI (triggers RCA after creation)
+            </label>
+          </div>
+
+          <div className="flex gap-2 justify-end pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 bg-muted text-muted-foreground rounded-lg text-sm font-medium hover:bg-muted/80"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading || !title.trim()}
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin inline mr-2" />
+                  Creating...
+                </>
+              ) : (
+                'Create Incident'
+              )}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   )
