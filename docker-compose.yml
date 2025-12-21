@@ -20,8 +20,10 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - FAST_AGENT_URL=http://llama-swap:8081/v1
-      - REASONING_AGENT_URL=http://llama-swap:8082/v1
+      - FAST_AGENT_URL=${FAST_AGENT_URL:-https://251c243656751.notebooks.jarvislabs.net/v1}
+      - REASONING_AGENT_URL=${REASONING_AGENT_URL:-https://251c243656751.notebooks.jarvislabs.net/v1}
+      - FAST_AGENT_MODEL=${FAST_AGENT_MODEL:-qwen3:4b}
+      - REASONING_AGENT_MODEL=${REASONING_AGENT_MODEL:-qwen3:14b}
       - NEO4J_URI=bolt://neo4j:7687
       - NEO4J_PASSWORD=${NEO4J_PASSWORD:-changeme_neo4j_password}
       - LOKI_URL=http://loki:3100
