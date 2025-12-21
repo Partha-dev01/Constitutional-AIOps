@@ -141,14 +141,20 @@ async def get_containers(request: Request) -> InfrastructureResponse:
                 # Determine service name
                 service = name.replace("aiops-", "") if name.startswith("aiops-") else name
 
-                # Count health
+                # Count health and normalize health status
                 if status == "running":
                     if health in ("healthy", None):
                         healthy_count += 1
+                        # Treat running containers without HEALTHCHECK as healthy
+                        if health is None:
+                            health = "healthy"
                     else:
                         unhealthy_count += 1
                 else:
                     unhealthy_count += 1
+                    # Non-running containers are unhealthy
+                    if health is None:
+                        health = "unhealthy"
 
                 containers.append(ContainerInfo(
                     name=name,

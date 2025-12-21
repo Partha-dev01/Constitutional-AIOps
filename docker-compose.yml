@@ -50,8 +50,6 @@ services:
     container_name: aiops-frontend
     ports:
       - "3000:3000"
-    environment:
-      - VITE_API_URL=http://localhost:8000
     depends_on:
       - backend
     networks:
