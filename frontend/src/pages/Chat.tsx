@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import { Send, Bot, User, Loader2, AlertCircle } from 'lucide-react'
-import api, { ChatMessage as ApiChatMessage } from '../lib/api'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import api from '../lib/api'
 
 interface Message {
   id: string
@@ -69,16 +71,17 @@ export function Chat() {
       setMessages((prev) => [...prev, assistantMessage])
     } catch (err) {
       console.error('Chat error:', err)
-      setError(err instanceof Error ? err.message : 'Failed to send message')
+      const errorMessage = err instanceof Error ? err.message : 'Failed to send message'
+      setError(errorMessage)
 
-      // Fallback to mock response if API fails
-      const assistantMessage: Message = {
+      // Show error as assistant message so user knows what happened
+      const errorAssistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: generateMockResponse(input),
+        content: `I'm sorry, I couldn't process your request. Error: ${errorMessage}\n\nPlease check that the backend and LLM servers are running.`,
         timestamp: new Date(),
       }
-      setMessages((prev) => [...prev, assistantMessage])
+      setMessages((prev) => [...prev, errorAssistantMessage])
     } finally {
       setIsLoading(false)
     }
@@ -115,9 +118,9 @@ export function Chat() {
       </div>
 
       {error && (
-        <div className="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg flex items-center gap-2 text-yellow-600">
+        <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-2 text-red-600">
           <AlertCircle className="h-4 w-4" />
-          <span className="text-sm">API unavailable, using mock responses</span>
+          <span className="text-sm">Error: {error}</span>
         </div>
       )}
 
@@ -150,7 +153,15 @@ export function Chat() {
                   : 'bg-muted'
               }`}
             >
-              <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+              <div className={`text-sm prose prose-sm max-w-none ${
+                message.role === 'user'
+                  ? 'prose-invert'
+                  : 'dark:prose-invert'
+              }`}>
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {message.content}
+                </ReactMarkdown>
+              </div>
               <p
                 className={`text-xs mt-1 ${
                   message.role === 'user'
@@ -198,52 +209,3 @@ export function Chat() {
   )
 }
 
-function generateMockResponse(input: string): string {
-  const lowerInput = input.toLowerCase()
-
-  if (lowerInput.includes('incident') || lowerInput.includes('alert')) {
-    return `Based on my analysis of the current incidents:
-
-**Active Issues:**
-1. High CPU on api-gateway (87% confidence)
-   - Root cause: Likely increased traffic from recent deployment
-   - Suggested action: Scale horizontally
-
-2. Database connection pool warning (92% confidence)
-   - Root cause: Connection leak in user-service v2.3.1
-   - Suggested action: Restart affected pods
-
-Would you like me to proceed with any remediation actions?`
-  }
-
-  if (lowerInput.includes('status') || lowerInput.includes('health')) {
-    return `**System Health Summary:**
-
-✅ Fast Agent (Qwen3-4B): Operational
-   - Latency: 42ms avg
-   - Requests/min: 847
-
-✅ Reasoning Agent (Qwen3-14B): Operational
-   - Latency: 156ms avg
-   - Active sessions: 3
-
-✅ Neo4j Memory: Healthy
-   - Episodes stored: 1,247
-   - Graph nodes: 15,892
-
-⚠️ 3 active incidents requiring attention`
-  }
-
-  return `I've analyzed your query. Based on the current system state and telemetry data:
-
-The infrastructure appears to be operating within normal parameters, with a few areas worth monitoring:
-
-1. Memory usage is trending upward on worker nodes
-2. Request latency has increased 15% in the last hour
-3. No critical security alerts
-
-Would you like me to:
-- Perform a deeper analysis on any specific component?
-- Generate a remediation plan?
-- Show historical trends?`
-}

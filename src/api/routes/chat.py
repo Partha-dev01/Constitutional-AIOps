@@ -25,6 +25,83 @@ from src.api.schemas.chat import (
 
 logger = logging.getLogger(__name__)
 
+
+async def _build_runtime_context(request: Request) -> str:
+    """
+    Build runtime context string for LLM with current system state.
+
+    This provides the LLM with real-time information about:
+    - Running containers and their status
+    - LLM agent health
+    - Demo mode status
+    - Available tools and capabilities
+    """
+    context_parts = []
+
+    # 1. Container Status from infrastructure
+    try:
+        from src.api.routes.infrastructure import (
+            _get_docker_client,
+            _monitored_containers,
+        )
+
+        docker_client = _get_docker_client()
+        if docker_client:
+            try:
+                all_containers = docker_client.containers.list(all=True)
+                container_list = []
+                for container in all_containers:
+                    if container.name in _monitored_containers:
+                        status_icon = "🟢" if container.status == "running" else "🔴"
+                        container_list.append(f"  - {container.name}: {status_icon} {container.status}")
+
+                if container_list:
+                    context_parts.append("## Current Container Status\n" + "\n".join(container_list))
+                docker_client.close()
+            except Exception as e:
+                logger.debug(f"Failed to get container status: {e}")
+                docker_client.close()
+    except Exception as e:
+        logger.debug(f"Container context unavailable: {e}")
+
+    # 2. LLM Agent Health
+    model_router = getattr(request.app.state, "model_router", None)
+    if model_router:
+        try:
+            health = await model_router.health_check()
+            fast_status = "🟢 Online" if health.get("fast_agent") else "🔴 Offline"
+            reasoning_status = "🟢 Online" if health.get("reasoning_agent") else "🔴 Offline"
+            context_parts.append(
+                f"## LLM Agent Status\n  - Fast Agent (Qwen3-4B): {fast_status}\n  - Reasoning Agent (Qwen3-14B): {reasoning_status}"
+            )
+        except Exception as e:
+            logger.debug(f"Agent health context unavailable: {e}")
+
+    # 3. Demo Mode Status
+    try:
+        from src.api.routes.demo import _demo_state
+
+        if _demo_state.get("active"):
+            context_parts.append(
+                f"## Demo Mode\n  - Status: ACTIVE\n  - Anomalies triggered: {_demo_state.get('anomalies_triggered', 0)}\n  - Target container: {_demo_state.get('container_name', 'nextcloud')}"
+            )
+    except Exception as e:
+        logger.debug(f"Demo status context unavailable: {e}")
+
+    # 4. Available Tools and Capabilities
+    context_parts.append(
+        """## Available Tools & Capabilities
+  - Container monitoring and real-time status
+  - CPU/Memory/Disk stress injection (demo mode)
+  - Incident creation and tracking
+  - Root Cause Analysis (RCA)
+  - Remediation action suggestions
+  - Graph-based service dependency analysis (Neo4j)
+  - Telemetry from LGTM stack (Loki, Grafana, Tempo, Prometheus)"""
+    )
+
+    return "\n\n".join(context_parts) if context_parts else "## Runtime Context\nNo runtime data available"
+
 router = APIRouter()
 
 # In-memory conversation store (replace with Redis/Neo4j in production)
@@ -80,36 +157,42 @@ async def chat(request: Request, chat_request: ChatRequest) -> ChatResponse:
     reasoning_agent = getattr(request.app.state, "reasoning_agent", None)
 
     if reasoning_agent is None:
-        # Fallback for development - return mock response
-        logger.warning("Reasoning agent not initialized, returning mock response")
-        assistant_response = _mock_chat_response(chat_request.message)
-    else:
-        try:
-            # Build conversation history for context
-            history = [
-                {"role": msg.role.value, "content": msg.content}
-                for msg in conversation.messages[-5:]  # Last 5 messages
-            ]
+        logger.error("Reasoning agent not initialized - LLM server may be unavailable")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Reasoning agent not initialized. Check LLM server connection.",
+        )
 
-            # Get response from reasoning agent
-            agent_response = await reasoning_agent.chat(
-                message=chat_request.message,
-                conversation_history=history[:-1],  # Exclude current message
-            )
+    try:
+        # Build conversation history for context
+        history = [
+            {"role": msg.role.value, "content": msg.content}
+            for msg in conversation.messages[-5:]  # Last 5 messages
+        ]
 
-            assistant_response = {
-                "content": agent_response.content,
-                "confidence": agent_response.confidence,
-                "suggested_actions": _extract_actions(agent_response.content),
-                "metadata": agent_response.metadata,
-            }
+        # Build runtime context with current system state
+        runtime_context = await _build_runtime_context(request)
 
-        except Exception as e:
-            logger.error(f"Chat failed: {e}")
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail=f"Reasoning agent unavailable: {str(e)}",
-            )
+        # Get response from reasoning agent with runtime context
+        agent_response = await reasoning_agent.chat(
+            message=chat_request.message,
+            conversation_history=history[:-1],  # Exclude current message
+            runtime_context=runtime_context,
+        )
+
+        assistant_response = {
+            "content": agent_response.content,
+            "confidence": agent_response.confidence,
+            "suggested_actions": _extract_actions(agent_response.content),
+            "metadata": agent_response.metadata,
+        }
+
+    except Exception as e:
+        logger.error(f"Chat failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Reasoning agent unavailable: {str(e)}",
+        )
 
     # Create assistant message
     assistant_message = ChatMessage(
@@ -161,32 +244,34 @@ async def analyze(request: Request, analysis_request: AnalysisRequest) -> Analys
     reasoning_agent = getattr(request.app.state, "reasoning_agent", None)
 
     if reasoning_agent is None:
-        logger.warning("Reasoning agent not initialized, returning mock analysis")
-        result = _mock_analysis_response(analysis_request.mode, analysis_request.data)
-        confidence = 0.75
-    else:
-        try:
-            if analysis_request.mode == "rca":
-                agent_response = await reasoning_agent.analyze_rca(
-                    incident_data=analysis_request.data,
-                    enable_thinking=analysis_request.enable_thinking,
-                )
-            else:  # planning
-                root_cause = analysis_request.data.get("root_cause", "Unknown")
-                agent_response = await reasoning_agent.create_plan(
-                    root_cause=root_cause,
-                    incident_context=analysis_request.data,
-                )
+        logger.error("Reasoning agent not initialized - LLM server may be unavailable")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Reasoning agent not initialized. Check LLM server connection.",
+        )
 
-            result = agent_response.metadata or {"raw_content": agent_response.content}
-            confidence = agent_response.confidence
-
-        except Exception as e:
-            logger.error(f"Analysis failed: {e}")
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail=f"Analysis failed: {str(e)}",
+    try:
+        if analysis_request.mode == "rca":
+            agent_response = await reasoning_agent.analyze_rca(
+                incident_data=analysis_request.data,
+                enable_thinking=analysis_request.enable_thinking,
             )
+        else:  # planning
+            root_cause = analysis_request.data.get("root_cause", "Unknown")
+            agent_response = await reasoning_agent.create_plan(
+                root_cause=root_cause,
+                incident_context=analysis_request.data,
+            )
+
+        result = agent_response.metadata or {"raw_content": agent_response.content}
+        confidence = agent_response.confidence
+
+    except Exception as e:
+        logger.error(f"Analysis failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Analysis failed: {str(e)}",
+        )
 
     processing_time = (time.perf_counter() - start_time) * 1000
 
@@ -295,47 +380,6 @@ async def list_conversations(
 
 
 # Helper functions
-
-def _mock_chat_response(message: str) -> dict[str, Any]:
-    """Generate mock response for development."""
-    return {
-        "content": (
-            f"I understand you're asking about: '{message[:50]}...'\n\n"
-            "As an AI operations assistant, I can help you analyze incidents, "
-            "understand system behavior, and suggest remediation steps.\n\n"
-            "Note: Running in mock mode - LLM agents not connected."
-        ),
-        "confidence": 0.75,
-        "suggested_actions": ["Check system logs", "Review recent deployments"],
-        "metadata": {"mock": True},
-    }
-
-
-def _mock_analysis_response(mode: str, data: dict) -> dict[str, Any]:
-    """Generate mock analysis response."""
-    if mode == "rca":
-        return {
-            "root_cause": "Mock root cause analysis",
-            "causal_chain": ["Event A", "Event B", "Issue detected"],
-            "confidence": 0.75,
-            "reasoning": "This is a mock analysis for development",
-            "remediation_steps": [
-                {"action": "Investigate further", "risk": "low"},
-            ],
-            "mock": True,
-        }
-    else:
-        return {
-            "plan_name": "Mock Remediation Plan",
-            "total_steps": 2,
-            "overall_risk": "low",
-            "steps": [
-                {"order": 1, "action": "Step 1", "risk": "low"},
-                {"order": 2, "action": "Step 2", "risk": "low"},
-            ],
-            "mock": True,
-        }
-
 
 def _extract_actions(content: str) -> list[str] | None:
     """Extract suggested actions from response content."""

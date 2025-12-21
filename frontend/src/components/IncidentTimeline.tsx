@@ -132,7 +132,7 @@ const eventConfig: Record<
   },
 }
 
-export function IncidentTimeline({ incidentId, events, className = '' }: IncidentTimelineProps) {
+export function IncidentTimeline({ incidentId: _incidentId, events, className = '' }: IncidentTimelineProps) {
   const [expandedEvents, setExpandedEvents] = useState<Set<string>>(new Set())
 
   const toggleExpanded = (eventId: string) => {

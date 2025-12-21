@@ -22,6 +22,12 @@ from src.api.routes.chat import router as chat_router
 from src.api.routes.incidents import router as incidents_router
 from src.api.routes.actions import router as actions_router
 from src.api.routes.tools import router as tools_router
+from src.api.routes.agents import router as agents_router
+from src.api.routes.telemetry import router as telemetry_router
+from src.api.routes.graph import router as graph_router
+from src.api.routes.prompts import router as prompts_router
+from src.api.routes.infrastructure import router as infrastructure_router
+from src.api.routes.demo import router as demo_router
 
 # Import core components
 from src.agents.model_router import ModelRouter
@@ -220,6 +226,12 @@ app.include_router(chat_router, prefix="/api/v1/chat", tags=["chat"])
 app.include_router(incidents_router, prefix="/api/v1/incidents", tags=["incidents"])
 app.include_router(actions_router, prefix="/api/v1/actions", tags=["actions"])
 app.include_router(tools_router, prefix="/api/v1/tools", tags=["tools"])
+app.include_router(agents_router, prefix="/api/v1/agents", tags=["agents"])
+app.include_router(telemetry_router, prefix="/api/v1/telemetry", tags=["telemetry"])
+app.include_router(graph_router, prefix="/api/v1/graph", tags=["graph"])
+app.include_router(prompts_router, prefix="/api/v1/prompts", tags=["prompts"])
+app.include_router(infrastructure_router, prefix="/api/v1/infrastructure", tags=["infrastructure"])
+app.include_router(demo_router, prefix="/api/v1/demo", tags=["demo"])
 
 
 # WebSocket endpoint for real-time updates

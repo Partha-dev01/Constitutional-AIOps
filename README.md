@@ -104,6 +104,24 @@ docker compose -f docker-compose.yml -f docker/docker-compose.hybrid.yml up -d
 
 **Models**: Qwen3-4B (fast agent) + Qwen3-14B (reasoning agent) - both fit on A5000 24GB with 8GB free.
 
+#### Rebuilding After Code Changes
+
+After making changes to frontend or backend code, rebuild and restart:
+
+```bash
+# Stop current containers
+docker compose -f docker-compose.yml -f docker/docker-compose.hybrid.yml down
+
+# Rebuild with new code (force rebuild)
+docker compose -f docker-compose.yml -f docker/docker-compose.hybrid.yml build --no-cache frontend backend
+
+# Start services
+docker compose -f docker-compose.yml -f docker/docker-compose.hybrid.yml up -d
+
+# Or quick rebuild and restart in one command:
+docker compose -f docker-compose.yml -f docker/docker-compose.hybrid.yml up -d --build
+```
+
 See [Jarvis Labs Deployment Guide](docs/JARVIS_LABS_DEPLOYMENT.md) for detailed instructions.
 
 ## Deployment Options

@@ -5,12 +5,46 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- **Agents Page** (`/agents`): New comprehensive agent management interface with 5 tabs:
+  - Fast Agent Activity: Real-time telemetry annotation stream
+  - Reasoning Agent Activity: RCA and planning results
+  - Telemetry Viewer: Logs, metrics, traces from LGTM stack
+  - Graph Explorer: Neo4j episodic memory visualization
+  - MCP Tools: Tool configuration and execution interface
+- **Backend API Endpoints**:
+  - `/api/v1/agents/fast/activity` - Fast agent activity stream
+  - `/api/v1/agents/reasoning/activity` - Reasoning agent activity stream
+  - `/api/v1/telemetry/logs` - Log queries from Loki
+  - `/api/v1/telemetry/metrics` - Metrics from Prometheus
+  - `/api/v1/telemetry/traces` - Traces from Tempo
+  - `/api/v1/graph/episodes` - Neo4j episodic memory
+  - `/api/v1/graph/services` - Service dependency graph
+  - `/api/v1/prompts/` - System prompt management
+- **System Prompts Tab** in Settings: View and customize prompts for Fast/Reasoning agents
+- Navigation link to Agents page in sidebar
+
+### Fixed
+- **CRITICAL: Layout.tsx Hardcoded Agent Status**: Bottom-left sidebar now shows dynamic health status instead of always "Online"
+- **Incidents.tsx Mock Data**: Removed fallback mock data array, now shows empty state on API errors
+- **Dashboard.tsx Mock Activity**: Removed hardcoded "Recent Activity" items, now shows proper empty state
+- **Error Messages**: Improved error display with proper styling (red for errors instead of yellow)
+
+### Changed
 - Jarvis Labs hybrid deployment support
   - `docker/docker-compose.hybrid.yml` for local + remote LLM architecture
   - `scripts/setup-jarvis-ollama.sh` for model setup on Jarvis Labs
   - `docs/JARVIS_LABS_DEPLOYMENT.md` complete setup guide
 - `docs/plans/` folder for sub-implementation plans
   - `docs/plans/jarvis-labs-qwen3-deployment.md` - Qwen3 migration plan
+
+### Fixed
+- **Config Environment Variables**: Model names now read from `FAST_AGENT_MODEL` and `REASONING_AGENT_MODEL` environment variables instead of being hardcoded
+- **httpx URL Resolution**: Changed absolute paths (`/chat/completions`) to relative paths (`chat/completions`) in model_router.py for correct URL resolution with base_url
+- **Health Check Endpoint**: Updated docker-compose.yml healthcheck from `/health` to `/api/v1/health`
+- **Chat API Hardcoded Responses**: Removed mock response functions (`_mock_chat_response`, `_mock_analysis_response`) that could mask real LLM errors. Now raises HTTP 503 with clear error messages when agent unavailable.
+- **Frontend HealthResponse Type Mismatch**: Fixed type definition in `api.ts` - changed from object structure to array to match backend response format. Added `isComponentHealthy()` helper function.
+- **Frontend Mock Data Fallback**: Removed mock data fallbacks from Dashboard.tsx and Chat.tsx. Now shows proper error messages when API calls fail.
+- **Frontend Agent Status Display**: Fixed Dashboard.tsx and Settings.tsx to correctly show agents as "online" when healthy using the new helper function.
 
 ### Changed
 - **Model Upgrade**: Migrated from Qwen2.5 to Qwen3 models

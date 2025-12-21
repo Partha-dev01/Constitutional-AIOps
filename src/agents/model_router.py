@@ -108,7 +108,7 @@ class ModelRouter:
         }
         
         try:
-            response = await self._fast_client.post("/chat/completions", json=payload)
+            response = await self._fast_client.post("chat/completions", json=payload)
             response.raise_for_status()
             return response.json()
         except httpx.HTTPError as e:
@@ -155,7 +155,7 @@ class ModelRouter:
         }
         
         try:
-            response = await self._reasoning_client.post("/chat/completions", json=payload)
+            response = await self._reasoning_client.post("chat/completions", json=payload)
             response.raise_for_status()
             return response.json()
         except httpx.HTTPError as e:
@@ -172,13 +172,14 @@ class ModelRouter:
         health = {"fast_agent": False, "reasoning_agent": False}
         
         try:
-            response = await self._fast_client.get("/health")
+            # Ollama doesn't have /health, use root endpoint or /api/tags
+            response = await self._fast_client.get("../")
             health["fast_agent"] = response.status_code == 200
         except httpx.HTTPError:
             pass
-        
+
         try:
-            response = await self._reasoning_client.get("/health")
+            response = await self._reasoning_client.get("../")
             health["reasoning_agent"] = response.status_code == 200
         except httpx.HTTPError:
             pass

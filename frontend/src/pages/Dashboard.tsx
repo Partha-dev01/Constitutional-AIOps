@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Activity, AlertTriangle, CheckCircle, Clock, RefreshCw, Loader2, Wifi, WifiOff } from 'lucide-react'
-import api, { DashboardStats, HealthResponse } from '../lib/api'
+import api, { DashboardStats, HealthResponse, isComponentHealthy } from '../lib/api'
 import { useWebSocket, EventType, WebSocketEvent } from '../lib/websocket'
 
 interface ActivityItem {
@@ -143,27 +143,11 @@ export function Dashboard() {
       setLastRefresh(new Date())
     } catch (err) {
       console.error('Dashboard fetch error:', err)
-      setError('Failed to fetch dashboard data')
-      // Use mock data on error
-      setStats({
-        incidents: {
-          open: 3,
-          investigating: 2,
-          resolved_today: 47,
-          mttr_minutes: 42,
-        },
-        actions: {
-          pending_approval: 5,
-          executed_today: 23,
-          success_rate: 0.94,
-        },
-        system: {
-          health_score: 0.985,
-          services_healthy: 12,
-          services_degraded: 2,
-          services_down: 0,
-        },
-      })
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch dashboard data'
+      setError(errorMessage)
+      // Don't use mock data - show actual error state
+      setStats(null)
+      setHealth(null)
     } finally {
       setLoading(false)
     }
@@ -218,8 +202,8 @@ export function Dashboard() {
       </div>
 
       {error && (
-        <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg text-yellow-600 text-sm">
-          {error} - showing cached data
+        <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-600 text-sm">
+          Error: {error}. Please check that the backend is running.
         </div>
       )}
 
@@ -290,39 +274,37 @@ export function Dashboard() {
           )}
         </div>
         <div className="space-y-4">
-          {(recentActivity.length > 0
-            ? recentActivity
-            : [
-                { time: '2 min ago', event: 'High CPU alert auto-resolved', type: 'success' as const, timestamp: new Date() },
-                { time: '15 min ago', event: 'Database connection spike detected', type: 'warning' as const, timestamp: new Date() },
-                { time: '1 hour ago', event: 'Memory threshold exceeded - scaling triggered', type: 'info' as const, timestamp: new Date() },
-                { time: '2 hours ago', event: 'Service restart approved and executed', type: 'success' as const, timestamp: new Date() },
-                { time: '3 hours ago', event: 'New incident: API latency spike', type: 'warning' as const, timestamp: new Date() },
-              ]
-          ).map((item, i) => (
-            <div
-              key={i}
-              className="flex items-center gap-4 p-3 rounded-lg bg-muted/50"
-            >
+          {recentActivity.length > 0 ? (
+            recentActivity.map((item, i) => (
               <div
-                className={`w-2 h-2 rounded-full ${
-                  item.type === 'success'
-                    ? 'bg-green-500'
-                    : item.type === 'warning'
-                    ? 'bg-yellow-500'
-                    : 'bg-blue-500'
-                }`}
-              />
-              <div className="flex-1">
-                <p className="text-sm font-medium">{item.event}</p>
-                <p className="text-xs text-muted-foreground">{item.time}</p>
+                key={i}
+                className="flex items-center gap-4 p-3 rounded-lg bg-muted/50"
+              >
+                <div
+                  className={`w-2 h-2 rounded-full ${
+                    item.type === 'success'
+                      ? 'bg-green-500'
+                      : item.type === 'warning'
+                      ? 'bg-yellow-500'
+                      : 'bg-blue-500'
+                  }`}
+                />
+                <div className="flex-1">
+                  <p className="text-sm font-medium">{item.event}</p>
+                  <p className="text-xs text-muted-foreground">{item.time}</p>
+                </div>
               </div>
+            ))
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <Activity className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <p className="text-sm">No recent activity</p>
+              <p className="text-xs mt-1">
+                {isConnected
+                  ? 'Activity will appear here in real-time as events occur'
+                  : 'Connect to WebSocket for real-time updates'}
+              </p>
             </div>
-          ))}
-          {recentActivity.length === 0 && !isConnected && (
-            <p className="text-xs text-muted-foreground text-center py-2">
-              Connect to WebSocket for real-time updates
-            </p>
           )}
         </div>
       </div>
@@ -333,7 +315,7 @@ export function Dashboard() {
           name="Fast Agent"
           model="Qwen3-4B Q4_K_M"
           port={8081}
-          status={health?.components.fast_agent ? 'online' : 'offline'}
+          status={isComponentHealthy(health, 'fast_agent') ? 'online' : 'offline'}
           latency="42ms"
           requests={1247}
         />
@@ -341,7 +323,7 @@ export function Dashboard() {
           name="Reasoning Agent"
           model="Qwen3-14B Q4_K_M"
           port={8082}
-          status={health?.components.reasoning_agent ? 'online' : 'offline'}
+          status={isComponentHealthy(health, 'reasoning_agent') ? 'online' : 'offline'}
           latency="156ms"
           requests={89}
         />

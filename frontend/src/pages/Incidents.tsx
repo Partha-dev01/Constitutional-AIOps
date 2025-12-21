@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { AlertTriangle, CheckCircle, Clock, Search, Plus, Eye, Play, X, Loader2, RefreshCw } from 'lucide-react'
 import { formatRelativeTime } from '../lib/utils'
-import api, { Incident, IncidentSeverity, IncidentStatus, Action, ActionApproval } from '../lib/api'
+import api, { Incident, IncidentSeverity, IncidentStatus, Action } from '../lib/api'
 
 export function Incidents() {
   const [incidents, setIncidents] = useState<Incident[]>([])
@@ -32,44 +32,11 @@ export function Incidents() {
       setPendingActions(actionData.actions)
     } catch (err) {
       console.error('Fetch error:', err)
-      setError('Failed to fetch incidents')
-      // Use mock data
-      setIncidents([
-        {
-          id: 'INC-2025-0001',
-          title: 'High CPU usage on api-gateway',
-          description: 'CPU usage exceeded 85% threshold',
-          severity: 'high',
-          status: 'investigating',
-          category: 'performance',
-          affected_services: [{ name: 'api-gateway' }],
-          created_at: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-        {
-          id: 'INC-2025-0002',
-          title: 'Database connection pool exhausted',
-          description: 'Connection pool reached maximum capacity',
-          severity: 'critical',
-          status: 'open',
-          category: 'resource',
-          affected_services: [{ name: 'user-service' }, { name: 'postgres-primary' }],
-          created_at: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-        {
-          id: 'INC-2025-0003',
-          title: 'Memory pressure on worker nodes',
-          description: 'Memory usage trending upward',
-          severity: 'medium',
-          status: 'resolved',
-          category: 'resource',
-          affected_services: [{ name: 'worker-pool' }],
-          created_at: new Date(Date.now() - 1000 * 60 * 60).toISOString(),
-          updated_at: new Date().toISOString(),
-          resolved_at: new Date().toISOString(),
-        },
-      ])
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch incidents'
+      setError(errorMessage)
+      // Don't use mock data - show actual error state
+      setIncidents([])
+      setPendingActions([])
     } finally {
       setLoading(false)
     }
@@ -175,8 +142,8 @@ export function Incidents() {
       )}
 
       {error && (
-        <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg text-yellow-600 text-sm">
-          {error} - showing cached data
+        <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-600 text-sm">
+          Error: {error}. Please check that the backend is running.
         </div>
       )}
 
