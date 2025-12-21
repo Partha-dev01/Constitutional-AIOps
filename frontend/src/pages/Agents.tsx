@@ -932,7 +932,7 @@ export function Agents() {
                           const y = centerY + radius * Math.sin(angle)
 
                           const nodeColor = node.type === 'service'
-                            ? node.status === 'healthy' ? '#22c55e' : node.status === 'unhealthy' ? '#ef4444' : '#3b82f6'
+                            ? node.status === 'healthy' ? '#22c55e' : node.status === 'critical' ? '#ef4444' : node.status === 'warning' ? '#f59e0b' : '#3b82f6'
                             : node.type === 'episode' ? '#a855f7' : '#64748b'
 
                           const isSelected = selectedNode?.id === node.id
