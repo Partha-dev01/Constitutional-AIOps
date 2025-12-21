@@ -17,6 +17,7 @@ import {
   Play,
   Server,
   Box,
+  X,
 } from 'lucide-react'
 import api, { HealthResponse, isComponentHealthy } from '../lib/api'
 
@@ -398,9 +399,9 @@ export function Agents() {
       })
 
       if (response.ok) {
-        // Refresh container list to show updated monitoring status
+        // Clear selection and refresh container list to show updated monitoring status
+        setSelectedContainers(new Set())
         await fetchContainers()
-        alert(`Started monitoring ${selectedContainers.size} container(s)`)
       } else {
         const data = await response.json()
         alert(`Failed to start monitoring: ${data.message || 'Unknown error'}`)
@@ -410,6 +411,27 @@ export function Agents() {
       alert(`Failed to start monitoring: ${err instanceof Error ? err.message : 'Unknown error'}`)
     } finally {
       setMonitoringStarting(false)
+    }
+  }
+
+  // Stop monitoring a container
+  const stopMonitoring = async (containerName: string, e: React.MouseEvent) => {
+    e.stopPropagation() // Prevent row click
+    try {
+      const response = await fetch(`/api/v1/infrastructure/containers/${containerName}/monitor`, {
+        method: 'DELETE',
+      })
+
+      if (response.ok) {
+        // Refresh container list to show updated monitoring status
+        await fetchContainers()
+      } else {
+        const data = await response.json()
+        alert(`Failed to stop monitoring: ${data.message || 'Unknown error'}`)
+      }
+    } catch (err) {
+      console.error('Failed to stop monitoring:', err)
+      alert(`Failed to stop monitoring: ${err instanceof Error ? err.message : 'Unknown error'}`)
     }
   }
 
@@ -827,49 +849,167 @@ export function Agents() {
               </div>
             </div>
 
-            {/* Graph Visualization Placeholder */}
+            {/* Graph Visualization */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               <div className="lg:col-span-2 bg-card rounded-lg border border-border p-4">
                 <h3 className="font-semibold mb-4">Service Dependency Graph</h3>
                 {graphLoading ? (
-                  <div className="flex items-center justify-center h-[300px]">
+                  <div className="flex items-center justify-center h-[400px]">
                     <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                   </div>
                 ) : graphNodes.length > 0 ? (
-                  <div className="h-[300px] bg-muted/30 rounded-lg flex items-center justify-center">
-                    {/* Graph visualization would go here with vis-network */}
-                    <div className="text-center">
-                      <GitBranch className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
-                      <p className="text-sm text-muted-foreground">
-                        {graphNodes.length} nodes, {graphEdges.length} edges
-                      </p>
-                      <div className="mt-4 flex flex-wrap gap-2 justify-center">
-                        {graphNodes.slice(0, 5).map((node) => (
-                          <button
-                            key={node.id}
-                            onClick={() => setSelectedNode(node)}
-                            className={`px-3 py-1 rounded-full text-xs ${
-                              node.type === 'service' ? 'bg-blue-500/10 text-blue-500' :
-                              node.type === 'episode' ? 'bg-purple-500/10 text-purple-500' :
-                              'bg-gray-500/10 text-gray-500'
-                            } hover:opacity-80`}
-                          >
-                            {node.label}
-                          </button>
-                        ))}
-                        {graphNodes.length > 5 && (
-                          <span className="px-3 py-1 text-xs text-muted-foreground">
-                            +{graphNodes.length - 5} more
-                          </span>
-                        )}
+                  <div className="h-[400px] bg-gradient-to-br from-slate-900/50 to-slate-800/50 rounded-lg relative overflow-hidden">
+                    {/* Interactive SVG Graph */}
+                    <svg width="100%" height="100%" className="absolute inset-0">
+                      <defs>
+                        {/* Glow filter for nodes */}
+                        <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+                          <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                          <feMerge>
+                            <feMergeNode in="coloredBlur"/>
+                            <feMergeNode in="SourceGraphic"/>
+                          </feMerge>
+                        </filter>
+                        {/* Arrow marker for directed edges */}
+                        <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+                          <polygon points="0 0, 10 3.5, 0 7" fill="#64748b" />
+                        </marker>
+                      </defs>
+
+                      {/* Edges */}
+                      <g className="edges">
+                        {graphEdges.map((edge, i) => {
+                          const fromNode = graphNodes.find(n => n.id === edge.from)
+                          const toNode = graphNodes.find(n => n.id === edge.to)
+                          if (!fromNode || !toNode) return null
+
+                          const totalNodes = graphNodes.length
+                          const fromIndex = graphNodes.indexOf(fromNode)
+                          const toIndex = graphNodes.indexOf(toNode)
+
+                          // Circular layout
+                          const centerX = 280
+                          const centerY = 200
+                          const radius = 140
+
+                          const fromAngle = (fromIndex / totalNodes) * 2 * Math.PI - Math.PI / 2
+                          const toAngle = (toIndex / totalNodes) * 2 * Math.PI - Math.PI / 2
+
+                          const x1 = centerX + radius * Math.cos(fromAngle)
+                          const y1 = centerY + radius * Math.sin(fromAngle)
+                          const x2 = centerX + radius * Math.cos(toAngle)
+                          const y2 = centerY + radius * Math.sin(toAngle)
+
+                          // Curved path for edges
+                          const midX = centerX + (radius * 0.3) * Math.cos((fromAngle + toAngle) / 2)
+                          const midY = centerY + (radius * 0.3) * Math.sin((fromAngle + toAngle) / 2)
+
+                          return (
+                            <path
+                              key={`edge-${i}`}
+                              d={`M ${x1} ${y1} Q ${midX} ${midY} ${x2} ${y2}`}
+                              stroke="#3b82f6"
+                              strokeWidth="1.5"
+                              fill="none"
+                              opacity="0.5"
+                              markerEnd="url(#arrowhead)"
+                              className="transition-all duration-300 hover:stroke-cyan-400 hover:opacity-100 hover:stroke-[2.5]"
+                            />
+                          )
+                        })}
+                      </g>
+
+                      {/* Nodes */}
+                      <g className="nodes">
+                        {graphNodes.map((node, i) => {
+                          const totalNodes = graphNodes.length
+                          const centerX = 280
+                          const centerY = 200
+                          const radius = 140
+
+                          const angle = (i / totalNodes) * 2 * Math.PI - Math.PI / 2
+                          const x = centerX + radius * Math.cos(angle)
+                          const y = centerY + radius * Math.sin(angle)
+
+                          const nodeColor = node.type === 'service'
+                            ? node.status === 'healthy' ? '#22c55e' : node.status === 'unhealthy' ? '#ef4444' : '#3b82f6'
+                            : node.type === 'episode' ? '#a855f7' : '#64748b'
+
+                          const isSelected = selectedNode?.id === node.id
+
+                          return (
+                            <g
+                              key={node.id}
+                              className="cursor-pointer transition-transform duration-200 hover:scale-110"
+                              onClick={() => setSelectedNode(node)}
+                              style={{ transform: `translate(${x}px, ${y}px)` }}
+                            >
+                              {/* Outer glow ring for selected node */}
+                              {isSelected && (
+                                <circle
+                                  cx="0"
+                                  cy="0"
+                                  r="28"
+                                  fill="none"
+                                  stroke={nodeColor}
+                                  strokeWidth="2"
+                                  opacity="0.4"
+                                  className="animate-pulse"
+                                />
+                              )}
+                              {/* Node circle */}
+                              <circle
+                                cx="0"
+                                cy="0"
+                                r={isSelected ? 22 : 18}
+                                fill={nodeColor}
+                                opacity={isSelected ? 1 : 0.8}
+                                filter={isSelected ? 'url(#glow)' : undefined}
+                                className="transition-all duration-200"
+                              />
+                              {/* Node label */}
+                              <text
+                                x="0"
+                                y="35"
+                                textAnchor="middle"
+                                fill="#94a3b8"
+                                fontSize="10"
+                                className="pointer-events-none"
+                              >
+                                {node.label.length > 12 ? node.label.slice(0, 10) + '...' : node.label}
+                              </text>
+                            </g>
+                          )
+                        })}
+                      </g>
+                    </svg>
+
+                    {/* Legend */}
+                    <div className="absolute bottom-3 left-3 flex gap-3 text-xs">
+                      <div className="flex items-center gap-1">
+                        <div className="w-3 h-3 rounded-full bg-green-500" />
+                        <span className="text-muted-foreground">Healthy</span>
                       </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-3 h-3 rounded-full bg-blue-500" />
+                        <span className="text-muted-foreground">Service</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-3 h-3 rounded-full bg-purple-500" />
+                        <span className="text-muted-foreground">Episode</span>
+                      </div>
+                    </div>
+
+                    {/* Stats overlay */}
+                    <div className="absolute top-3 right-3 text-xs text-muted-foreground bg-slate-900/70 px-2 py-1 rounded">
+                      {graphNodes.length} nodes • {graphEdges.length} edges
                     </div>
                   </div>
                 ) : (
-                  <div className="h-[300px] flex flex-col items-center justify-center text-muted-foreground">
+                  <div className="h-[400px] flex flex-col items-center justify-center text-muted-foreground bg-gradient-to-br from-slate-900/30 to-slate-800/30 rounded-lg">
                     <GitBranch className="h-8 w-8 mb-2 opacity-50" />
                     <p className="text-sm">No graph data available</p>
-                    <p className="text-xs mt-1">Episodes will appear as incidents are processed</p>
+                    <p className="text-xs mt-1">Start monitoring containers to populate the graph</p>
                   </div>
                 )}
               </div>
@@ -1178,8 +1318,15 @@ export function Agents() {
                             <div className="flex items-center gap-2">
                               <h4 className="font-semibold">{container.name}</h4>
                               {container.monitored && (
-                                <span className="px-2 py-0.5 bg-blue-500/10 text-blue-500 rounded-full text-xs font-medium">
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-500/10 text-blue-500 rounded-full text-xs font-medium">
                                   Monitoring
+                                  <button
+                                    onClick={(e) => stopMonitoring(container.name, e)}
+                                    className="ml-1 p-0.5 hover:bg-blue-500/20 rounded"
+                                    title="Stop monitoring"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
                                 </span>
                               )}
                             </div>
