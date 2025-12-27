@@ -1,7 +1,8 @@
 # Constitutional AIOps - System Architecture
 
-> **Version**: 0.1.0-alpha
-> **Last Updated**: 2025-12-06
+> **Version**: 0.3.1
+> **Last Updated**: 2025-12-27
+> **Status**: Production Ready
 
 ---
 
@@ -9,12 +10,11 @@
 
 1. [System Overview](#1-system-overview)
 2. [Component Architecture](#2-component-architecture)
-3. [Data Flow](#3-data-flow)
-4. [Model Architecture](#4-model-architecture)
+3. [LLM Architecture](#3-llm-architecture)
+4. [Data Flow](#4-data-flow)
 5. [Memory Architecture](#5-memory-architecture)
 6. [API Architecture](#6-api-architecture)
-7. [Security Architecture](#7-security-architecture)
-8. [Deployment Architecture](#8-deployment-architecture)
+7. [Deployment Architecture](#7-deployment-architecture)
 
 ---
 
@@ -25,112 +25,55 @@
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                        CONSTITUTIONAL AIOPS SYSTEM                          │
+│                      (Simultaneous Dual-Model Architecture)                 │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
 │  │                      INFRASTRUCTURE LAYER                            │   │
-│  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐  │   │
-│  │  │Nextcloud │ │ MariaDB  │ │  Redis   │ │  Nginx   │ │   Cron   │  │   │
-│  │  │   App    │ │    DB    │ │  Cache   │ │  Proxy   │ │  Worker  │  │   │
-│  │  └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘  │   │
-│  │       │            │            │            │            │         │   │
-│  │       └────────────┴────────────┴────────────┴────────────┘         │   │
-│  │                              │                                       │   │
-│  │                    OpenTelemetry SDK                                 │   │
-│  └──────────────────────────────┼───────────────────────────────────────┘   │
-│                                 │                                           │
-│  ┌──────────────────────────────┴───────────────────────────────────────┐   │
-│  │                     OBSERVABILITY LAYER (LGTM)                        │   │
-│  │  ┌──────────────────────────────────────────────────────────────┐    │   │
-│  │  │              OpenTelemetry Collector                          │    │   │
-│  │  │         (Receive, Process, Export telemetry)                  │    │   │
-│  │  └────────┬─────────────────┬─────────────────┬─────────────────┘    │   │
-│  │           │                 │                 │                       │   │
-│  │  ┌────────▼────┐   ┌────────▼────┐   ┌────────▼────┐                 │   │
-│  │  │    Loki     │   │    Tempo    │   │ Prometheus  │                 │   │
-│  │  │   (Logs)    │   │  (Traces)   │   │  (Metrics)  │                 │   │
-│  │  └──────┬──────┘   └──────┬──────┘   └──────┬──────┘                 │   │
-│  │         └─────────────────┼─────────────────┘                        │   │
-│  │                           │                                          │   │
-│  │                   ┌───────▼───────┐                                  │   │
-│  │                   │    Grafana    │                                  │   │
-│  │                   │ (Visualization)│                                  │   │
-│  │                   └───────────────┘                                  │   │
-│  └──────────────────────────────────────────────────────────────────────┘   │
-│                                 │                                           │
-│  ┌──────────────────────────────┴───────────────────────────────────────┐   │
-│  │                      INTELLIGENCE LAYER                               │   │
-│  │                                                                       │   │
-│  │  ┌─────────────────────────────────────────────────────────────┐     │   │
-│  │  │                   TELEMETRY AGGREGATOR                       │     │   │
-│  │  │         (Collect, normalize, prepare for analysis)           │     │   │
-│  │  └────────────────────────────┬────────────────────────────────┘     │   │
-│  │                               │                                       │   │
-│  │  ┌────────────────────────────▼────────────────────────────────┐     │   │
-│  │  │              FAST ANNOTATOR (Qwen3-8B)                       │     │   │
-│  │  │     • Anomaly detection (<100ms latency)                     │     │   │
-│  │  │     • Classification & severity scoring                      │     │   │
-│  │  │     • Confidence calculation                                 │     │   │
-│  │  │     • Routing decision (direct action vs reasoning)          │     │   │
-│  │  └─────────────┬─────────────────────────────┬─────────────────┘     │   │
-│  │                │                             │                        │   │
-│  │    ┌───────────▼───────────┐     ┌───────────▼───────────┐           │   │
-│  │    │   HIGH CONFIDENCE     │     │    LOW CONFIDENCE     │           │   │
-│  │    │   (≥70%, simple)      │     │   (<70% or complex)   │           │   │
-│  │    └───────────┬───────────┘     └───────────┬───────────┘           │   │
-│  │                │                             │                        │   │
-│  │                │                 ┌───────────▼───────────┐           │   │
-│  │                │                 │  REASONING AGENT      │           │   │
-│  │                │                 │    (Qwen3-14B)        │           │   │
-│  │                │                 │  • Deep RCA analysis  │           │   │
-│  │                │                 │  • Human chat mode    │           │   │
-│  │                │                 │  • /think toggle      │           │   │
-│  │                │                 └───────────┬───────────┘           │   │
-│  │                │                             │                        │   │
-│  │    ┌───────────▼─────────────────────────────▼───────────┐           │   │
-│  │    │            CONSTITUTIONAL VALIDATOR                  │           │   │
-│  │    │   Tier 1 (Safety) → Tier 2 (Ops) → Tier 3 (Learn)   │           │   │
-│  │    └─────────────────────────┬───────────────────────────┘           │   │
-│  │                              │                                        │   │
-│  └──────────────────────────────┼────────────────────────────────────────┘   │
-│                                 │                                           │
-│  ┌──────────────────────────────┴───────────────────────────────────────┐   │
-│  │                        ACTION LAYER                                   │   │
-│  │                                                                       │   │
-│  │  ┌─────────────────────────────────────────────────────────────┐     │   │
-│  │  │                   MCP ACTION SERVER                          │     │   │
-│  │  │  ┌────────────┐ ┌────────────┐ ┌────────────┐               │     │   │
-│  │  │  │find_similar│ │get_depends │ │  restart   │               │     │   │
-│  │  │  └────────────┘ └────────────┘ └────────────┘               │     │   │
-│  │  │  ┌────────────┐ ┌────────────┐                              │     │   │
-│  │  │  │   scale    │ │  analyze   │                              │     │   │
-│  │  │  └────────────┘ └────────────┘                              │     │   │
-│  │  └─────────────────────────────────────────────────────────────┘     │   │
-│  │                              │                                        │   │
-│  └──────────────────────────────┼────────────────────────────────────────┘   │
-│                                 │                                           │
-│  ┌──────────────────────────────┴───────────────────────────────────────┐   │
-│  │                       MEMORY LAYER                                    │   │
-│  │  ┌─────────────────────┐     ┌─────────────────────┐                 │   │
-│  │  │       Neo4j         │     │      InfluxDB       │                 │   │
-│  │  │  (Graph Memory)     │     │   (Time Series)     │                 │   │
-│  │  │  • Services         │     │  • Metrics history  │                 │   │
-│  │  │  • Incidents        │     │  • Anomaly scores   │                 │   │
-│  │  │  • Dependencies     │     │  • Action outcomes  │                 │   │
-│  │  │  • Resolutions      │     │                     │                 │   │
-│  │  └─────────────────────┘     └─────────────────────┘                 │   │
-│  └──────────────────────────────────────────────────────────────────────┘   │
+│  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐               │   │
+│  │  │Nextcloud │ │ Backend  │ │ Frontend │ │  Neo4j   │               │   │
+│  │  │   App    │ │  :8000   │ │  :3000   │ │  :7687   │               │   │
+│  │  └──────────┘ └──────────┘ └──────────┘ └──────────┘               │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
 │                                                                             │
-│  ┌──────────────────────────────────────────────────────────────────────┐   │
-│  │                      INTERFACE LAYER                                  │   │
-│  │  ┌─────────────────────┐     ┌─────────────────────┐                 │   │
-│  │  │   React Dashboard   │     │    FastAPI Backend  │                 │   │
-│  │  │  • Real-time chat   │◄───►│  • REST endpoints   │                 │   │
-│  │  │  • Incident view    │     │  • WebSocket chat   │                 │   │
-│  │  │  • Service topology │     │  • Auth & logging   │                 │   │
-│  │  │  • Configuration    │     │                     │                 │   │
-│  │  └─────────────────────┘     └─────────────────────┘                 │   │
-│  └──────────────────────────────────────────────────────────────────────┘   │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                   OBSERVABILITY LAYER (LGTM + Promtail)              │   │
+│  │  ┌────────┐ ┌────────┐ ┌──────────┐ ┌─────────┐ ┌─────────────┐    │   │
+│  │  │  Loki  │ │ Tempo  │ │Prometheus│ │ Grafana │ │  Promtail   │    │   │
+│  │  │ :3100  │ │ :3200  │ │  :9090   │ │  :3001  │ │ (log ship)  │    │   │
+│  │  └────────┘ └────────┘ └──────────┘ └─────────┘ └─────────────┘    │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                      INTELLIGENCE LAYER                              │   │
+│  │              (Jarvis Labs A5000 24GB - Both Models Loaded)           │   │
+│  │                                                                       │   │
+│  │  ┌───────────────────────────────────────────────────────────────┐   │   │
+│  │  │                JARVIS LABS OLLAMA ENDPOINT                     │   │   │
+│  │  │          https://[instance].notebooks.jarvislabs.net/v1        │   │   │
+│  │  │                                                                 │   │   │
+│  │  │  ┌─────────────────────┐     ┌─────────────────────┐          │   │   │
+│  │  │  │   FAST AGENT        │     │   REASONING AGENT   │          │   │   │
+│  │  │  │   Qwen3-4B (~4GB)   │     │   Qwen3-14B (~11GB) │          │   │   │
+│  │  │  │   8K context        │     │   4K context        │          │   │   │
+│  │  │  │   <50ms latency     │     │   <200ms latency    │          │   │   │
+│  │  │  │                     │     │                     │          │   │   │
+│  │  │  │   Purpose:          │     │   Purpose:          │          │   │   │
+│  │  │  │   • Annotation      │     │   • RCA Analysis    │          │   │   │
+│  │  │  │   • Classification  │     │   • Planning        │          │   │   │
+│  │  │  │   • Confidence      │     │   • Human Chat      │          │   │   │
+│  │  │  └─────────────────────┘     └─────────────────────┘          │   │   │
+│  │  │                                                                 │   │   │
+│  │  │  VRAM: ~15GB used / 24GB available (both always loaded)        │   │   │
+│  │  │  NO HOT-SWAP - Direct routing, zero latency                    │   │   │
+│  │  └───────────────────────────────────────────────────────────────┘   │   │
+│  │                                                                       │   │
+│  │  ┌───────────────────────────────────────────────────────────────┐   │   │
+│  │  │            CONSTITUTIONAL VALIDATOR                            │   │   │
+│  │  │   Tier 1 (Safety) → Tier 2 (Ops) → Tier 3 (Learning)          │   │   │
+│  │  │   11 Principles | 3 Tiers | Authorization Matrix               │   │   │
+│  │  └───────────────────────────────────────────────────────────────┘   │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -138,10 +81,10 @@
 ### 1.2 Design Principles
 
 1. **Safety First**: All actions validated against Constitutional AI principles
-2. **Evidence Based**: Decisions backed by telemetry data
-3. **Human in Loop**: Uncertain actions require human approval
-4. **Minimal Intervention**: Prefer smallest effective action
-5. **Continuous Learning**: Track outcomes for improvement
+2. **Simultaneous Loading**: Both models always loaded - zero swap latency
+3. **Human in Loop**: Uncertain actions (70-90% confidence) require approval
+4. **Evidence Based**: Decisions backed by telemetry data
+5. **Minimal Intervention**: Prefer smallest effective action
 
 ---
 
@@ -151,254 +94,154 @@
 
 | Component | Technology | Purpose | Port |
 |-----------|------------|---------|------|
-| Fast Annotator | Qwen3-8B via llama.cpp | Real-time anomaly detection | 8081 |
-| Reasoning Agent | Qwen3-14B via llama.cpp | Complex RCA & chat | 8082 |
-| Model Proxy | llama-swap | Model hot-swapping | 8080 |
 | Backend API | FastAPI | REST & WebSocket API | 8000 |
-| Frontend | React + Vite | User interface | 5173 |
-| Graph Memory | Neo4j | Incident correlation | 7474/7687 |
-| Time Series | InfluxDB | Metrics storage | 8086 |
+| Frontend | React + Vite + Tailwind | User interface | 3000 |
+| Graph Memory | Neo4j 5.15 | Incident correlation | 7474/7687 |
+| Fast Agent | Qwen3-4B via Ollama | Telemetry annotation | (Jarvis Labs) |
+| Reasoning Agent | Qwen3-14B via Ollama | RCA & human chat | (Jarvis Labs) |
 
-### 2.2 Observability Components
-
-| Component | Technology | Purpose | Port |
-|-----------|------------|---------|------|
-| Collector | OpenTelemetry | Telemetry aggregation | 4317/4318 |
-| Logs | Loki | Log storage & query | 3100 |
-| Traces | Tempo | Distributed tracing | 3200 |
-| Metrics | Prometheus | Metrics collection | 9090 |
-| Visualization | Grafana | Dashboards | 3000 |
-
-### 2.3 Test Environment
+### 2.2 Observability Stack (LGTM + Promtail)
 
 | Component | Technology | Purpose | Port |
 |-----------|------------|---------|------|
-| Nextcloud App | Nextcloud | Test application | 8080 |
-| Database | MariaDB | Test database | 3306 |
-| Cache | Redis | Test cache | 6379 |
-| Proxy | Nginx | (bundled) | - |
-| Background | Cron | Test worker | - |
+| Logs | Loki 2.9.3 | Log aggregation | 3100 |
+| Traces | Tempo 2.3.1 | Distributed tracing | 3200 |
+| Metrics | Prometheus 2.48 | Metrics collection | 9090 |
+| Visualization | Grafana 10.2.3 | Dashboards | 3001 |
+| Log Shipping | Promtail 2.9.3 | Container logs → Loki | - |
+| Collector | OpenTelemetry 0.91 | Telemetry pipeline | 4317/4318 |
 
----
-
-## 3. Data Flow
-
-### 3.1 Telemetry Flow
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                        TELEMETRY FLOW                               │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  SERVICE                    COLLECTOR              STORAGE          │
-│  ───────                    ─────────              ───────          │
-│                                                                     │
-│  Nextcloud ─┐                                                       │
-│  MariaDB  ──┼─► OTLP ─────► OpenTelemetry ─────┬─► Loki (logs)     │
-│  Redis    ──┤    Protocol    Collector         ├─► Tempo (traces)  │
-│  Nginx    ──┤                   │              └─► Prometheus      │
-│  Cron     ──┘                   │                  (metrics)       │
-│                                 │                                   │
-│                                 ▼                                   │
-│                          Batch Processing                           │
-│                          (5s batches)                               │
-│                                 │                                   │
-│                                 ▼                                   │
-│                       Telemetry Aggregator                          │
-│                                 │                                   │
-│                                 ▼                                   │
-│                        Fast Annotator (8B)                          │
-│                                                                     │
-└─────────────────────────────────────────────────────────────────────┘
-```
-
-### 3.2 Analysis Flow
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                        ANALYSIS FLOW                                │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  TELEMETRY              FAST AGENT (8B)           RESULT            │
-│  ─────────              ───────────────           ──────            │
-│                                                                     │
-│  {                      ┌─────────────────┐                         │
-│    logs: [...],         │ Anomaly Check   │                         │
-│    metrics: {...},  ───►│ Classification  │───► confidence ≥ 0.7?  │
-│    traces: [...]        │ Confidence Calc │           │             │
-│  }                      └─────────────────┘           │             │
-│                                                       │             │
-│                         ┌─────────────────────────────┼─────────┐   │
-│                         │                             │         │   │
-│                         ▼                             ▼         │   │
-│                  ┌──────────────┐            ┌──────────────┐   │   │
-│                  │ Direct Route │            │ Reasoning    │   │   │
-│                  │ to Validator │            │ Agent (14B)  │   │   │
-│                  └──────────────┘            └──────────────┘   │   │
-│                         │                             │         │   │
-│                         │                             │         │   │
-│                         └──────────────┬──────────────┘         │   │
-│                                        │                        │   │
-│                                        ▼                        │   │
-│                              Constitutional Validator           │   │
-│                                        │                        │   │
-│                         ┌──────────────┼──────────────┐         │   │
-│                         ▼              ▼              ▼         │   │
-│                    APPROVED      NEEDS APPROVAL   REJECTED      │   │
-│                         │              │              │         │   │
-│                         ▼              ▼              ▼         │   │
-│                    Execute       Queue for        Log &         │   │
-│                    Action        Human Review     Alert         │   │
-│                                                                 │   │
-└─────────────────────────────────────────────────────────────────────┘
-```
-
-### 3.3 Chat Flow
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                          CHAT FLOW                                  │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  USER                  BACKEND                  REASONING AGENT     │
-│  ────                  ───────                  ───────────────     │
-│                                                                     │
-│  "Why is the          WebSocket               Record Activity       │
-│   database slow?"  ──► Connection ──────────► (keeps 14B loaded)   │
-│                            │                                        │
-│                            ▼                                        │
-│                     Complexity Check                                │
-│                            │                                        │
-│               ┌────────────┴────────────┐                          │
-│               ▼                         ▼                          │
-│         Simple Query              Complex Query                     │
-│         /no_think                 /think                           │
-│               │                         │                          │
-│               └────────────┬────────────┘                          │
-│                            │                                        │
-│                            ▼                                        │
-│                    Reasoning Agent (14B)                           │
-│                            │                                        │
-│               ┌────────────┴────────────┐                          │
-│               ▼                         ▼                          │
-│         Direct Response         Thinking Process                    │
-│         (~500ms)                + Response (2-10s)                 │
-│               │                         │                          │
-│               └────────────┬────────────┘                          │
-│                            │                                        │
-│                            ▼                                        │
-│                     WebSocket Response                              │
-│                            │                                        │
-│  {                         │                                        │
-│    thinking: "...",   ◄────┘                                        │
-│    response: "The database is slow because..."                     │
-│  }                                                                  │
-│                                                                     │
-│  ─────────────────────────────────────────────────────────────     │
-│  TIMEOUT: 1 minute after last message → swap back to 8B            │
-│                                                                     │
-└─────────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## 4. Model Architecture
-
-### 4.1 VRAM Allocation Strategy
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                    T4 16GB VRAM ALLOCATION                          │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  NORMAL STATE (95% of operation time):                              │
-│  ════════════════════════════════════                              │
-│                                                                     │
-│  ┌────────────────────────────────────────────────────────────┐    │
-│  │                    VRAM (16GB)                              │    │
-│  ├────────────────────────────────────────────────────────────┤    │
-│  │  Qwen3-8B Q4_K_M          │  KV Cache    │     FREE        │    │
-│  │      (~5.5GB)             │  (~1GB)      │   (~9.5GB)      │    │
-│  │                           │  8K context  │                 │    │
-│  └────────────────────────────────────────────────────────────┘    │
-│                                                                     │
-│  Purpose: Fast annotation, anomaly detection                        │
-│  Latency: <100ms per inference                                      │
-│                                                                     │
-│  ─────────────────────────────────────────────────────────────     │
-│                                                                     │
-│  RCA/CHAT STATE (on-demand, ~5% of time):                          │
-│  ════════════════════════════════════════                          │
-│                                                                     │
-│  ┌────────────────────────────────────────────────────────────┐    │
-│  │                    VRAM (16GB)                              │    │
-│  ├────────────────────────────────────────────────────────────┤    │
-│  │  Qwen3-14B Q4_K_M              │  KV Cache  │    FREE      │    │
-│  │      (~9.5GB)                  │  (~1.5GB)  │   (~5GB)     │    │
-│  │                                │ 4K context │              │    │
-│  └────────────────────────────────────────────────────────────┘    │
-│                                                                     │
-│  Purpose: Complex RCA, human chat                                   │
-│  Latency: ~500ms (no think), 2-10s (with think)                    │
-│                                                                     │
-│  ─────────────────────────────────────────────────────────────     │
-│                                                                     │
-│  RAM PRE-CACHE (always):                                           │
-│  ══════════════════════                                            │
-│                                                                     │
-│  ┌────────────────────────────────────────────────────────────┐    │
-│  │                    RAM (32GB)                               │    │
-│  ├────────────────────────────────────────────────────────────┤    │
-│  │  Qwen3-14B (mmap)  │    OS    │        Buffer             │    │
-│  │     (~9GB)         │  (~8GB)  │       (~15GB)             │    │
-│  │                    │          │                            │    │
-│  └────────────────────────────────────────────────────────────┘    │
-│                                                                     │
-│  Enables: ~2-3s swap time (vs 30s+ from disk)                      │
-│                                                                     │
-└─────────────────────────────────────────────────────────────────────┘
-```
-
-### 4.2 Model Swap Timing
-
-| Transition | Time | Method |
-|------------|------|--------|
-| 8B → 14B | ~2-3s | Pre-cached in RAM |
-| 14B → 8B | ~1s | Smaller model, faster |
-| Cold start (disk) | ~30-60s | Avoided by pre-caching |
-
-### 4.3 Thinking Mode Logic
+### 2.3 LLM Configuration (from `src/config.py`)
 
 ```python
-# Thinking mode is enabled for:
-COMPLEX_PATTERNS = [
-    "root cause",           # RCA queries
-    "why.*fail",           # Failure analysis
-    "cascade",             # Cascade failures
-    "correlat",            # Correlation analysis
-    "multiple.*service",   # Multi-service issues
-    "explain.*step",       # Step-by-step explanations
-    "compare",             # Comparisons
-    "trade.?off",          # Trade-off analysis
-    "plan|strategy",       # Planning
-]
+# Fast Agent (Qwen3-4B) - Always loaded
+fast_agent_url: str = "https://[instance].notebooks.jarvislabs.net/v1"
+fast_agent_model: str = "qwen3:4b"
+fast_agent_context: int = 8192  # 8K context window
+fast_agent_timeout: float = 30  # seconds
 
-# Thinking mode is disabled for:
-SIMPLE_PATTERNS = [
-    "^(what|who|when|where)\\s+is\\b",  # Simple factual
-    "^status",             # Status checks
-    "^list",               # List commands
-    "^show",               # Show commands
-    "^restart",            # Action commands
-    "^current",            # Current state
-]
-
-# Context triggers (override patterns):
-if affected_services > 3:
-    enable_thinking = True
-if incident_severity == "critical":
-    enable_thinking = True
+# Reasoning Agent (Qwen3-14B) - Always loaded
+reasoning_agent_url: str = "https://[instance].notebooks.jarvislabs.net/v1"
+reasoning_agent_model: str = "qwen3:14b"
+reasoning_agent_context: int = 4096  # 4K context window
+reasoning_agent_timeout: float = 120  # seconds
 ```
+
+---
+
+## 3. LLM Architecture
+
+### 3.1 Simultaneous Dual-Model (NOT Hot-Swap)
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│             JARVIS LABS A5000 24GB - BOTH ALWAYS LOADED         │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │  FAST AGENT                                               │  │
+│  │  ─────────────────────────────────────────────────────    │  │
+│  │  Model: Qwen3-4B Q4_K_M (~2.5GB + 1GB KV = ~4GB)         │  │
+│  │  Purpose: Telemetry annotation, classification            │  │
+│  │  Context: 8K tokens | Latency: <50ms | TTL: -1           │  │
+│  └───────────────────────────────────────────────────────────┘  │
+│                                                                 │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │  REASONING AGENT                                          │  │
+│  │  ─────────────────────────────────────────────────────    │  │
+│  │  Model: Qwen3-14B Q4_K_M (~9GB + 1.5GB KV = ~11GB)       │  │
+│  │  Purpose: RCA, remediation planning, human chat           │  │
+│  │  Context: 4K tokens | Latency: <200ms | TTL: -1          │  │
+│  └───────────────────────────────────────────────────────────┘  │
+│                                                                 │
+│  FREE VRAM: ~9GB (overhead, batch processing)                  │
+│  TOTAL: ~15GB used / 24GB available                            │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 3.2 Why Simultaneous (NOT Hot-Swap)
+
+| Factor | Old (T4 16GB Hot-Swap) | Current (24GB Simultaneous) |
+|--------|------------------------|----------------------------|
+| Swap Latency | 2-3 seconds | **0 ms** |
+| Code Complexity | High (timeout mgmt) | **Low (direct routing)** |
+| Monthly Cost | ~$14 | ~$36 (Jarvis Labs) |
+| User Experience | Noticeable delays | **Instant responses** |
+| Decision | ❌ Rejected | ✅ **Selected** |
+
+**+$22/month is justified by: zero latency, simpler code, better UX**
+
+### 3.3 Model Router (from `src/agents/model_router.py`)
+
+```python
+class ModelRouter:
+    """
+    Routes requests to appropriate LLM endpoint.
+    Both models run simultaneously on 24GB VRAM.
+    No swap latency, no timeout management - just direct routing.
+    """
+
+    async def fast_completion(self, prompt: str, **kwargs) -> dict:
+        """Fast agent (Qwen3-4B) for annotation, classification."""
+        ...
+
+    async def reasoning_completion(self, prompt: str, **kwargs) -> dict:
+        """Reasoning agent (Qwen3-14B) for RCA, planning, chat."""
+        ...
+```
+
+---
+
+## 4. Data Flow
+
+### 4.1 Telemetry Flow
+
+```
+Container Logs ──► Promtail ──► Loki ──► Backend API
+                                              │
+Metrics ─────────► Prometheus ────────────────┤
+                                              │
+Traces ──────────► Tempo ─────────────────────┤
+                                              │
+                                              ▼
+                                    Telemetry Aggregator
+                                              │
+                                              ▼
+                                    Fast Agent (Qwen3-4B)
+                                      Classification
+                                              │
+                            ┌─────────────────┴─────────────────┐
+                            ▼                                   ▼
+                    HIGH CONFIDENCE                     LOW CONFIDENCE
+                    (≥70%, simple)                     (<70% or complex)
+                            │                                   │
+                            │                    ┌──────────────┴──────────────┐
+                            │                    ▼                             │
+                            │           Reasoning Agent (Qwen3-14B)            │
+                            │                    │                             │
+                            └────────────────────┴─────────────────────────────┘
+                                                 │
+                                                 ▼
+                                    Constitutional Validator
+                                                 │
+                            ┌────────────────────┼────────────────────┐
+                            ▼                    ▼                    ▼
+                        APPROVED           NEEDS APPROVAL         REJECTED
+                        (≥90%)              (70-90%)              (<70%)
+                            │                    │                    │
+                            ▼                    ▼                    ▼
+                        Execute            Queue for              Log &
+                        Action             Human Review           Alert
+```
+
+### 4.2 Authorization Matrix
+
+| Confidence | Action | Human Review |
+|------------|--------|--------------|
+| ≥90% | AUTOMATIC | Audit only |
+| 70-90% | APPROVAL_REQUIRED | Must approve |
+| <70% | ALERT_ONLY | Notify only |
 
 ---
 
@@ -407,72 +250,33 @@ if incident_severity == "critical":
 ### 5.1 Neo4j Graph Schema
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                      NEO4J GRAPH SCHEMA                             │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  NODE TYPES:                                                        │
-│  ───────────                                                        │
-│                                                                     │
-│  (Service)                    (Incident)                            │
-│  ├── name: string             ├── id: string                        │
-│  ├── type: string             ├── timestamp: datetime               │
-│  ├── criticality: int         ├── severity: string                  │
-│  ├── replicas: int            ├── status: string                    │
-│  └── metadata: map            ├── root_cause: string                │
-│                               ├── resolution: string                │
-│                               └── confidence: float                 │
-│                                                                     │
-│  (Action)                     (Metric)                              │
-│  ├── id: string               ├── name: string                      │
-│  ├── type: string             ├── value: float                      │
-│  ├── timestamp: datetime      ├── timestamp: datetime               │
-│  ├── confidence: float        └── service: string                   │
-│  ├── outcome: string                                                │
-│  └── rollback_available: bool                                       │
-│                                                                     │
-│  ─────────────────────────────────────────────────────────────     │
-│                                                                     │
-│  RELATIONSHIPS:                                                     │
-│  ──────────────                                                     │
-│                                                                     │
-│  (Service)-[:DEPENDS_ON]->(Service)                                │
-│      └── criticality: int                                          │
-│                                                                     │
-│  (Incident)-[:AFFECTS]->(Service)                                  │
-│      └── impact_score: float                                       │
-│                                                                     │
-│  (Incident)-[:SIMILAR_TO]->(Incident)                              │
-│      └── similarity: float                                         │
-│                                                                     │
-│  (Incident)-[:RESOLVED_BY]->(Action)                               │
-│      └── effectiveness: float                                      │
-│                                                                     │
-│  (Action)-[:TARGETS]->(Service)                                    │
-│                                                                     │
-│  ─────────────────────────────────────────────────────────────     │
-│                                                                     │
-│  EXAMPLE GRAPH:                                                     │
-│                                                                     │
-│           ┌─────────────┐                                          │
-│           │ nextcloud-  │                                          │
-│           │    app      │                                          │
-│           └──────┬──────┘                                          │
-│                  │ DEPENDS_ON                                       │
-│         ┌────────┼────────┐                                        │
-│         ▼        ▼        ▼                                        │
-│  ┌──────────┐ ┌──────┐ ┌──────────┐                               │
-│  │nextcloud-│ │redis │ │nextcloud-│                               │
-│  │   db     │ │      │ │  nginx   │                               │
-│  └──────────┘ └──────┘ └──────────┘                               │
-│         ▲                                                          │
-│         │ AFFECTS                                                   │
-│  ┌──────┴───────┐      ┌─────────────┐                            │
-│  │ INC-20251206 │──────│ ACT-restart │                            │
-│  │ DB Timeout   │ RESOLVED_BY        │                            │
-│  └──────────────┘      └─────────────┘                            │
-│                                                                     │
-└─────────────────────────────────────────────────────────────────────┘
+NODE TYPES:
+───────────
+
+(Service)                    (Incident)
+├── name: string             ├── id: string
+├── type: string             ├── timestamp: datetime
+├── criticality: int         ├── severity: string
+└── metadata: map            ├── status: string
+                             ├── root_cause: string
+                             └── confidence: float
+
+(Action)                     (Episode)
+├── id: string               ├── incident_id: string
+├── type: string             ├── telemetry_summary: string
+├── timestamp: datetime      ├── analysis: string
+├── confidence: float        ├── resolution: string
+├── outcome: string          └── outcome: string
+└── rollback_available: bool
+
+RELATIONSHIPS:
+──────────────
+
+(Service)-[:DEPENDS_ON]->(Service)
+(Incident)-[:AFFECTS]->(Service)
+(Incident)-[:SIMILAR_TO]->(Incident)
+(Incident)-[:RESOLVED_BY]->(Action)
+(Action)-[:TARGETS]->(Service)
 ```
 
 ### 5.2 Query Patterns
@@ -480,22 +284,17 @@ if incident_severity == "critical":
 ```cypher
 // Find similar incidents
 MATCH (i:Incident)-[:AFFECTS]->(s:Service)<-[:AFFECTS]-(similar:Incident)
-WHERE i.id = $incident_id
-  AND similar.status = 'resolved'
-RETURN similar, 
-       count(s) as shared_services,
-       similar.resolution as resolution
-ORDER BY shared_services DESC
+WHERE i.id = $incident_id AND similar.status = 'resolved'
+RETURN similar, similar.resolution
 LIMIT 5
 
 // Get service dependencies
-MATCH path = (s:Service {name: $service_name})-[:DEPENDS_ON*1..3]->(dep:Service)
+MATCH path = (s:Service {name: $name})-[:DEPENDS_ON*1..3]->(dep:Service)
 RETURN path
 
 // Find effective resolutions
 MATCH (i:Incident)-[:RESOLVED_BY]->(a:Action)
-WHERE i.root_cause CONTAINS $pattern
-  AND a.outcome = 'success'
+WHERE i.root_cause CONTAINS $pattern AND a.outcome = 'success'
 RETURN a.type, count(*) as success_count
 ORDER BY success_count DESC
 ```
@@ -508,256 +307,106 @@ ORDER BY success_count DESC
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/health` | Health check |
-| GET | `/ready` | Readiness probe |
-| GET | `/live` | Liveness probe |
-| GET | `/api/status` | System status |
-| GET | `/api/status/models` | Model status |
-| POST | `/api/chat` | HTTP chat |
-| WS | `/api/chat/ws/{session}` | WebSocket chat |
-| GET | `/api/incidents` | List incidents |
-| GET | `/api/incidents/{id}` | Get incident |
-| POST | `/api/actions` | Execute action |
-| GET | `/api/telemetry/summary` | Telemetry summary |
+| GET | `/api/v1/health` | System health with component status |
+| GET | `/api/v1/health/ready` | Kubernetes readiness probe |
+| GET | `/api/v1/health/live` | Kubernetes liveness probe |
+| POST | `/api/v1/chat` | Send message to reasoning agent |
+| POST | `/api/v1/chat/analyze` | Run RCA or planning analysis |
+| GET | `/api/v1/incidents` | List incidents with filters |
+| POST | `/api/v1/incidents` | Create incident |
+| GET | `/api/v1/incidents/{id}` | Get incident details |
+| POST | `/api/v1/incidents/{id}/analyze` | Trigger RCA |
+| GET | `/api/v1/actions` | List actions |
+| POST | `/api/v1/actions/{id}/approve` | Human approval |
+| GET | `/api/v1/infrastructure/services` | Docker containers |
+| GET | `/api/v1/graph/services` | Service dependency graph |
+| POST | `/api/v1/demo/start` | Start demo mode |
 
-### 6.2 WebSocket Protocol
+### 6.2 WebSocket Endpoint
 
-```json
-// Client → Server
-{
-  "type": "message",
-  "content": "Why is the database slow?",
-  "enable_thinking": true
-}
-
-// Server → Client (status)
-{
-  "type": "status",
-  "content": "thinking"
-}
-
-// Server → Client (thinking)
-{
-  "type": "thinking",
-  "content": "Analyzing database metrics..."
-}
-
-// Server → Client (response)
-{
-  "type": "response",
-  "content": "The database is slow because...",
-  "model": "reasoning-agent",
-  "latency_ms": 1234.56
-}
-
-// Server → Client (error)
-{
-  "type": "error",
-  "content": "Error message"
-}
+```
+WS /ws - Real-time updates for incidents, actions, RCA results
 ```
 
 ---
 
-## 7. Security Architecture
+## 7. Deployment Architecture
 
-### 7.1 Authentication & Authorization
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                    SECURITY ARCHITECTURE                            │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  AUTHENTICATION:                                                    │
-│  ───────────────                                                    │
-│  • JWT tokens for API access                                        │
-│  • Session management for WebSocket                                 │
-│  • API key for service-to-service                                   │
-│                                                                     │
-│  AUTHORIZATION:                                                     │
-│  ──────────────                                                     │
-│  • Role-based access control (RBAC)                                │
-│  • Roles: admin, operator, viewer                                  │
-│  • Action approval based on confidence + role                       │
-│                                                                     │
-│  DATA PROTECTION:                                                   │
-│  ────────────────                                                   │
-│  • TLS 1.3 for all connections                                     │
-│  • Encryption at rest for Neo4j/InfluxDB                           │
-│  • No credential logging (P1.5 principle)                          │
-│  • Audit trail for all actions                                     │
-│                                                                     │
-│  CONSTITUTIONAL SAFETY:                                             │
-│  ──────────────────────                                            │
-│  • Tier 1 principles never bypassed                                │
-│  • All actions logged and auditable                                │
-│  • Reversibility requirement enforced                              │
-│                                                                     │
-└─────────────────────────────────────────────────────────────────────┘
-```
-
-### 7.2 Compliance
-
-| Standard | Status | Notes |
-|----------|--------|-------|
-| HIPAA | Ready | No PHI stored, audit trails |
-| ISO 27001 | Ready | Security controls documented |
-| SOC 2 | Partial | Requires external audit |
-| GDPR | Ready | No personal data processed |
-
----
-
-## 8. Deployment Architecture
-
-### 8.1 Local Development
+### 7.1 Primary: Jarvis Labs Hybrid (Recommended)
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                  LOCAL DEVELOPMENT STACK                            │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  HOST MACHINE (No GPU required)                                     │
-│  ─────────────────────────────                                     │
-│                                                                     │
-│  ┌─────────────────────────────────────────────────────────────┐   │
-│  │                    Docker Compose                            │   │
-│  │                                                              │   │
-│  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐       │   │
-│  │  │Nextcloud │ │ MariaDB  │ │  Redis   │ │   Cron   │       │   │
-│  │  └──────────┘ └──────────┘ └──────────┘ └──────────┘       │   │
-│  │                                                              │   │
-│  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐       │   │
-│  │  │   Loki   │ │  Tempo   │ │Prometheus│ │ Grafana  │       │   │
-│  │  └──────────┘ └──────────┘ └──────────┘ └──────────┘       │   │
-│  │                                                              │   │
-│  │  ┌──────────┐ ┌──────────┐ ┌──────────┐                    │   │
-│  │  │  Neo4j   │ │ InfluxDB │ │ Mock LLM │ ◄── Returns        │   │
-│  │  └──────────┘ └──────────┘ └──────────┘     canned         │   │
-│  │                                              responses      │   │
-│  └─────────────────────────────────────────────────────────────┘   │
-│                                                                     │
-│  LOCAL PROCESSES:                                                   │
-│  ┌──────────────┐  ┌──────────────┐                                │
-│  │ FastAPI      │  │ Vite (React) │                                │
-│  │ (hot reload) │  │ (hot reload) │                                │
-│  └──────────────┘  └──────────────┘                                │
-│                                                                     │
-└─────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                    JARVIS LABS HYBRID DEPLOYMENT                │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  LOCAL MACHINE (Docker Compose)          JARVIS LABS (Cloud)   │
+│  ─────────────────────────────           ──────────────────    │
+│                                                                 │
+│  ┌─────────────────────┐                ┌─────────────────────┐│
+│  │ Frontend    :3000   │                │ Ollama Server       ││
+│  │ Backend     :8000   │───HTTPS────────│ A5000 24GB GPU      ││
+│  │ Neo4j       :7687   │                │                     ││
+│  │ Loki        :3100   │                │ ┌─────────────────┐ ││
+│  │ Prometheus  :9090   │                │ │ Qwen3-4B (4GB)  │ ││
+│  │ Tempo       :3200   │                │ │ Qwen3-14B (11GB)│ ││
+│  │ Grafana     :3001   │                │ └─────────────────┘ ││
+│  │ Promtail           │                │                     ││
+│  │ OTel Collector     │                │ Cost: $0.49/hr      ││
+│  └─────────────────────┘                └─────────────────────┘│
+│                                                                 │
+│  COST: ~$36/month (average 73 hours/month)                     │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-### 8.2 AWS GPU Testing
+### 7.2 Alternative: AWS g6.xlarge
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                  AWS GPU TESTING STACK                              │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  AWS g4dn.xlarge (T4 16GB, 4 vCPU, 16GB RAM)                       │
-│  ────────────────────────────────────────────                      │
-│                                                                     │
-│  ┌─────────────────────────────────────────────────────────────┐   │
-│  │                    Docker Compose (GPU)                      │   │
-│  │                                                              │   │
-│  │  ┌─────────────────────────────────────────────────────┐    │   │
-│  │  │              llama-swap (GPU)                        │    │   │
-│  │  │  ┌──────────────┐    ┌──────────────┐               │    │   │
-│  │  │  │ Qwen3-8B     │◄──►│ Qwen3-14B    │               │    │   │
-│  │  │  │ (fast-agent) │    │ (reasoning)  │               │    │   │
-│  │  │  └──────────────┘    └──────────────┘               │    │   │
-│  │  └─────────────────────────────────────────────────────┘    │   │
-│  │                                                              │   │
-│  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐       │   │
-│  │  │Nextcloud │ │ MariaDB  │ │  Redis   │ │   Cron   │       │   │
-│  │  └──────────┘ └──────────┘ └──────────┘ └──────────┘       │   │
-│  │                                                              │   │
-│  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐       │   │
-│  │  │   Loki   │ │  Tempo   │ │Prometheus│ │ Grafana  │       │   │
-│  │  └──────────┘ └──────────┘ └──────────┘ └──────────┘       │   │
-│  │                                                              │   │
-│  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐       │   │
-│  │  │  Neo4j   │ │ InfluxDB │ │ Backend  │ │ Frontend │       │   │
-│  │  └──────────┘ └──────────┘ └──────────┘ └──────────┘       │   │
-│  │                                                              │   │
-│  └─────────────────────────────────────────────────────────────┘   │
-│                                                                     │
-│  COST: ~$0.16-0.20/hour (Spot)                                     │
-│  REMEMBER: Stop instance when not in use!                          │
-│                                                                     │
-└─────────────────────────────────────────────────────────────────────┘
+AWS g6.xlarge (L4 24GB, 4 vCPU, 16GB RAM)
+Cost: ~$0.35/hr (Spot)
+Use for: Self-contained deployment when Jarvis Labs unavailable
 ```
 
-### 8.3 Production Deployment
+### 7.3 Local Development (No GPU)
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                 PRODUCTION DEPLOYMENT (Self-Hosted)                 │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  CUSTOMER HARDWARE REQUIREMENTS:                                    │
-│  ───────────────────────────────                                   │
-│  • GPU: 16GB VRAM minimum (T4, RTX 4060 Ti 16GB, RTX 3060 12GB)   │
-│  • RAM: 32GB minimum                                               │
-│  • Storage: 100GB SSD                                              │
-│  • CPU: 4+ cores                                                   │
-│                                                                     │
-│  DEPLOYMENT:                                                        │
-│  ───────────                                                        │
-│  $ git clone https://github.com/org/constitutional-aiops           │
-│  $ cd constitutional-aiops                                         │
-│  $ ./scripts/install.sh    # Downloads models, configures system   │
-│  $ docker-compose up -d    # Starts all services                   │
-│                                                                     │
-│  SINGLE DOCKER-COMPOSE:                                            │
-│  ──────────────────────                                            │
-│  • All services in one file                                        │
-│  • Automatic hardware detection                                     │
-│  • Self-contained (no external dependencies)                       │
-│  • HIPAA/ISO 27001 compliant package                               │
-│                                                                     │
-│  CUSTOMER SUPPORT:                                                  │
-│  ─────────────────                                                 │
-│  • Installation documentation                                       │
-│  • Troubleshooting guide                                           │
-│  • Email/ticket support                                            │
-│                                                                     │
-└─────────────────────────────────────────────────────────────────────┘
+docker-compose -f docker-compose.yml -f docker/docker-compose.local.yml up
+- Uses mock LLM server
+- Full observability stack
+- No GPU required
 ```
 
 ---
 
-## Appendix A: Hardware Compatibility Matrix
-
-| GPU | VRAM | Compatible | Notes |
-|-----|------|------------|-------|
-| NVIDIA T4 | 16GB | ✅ Yes | Primary development target |
-| NVIDIA RTX 4060 Ti | 16GB | ✅ Yes | Consumer option |
-| NVIDIA RTX 3060 | 12GB | ⚠️ Limited | May need smaller context |
-| NVIDIA RTX 4090 | 24GB | ✅ Yes | Can run both models |
-| NVIDIA A10 | 24GB | ✅ Yes | Cloud option |
-| NVIDIA A100 | 40/80GB | ✅ Yes | Enterprise option |
-| AMD GPUs | Various | ❌ No | ROCm not tested |
-| Apple Silicon | Various | ❌ No | Not supported |
-
-## Appendix B: Port Reference
+## Appendix A: Port Reference
 
 | Port | Service | Protocol |
 |------|---------|----------|
-| 3000 | Grafana | HTTP |
+| 3000 | Frontend | HTTP |
+| 3001 | Grafana | HTTP |
 | 3100 | Loki | HTTP |
 | 3200 | Tempo | HTTP/gRPC |
 | 4317 | OTEL Collector | gRPC |
 | 4318 | OTEL Collector | HTTP |
-| 5173 | Frontend (dev) | HTTP |
 | 7474 | Neo4j Browser | HTTP |
 | 7687 | Neo4j Bolt | Bolt |
 | 8000 | Backend API | HTTP/WS |
-| 8080 | llama-swap | HTTP |
-| 8081 | Fast Agent | HTTP |
-| 8082 | Reasoning Agent | HTTP |
-| 8086 | InfluxDB | HTTP |
 | 9090 | Prometheus | HTTP |
+
+## Appendix B: Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `FAST_AGENT_URL` | Jarvis Labs URL | Fast agent endpoint |
+| `REASONING_AGENT_URL` | Jarvis Labs URL | Reasoning agent endpoint |
+| `FAST_AGENT_MODEL` | `qwen3:4b` | Fast agent model name |
+| `REASONING_AGENT_MODEL` | `qwen3:14b` | Reasoning agent model |
+| `NEO4J_URI` | `bolt://neo4j:7687` | Neo4j connection |
+| `NEO4J_PASSWORD` | `constitutional_aiops_2025` | Neo4j password |
+| `CONFIDENCE_THRESHOLD_AUTO` | `0.90` | Auto-execute threshold |
+| `CONFIDENCE_THRESHOLD_APPROVAL` | `0.70` | Require approval threshold |
 
 ---
 
-**Last Updated**: 2025-12-06
-**Version**: 0.1.0-alpha
+**Last Updated**: 2025-12-27
+**Version**: 0.3.1

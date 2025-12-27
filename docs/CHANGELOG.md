@@ -2,6 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.2] - 2025-12-27
+
+### Documentation Restructure
+- **ARCHITECTURE.md**: Complete rewrite with correct specs (Qwen3-4B/14B, Jarvis Labs, no hot-swap)
+- **DEPLOYMENT.md**: Complete rewrite with Jarvis Labs Hybrid as primary deployment option
+- **INDEX.md**: New master documentation index with update tracking
+- **DOCUMENTATION_SCHEMA.md**: New guidelines for maintaining documentation
+- **CLAUDE.md**: Updated to v2.1 with correct documentation map
+- **README.md**: Updated technology stack and documentation references
+
+### Removed (Outdated/Redundant Files)
+- `MEGA_PROMPT.md`, `MEGA_PROMPT_PART2.md`, `MEGA_PROMPT_PART3.md` - Contained outdated code examples (InfluxDB, T4)
+- `PROJECT_SUMMARY.md` - Historical document, no longer needed
+- `QUICKSTART.md` - Merged into README.md
+- `Cloud_provider_discussions.md` - Historical research notes
+- `JARVIS_LABS_TESTING_RESULTS.md` - Test results, not documentation
+- `Simplified_AIOps_Documentation_v6.md` - Old consolidated draft
+- `docs/plans/jarvis-labs-qwen3-deployment.md` - Obsolete plan file
+
+### Fixed
+- Removed all T4 16GB / hot-swap / llama-swap references (incorrect architecture)
+- Removed all Qwen3-8B references (correct model is Qwen3-4B)
+- Removed InfluxDB references (only Neo4j is used for memory)
+- Updated all documentation to reflect Jarvis Labs Ollama as primary LLM host
+
+---
+
 ## [0.3.1] - 2025-12-21
 
 ### Deployment

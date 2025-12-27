@@ -1,7 +1,7 @@
 # CLAUDE.md - Constitutional AIOps Development Instructions
 
-> **Version**: 2.0
-> **Last Updated**: 2025-12-14
+> **Version**: 2.1
+> **Last Updated**: 2025-12-27
 > **Architecture**: Simultaneous Dual-Model (24GB VRAM)
 
 ---
@@ -21,8 +21,8 @@ cat docs/ISSUES.md | head -30
 # 3. Check recent changes
 cat docs/CHANGELOG.md | head -40
 
-# 4. For full context (if needed)
-cat PROJECT_SUMMARY.md
+# 4. Check documentation index
+cat docs/INDEX.md
 ```
 
 ---
@@ -87,20 +87,21 @@ cat PROJECT_SUMMARY.md
 
 ```
 constitutional-aiops/
+├── README.md                    # Quick Start (entry point)
 ├── CLAUDE.md                    # THIS FILE - Read first every session
-├── PROJECT_SUMMARY.md           # Complete requirements & history
 ├── docs/
+│   ├── INDEX.md                 # Master documentation index
+│   ├── DOCUMENTATION_SCHEMA.md  # Update guidelines
 │   ├── CHECKLIST.md             # ⭐ Current progress & tasks
 │   ├── CHANGELOG.md             # Version history
 │   ├── ISSUES.md                # Active blockers
-│   ├── MEGA_PROMPT.md           # Part 1: Architecture overview
-│   ├── MEGA_PROMPT_PART2.md     # Part 2: Backend implementation
-│   ├── MEGA_PROMPT_PART3.md     # Part 3: Frontend & deployment
-│   ├── ARCHITECTURE.md          # Detailed architecture
-│   ├── DEPLOYMENT.md            # Deployment guide
+│   ├── ARCHITECTURE.md          # System architecture
+│   ├── DEPLOYMENT.md            # Deployment overview
+│   ├── JARVIS_LABS_DEPLOYMENT.md # Detailed Jarvis Labs guide
+│   ├── AWS_DEPLOYMENT.md        # Detailed AWS guide
 │   └── research/                # Academic materials
-│       ├── references.bib       # 40+ BibTeX citations
-│       └── diagrams/            # SVG architecture diagrams
+│       ├── references.bib       # BibTeX citations
+│       └── diagrams/            # Architecture diagrams
 ```
 
 ---
@@ -152,8 +153,8 @@ constitutional-aiops/
 ### Infrastructure
 | Component | Technology |
 |-----------|------------|
-| LLM Runtime | llama.cpp (llama-server × 2) |
-| Model Mgmt | llama-swap (TTL: -1 for both) |
+| LLM Hosting | Jarvis Labs Ollama (A5000 24GB) |
+| LLM Runtime | Ollama with OpenAI-compatible API |
 | Graph Memory | Neo4j 5.x |
 | Observability | Grafana, Loki, Tempo, Prometheus |
 | Backend | FastAPI (Python 3.11+) |
