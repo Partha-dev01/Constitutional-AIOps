@@ -306,7 +306,7 @@ async def get_action_stats() -> ActionStats:
                 successful += 1
             execution_times.append(action.execution_result.duration_ms)
 
-    success_rate = successful / total_with_result if total_with_result > 0 else 0.0
+    success_rate = successful / total_with_result if total_with_result > 0 else 1.0
     avg_execution = sum(execution_times) / len(execution_times) if execution_times else None
 
     return ActionStats(
