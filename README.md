@@ -136,8 +136,8 @@ See [Jarvis Labs Deployment Guide](docs/JARVIS_LABS_DEPLOYMENT.md) for detailed 
 
 ```
 constitutional-aiops/
-├── CLAUDE.md                # AI assistant instructions (READ FIRST)
-├── PROJECT_SUMMARY.md       # Complete requirements history
+├── README.md                # Quick Start (this file)
+├── CLAUDE.md                # AI assistant instructions
 ├── src/                     # Python backend
 │   ├── agents/              # LLM agents (FastAnnotator, ReasoningAgent)
 │   ├── constitutional/      # Constitutional AI framework
@@ -147,9 +147,11 @@ constitutional-aiops/
 ├── frontend/                # React dashboard
 ├── docker/                  # Docker configurations
 ├── docs/                    # Documentation
+│   ├── INDEX.md             # Documentation index
+│   ├── ARCHITECTURE.md      # System design
+│   ├── DEPLOYMENT.md        # Deployment guide
 │   ├── CHECKLIST.md         # Development progress
-│   ├── CHANGELOG.md         # Version history
-│   └── MEGA_PROMPT.md       # Detailed implementation guide
+│   └── CHANGELOG.md         # Version history
 └── tests/                   # Test suite
 ```
 
@@ -186,8 +188,8 @@ constitutional-aiops/
 
 | Component | Technology |
 |-----------|------------|
-| LLM Runtime | llama.cpp (llama-server × 2) |
-| Model Mgmt | llama-swap (TTL: -1) |
+| LLM Hosting | Jarvis Labs Ollama (A5000 24GB) |
+| LLM Runtime | Ollama with OpenAI-compatible API |
 | Graph Memory | Neo4j 5.x |
 | Observability | Grafana, Loki, Tempo, Prometheus |
 | Backend | FastAPI (Python 3.11+) |
@@ -243,8 +245,9 @@ CONFIDENCE_THRESHOLD_APPROVAL=0.70
 ## Documentation
 
 - **CLAUDE.md**: Instructions for AI assistants (read first on every session)
-- **PROJECT_SUMMARY.md**: Complete requirements and history
-- **docs/MEGA_PROMPT.md**: Detailed implementation guide
+- **docs/INDEX.md**: Master documentation index
+- **docs/ARCHITECTURE.md**: System architecture
+- **docs/DEPLOYMENT.md**: Deployment overview
 - **docs/CHECKLIST.md**: Development progress tracker
 - **docs/CHANGELOG.md**: Version history
 
@@ -270,10 +273,11 @@ Proprietary - All rights reserved.
 
 When starting a new session, always read:
 1. `CLAUDE.md` - Development instructions
-2. `docs/CHECKLIST.md` - Current progress
-3. `docs/ISSUES.md` - Active blockers
+2. `docs/INDEX.md` - Documentation index
+3. `docs/CHECKLIST.md` - Current progress
+4. `docs/ISSUES.md` - Active blockers
 
 The architecture is **FINALIZED**:
 - 24GB VRAM simultaneous dual-model (not hot-swap)
 - Qwen3-4B (fast) + Qwen3-14B (reasoning)
-- AWS g6.xlarge target hardware
+- Jarvis Labs Ollama (primary) or AWS g6.xlarge (alternative)
