@@ -1,7 +1,7 @@
 # Documentation Update Schema
 
 > **Purpose**: Guidelines for maintaining consistent, accurate documentation
-> **Last Updated**: 2025-12-27
+> **Last Updated**: 2025-12-28
 
 ---
 
@@ -60,13 +60,16 @@ When updating any documentation file:
 
 When documentation conflicts with code, **code is the source of truth**:
 
-| Topic | Source of Truth |
-|-------|-----------------|
-| Model names | `src/config.py` |
-| API endpoints | `src/api/routes/*.py` |
-| Docker config | `docker-compose.yml` |
-| Environment variables | `.env` + `src/config.py` |
-| LLM architecture | `src/agents/model_router.py` |
+| Topic | Source of Truth | Documentation |
+|-------|-----------------|---------------|
+| Model names | `src/config.py` | [BACKEND.md](BACKEND.md) |
+| API endpoints | `src/api/routes/*.py` | [API.md](API.md) |
+| Docker config | `docker-compose.yml` | [DEPLOYMENT.md](DEPLOYMENT.md) |
+| Environment variables | `.env` + `src/config.py` | [BACKEND.md](BACKEND.md) |
+| LLM architecture | `src/agents/model_router.py` | [BACKEND.md](BACKEND.md) |
+| Constitutional principles | `src/constitutional/principles.py` | [BACKEND.md](BACKEND.md) |
+| Frontend components | `frontend/src/` | [FRONTEND.md](FRONTEND.md) |
+| Complete file inventory | Entire codebase | [INDEX.md](INDEX.md) |
 
 ---
 
