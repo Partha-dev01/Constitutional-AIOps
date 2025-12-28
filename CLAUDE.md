@@ -1,7 +1,7 @@
 # CLAUDE.md - Constitutional AIOps Development Instructions
 
-> **Version**: 2.1
-> **Last Updated**: 2025-12-27
+> **Version**: 2.2
+> **Last Updated**: 2025-12-28
 > **Architecture**: Simultaneous Dual-Model (24GB VRAM)
 
 ---
@@ -90,11 +90,10 @@ constitutional-aiops/
 ├── README.md                    # Quick Start (entry point)
 ├── CLAUDE.md                    # THIS FILE - Read first every session
 ├── docs/
-│   ├── INDEX.md                 # Master documentation index
-│   ├── DOCUMENTATION_SCHEMA.md  # Update guidelines
-│   ├── CHECKLIST.md             # ⭐ Current progress & tasks
-│   ├── CHANGELOG.md             # Version history
-│   ├── ISSUES.md                # Active blockers
+│   ├── INDEX.md                 # Master documentation index (93+ files)
+│   ├── BACKEND.md               # ⭐ Python backend reference (43 files)
+│   ├── API.md                   # ⭐ REST API reference (50+ endpoints)
+│   ├── FRONTEND.md              # ⭐ React frontend reference (23 files)
 │   ├── ARCHITECTURE.md          # System architecture
 │   ├── DEPLOYMENT.md            # Deployment overview
 │   ├── JARVIS_LABS_DEPLOYMENT.md # Detailed Jarvis Labs guide
