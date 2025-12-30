@@ -36,6 +36,20 @@ None - All core functionality implemented and tested.
 
 ## ✅ Resolved Issues
 
+### 2025-12-30 (Codebase Synchronization)
+
+| ID | Issue | Resolution |
+|----|-------|------------|
+| CODE-001 | fast_annotator.py latency mismatch | Updated <50ms P99 → <100ms P95 |
+| CODE-002 | reasoning_agent.py latency mismatch | Updated <200ms P99 → 200-500ms P95 |
+| CODE-003 | main.py version outdated (0.2.0) | Updated to 0.4.0 |
+| CODE-004 | config.py missing memory/performance constants | Added MemoryConfig, PerformanceConfig classes |
+| CODE-005 | Missing validation module | Created src/validation/constants.py with all Research_V5.tex values |
+| CODE-006 | Settings.tsx latency mismatch | Updated both agent latency displays |
+| CODE-007 | Dashboard.tsx hardcoded fake latencies | Updated to show target latency (not fake 42ms/156ms) |
+| CODE-008 | frontend/package.json version (0.1.0) | Updated to 0.4.0 |
+| CODE-009 | validation/__init__.py missing exports | Added all constants exports |
+
 ### 2025-12-30 (Documentation Audit)
 
 | ID | Issue | Resolution |
@@ -96,8 +110,9 @@ None - All core functionality implemented and tested.
 | High Priority | 0 |
 | Medium Priority | 0 |
 | Low Priority | 0 |
+| Codebase Fixed | 9 |
 | Documentation Fixed | 6 |
-| Total Resolved | 25+ |
+| Total Resolved | 40+ |
 
 ---
 

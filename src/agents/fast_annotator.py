@@ -10,8 +10,8 @@ Responsibilities:
 - Confidence scoring for routing decisions
 - Token compression for downstream processing
 
-Performance Targets:
-- Latency: <50ms (p99)
+Performance Targets (from Research_V5.tex):
+- Latency: <100ms P95
 - Context: 8K tokens
 - Throughput: High (batch processing capable)
 """

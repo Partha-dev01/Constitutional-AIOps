@@ -212,7 +212,7 @@ export function Dashboard() {
           model="Qwen3-4B Q4_K_M"
           port={8081}
           status={isComponentHealthy(health, 'fast_agent') ? 'online' : 'offline'}
-          latency="42ms"
+          latency="<100ms P95"
           requests={1247}
         />
         <ModelCard
@@ -220,7 +220,7 @@ export function Dashboard() {
           model="Qwen3-14B Q4_K_M"
           port={8082}
           status={isComponentHealthy(health, 'reasoning_agent') ? 'online' : 'offline'}
-          latency="156ms"
+          latency="200-500ms P95"
           requests={89}
         />
       </div>

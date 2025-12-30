@@ -3,12 +3,26 @@ Constitutional AIOps - Context Retrieval
 
 Retrieves relevant context from episodic memory for LLM prompts.
 Implements RAG (Retrieval Augmented Generation) patterns for better RCA.
+
+Hybrid Retrieval Formula (from Research_V5.tex):
+    score(e) = α · vector_sim(e) + (1-α) · graph_sim(e)
+
+Where:
+    α = 0.6 (default) - weight for vector similarity
+    (1-α) = 0.4 - weight for graph-based similarity
+
+This implements the AriGraph-inspired dual-memory architecture combining
+semantic (vector) and episodic (graph) retrieval strategies.
 """
 
 import logging
+
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any, Optional
+
+# Hybrid Retrieval Configuration (from Research_V5.tex)
+RETRIEVAL_ALPHA = 0.6  # Weight for vector_sim in: α·vector_sim + (1-α)·graph_sim
 
 from src.memory.episode_store import Episode, EpisodeStore
 from src.memory.neo4j_client import Neo4jClient

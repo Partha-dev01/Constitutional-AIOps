@@ -10,8 +10,8 @@ Responsibilities:
 - Human chat interaction for operator communication
 - Multi-service dependency analysis
 
-Performance Targets:
-- Latency: <200ms (p99)
+Performance Targets (from Research_V5.tex):
+- Latency: 200-500ms P95
 - Context: 4K tokens
 - Accuracy: Prioritized over speed
 

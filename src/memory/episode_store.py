@@ -3,6 +3,12 @@ Constitutional AIOps - Episode Store
 
 Manages episodic memory for incidents, storing complete incident lifecycles
 as "episodes" that can be retrieved for similar situation analysis.
+
+Memory System Constants (from Research_V5.tex):
+- Embedding Model: sentence-transformers/all-MiniLM-L6-v2
+- Embedding Dimensions: 384
+- Similarity Threshold: ≥0.70 cosine
+- Retrieval Complexity: O(log n)
 """
 
 import hashlib
@@ -13,6 +19,11 @@ from datetime import datetime
 from typing import Any, Optional
 
 from src.memory.neo4j_client import Neo4jClient, NEO4J_AVAILABLE
+
+# Memory System Constants (from Research_V5.tex)
+EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
+EMBEDDING_DIMENSIONS = 384
+SIMILARITY_THRESHOLD = 0.70  # Minimum cosine similarity for matching
 
 logger = logging.getLogger(__name__)
 
