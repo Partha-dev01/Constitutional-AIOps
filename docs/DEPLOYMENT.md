@@ -1,7 +1,7 @@
 # Constitutional AIOps - Deployment Guide
 
-> **Version**: 0.3.1
-> **Last Updated**: 2025-12-27
+> **Version**: 0.4.0
+> **Last Updated**: 2025-12-30
 > **Status**: Production Ready
 
 ---

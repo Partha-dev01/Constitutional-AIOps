@@ -1,7 +1,7 @@
 # Frontend Architecture
 
-> **Version**: 1.0
-> **Last Updated**: 2025-12-27
+> **Version**: 0.4.0
+> **Last Updated**: 2025-12-30
 > **Framework**: React 18 + TypeScript + Vite
 
 ---

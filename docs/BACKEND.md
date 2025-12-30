@@ -1,8 +1,9 @@
 # Backend Architecture
 
-> **Version**: 1.0
-> **Last Updated**: 2025-12-27
+> **Version**: 0.4.0
+> **Last Updated**: 2025-12-30
 > **Framework**: FastAPI (Python 3.11+)
+> **Source of Truth**: [KEY_METRICS.md](KEY_METRICS.md)
 
 ---
 
@@ -70,8 +71,8 @@ class ConfidenceLevel(Enum):
 
 #### model_router.py
 - **No Hot-Swap**: Both models always loaded (24GB VRAM)
-- **Fast Agent**: Port 8081, <50ms latency, 512 max tokens
-- **Reasoning Agent**: Port 8082, <200ms latency, 2048 max tokens
+- **Fast Agent**: Port 8081, <100ms P95 latency, 512 max tokens
+- **Reasoning Agent**: Port 8082, 200-500ms P95 latency, 2048 max tokens
 - **Methods**: `fast_completion()`, `reasoning_completion()`, `health_check()`
 
 #### fast_annotator.py
@@ -345,7 +346,33 @@ LOG_LEVEL=INFO
 
 ---
 
+---
+
+## Performance Targets (From Research_V5.tex)
+
+| Metric | Target |
+|--------|--------|
+| Fast Agent Latency | <100ms P95 |
+| Reasoning Agent Latency | 200-500ms P95 |
+| Annotation Accuracy | 87-92% |
+| RCA Accuracy | 85-90% |
+| Token Compression Rate | 92% |
+| Resolution Time | <5 minutes |
+
+### Confidence Formula
+```
+C(a) = α · C_LLM(a) + β · C_hist(a) + γ · C_sim(a)
+
+Where:
+  α = 0.4  (LLM confidence weight)
+  β = 0.35 (Historical success rate)
+  γ = 0.25 (Similarity to past incidents)
+```
+
+---
+
 **See Also**:
+- [KEY_METRICS.md](KEY_METRICS.md) - Complete metrics reference
 - [API.md](API.md) - REST API reference
 - [FRONTEND.md](FRONTEND.md) - React frontend documentation
 - [ARCHITECTURE.md](ARCHITECTURE.md) - System architecture overview
