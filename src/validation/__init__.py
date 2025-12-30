@@ -3,6 +3,8 @@ Constitutional AIOps - Validation Framework
 
 Provides methods to measure, validate, and report system accuracy metrics.
 Used to generate verifiable metrics for research documentation.
+
+Source of Truth: docs/KEY_METRICS.md, Research_V5.tex
 """
 
 from src.validation.accuracy_validator import (
@@ -10,5 +12,29 @@ from src.validation.accuracy_validator import (
     ValidationResult,
     BenchmarkSuite,
 )
+from src.validation.constants import (
+    PerformanceTargets,
+    AccuracyTargets,
+    CompressionMetrics,
+    MemorySystemConfig,
+    ConstitutionalAIConfig,
+    VRAMConfig,
+    ObservabilityVersions,
+    ResearchGaps,
+)
 
-__all__ = ["AccuracyValidator", "ValidationResult", "BenchmarkSuite"]
+__all__ = [
+    # Accuracy validation
+    "AccuracyValidator",
+    "ValidationResult",
+    "BenchmarkSuite",
+    # Constants from Research_V5.tex
+    "PerformanceTargets",
+    "AccuracyTargets",
+    "CompressionMetrics",
+    "MemorySystemConfig",
+    "ConstitutionalAIConfig",
+    "VRAMConfig",
+    "ObservabilityVersions",
+    "ResearchGaps",
+]
