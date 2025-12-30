@@ -2,6 +2,39 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.1] - 2025-12-30
+
+### Changed
+- **Codebase Synchronization**: All codebase files now match Research_V5.tex and documentation
+- **Latency Targets**: Updated all files to use correct values
+  - fast_annotator.py: <50ms P99 → <100ms P95
+  - reasoning_agent.py: <200ms P99 → 200-500ms P95
+  - Settings.tsx, Dashboard.tsx: Updated latency displays
+- **Version Numbers**: Synchronized across codebase
+  - main.py: 0.2.0 → 0.4.0
+  - frontend/package.json: 0.1.0 → 0.4.0
+
+### Added
+- **src/validation/constants.py**: NEW centralized validation constants module
+  - PerformanceTargets: Latency and resolution time targets
+  - AccuracyTargets: Annotation and RCA accuracy ranges
+  - CompressionMetrics: Token compression and tool sprawl rates
+  - MemorySystemConfig: Embeddings, similarity threshold, retrieval alpha
+  - ConstitutionalAIConfig: Thresholds, weights, principle counts
+  - VRAMConfig: Model memory allocations and ports
+  - ObservabilityVersions: LGTM stack versions and retention
+  - ResearchGaps: RG1-RG5 definitions
+- **config.py**: Added MemoryConfig and PerformanceConfig classes
+- **episode_store.py**: Added embedding model constants (EMBEDDING_MODEL, EMBEDDING_DIMENSIONS, SIMILARITY_THRESHOLD)
+- **retrieval.py**: Documented hybrid retrieval formula with RETRIEVAL_ALPHA constant
+
+### Fixed
+- Dashboard.tsx: Removed hardcoded fake latency values (42ms, 156ms)
+- Settings.tsx: Fixed incorrect latency target displays
+- validation/__init__.py: Added exports for all new constants
+
+---
+
 ## [0.3.2] - 2025-12-27
 
 ### Documentation Restructure
@@ -530,4 +563,4 @@ This project uses [Semantic Versioning](https://semver.org/):
 - MINOR: Backward-compatible functionality
 - PATCH: Backward-compatible bug fixes
 
-Current: **0.3.1** (Fully deployed and tested with Jarvis Labs LLM endpoint)
+Current: **0.4.1** (Codebase synchronized with documentation)

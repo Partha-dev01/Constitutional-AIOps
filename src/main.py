@@ -175,7 +175,7 @@ app = FastAPI(
         "Autonomous infrastructure management system with Constitutional AI safety. "
         "Uses dual-agent architecture (Qwen3-4B + Qwen3-14B) for intelligent operations."
     ),
-    version="0.2.0",
+    version="0.4.0",
     lifespan=lifespan,
     docs_url="/docs",
     redoc_url="/redoc",
@@ -198,7 +198,7 @@ async def root():
     """Root endpoint with service information."""
     return {
         "service": "Constitutional AIOps",
-        "version": "0.2.0",
+        "version": "0.4.0",
         "architecture": "Simultaneous Dual-Model (24GB VRAM)",
         "models": {
             "fast_agent": "Qwen3-4B Q4_K_M @ port 8081",

@@ -1,10 +1,41 @@
 # Constitutional AIOps - Development Checklist
 
-> **Version**: 0.4.0
+> **Version**: 0.4.1
 > **Last Updated**: 2025-12-30
 > **Status**: 100% Core Complete
 > **Architecture**: Simultaneous Dual-Model (Qwen3-4B + Qwen3-14B on 24GB VRAM)
 > **Deployment**: Hybrid (Jarvis Labs A5000 GPU + Local Services)
+
+---
+
+## Codebase Synchronization (2025-12-30) ✅
+
+All codebase files now match documentation (Research_V5.tex, KEY_METRICS.md).
+
+### Backend Updates ✅
+- [x] `src/agents/fast_annotator.py` - Latency: <50ms P99 → <100ms P95
+- [x] `src/agents/reasoning_agent.py` - Latency: <200ms P99 → 200-500ms P95
+- [x] `src/main.py` - Version: 0.2.0 → 0.4.0
+- [x] `src/config.py` - Added MemoryConfig, PerformanceConfig classes
+- [x] `src/memory/episode_store.py` - Added embedding constants
+- [x] `src/memory/retrieval.py` - Documented hybrid retrieval formula
+- [x] `src/validation/constants.py` - NEW: Centralized validation constants
+
+### Frontend Updates ✅
+- [x] `frontend/package.json` - Version: 0.1.0 → 0.4.0
+- [x] `frontend/src/pages/Settings.tsx` - Latency: <50ms → <100ms P95, <200ms → 200-500ms P95
+- [x] `frontend/src/pages/Dashboard.tsx` - Latency: 42ms/156ms → <100ms P95/200-500ms P95
+
+### New Validation Module ✅
+Created `src/validation/constants.py` with:
+- PerformanceTargets (latency, resolution time)
+- AccuracyTargets (annotation, RCA)
+- CompressionMetrics (token compression, tool sprawl)
+- MemorySystemConfig (embeddings, similarity, retrieval)
+- ConstitutionalAIConfig (thresholds, weights, principles)
+- VRAMConfig (model allocations)
+- ObservabilityVersions (stack versions, retention)
+- ResearchGaps (RG1-RG5 definitions)
 
 ---
 
@@ -208,4 +239,4 @@ See [CLAUDE.md](../CLAUDE.md) for session management.
 ---
 
 **Last Updated**: 2025-12-30
-**Version**: 0.4.0
+**Version**: 0.4.1

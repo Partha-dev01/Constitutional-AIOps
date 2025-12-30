@@ -78,21 +78,68 @@ class ObservabilityConfig:
 
 
 @dataclass
+class MemoryConfig:
+    """Memory system configuration (from Research_V5.tex)."""
+
+    # Embedding configuration
+    embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
+    embedding_dimensions: int = 384
+    similarity_threshold: float = 0.70  # Minimum cosine similarity for matching
+
+    # Hybrid retrieval
+    retrieval_alpha: float = 0.6  # Weight for vector_sim in hybrid scoring
+
+
+@dataclass
+class PerformanceConfig:
+    """Performance targets configuration (from Research_V5.tex)."""
+
+    # Latency targets (P95)
+    fast_agent_latency_target_ms: int = 100  # <100ms P95
+    reasoning_agent_latency_min_ms: int = 200  # 200-500ms P95
+    reasoning_agent_latency_max_ms: int = 500
+
+    # Accuracy targets
+    annotation_accuracy_min: float = 0.87
+    annotation_accuracy_max: float = 0.92
+    rca_accuracy_min: float = 0.85
+    rca_accuracy_max: float = 0.90
+
+    # Compression
+    token_compression_rate: float = 0.92
+
+    # Resolution time
+    resolution_time_max_minutes: int = 5
+
+
+@dataclass
 class ConstitutionalConfig:
     """Constitutional AI framework configuration."""
-    
-    # Confidence thresholds for authorization matrix
+
+    # Confidence thresholds for authorization matrix (from Research_V5.tex)
+    # C(a) = 0.4 · C_LLM + 0.35 · C_hist + 0.25 · C_sim
     confidence_threshold_auto: float = field(
         default_factory=lambda: float(os.getenv("CONFIDENCE_THRESHOLD_AUTO", "0.90"))
     )
     confidence_threshold_approval: float = field(
         default_factory=lambda: float(os.getenv("CONFIDENCE_THRESHOLD_APPROVAL", "0.70"))
     )
-    
+
+    # Confidence formula weights
+    confidence_weight_llm: float = 0.40
+    confidence_weight_historical: float = 0.35
+    confidence_weight_similarity: float = 0.25
+
     # Principle enforcement
     strict_tier1: bool = True  # Never allow Tier 1 violations
     log_all_decisions: bool = True  # Audit trail
-    
+
+    # Constitutional AI principles count
+    tier1_principles: int = 4  # Safety-critical (P1.1-P1.4)
+    tier2_principles: int = 4  # Operational (P2.1-P2.4)
+    tier3_principles: int = 3  # Learning (P3.1-P3.3)
+    total_principles: int = 11
+
     # Action limits
     max_actions_per_minute: int = 10
     max_concurrent_actions: int = 3
@@ -128,11 +175,13 @@ class AppConfig:
 @dataclass
 class Config:
     """Main configuration class aggregating all config sections."""
-    
+
     llm: LLMConfig = field(default_factory=LLMConfig)
     neo4j: Neo4jConfig = field(default_factory=Neo4jConfig)
     observability: ObservabilityConfig = field(default_factory=ObservabilityConfig)
     constitutional: ConstitutionalConfig = field(default_factory=ConstitutionalConfig)
+    memory: MemoryConfig = field(default_factory=MemoryConfig)
+    performance: PerformanceConfig = field(default_factory=PerformanceConfig)
     app: AppConfig = field(default_factory=AppConfig)
     
     @classmethod
@@ -148,10 +197,12 @@ config = Config.from_env()
 # Export for convenience
 __all__ = [
     "Config",
-    "LLMConfig", 
+    "LLMConfig",
     "Neo4jConfig",
     "ObservabilityConfig",
     "ConstitutionalConfig",
+    "MemoryConfig",
+    "PerformanceConfig",
     "AppConfig",
     "config",
 ]

@@ -523,7 +523,7 @@ export function Settings() {
                   status={isComponentHealthy(health, 'fast_agent') ? 'online' : 'offline'}
                   purpose="Telemetry annotation, classification"
                   context="8K tokens"
-                  latency="<50ms"
+                  latency="<100ms P95"
                 />
                 <ModelStatusCard
                   name="Reasoning Agent"
@@ -532,7 +532,7 @@ export function Settings() {
                   status={isComponentHealthy(health, 'reasoning_agent') ? 'online' : 'offline'}
                   purpose="RCA, remediation planning, human chat"
                   context="4K tokens"
-                  latency="<200ms"
+                  latency="200-500ms P95"
                 />
               </div>
             </div>
