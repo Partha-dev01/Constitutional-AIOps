@@ -158,6 +158,113 @@ class Episode:
         else:
             return "other"
 
+    def extract_semantic_triplets(self) -> list[dict[str, Any]]:
+        """
+        Extract semantic triplets (entity, relation, entity) from episode.
+
+        Following AriGraph pattern for knowledge graph construction.
+        Returns triplets that can be stored in Neo4j for semantic memory.
+        """
+        triplets = []
+
+        # Service-to-issue triplets
+        root_cause_type = self._extract_root_cause_type()
+        for service in self.affected_services:
+            if self.root_cause:
+                triplets.append({
+                    "entity1": service,
+                    "relation": "EXPERIENCED",
+                    "entity2": root_cause_type,
+                    "confidence": self.confidence,
+                    "source_episode_id": self.episode_id,
+                })
+
+        # Causal chain triplets
+        for i in range(len(self.causal_chain) - 1):
+            triplets.append({
+                "entity1": self.causal_chain[i],
+                "relation": "CAUSED",
+                "entity2": self.causal_chain[i + 1],
+                "confidence": 0.8,
+                "source_episode_id": self.episode_id,
+            })
+
+        # Service dependency triplets (if multiple services affected)
+        if len(self.affected_services) > 1:
+            primary_service = self.affected_services[0]
+            for dependent in self.affected_services[1:]:
+                triplets.append({
+                    "entity1": primary_service,
+                    "relation": "IMPACTED",
+                    "entity2": dependent,
+                    "confidence": 0.7,
+                    "source_episode_id": self.episode_id,
+                })
+
+        # Successful action triplets (for learning)
+        for action in self.successful_actions:
+            triplets.append({
+                "entity1": root_cause_type,
+                "relation": "RESOLVED_BY",
+                "entity2": action,
+                "confidence": 0.9,
+                "source_episode_id": self.episode_id,
+            })
+
+        return triplets
+
+    def get_embedding_text(self) -> str:
+        """
+        Generate text for embedding creation.
+
+        Combines key fields into a single text for vector embedding.
+        """
+        parts = [
+            self.title,
+            self.description or "",
+            f"Category: {self.category}",
+            f"Severity: {self.severity}",
+        ]
+
+        if self.root_cause:
+            parts.append(f"Root Cause: {self.root_cause}")
+
+        if self.affected_services:
+            parts.append(f"Services: {', '.join(self.affected_services)}")
+
+        if self.causal_chain:
+            parts.append(f"Causal Chain: {' -> '.join(self.causal_chain)}")
+
+        return " ".join(parts)
+
+
+@dataclass
+class SemanticTriplet:
+    """
+    Represents a semantic triplet (entity, relation, entity).
+
+    Used for building the semantic knowledge graph in Neo4j.
+    Following AriGraph's dual-memory architecture.
+    """
+
+    entity1: str
+    relation: str
+    entity2: str
+    confidence: float
+    source_episode_id: str
+    extraction_method: str = "rule"  # "llm" | "rule" | "pattern"
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to dictionary for storage."""
+        return {
+            "entity1": self.entity1,
+            "relation": self.relation,
+            "entity2": self.entity2,
+            "confidence": self.confidence,
+            "source_episode_id": self.source_episode_id,
+            "extraction_method": self.extraction_method,
+        }
+
 
 class EpisodeStore:
     """
@@ -520,4 +627,4 @@ class EpisodeStore:
             return Episode.from_dict(ep_data)
 
 
-__all__ = ["Episode", "EpisodeStore"]
+__all__ = ["Episode", "EpisodeStore", "SemanticTriplet"]

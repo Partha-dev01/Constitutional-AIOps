@@ -10,7 +10,8 @@ import {
   Cpu,
   Play,
   RotateCcw,
-  Loader2
+  Loader2,
+  BarChart3
 } from 'lucide-react'
 import { cn } from '../lib/utils'
 import api, { HealthResponse, isComponentHealthy } from '../lib/api'
@@ -31,6 +32,7 @@ const navigation = [
   { name: 'Agents', href: '/agents', icon: Cpu },
   { name: 'Incidents', href: '/incidents', icon: AlertTriangle },
   { name: 'Chat', href: '/chat', icon: MessageSquare },
+  { name: 'Metrics', href: '/metrics', icon: BarChart3 },
   { name: 'Settings', href: '/settings', icon: Settings },
 ]
 
