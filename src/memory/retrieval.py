@@ -310,6 +310,114 @@ class ContextRetriever:
 
         return "\n".join(sections)
 
+    async def hybrid_retrieve(
+        self,
+        incident: dict[str, Any],
+        alpha: float = 0.6,
+        limit: int = 5,
+    ) -> list[tuple[dict[str, Any], float]]:
+        """
+        Hybrid retrieval combining graph traversal with similarity search.
+
+        Following AriGraph pattern for combining episodic and semantic memory.
+
+        Args:
+            incident: Incident data to find similar episodes for
+            alpha: Weight for graph-based score (1-alpha for similarity-based)
+            limit: Maximum results
+
+        Returns:
+            List of (episode_data, combined_score) tuples
+        """
+        category = incident.get("category", "unknown")
+        affected_services = self._extract_services(incident)
+        title = incident.get("title", "")
+
+        combined_results: dict[str, tuple[dict, float]] = {}
+
+        # 1. Graph-based retrieval: find episodes with same root cause type
+        if self.neo4j_client:
+            try:
+                # Get root cause type from incident if available
+                root_cause = incident.get("root_cause", "")
+                if root_cause:
+                    # Infer root cause type using same logic as Episode class
+                    root_cause_type = self._infer_root_cause_type(root_cause)
+                    graph_results = await self.neo4j_client.find_episodes_by_root_cause_type(
+                        root_cause_type,
+                        limit=limit * 2,
+                    )
+
+                    for result in graph_results:
+                        ep_id = result.get("episode_id", "")
+                        if ep_id:
+                            combined_results[ep_id] = (
+                                result,
+                                result.get("confidence", 0.5) * (1 - alpha),
+                            )
+            except Exception as e:
+                logger.warning(f"Graph retrieval failed: {e}")
+
+        # 2. Similarity-based retrieval: find similar episodes by category/services
+        if self.episode_store:
+            try:
+                similar = await self._find_similar_incidents(
+                    category=category,
+                    services=affected_services,
+                    title=title,
+                    limit=limit * 2,
+                )
+
+                for ep_data in similar:
+                    ep_id = ep_data.get("incident_id", "")
+                    sim_score = ep_data.get("similarity_score", 0.5)
+
+                    if ep_id in combined_results:
+                        # Combine scores
+                        existing = combined_results[ep_id]
+                        new_score = existing[1] + (sim_score * alpha)
+                        combined_results[ep_id] = (existing[0], new_score)
+                    else:
+                        combined_results[ep_id] = (ep_data, sim_score * alpha)
+
+            except Exception as e:
+                logger.warning(f"Similarity retrieval failed: {e}")
+
+        # Sort by combined score and return top results
+        sorted_results = sorted(
+            combined_results.values(),
+            key=lambda x: x[1],
+            reverse=True,
+        )
+
+        return sorted_results[:limit]
+
+    def _infer_root_cause_type(self, root_cause: str) -> str:
+        """Infer root cause type from description (mirrors Episode logic)."""
+        if not root_cause:
+            return "unknown"
+
+        root_cause_lower = root_cause.lower()
+
+        if any(word in root_cause_lower for word in ["memory", "oom", "heap", "leak"]):
+            return "memory"
+        elif any(word in root_cause_lower for word in ["cpu", "processor", "compute"]):
+            return "cpu"
+        elif any(word in root_cause_lower for word in ["disk", "storage", "io"]):
+            return "storage"
+        elif any(word in root_cause_lower for word in ["network", "connection", "timeout", "latency"]):
+            return "network"
+        elif any(word in root_cause_lower for word in ["database", "query", "deadlock", "connection pool"]):
+            return "database"
+        elif any(word in root_cause_lower for word in ["config", "configuration", "setting"]):
+            return "configuration"
+        elif any(word in root_cause_lower for word in ["deploy", "release", "version"]):
+            return "deployment"
+        elif any(word in root_cause_lower for word in ["dependency", "upstream", "downstream"]):
+            return "dependency"
+        else:
+            return "other"
+
     def _extract_services(self, incident: dict[str, Any]) -> list[str]:
         """Extract service names from incident data."""
         services = []

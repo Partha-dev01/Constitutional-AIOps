@@ -153,6 +153,20 @@ class Neo4jClient:
                 "CREATE INDEX incident_severity IF NOT EXISTS FOR (i:Incident) ON (i.severity)",
                 "CREATE INDEX action_status IF NOT EXISTS FOR (a:Action) ON (a.status)",
                 "CREATE INDEX service_namespace IF NOT EXISTS FOR (s:Service) ON (s.namespace)",
+                # Semantic memory indexes (AriGraph-inspired)
+                "CREATE INDEX episode_id IF NOT EXISTS FOR (e:Episode) ON (e.episode_id)",
+                "CREATE INDEX entity_name IF NOT EXISTS FOR (en:Entity) ON (en.name)",
+                "CREATE INDEX rootcause_type IF NOT EXISTS FOR (rc:RootCauseType) ON (rc.name)",
+            ]
+
+            # Full-text indexes for semantic search (AriGraph-inspired)
+            fulltext_indexes = [
+                """CREATE FULLTEXT INDEX incident_search IF NOT EXISTS
+                   FOR (i:Incident) ON EACH [i.description, i.title]""",
+                """CREATE FULLTEXT INDEX episode_search IF NOT EXISTS
+                   FOR (e:Episode) ON EACH [e.title, e.root_cause]""",
+                """CREATE FULLTEXT INDEX entity_search IF NOT EXISTS
+                   FOR (en:Entity) ON EACH [en.name, en.description]""",
             ]
 
             for constraint in constraints:
@@ -167,7 +181,13 @@ class Neo4jClient:
                 except Exception as e:
                     logger.debug(f"Index may already exist: {e}")
 
-            logger.info("Neo4j schema initialized")
+            for ft_index in fulltext_indexes:
+                try:
+                    await session.run(ft_index)
+                except Exception as e:
+                    logger.debug(f"Full-text index may already exist: {e}")
+
+            logger.info("Neo4j schema initialized with full-text indexes")
 
     # --- Incident Operations ---
 
@@ -616,6 +636,198 @@ class Neo4jClient:
             if record and record["total"] > 0:
                 return record["successes"] / record["total"]
             return 0.0
+
+    # --- Semantic Memory Operations (AriGraph-inspired) ---
+
+    async def store_semantic_triplet(
+        self,
+        triplet: dict[str, Any],
+        episode_id: str,
+    ) -> None:
+        """
+        Store a semantic triplet in the knowledge graph.
+
+        Following AriGraph pattern for building semantic memory.
+
+        Args:
+            triplet: Dict with entity1, relation, entity2, confidence
+            episode_id: Source episode ID for traceability
+        """
+        if not self._connected:
+            return
+
+        query = """
+        MATCH (ep:Episode {episode_id: $episode_id})
+        MERGE (e1:Entity {name: $entity1})
+        MERGE (e2:Entity {name: $entity2})
+        MERGE (e1)-[r:RELATES {type: $relation}]->(e2)
+        SET r.confidence = $confidence,
+            r.source_episode = $episode_id,
+            r.updated_at = datetime()
+        MERGE (ep)-[:EXTRACTED]->(e1)
+        MERGE (ep)-[:EXTRACTED]->(e2)
+        """
+
+        async with self.session() as session:
+            await session.run(
+                query,
+                episode_id=episode_id,
+                entity1=triplet["entity1"],
+                entity2=triplet["entity2"],
+                relation=triplet["relation"],
+                confidence=triplet.get("confidence", 0.5),
+            )
+
+    async def link_episode_to_root_cause_type(
+        self,
+        episode_id: str,
+        root_cause_type: str,
+    ) -> None:
+        """
+        Create episodic-semantic edge linking episode to root cause type.
+
+        Args:
+            episode_id: Episode ID
+            root_cause_type: Root cause category (e.g., "memory", "network")
+        """
+        if not self._connected:
+            return
+
+        query = """
+        MATCH (ep:Episode {episode_id: $episode_id})
+        MERGE (rc:RootCauseType {name: $root_cause_type})
+        MERGE (ep)-[:CAUSED_BY]->(rc)
+        """
+
+        async with self.session() as session:
+            await session.run(
+                query,
+                episode_id=episode_id,
+                root_cause_type=root_cause_type,
+            )
+
+    async def find_episodes_by_root_cause_type(
+        self,
+        root_cause_type: str,
+        limit: int = 10,
+    ) -> list[dict[str, Any]]:
+        """
+        Find episodes that share the same root cause type.
+
+        Args:
+            root_cause_type: Root cause category
+            limit: Maximum results
+
+        Returns:
+            List of episode data dictionaries
+        """
+        if not self._connected:
+            return []
+
+        query = """
+        MATCH (ep:Episode)-[:CAUSED_BY]->(rc:RootCauseType {name: $root_cause_type})
+        RETURN ep.episode_id as episode_id,
+               ep.title as title,
+               ep.severity as severity,
+               ep.outcome as outcome,
+               ep.confidence as confidence
+        ORDER BY ep.detected_at DESC
+        LIMIT $limit
+        """
+
+        async with self.session() as session:
+            result = await session.run(
+                query,
+                root_cause_type=root_cause_type,
+                limit=limit,
+            )
+            records = await result.data()
+            return records
+
+    async def fulltext_search_incidents(
+        self,
+        query_text: str,
+        limit: int = 10,
+    ) -> list[dict[str, Any]]:
+        """
+        Search incidents using full-text index.
+
+        Args:
+            query_text: Search query
+            limit: Maximum results
+
+        Returns:
+            List of matching incidents with scores
+        """
+        if not self._connected:
+            return []
+
+        query = """
+        CALL db.index.fulltext.queryNodes("incident_search", $query_text)
+        YIELD node, score
+        RETURN node.id as id,
+               node.title as title,
+               node.description as description,
+               score
+        ORDER BY score DESC
+        LIMIT $limit
+        """
+
+        try:
+            async with self.session() as session:
+                result = await session.run(
+                    query,
+                    query_text=query_text,
+                    limit=limit,
+                )
+                records = await result.data()
+                return records
+        except Exception as e:
+            logger.warning(f"Full-text search failed: {e}")
+            return []
+
+    async def get_successful_remediations_for_cause(
+        self,
+        root_cause_type: str,
+        limit: int = 5,
+    ) -> list[dict[str, Any]]:
+        """
+        Find successful remediations for a root cause type.
+
+        Uses semantic graph to find what actions resolved similar issues.
+
+        Args:
+            root_cause_type: Root cause category
+            limit: Maximum results
+
+        Returns:
+            List of successful remediation patterns
+        """
+        if not self._connected:
+            return []
+
+        query = """
+        MATCH (rc:RootCauseType {name: $root_cause_type})<-[:CAUSED_BY]-(ep:Episode)
+        WHERE ep.outcome = 'resolved'
+        WITH ep, rc
+        MATCH (ep)-[:INVOLVES]->(s:Service)
+        RETURN ep.episode_id as episode_id,
+               ep.title as title,
+               ep.successful_actions as actions,
+               ep.confidence as confidence,
+               collect(s.name) as services
+        ORDER BY ep.confidence DESC
+        LIMIT $limit
+        """
+
+        async with self.session() as session:
+            result = await session.run(
+                query,
+                root_cause_type=root_cause_type,
+                limit=limit,
+            )
+            records = await result.data()
+            return records
 
 
 # Singleton instance (optional)

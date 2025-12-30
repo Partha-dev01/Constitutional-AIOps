@@ -4,6 +4,7 @@ import { Dashboard } from './pages/Dashboard'
 import { Agents } from './pages/Agents'
 import { Incidents } from './pages/Incidents'
 import { Chat } from './pages/Chat'
+import { Metrics } from './pages/Metrics'
 import { Settings } from './pages/Settings'
 
 function App() {
@@ -14,6 +15,7 @@ function App() {
         <Route path="/agents" element={<Agents />} />
         <Route path="/incidents" element={<Incidents />} />
         <Route path="/chat" element={<Chat />} />
+        <Route path="/metrics" element={<Metrics />} />
         <Route path="/settings" element={<Settings />} />
       </Routes>
     </Layout>
