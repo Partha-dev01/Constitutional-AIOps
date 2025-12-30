@@ -1,9 +1,10 @@
 # Constitutional AIOps - Documentation Index
 
 > **Version**: 0.4.0
-> **Last Updated**: 2025-12-28
+> **Last Updated**: 2025-12-30
 > **Status**: Production Ready
 > **Total Files Indexed**: 93+
+> **Source of Truth**: [KEY_METRICS.md](KEY_METRICS.md)
 
 ---
 
@@ -71,8 +72,8 @@
 |------|---------|
 | [base_agent.py](../src/agents/base_agent.py) | Abstract base, AgentRole, ConfidenceLevel enums |
 | [model_router.py](../src/agents/model_router.py) | Dual-endpoint routing (8081/8082), NO hot-swap |
-| [fast_annotator.py](../src/agents/fast_annotator.py) | Qwen3-4B telemetry annotation, <50ms |
-| [reasoning_agent.py](../src/agents/reasoning_agent.py) | Qwen3-14B RCA/planning/chat, <200ms |
+| [fast_annotator.py](../src/agents/fast_annotator.py) | Qwen3-4B telemetry annotation, <100ms P95 |
+| [reasoning_agent.py](../src/agents/reasoning_agent.py) | Qwen3-14B RCA/planning/chat, 200-500ms P95 |
 | [\_\_init\_\_.py](../src/agents/__init__.py) | Module exports |
 
 #### API Routes (src/api/routes/)
@@ -310,8 +311,8 @@ constitutional-aiops/
 
 | Component | Technology | Notes |
 |-----------|------------|-------|
-| Fast Agent | Qwen3-4B | Telemetry annotation, <50ms |
-| Reasoning Agent | Qwen3-14B | RCA, remediation, <200ms |
+| Fast Agent | Qwen3-4B | Telemetry annotation, <100ms P95 |
+| Reasoning Agent | Qwen3-14B | RCA, remediation, 200-500ms P95 |
 | LLM Hosting | Jarvis Labs Ollama | A5000 24GB, $0.49/hr |
 | Graph Memory | Neo4j 5.x | Incident correlation |
 | Backend | FastAPI | Python 3.11+ |
@@ -346,4 +347,4 @@ See [DOCUMENTATION_SCHEMA.md](DOCUMENTATION_SCHEMA.md) for detailed guidelines.
 
 ---
 
-**Last Updated**: 2025-12-28
+**Last Updated**: 2025-12-30

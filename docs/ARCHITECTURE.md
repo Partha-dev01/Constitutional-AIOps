@@ -1,8 +1,9 @@
 # Constitutional AIOps - System Architecture
 
-> **Version**: 0.3.1
-> **Last Updated**: 2025-12-27
+> **Version**: 0.4.0
+> **Last Updated**: 2025-12-30
 > **Status**: Production Ready
+> **Source of Truth**: [KEY_METRICS.md](KEY_METRICS.md)
 
 ---
 
@@ -56,7 +57,7 @@
 │  │  │  │   FAST AGENT        │     │   REASONING AGENT   │          │   │   │
 │  │  │  │   Qwen3-4B (~4GB)   │     │   Qwen3-14B (~11GB) │          │   │   │
 │  │  │  │   8K context        │     │   4K context        │          │   │   │
-│  │  │  │   <50ms latency     │     │   <200ms latency    │          │   │   │
+│  │  │  │   <100ms P95        │     │   200-500ms P95     │          │   │   │
 │  │  │  │                     │     │                     │          │   │   │
 │  │  │  │   Purpose:          │     │   Purpose:          │          │   │   │
 │  │  │  │   • Annotation      │     │   • RCA Analysis    │          │   │   │
@@ -143,7 +144,7 @@ reasoning_agent_timeout: float = 120  # seconds
 │  │  ─────────────────────────────────────────────────────    │  │
 │  │  Model: Qwen3-4B Q4_K_M (~2.5GB + 1GB KV = ~4GB)         │  │
 │  │  Purpose: Telemetry annotation, classification            │  │
-│  │  Context: 8K tokens | Latency: <50ms | TTL: -1           │  │
+│  │  Context: 8K tokens | Latency: <100ms P95 | TTL: -1      │  │
 │  └───────────────────────────────────────────────────────────┘  │
 │                                                                 │
 │  ┌───────────────────────────────────────────────────────────┐  │
@@ -151,7 +152,7 @@ reasoning_agent_timeout: float = 120  # seconds
 │  │  ─────────────────────────────────────────────────────    │  │
 │  │  Model: Qwen3-14B Q4_K_M (~9GB + 1.5GB KV = ~11GB)       │  │
 │  │  Purpose: RCA, remediation planning, human chat           │  │
-│  │  Context: 4K tokens | Latency: <200ms | TTL: -1          │  │
+│  │  Context: 4K tokens | Latency: 200-500ms P95 | TTL: -1   │  │
 │  └───────────────────────────────────────────────────────────┘  │
 │                                                                 │
 │  FREE VRAM: ~9GB (overhead, batch processing)                  │
@@ -408,5 +409,28 @@ docker-compose -f docker-compose.yml -f docker/docker-compose.local.yml up
 
 ---
 
-**Last Updated**: 2025-12-27
-**Version**: 0.3.1
+---
+
+## Appendix C: Performance Metrics (From Research_V5.tex)
+
+See [KEY_METRICS.md](KEY_METRICS.md) for complete metrics reference.
+
+### Key Targets
+| Metric | Target |
+|--------|--------|
+| Fast Agent Latency | <100ms P95 |
+| Reasoning Agent Latency | 200-500ms P95 |
+| Annotation Accuracy | 87-92% |
+| RCA Accuracy | 85-90% |
+| Token Compression | 92% |
+| Resolution Time | <5 minutes |
+
+### Confidence Formula
+```
+C(a) = 0.4 · C_LLM + 0.35 · C_hist + 0.25 · C_sim
+```
+
+---
+
+**Last Updated**: 2025-12-30
+**Version**: 0.4.0
