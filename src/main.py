@@ -28,6 +28,7 @@ from src.api.routes.graph import router as graph_router
 from src.api.routes.prompts import router as prompts_router
 from src.api.routes.infrastructure import router as infrastructure_router
 from src.api.routes.demo import router as demo_router
+from src.api.routes.metrics import router as metrics_router
 
 # Import core components
 from src.agents.model_router import ModelRouter
@@ -215,6 +216,7 @@ async def root():
             "incidents": "/api/v1/incidents",
             "actions": "/api/v1/actions",
             "tools": "/api/v1/tools",
+            "metrics": "/api/v1/metrics",
             "websocket": "/ws",
         },
     }
@@ -232,6 +234,7 @@ app.include_router(graph_router, prefix="/api/v1/graph", tags=["graph"])
 app.include_router(prompts_router, prefix="/api/v1/prompts", tags=["prompts"])
 app.include_router(infrastructure_router, prefix="/api/v1/infrastructure", tags=["infrastructure"])
 app.include_router(demo_router, prefix="/api/v1/demo", tags=["demo"])
+app.include_router(metrics_router, prefix="/api/v1/metrics", tags=["metrics"])
 
 
 # WebSocket endpoint for real-time updates
