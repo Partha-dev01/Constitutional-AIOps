@@ -2,6 +2,8 @@
 
 > Autonomous Infrastructure Management with Constitutional AI Safety
 
+**Version**: 0.4.0 | **Status**: Production Ready | **Last Updated**: 2025-12-30
+
 [![License](https://img.shields.io/badge/license-Proprietary-red.svg)]()
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)]()
 [![TypeScript](https://img.shields.io/badge/typescript-5.0+-blue.svg)]()
@@ -24,13 +26,13 @@ Constitutional AIOps is an autonomous infrastructure management system that comb
 │                                                                 │
 │  ┌───────────────────────────────────────────────────────────┐  │
 │  │  FAST AGENT (Port 8081)                                   │  │
-│  │  Model: Qwen3-4B Q4_K_M | Latency: <50ms                  │  │
+│  │  Model: Qwen3-4B Q4_K_M | Latency: <100ms P95             │  │
 │  │  Purpose: Telemetry annotation, classification            │  │
 │  └───────────────────────────────────────────────────────────┘  │
 │                                                                 │
 │  ┌───────────────────────────────────────────────────────────┐  │
 │  │  REASONING AGENT (Port 8082)                              │  │
-│  │  Model: Qwen3-14B Q4_K_M | Latency: <200ms                │  │
+│  │  Model: Qwen3-14B Q4_K_M | Latency: 200-500ms P95         │  │
 │  │  Purpose: RCA, remediation planning, human chat           │  │
 │  └───────────────────────────────────────────────────────────┘  │
 │                                                                 │
@@ -184,6 +186,39 @@ constitutional-aiops/
 - P3.2: Human Correction Learning
 - P3.3: Long-term Optimization
 
+## Performance Targets
+
+| Metric | Target |
+|--------|--------|
+| Fast Agent Latency | <100ms P95 |
+| Reasoning Agent Latency | 200-500ms P95 |
+| Annotation Accuracy | 87-92% |
+| RCA Accuracy | 85-90% |
+| Token Compression Rate | 92% |
+| Resolution Time | <5 minutes |
+
+### Confidence Formula
+
+```
+C(a) = 0.4 · C_LLM + 0.35 · C_hist + 0.25 · C_sim
+```
+
+See [KEY_METRICS.md](docs/KEY_METRICS.md) for complete metrics reference.
+
+## Research Gaps Addressed
+
+This project addresses 5 critical research gaps in AI-enhanced observability:
+
+| ID | Research Gap | Solution |
+|----|--------------|----------|
+| RG1 | Automated Knowledge Extraction | Graph-episodic memory with incident correlation |
+| RG2 | Graph-Based Operational Knowledge | Neo4j semantic + episodic hybrid retrieval |
+| RG3 | Observability-Specific Tokenization | 92% compression via dedup + aggregation |
+| RG4 | Constitutional AI for Operations | 11 principles across 3 tiers |
+| RG5 | Comprehensive AI-Enhanced Observability | Dual-agent LGTM integration |
+
+See [Research Paper](docs/research/# IMP Current Research Documentation/Research_V5.tex) for detailed analysis.
+
 ## Technology Stack
 
 | Component | Technology |
@@ -244,12 +279,16 @@ CONFIDENCE_THRESHOLD_APPROVAL=0.70
 
 ## Documentation
 
-- **CLAUDE.md**: Instructions for AI assistants (read first on every session)
-- **docs/INDEX.md**: Master documentation index
-- **docs/ARCHITECTURE.md**: System architecture
-- **docs/DEPLOYMENT.md**: Deployment overview
-- **docs/CHECKLIST.md**: Development progress tracker
-- **docs/CHANGELOG.md**: Version history
+- **[CLAUDE.md](CLAUDE.md)**: Instructions for AI assistants (read first on every session)
+- **[docs/INDEX.md](docs/INDEX.md)**: Master documentation index (93+ files)
+- **[docs/KEY_METRICS.md](docs/KEY_METRICS.md)**: Performance metrics reference
+- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**: System architecture
+- **[docs/BACKEND.md](docs/BACKEND.md)**: Python backend (43 files)
+- **[docs/API.md](docs/API.md)**: REST API reference (50+ endpoints)
+- **[docs/FRONTEND.md](docs/FRONTEND.md)**: React frontend (23 files)
+- **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**: Deployment overview
+- **[docs/CHECKLIST.md](docs/CHECKLIST.md)**: Development progress tracker
+- **[docs/CHANGELOG.md](docs/CHANGELOG.md)**: Version history
 
 ## Team
 
