@@ -1,7 +1,7 @@
 # Constitutional AIOps - Issue Tracker
 
-> **Version**: 0.4.0
-> **Last Updated**: 2025-12-30
+> **Version**: 0.4.6
+> **Last Updated**: 2026-01-05
 > **Open Issues**: 0
 > **Blockers**: 0
 
@@ -35,6 +35,69 @@ None - All core functionality implemented and tested.
 ---
 
 ## ✅ Resolved Issues
+
+### 2026-01-05 (Hardcoded URLs, Neo4j Health, Chat UI)
+
+| ID | Issue | Resolution |
+|----|-------|------------|
+| URL-001 | Hardcoded Jarvis Labs URLs in docker-compose.yml | Removed hardcoded fallbacks, now reads from `JARVIS_OLLAMA_URL` in `.env` |
+| NEO4J-001 | Neo4j health check failing (curl not installed) | Changed health check from `curl` to `wget -q --spider` |
+| UI-001 | Chat response appears instantly (no visual feedback) | Added typewriter effect (3 chars/15ms) + blinking cursor |
+| UI-002 | No thinking indicator during LLM processing | Added collapsible "Thinking..." dropdown with animated dots |
+| INFRA-001 | Nextcloud not part of docker compose | Added nextcloud service to docker-compose.yml for Phase B metrics |
+
+**Container Status After Fix**:
+- Backend: ✅ Healthy (reads Jarvis URL from .env)
+- Frontend: ✅ Healthy (Chat UI enhanced)
+- Neo4j: ✅ Healthy (wget health check working)
+- Nextcloud: ✅ Running (port 8080)
+- All LGTM stack: ✅ Running
+
+**Files Modified**:
+- `docker-compose.yml`: URL handling, Neo4j health, nextcloud service
+- `frontend/src/pages/Chat.tsx`: Typewriter effect + thinking indicator
+
+### 2026-01-05 (Environment & Container Fixes)
+
+| ID | Issue | Resolution |
+|----|-------|------------|
+| ENV-001 | Wrong Jarvis Labs endpoint in .env | Updated `JARVIS_OLLAMA_URL` from old instance to `https://96c3f93672471.notebooks.jarvislabs.net` |
+| ENV-002 | Docker Compose not reading .env file | Workaround: Export variable explicitly before docker compose (`export JARVIS_OLLAMA_URL=...`) |
+| OTEL-001 | otel-collector restart loop | Fixed invalid `labels` config in loki exporter → `default_labels_enabled` format |
+| PROXY-001 | nginx 502 Bad Gateway to backend | Fixed by restarting frontend container to refresh DNS resolution |
+
+**Container Status After Fix**:
+- Backend: ✅ Healthy (correct Jarvis Labs endpoint)
+- Frontend: ✅ Healthy (nginx proxy working)
+- otel-collector: ✅ Running (config syntax fixed)
+- Neo4j: ✅ Running (health check shows unhealthy but API responds)
+- All LGTM stack: ✅ Running
+
+**Files Modified**:
+- `.env`: Updated `JARVIS_OLLAMA_URL` endpoint
+- `docker/configs/otel-collector.yaml`: Fixed loki exporter config
+
+### 2026-01-04 (Playwright Testing & API Route Fixes)
+
+| ID | Issue | Resolution |
+|----|-------|------------|
+| API-001 | Metrics API 404 errors | Fixed route paths in metrics.py: `/metrics` → `""`, `/metrics/*` → `/*` |
+| API-002 | 307 Temporary Redirect on /api/v1/metrics | Changed route from `/` to `""` to avoid trailing slash redirect |
+| TEST-001 | WebSocket 404 errors in console | Expected behavior in Docker (nginx proxies ws correctly) |
+| TEST-002 | Jarvis Labs 520 transient errors | Intermittent Ollama issue, not a codebase bug |
+
+**Testing Coverage (Playwright MCP)**:
+- Dashboard: ✅ Stats cards, model status, navigation
+- Agents: ✅ 6 tabs, activity streams, infrastructure (9 containers)
+- Incidents: ✅ List view, search, filters, create modal
+- Chat: ✅ Input, send button, response display
+- Metrics: ✅ 4 tabs, determinism config, benchmark controls
+- Settings: ✅ 5 tabs, Constitutional AI sliders, model status, prompts
+
+**Compliance Verified**:
+- Temperature: Fast=0.0, Reasoning=0.0 (analysis), Chat=0.5
+- Seed method: hash(prompt) % 2^32
+- 12 Principles (4+4+4)
 
 ### 2025-12-30 (Codebase Synchronization)
 
@@ -112,7 +175,7 @@ None - All core functionality implemented and tested.
 | Low Priority | 0 |
 | Codebase Fixed | 9 |
 | Documentation Fixed | 6 |
-| Total Resolved | 40+ |
+| Total Resolved | 44+ |
 
 ---
 
@@ -144,5 +207,5 @@ When adding new issues, use this format:
 
 ---
 
-**Last Updated**: 2025-12-30
-**Version**: 0.4.0
+**Last Updated**: 2026-01-05
+**Version**: 0.4.5

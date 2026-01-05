@@ -2,7 +2,7 @@
 Constitutional AIOps - Actions API Routes
 
 Action management endpoints with Constitutional AI validation.
-All actions are validated against 11 principles before execution.
+All actions are validated against 12 constitutional principles before execution.
 """
 
 import logging

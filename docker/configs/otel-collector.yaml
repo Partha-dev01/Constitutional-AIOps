@@ -37,10 +37,9 @@ exporters:
   # Logs to Loki
   loki:
     endpoint: http://loki:3100/loki/api/v1/push
-    labels:
-      attributes:
-        service.name: "service_name"
-        severity: "severity"
+    default_labels_enabled:
+      exporter: true
+      job: true
 
   # Traces to Tempo
   otlp/tempo:

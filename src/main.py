@@ -205,7 +205,7 @@ async def root():
             "reasoning_agent": "Qwen3-14B Q4_K_M @ port 8082",
         },
         "features": {
-            "constitutional_ai": "11 principles, 3 tiers",
+            "constitutional_ai": "12 principles (4+4+4), 3 tiers",
             "graph_memory": "Neo4j episodic storage",
             "telemetry": "LGTM stack integration",
         },

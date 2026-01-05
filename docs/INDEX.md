@@ -103,7 +103,7 @@
 #### Constitutional AI (src/constitutional/)
 | File | Purpose |
 |------|---------|
-| [principles.py](../src/constitutional/principles.py) | 11 principles, 3 tiers, violation actions |
+| [principles.py](../src/constitutional/principles.py) | 12 principles, 3 tiers, violation actions |
 | [validator.py](../src/constitutional/validator.py) | ValidationReport, confidence→authorization |
 | [\_\_init\_\_.py](../src/constitutional/__init__.py) | Module exports |
 
@@ -254,7 +254,7 @@
 | File | Purpose |
 |------|---------|
 | [docs/research/references.bib](research/references.bib) | BibTeX citations |
-| [docs/research/diagrams/constitutional-ai-framework.svg](research/diagrams/constitutional-ai-framework.svg) | 11 principles visualization |
+| [docs/research/diagrams/constitutional-ai-framework.svg](research/diagrams/constitutional-ai-framework.svg) | 12 principles visualization |
 | [docs/research/diagrams/dual-agent-architecture.svg](research/diagrams/dual-agent-architecture.svg) | Dual-model architecture |
 | [docs/research/diagrams/token-compression-pipeline.svg](research/diagrams/token-compression-pipeline.svg) | Token compression flow |
 

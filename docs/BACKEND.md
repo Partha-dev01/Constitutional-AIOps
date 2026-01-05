@@ -12,7 +12,7 @@
 The Constitutional AIOps backend is a FastAPI application providing:
 
 - **Dual-Agent LLM System**: Qwen3-4B (fast) + Qwen3-14B (reasoning)
-- **Constitutional AI Validation**: 11 principles across 3 tiers
+- **Constitutional AI Validation**: 12 principles across 3 tiers
 - **Graph-Episodic Memory**: Neo4j-based incident correlation
 - **Real-time Events**: WebSocket streaming for UI updates
 - **LGTM Stack Integration**: Loki, Grafana, Tempo, Prometheus
@@ -140,7 +140,7 @@ class AuthorizationLevel(Enum): automatic, approval_required, alert_only
 
 | File | Purpose | Key Exports |
 |------|---------|-------------|
-| `principles.py` | 11 principles, 3 tiers | `Principle`, `PrincipleTier`, `ALL_PRINCIPLES`, `get_principle()` |
+| `principles.py` | 12 principles, 3 tiers | `Principle`, `PrincipleTier`, `ALL_PRINCIPLES`, `get_principle()` |
 | `validator.py` | Action validation engine | `ConstitutionalValidator`, `ValidationReport`, `AuthorizationLevel` |
 | `__init__.py` | Module exports | All above |
 
@@ -258,7 +258,7 @@ class EventType(Enum):
 1. ModelRouter() - Initialize dual-endpoint HTTP clients
 2. FastAnnotator(router) - Create fast agent wrapper
 3. ReasoningAgent(router) - Create reasoning agent wrapper
-4. ConstitutionalValidator() - Load 11 principles
+4. ConstitutionalValidator() - Load 12 principles
 5. Neo4jClient() - Connect to graph database
 6. EpisodeStore(neo4j) - Initialize episodic memory
 7. ContextRetriever(store, neo4j) - Initialize RAG

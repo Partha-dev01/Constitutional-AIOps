@@ -1,7 +1,7 @@
 # CLAUDE.md - Constitutional AIOps Development Instructions
 
-> **Version**: 3.0
-> **Last Updated**: 2025-12-30
+> **Version**: 3.1
+> **Last Updated**: 2026-01-03
 > **Architecture**: Simultaneous Dual-Model (24GB VRAM)
 > **Status**: 100% Core Complete
 
@@ -38,7 +38,7 @@ cat docs/KEY_METRICS.md | head -100
 ### System Status
 - **Implementation**: 100% core complete
 - **Deployment**: Jarvis Labs A5000 24GB (primary)
-- **Research Paper**: `docs/research/# IMP Current Research Documentation/Research_V5.tex`
+- **Research Paper**: `docs/research/# IMP Current Research Documentation/Research_V6.tex`
 
 ### Key Files Inventory
 | Category | Count | Location |
@@ -70,7 +70,7 @@ cat docs/KEY_METRICS.md | head -100
 
 **Constitutional AIOps** is an autonomous infrastructure management system combining:
 - **Dual-agent LLM architecture** (Qwen3-4B + Qwen3-14B running simultaneously)
-- **Constitutional AI safety framework** (11 principles, 3 tiers)
+- **Constitutional AI safety framework** (12 principles, 3 tiers)
 - **Graph-episodic memory** (Neo4j) for incident correlation
 - **Human-in-the-loop workflows** for uncertain actions
 
@@ -119,7 +119,7 @@ cat docs/KEY_METRICS.md | head -100
 
 ---
 
-## 📊 Performance Targets (From Research_V5.tex)
+## 📊 Performance Targets (From Research_V6.tex)
 
 ### Latency Targets
 | Component | Target |
@@ -166,12 +166,12 @@ Where:
 | 0.70-0.90 | APPROVAL_REQUIRED | Must approve |
 | <0.70 | ALERT_ONLY | Notify only |
 
-### Principle Tiers (11 Total)
+### Principle Tiers (12 Total)
 | Tier | Principles | Violation Handling |
 |------|------------|-------------------|
 | **Tier 1 (Safety)** | P1.1-P1.4 | NEVER violate |
 | **Tier 2 (Operational)** | P2.1-P2.4 | Require approval |
-| **Tier 3 (Learning)** | P3.1-P3.3 | Soft guidelines |
+| **Tier 3 (Learning)** | P3.1-P3.4 | Soft guidelines |
 
 #### Tier 1 - Safety Critical
 - **P1.1**: No data deletion without confirmation
@@ -189,6 +189,7 @@ Where:
 - **P3.1**: Attribute outcomes to actions
 - **P3.2**: Analyze failures systematically
 - **P3.3**: Reinforce successful patterns
+- **P3.4**: Maintain solution diversity
 
 ---
 
@@ -260,7 +261,7 @@ constitutional-aiops/
 │   ├── AWS_DEPLOYMENT.md        # AWS guide
 │   └── research/                # Academic materials
 │       ├── # IMP Current Research Documentation/
-│       │   └── Research_V5.tex  # Main research paper
+│       │   └── Research_V6.tex  # Main research paper (22 pages)
 │       └── references.bib       # BibTeX citations
 ```
 
@@ -416,7 +417,7 @@ reasoning_response = await router.reasoning_completion(prompt)
 
 ## 📎 Quick Links
 
-- **Research Paper**: `docs/research/# IMP Current Research Documentation/Research_V5.tex`
+- **Research Paper**: `docs/research/# IMP Current Research Documentation/Research_V6.tex`
 - **Key Metrics**: `docs/KEY_METRICS.md`
 - **API Reference**: `docs/API.md`
 - **Backend Reference**: `docs/BACKEND.md`
