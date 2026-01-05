@@ -1,7 +1,7 @@
 """
 Constitutional AIOps - Constitutional AI Principles
 
-Defines the 11 constitutional principles organized into 3 tiers.
+Defines the 12 constitutional principles organized into 3 tiers.
 These principles govern all autonomous actions taken by the system.
 
 Tier 1 (Safety-Critical): NEVER violate under any circumstances
@@ -189,10 +189,24 @@ PRINCIPLE_P3_3 = Principle(
     ],
 )
 
+PRINCIPLE_P3_4 = Principle(
+    id="P3.4",
+    tier=PrincipleTier.TIER_3_LEARNING,
+    name="Solution Diversity",
+    description="Occasionally explore alternative solutions to prevent local optima",
+    violation_action="LOG_WARNING",
+    examples=[
+        "Trying different remediation approaches",
+        "Testing alternative scaling strategies",
+        "Exploring new diagnostic paths",
+        "Validating assumptions periodically",
+    ],
+)
+
 # All principles organized by tier
 TIER_1_PRINCIPLES = [PRINCIPLE_P1_1, PRINCIPLE_P1_2, PRINCIPLE_P1_3, PRINCIPLE_P1_4]
 TIER_2_PRINCIPLES = [PRINCIPLE_P2_1, PRINCIPLE_P2_2, PRINCIPLE_P2_3, PRINCIPLE_P2_4]
-TIER_3_PRINCIPLES = [PRINCIPLE_P3_1, PRINCIPLE_P3_2, PRINCIPLE_P3_3]
+TIER_3_PRINCIPLES = [PRINCIPLE_P3_1, PRINCIPLE_P3_2, PRINCIPLE_P3_3, PRINCIPLE_P3_4]
 
 ALL_PRINCIPLES = TIER_1_PRINCIPLES + TIER_2_PRINCIPLES + TIER_3_PRINCIPLES
 

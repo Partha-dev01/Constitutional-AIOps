@@ -10,7 +10,7 @@ Responsibilities:
 - Human chat interaction for operator communication
 - Multi-service dependency analysis
 
-Performance Targets (from Research_V5.tex):
+Performance Targets (from Research_V6.tex):
 - Latency: 200-500ms P95
 - Context: 4K tokens
 - Accuracy: Prioritized over speed
@@ -84,7 +84,7 @@ You are part of a dual-agent architecture:
 - **Reasoning Agent (You)**: Deep analysis, RCA, remediation planning, human interaction
 
 ## Constitutional AI Framework
-You operate under 11 safety principles across 3 tiers:
+You operate under 12 constitutional principles (4+4+4) across 3 tiers:
 - **Tier 1 (Safety)**: NEVER violate - human safety, data protection, service availability
 - **Tier 2 (Operational)**: Require approval if uncertain
 - **Tier 3 (Learning)**: Soft guidelines for improvement
@@ -261,10 +261,12 @@ class ReasoningAgent(BaseAgent):
 
         try:
             # Get completion from reasoning agent
+            # Temperature: 0.0 for deterministic RCA/planning, 0.5 for natural chat
+            temp = 0.0 if mode in ("rca", "planning") else 0.5
             response = await self.model_router.reasoning_completion(
                 prompt=prompt,
                 max_tokens=2048,
-                temperature=0.3,
+                temperature=temp,
                 enable_thinking=enable_thinking,
             )
 

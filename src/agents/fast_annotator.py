@@ -10,7 +10,7 @@ Responsibilities:
 - Confidence scoring for routing decisions
 - Token compression for downstream processing
 
-Performance Targets (from Research_V5.tex):
+Performance Targets (from Research_V6.tex):
 - Latency: <100ms P95
 - Context: 8K tokens
 - Throughput: High (batch processing capable)
@@ -116,7 +116,7 @@ class FastAnnotator(BaseAgent):
             response = await self.model_router.fast_completion(
                 prompt=prompt,
                 max_tokens=512,
-                temperature=0.1,  # Low temp for consistent classification
+                temperature=0.0,  # Deterministic classification (greedy decoding)
             )
 
             # Parse response

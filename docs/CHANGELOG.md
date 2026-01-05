@@ -2,10 +2,203 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.6] - 2026-01-05
+
+### Container Fixes, Chat UI Enhancements & Infrastructure Updates
+
+**Session**: Hardcoded URL removal, Chat typewriter effect, Neo4j health fix, Nextcloud integration
+
+#### Major Changes
+
+1. **Removed Hardcoded Jarvis Labs URLs** (`docker-compose.yml`)
+   - Changed `FAST_AGENT_URL` and `REASONING_AGENT_URL` from hardcoded fallbacks to read from `JARVIS_OLLAMA_URL` in `.env`
+   - Old: `${FAST_AGENT_URL:-https://96c3f93672471.notebooks.jarvislabs.net/v1}` (hardcoded!)
+   - New: `${JARVIS_OLLAMA_URL}/v1` (reads from .env)
+   - **Benefit**: When Jarvis Labs endpoint changes, only update `.env` file
+
+2. **Fixed Neo4j Health Check** (`docker-compose.yml`)
+   - Changed from `curl` to `wget` (curl not installed in Neo4j container)
+   - Old: `["CMD", "curl", "-f", "http://localhost:7474"]`
+   - New: `["CMD-SHELL", "wget -q --spider http://localhost:7474 || exit 1"]`
+
+3. **Added Nextcloud to Docker Compose** (`docker-compose.yml`)
+   - Nextcloud now auto-starts with the project for Phase B metrics extraction
+   - Port: 8080:80
+   - Volume: nextcloud-data
+
+4. **Chat UI Enhancements** (`frontend/src/pages/Chat.tsx`)
+   - Added typewriter effect: Text appears gradually (3 chars at 15ms intervals)
+   - Added thinking indicator: Collapsible "Thinking..." dropdown with animated dots
+   - Added blinking cursor while typing
+   - Better UX for LLM response visualization
+
+#### Container Status (Post-Fix)
+| Container | Status | Notes |
+|-----------|--------|-------|
+| aiops-backend | ✅ Healthy | Both agents connecting to Jarvis Labs |
+| aiops-frontend | ✅ Healthy | Chat UI with typewriter effect |
+| aiops-neo4j | ✅ Healthy | wget health check working |
+| nextcloud | ✅ Running | Now part of project stack |
+| All LGTM | ✅ Running | Observability stack operational |
+
+#### Files Modified
+| File | Changes |
+|------|---------|
+| `docker-compose.yml` | Removed hardcoded URLs, fixed Neo4j health check, added nextcloud |
+| `frontend/src/pages/Chat.tsx` | Typewriter effect + thinking indicator |
+
+---
+
+## [0.4.5] - 2026-01-05
+
+### Environment & Container Fixes
+
+**Session**: Debugging agent offline status and container issues
+
+#### Bug Fixes
+- **`.env`**: Updated `JARVIS_OLLAMA_URL` to correct Jarvis Labs endpoint (`https://96c3f93672471.notebooks.jarvislabs.net`)
+- **`docker/configs/otel-collector.yaml`**: Fixed loki exporter config syntax
+  - Changed invalid `labels.attributes` to `default_labels_enabled` format
+  - Resolved otel-collector restart loop
+
+#### Environment Issues Resolved
+| Issue | Root Cause | Resolution |
+|-------|------------|------------|
+| Agents showing offline | Wrong Jarvis Labs endpoint in container env | Updated `.env` with correct endpoint |
+| Docker not reading .env | Git Bash/Windows env handling | Use explicit `export VAR=value` before compose |
+| otel-collector restart loop | Invalid loki exporter config | Fixed to use `default_labels_enabled` format |
+| nginx 502 Bad Gateway | Stale DNS resolution | Restart frontend container |
+
+#### Container Status (Post-Fix)
+- Backend: ✅ Healthy (Jarvis Labs `qwen3:4b` + `qwen3:14b` responding)
+- Frontend: ✅ Healthy (nginx proxy working)
+- otel-collector: ✅ Running
+- Neo4j: ✅ Running (API responds at 7474/7687)
+- Loki, Prometheus, Tempo, Grafana: ✅ Running
+
+---
+
+## [0.4.4] - 2026-01-04
+
+### Playwright MCP Testing & API Route Fixes
+
+**Testing Session**: Full frontend and backend verification using Playwright MCP
+
+#### Bug Fixes
+- **src/api/routes/metrics.py**: Fixed all route paths causing 404 errors
+  - Changed `/metrics` → `""` (base route)
+  - Changed `/metrics/latency` → `/latency`
+  - Changed `/metrics/history` → `/history`
+  - Changed `/metrics/export` → `/export`
+  - Changed `/metrics/clear` → `/clear`
+  - Changed `/metrics/benchmark` → `/benchmark`
+  - Changed `/metrics/validate/determinism` → `/validate/determinism`
+  - Changed `/metrics/validation/report` → `/validation/report`
+  - Root cause: Routes had redundant `/metrics` prefix since router was already mounted at `/api/v1/metrics`
+
+#### Testing Coverage (Playwright MCP)
+| Page | Tests Passed | Key Checks |
+|------|-------------|------------|
+| Dashboard | ✅ | Stats cards, model status, sidebar navigation |
+| Agents | ✅ | 6 tabs (Fast, Reasoning, Telemetry, Graph, MCP Tools, Infrastructure) |
+| Incidents | ✅ | List, search, filters, create modal |
+| Chat | ✅ | Input, send button, response handling |
+| Metrics | ✅ | 4 tabs (Overview, Benchmark, Validation, Export) |
+| Settings | ✅ | 5 tabs (Constitutional AI, Notifications, Telemetry, Models, Prompts) |
+
+#### Compliance Verification
+- Fast Agent Temperature: 0.0 ✅
+- Reasoning Agent Temperature: 0.0 (analysis mode) ✅
+- Chat Temperature: 0.5 ✅
+- Seed Method: hash(prompt) % 2^32 ✅
+- Constitutional Principles: 12 (4+4+4) ✅
+
+#### Services Verified
+- Backend: http://localhost:8000 ✅
+- Frontend: http://localhost:3000 ✅
+- Neo4j: bolt://localhost:7687 ✅
+- Grafana: http://localhost:3001 ✅
+- Prometheus: http://localhost:9090 ✅
+- Loki: http://localhost:3100 ✅
+- Jarvis Labs LLM: https://96c3f93672471.notebooks.jarvislabs.net ✅
+
+---
+
+## [0.4.3] - 2026-01-03
+
+### Full Codebase Compliance Verification
+
+**Verification Scope**: Research_V6.tex → docs/ → src/ → frontend/src/
+
+#### Files Modified (Backend)
+- **src/agents/fast_annotator.py**:
+  - Fixed V5→V6 reference in docstring
+  - Fixed temperature 0.1→0.0 for deterministic annotation
+- **src/agents/reasoning_agent.py**:
+  - Fixed V5→V6 reference in docstring
+  - Fixed "11 principles"→"12 principles (4+4+4)"
+  - Fixed temperature to be mode-based (0.0 for RCA/planning, 0.5 for chat)
+- **src/config.py**: Fixed 3× V5→V6 references
+- **src/validation/constants.py**: Fixed 8× V5→V6 references
+- **src/validation/__init__.py**: Fixed 2× V5→V6 references
+- **src/memory/episode_store.py**: Fixed 2× V5→V6 references
+- **src/memory/retrieval.py**: Fixed 2× V5→V6 references
+- **src/main.py**: Fixed "11 principles"→"12 principles (4+4+4)"
+- **src/api/routes/actions.py**: Fixed "11 principles"→"12 principles"
+
+#### Verification Results
+| Area | Files Checked | Status |
+|------|---------------|--------|
+| Research_V6.tex | 1 (22 pages) | ✅ No changes needed |
+| docs/ | 13+ files | ✅ Already compliant |
+| frontend/src/ | 23+ files | ✅ Already compliant |
+| src/ | 48 files | ✅ Fixed (17 changes in 9 files) |
+
+**Total Changes**: 17 edits across 9 backend files
+
+---
+
+## [0.4.2] - 2026-01-03
+
+### Research Paper V6 Complete
+- **Research_V6.tex**: Final research paper version (22 pages)
+  - Added Determinism Analysis section with mathematical proofs
+  - Enhanced Confidence-Based Authorization with justifications
+  - Fixed Kubernetes→Docker Compose references (current deployment)
+  - Clarified 12 Constitutional Principles (4+4+4 across 3 tiers)
+  - Added Bounded Determinism claims (temperature=0, seed=hash(prompt))
+
+### Documentation Verification
+- **ARCHITECTURE.md**: Fixed mismatches with V6
+  - 11 Principles → 12 Principles
+  - Neo4j 5.15 → Neo4j 5.x
+  - OpenTelemetry 0.91 → OpenTelemetry 0.131.0
+- **CHECKLIST.md**: Updated V5→V6 references
+- **KEY_METRICS.md**: Complete overhaul with implementation details
+  - Added metric collection API endpoints and commands
+  - Added research paper tables mapping
+  - Documented test dataset requirements for accuracy validation
+  - Added complete metrics collection workflow
+
+### V6 Critical Values (Verified Across All Docs)
+- Principles: 12 (4+4+4), not 11
+- Fast Agent: <100ms P95
+- Reasoning Agent: 200-500ms P95
+- Auto threshold: >0.90
+- Approval threshold: 0.70-0.90
+- Confidence weights: α=0.4, β=0.35, γ=0.25
+- Embedding: 384-dim
+- Similarity: ≥0.70 cosine
+- Hybrid retrieval: α=0.6 vector, 0.4 graph
+- VRAM: 4GB + 11GB = 15GB
+- Compression: 92%
+
+---
+
 ## [0.4.1] - 2025-12-30
 
 ### Changed
-- **Codebase Synchronization**: All codebase files now match Research_V5.tex and documentation
+- **Codebase Synchronization**: All codebase files now match Research_V6.tex and documentation
 - **Latency Targets**: Updated all files to use correct values
   - fast_annotator.py: <50ms P99 → <100ms P95
   - reasoning_agent.py: <200ms P99 → 200-500ms P95
@@ -563,4 +756,4 @@ This project uses [Semantic Versioning](https://semver.org/):
 - MINOR: Backward-compatible functionality
 - PATCH: Backward-compatible bug fixes
 
-Current: **0.4.1** (Codebase synchronized with documentation)
+Current: **0.4.5** (Environment & container fixes)

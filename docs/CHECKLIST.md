@@ -1,7 +1,7 @@
 # Constitutional AIOps - Development Checklist
 
-> **Version**: 0.4.1
-> **Last Updated**: 2025-12-30
+> **Version**: 0.4.2
+> **Last Updated**: 2026-01-03
 > **Status**: 100% Core Complete
 > **Architecture**: Simultaneous Dual-Model (Qwen3-4B + Qwen3-14B on 24GB VRAM)
 > **Deployment**: Hybrid (Jarvis Labs A5000 GPU + Local Services)
@@ -10,7 +10,7 @@
 
 ## Codebase Synchronization (2025-12-30) ✅
 
-All codebase files now match documentation (Research_V5.tex, KEY_METRICS.md).
+All codebase files now match documentation (Research_V6.tex, KEY_METRICS.md).
 
 ### Backend Updates ✅
 - [x] `src/agents/fast_annotator.py` - Latency: <50ms P99 → <100ms P95
@@ -69,7 +69,7 @@ Created `src/validation/constants.py` with:
 - [x] `reasoning_agent.py` - Qwen3-14B agent (200-500ms P95)
 
 #### Constitutional AI (src/constitutional/)
-- [x] `principles.py` - 11 principles, 3 tiers
+- [x] `principles.py` - 12 principles, 3 tiers
 - [x] `validator.py` - Action validation engine
 
 #### Memory System (src/memory/)
@@ -169,13 +169,13 @@ Created `src/validation/constants.py` with:
 - [x] `AWS_DEPLOYMENT.md` - AWS guide
 
 #### Research
-- [x] `docs/research/# IMP Current Research Documentation/Research_V5.tex` - Main paper
+- [x] `docs/research/# IMP Current Research Documentation/Research_V6.tex` - Main paper (22 pages)
 - [x] `docs/research/references.bib` - BibTeX citations
 - [x] `docs/research/Whitepaper_Combined.md` - Combined whitepaper
 
 ---
 
-## Performance Targets (From Research_V5.tex)
+## Performance Targets (From Research_V6.tex)
 
 | Metric | Target | Status |
 |--------|--------|--------|
@@ -215,7 +215,7 @@ Created `src/validation/constants.py` with:
 ## Key Technical Specifications
 
 ### Constitutional AI
-- **11 Principles** across 3 tiers
+- **12 Principles** across 3 tiers (4+4+4)
 - **Authorization**: >0.90 auto, 0.70-0.90 approval, <0.70 alert
 - **Formula**: `C(a) = 0.4·C_LLM + 0.35·C_hist + 0.25·C_sim`
 
@@ -238,5 +238,5 @@ See [CLAUDE.md](../CLAUDE.md) for session management.
 
 ---
 
-**Last Updated**: 2025-12-30
-**Version**: 0.4.1
+**Last Updated**: 2026-01-03
+**Version**: 0.4.2
