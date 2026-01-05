@@ -87,7 +87,7 @@ class ValidationRequest(BaseModel):
 
 
 @router.get(
-    "/metrics",
+    "",
     response_model=MetricsSnapshot,
     summary="Get Metrics Snapshot",
     description="Get current metrics snapshot including latency stats for both agents",
@@ -118,7 +118,7 @@ async def get_metrics(request: Request) -> MetricsSnapshot:
 
 
 @router.get(
-    "/metrics/latency",
+    "/latency",
     summary="Get Latency Statistics",
     description="Get latency statistics optionally filtered by agent",
 )
@@ -154,7 +154,7 @@ async def get_latency_stats(
 
 
 @router.get(
-    "/metrics/history",
+    "/history",
     summary="Get Latency History",
     description="Get recent latency records for detailed analysis",
 )
@@ -190,7 +190,7 @@ async def get_latency_history(
 
 
 @router.get(
-    "/metrics/export",
+    "/export",
     summary="Export Metrics",
     description="Export metrics in JSON or CSV format",
 )
@@ -232,7 +232,7 @@ async def export_metrics(
 
 
 @router.delete(
-    "/metrics/clear",
+    "/clear",
     summary="Clear Metrics",
     description="Clear all latency history",
 )
@@ -252,7 +252,7 @@ async def clear_metrics(request: Request) -> dict[str, str]:
 
 
 @router.post(
-    "/metrics/benchmark",
+    "/benchmark",
     summary="Run Benchmark",
     description="Run a latency benchmark on specified agent",
 )
@@ -348,7 +348,7 @@ async def run_benchmark(
 
 
 @router.post(
-    "/metrics/validate/determinism",
+    "/validate/determinism",
     summary="Validate Determinism",
     description="Test output determinism with temperature=0",
 )
@@ -428,7 +428,7 @@ async def validate_determinism(
 
 
 @router.get(
-    "/metrics/validation/report",
+    "/validation/report",
     summary="Get Validation Report",
     description="Get comprehensive validation report for research documentation",
 )

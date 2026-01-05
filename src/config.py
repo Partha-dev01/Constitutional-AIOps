@@ -79,7 +79,7 @@ class ObservabilityConfig:
 
 @dataclass
 class MemoryConfig:
-    """Memory system configuration (from Research_V5.tex)."""
+    """Memory system configuration (from Research_V6.tex)."""
 
     # Embedding configuration
     embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
@@ -92,7 +92,7 @@ class MemoryConfig:
 
 @dataclass
 class PerformanceConfig:
-    """Performance targets configuration (from Research_V5.tex)."""
+    """Performance targets configuration (from Research_V6.tex)."""
 
     # Latency targets (P95)
     fast_agent_latency_target_ms: int = 100  # <100ms P95
@@ -116,7 +116,7 @@ class PerformanceConfig:
 class ConstitutionalConfig:
     """Constitutional AI framework configuration."""
 
-    # Confidence thresholds for authorization matrix (from Research_V5.tex)
+    # Confidence thresholds for authorization matrix (from Research_V6.tex)
     # C(a) = 0.4 · C_LLM + 0.35 · C_hist + 0.25 · C_sim
     confidence_threshold_auto: float = field(
         default_factory=lambda: float(os.getenv("CONFIDENCE_THRESHOLD_AUTO", "0.90"))
@@ -137,8 +137,8 @@ class ConstitutionalConfig:
     # Constitutional AI principles count
     tier1_principles: int = 4  # Safety-critical (P1.1-P1.4)
     tier2_principles: int = 4  # Operational (P2.1-P2.4)
-    tier3_principles: int = 3  # Learning (P3.1-P3.3)
-    total_principles: int = 11
+    tier3_principles: int = 4  # Learning (P3.1-P3.4)
+    total_principles: int = 12
 
     # Action limits
     max_actions_per_minute: int = 10

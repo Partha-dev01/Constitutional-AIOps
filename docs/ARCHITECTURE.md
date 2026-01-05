@@ -72,7 +72,7 @@
 │  │  ┌───────────────────────────────────────────────────────────────┐   │   │
 │  │  │            CONSTITUTIONAL VALIDATOR                            │   │   │
 │  │  │   Tier 1 (Safety) → Tier 2 (Ops) → Tier 3 (Learning)          │   │   │
-│  │  │   11 Principles | 3 Tiers | Authorization Matrix               │   │   │
+│  │  │   12 Principles | 3 Tiers | Authorization Matrix               │   │   │
 │  │  └───────────────────────────────────────────────────────────────┘   │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
 │                                                                             │
@@ -97,7 +97,7 @@
 |-----------|------------|---------|------|
 | Backend API | FastAPI | REST & WebSocket API | 8000 |
 | Frontend | React + Vite + Tailwind | User interface | 3000 |
-| Graph Memory | Neo4j 5.15 | Incident correlation | 7474/7687 |
+| Graph Memory | Neo4j 5.x | Incident correlation | 7474/7687 |
 | Fast Agent | Qwen3-4B via Ollama | Telemetry annotation | (Jarvis Labs) |
 | Reasoning Agent | Qwen3-14B via Ollama | RCA & human chat | (Jarvis Labs) |
 
@@ -110,7 +110,7 @@
 | Metrics | Prometheus 2.48 | Metrics collection | 9090 |
 | Visualization | Grafana 10.2.3 | Dashboards | 3001 |
 | Log Shipping | Promtail 2.9.3 | Container logs → Loki | - |
-| Collector | OpenTelemetry 0.91 | Telemetry pipeline | 4317/4318 |
+| Collector | OpenTelemetry 0.131.0 | Telemetry pipeline | 4317/4318 |
 
 ### 2.3 LLM Configuration (from `src/config.py`)
 

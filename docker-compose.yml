@@ -20,8 +20,8 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - FAST_AGENT_URL=${FAST_AGENT_URL:-https://[YOUR-ENDPOINT].notebooks.jarvislabs.net/v1}
-      - REASONING_AGENT_URL=${REASONING_AGENT_URL:-https://[YOUR-ENDPOINT].notebooks.jarvislabs.net/v1}
+      - FAST_AGENT_URL=${JARVIS_OLLAMA_URL}/v1
+      - REASONING_AGENT_URL=${JARVIS_OLLAMA_URL}/v1
       - FAST_AGENT_MODEL=${FAST_AGENT_MODEL:-qwen3:4b}
       - REASONING_AGENT_MODEL=${REASONING_AGENT_MODEL:-qwen3:14b}
       - NEO4J_URI=bolt://neo4j:7687
@@ -78,7 +78,7 @@ services:
       - aiops-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:7474"]
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:7474 || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -164,9 +164,24 @@ services:
     restart: unless-stopped
 
   # ==========================================================================
+  # Monitored Services (for demo/metrics extraction)
+  # ==========================================================================
+
+  nextcloud:
+    image: nextcloud:latest
+    container_name: nextcloud
+    ports:
+      - "8080:80"
+    volumes:
+      - nextcloud-data:/var/www/html
+    networks:
+      - aiops-network
+    restart: unless-stopped
+
+  # ==========================================================================
   # OpenTelemetry Collector
   # ==========================================================================
-  
+
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.91.0
     container_name: aiops-otel-collector
@@ -197,3 +212,4 @@ volumes:
   tempo-data:
   grafana-data:
   models:
+  nextcloud-data:
