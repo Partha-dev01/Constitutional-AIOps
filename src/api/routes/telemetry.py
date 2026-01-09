@@ -269,6 +269,64 @@ async def get_traces(
         return TracesResponse(traces=[], total=0)
 
 
+class BackgroundProcessorStats(BaseModel):
+    """Background telemetry processor statistics."""
+    running: bool = Field(..., description="Whether processor is running")
+    total_cycles: int = Field(0, description="Total processing cycles completed")
+    telemetry_processed: int = Field(0, description="Total telemetry windows processed")
+    anomalies_detected: int = Field(0, description="Total anomalies detected")
+    escalations_to_reasoning: int = Field(0, description="Times escalated to Reasoning Agent")
+    episodes_created: int = Field(0, description="Episodes stored in graph")
+    errors: int = Field(0, description="Processing errors")
+    last_run: str | None = Field(None, description="Timestamp of last processing cycle")
+    services_monitored: int = Field(0, description="Number of services being monitored")
+    processing_interval_seconds: int = Field(30, description="Seconds between cycles")
+
+
+@router.get(
+    "/processor/status",
+    response_model=BackgroundProcessorStats,
+    summary="Background Processor Status",
+    description="Get status and statistics of the background telemetry processor",
+)
+async def get_processor_status(request: Request) -> BackgroundProcessorStats:
+    """
+    Get background telemetry processor status.
+
+    The processor continuously scans telemetry and annotates anomalies
+    using the Fast Agent (System 1 pattern recognition).
+    """
+    processor = getattr(request.app.state, "background_processor", None)
+
+    if processor is None:
+        return BackgroundProcessorStats(
+            running=False,
+            total_cycles=0,
+            telemetry_processed=0,
+            anomalies_detected=0,
+            escalations_to_reasoning=0,
+            episodes_created=0,
+            errors=0,
+            last_run=None,
+            services_monitored=0,
+            processing_interval_seconds=30,
+        )
+
+    stats = processor.get_stats()
+    return BackgroundProcessorStats(
+        running=stats.get("running", False),
+        total_cycles=stats.get("total_cycles", 0),
+        telemetry_processed=stats.get("telemetry_processed", 0),
+        anomalies_detected=stats.get("anomalies_detected", 0),
+        escalations_to_reasoning=stats.get("escalations_to_reasoning", 0),
+        episodes_created=stats.get("episodes_created", 0),
+        errors=stats.get("errors", 0),
+        last_run=stats.get("last_run"),
+        services_monitored=stats.get("services_monitored", 0),
+        processing_interval_seconds=stats.get("processing_interval_seconds", 30),
+    )
+
+
 @router.get(
     "/health",
     response_model=TelemetryHealthResponse,

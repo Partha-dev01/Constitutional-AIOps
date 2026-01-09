@@ -45,6 +45,7 @@ from src.memory.retrieval import ContextRetriever
 from src.telemetry.collector import TelemetryCollector
 from src.telemetry.compressor import TokenCompressor
 from src.telemetry.aggregator import TelemetryAggregator
+from src.telemetry.background_processor import BackgroundTelemetryProcessor
 
 # Import MCP components
 from src.mcp.server import MCPActionServer
@@ -146,12 +147,30 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Telemetry health check failed: {e}")
 
+    # Initialize and start Background Telemetry Processor
+    # This implements the "System 1" continuous scanning from Research_V6.tex
+    app.state.background_processor = BackgroundTelemetryProcessor(
+        fast_annotator=app.state.fast_annotator,
+        reasoning_agent=app.state.reasoning_agent,
+        telemetry_collector=app.state.telemetry_collector,
+        episode_store=app.state.episode_store,
+        neo4j_client=app.state.neo4j_client,
+        processing_interval=30,  # Process every 30 seconds
+    )
+    await app.state.background_processor.start()
+    logger.info("Background telemetry processor started (30s interval)")
+
     logger.info("Constitutional AIOps started successfully")
 
     yield
 
     # Shutdown
     logger.info("Shutting down Constitutional AIOps...")
+
+    # Stop background processor first
+    if app.state.background_processor:
+        await app.state.background_processor.stop()
+        logger.info("Background telemetry processor stopped")
 
     # Close ModelRouter connections
     if app.state.model_router:

@@ -1,7 +1,7 @@
 # Constitutional AIOps - Issue Tracker
 
-> **Version**: 0.4.6
-> **Last Updated**: 2026-01-05
+> **Version**: 0.4.8
+> **Last Updated**: 2026-01-09
 > **Open Issues**: 0
 > **Blockers**: 0
 
@@ -35,6 +35,31 @@ None - All core functionality implemented and tested.
 ---
 
 ## ✅ Resolved Issues
+
+### 2026-01-09 (Architecture Compliance Fix)
+
+| ID | Issue | Resolution |
+|----|-------|------------|
+| ARCH-001 | BackgroundProcessor bypassed TelemetryCollector with direct HTTP | Removed direct HTTP queries, now uses `telemetry_collector.collect_window()` |
+| LOKI-001 | TelemetryCollector used wrong Loki label `service="{service}"` | Fixed to use `{job="containerlogs"}` which promtail uses |
+| PROM-001 | TelemetryCollector queried non-existent service-specific metrics | Changed to generic metrics: `go_goroutines`, `up`, etc. |
+
+**Architecture After Fix**:
+```
+LGTM Stack → TelemetryCollector → BackgroundProcessor → Fast Agent
+```
+
+**Verification**:
+```bash
+curl http://localhost:8000/api/v1/telemetry/processor/status
+# Response: {"running":true,"total_cycles":2,"telemetry_processed":2,...}
+```
+
+**Files Modified**:
+- `src/telemetry/collector.py`: Fixed Loki/Prometheus queries
+- `src/telemetry/background_processor.py`: Removed HTTP bypass, uses TelemetryCollector
+
+---
 
 ### 2026-01-05 (Hardcoded URLs, Neo4j Health, Chat UI)
 

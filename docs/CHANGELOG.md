@@ -2,6 +2,87 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.8] - 2026-01-09
+
+### Architecture Fix: TelemetryCollector Compliance with Research_V6.tex
+
+**Session**: Fixed architecture violation where BackgroundProcessor bypassed TelemetryCollector
+
+#### Critical Fix
+
+The previous implementation incorrectly bypassed the `TelemetryCollector` with direct HTTP queries to Loki/Prometheus/Tempo. This violated the Research_V6.tex architecture:
+
+```
+LGTM Stack → TelemetryCollector → BackgroundProcessor → Fast Agent
+```
+
+#### Changes Made
+
+1. **Fixed TelemetryCollector.query_logs()** (`src/telemetry/collector.py`)
+   - Changed Loki query from `{service="{service}"}` to `{job="containerlogs"}`
+   - Loki uses `job="containerlogs"` label (configured in promtail)
+   - Added service filtering with LogQL pattern matching
+
+2. **Fixed TelemetryCollector.query_metrics()** (`src/telemetry/collector.py`)
+   - Changed from service-specific metrics to generic Prometheus metrics
+   - Queries: `go_goroutines`, `go_memstats_alloc_bytes`, `process_cpu_seconds_total`, `up`
+
+3. **Removed HTTP Bypass from BackgroundProcessor** (`src/telemetry/background_processor.py`)
+   - Removed direct HTTP client and hardcoded URLs
+   - Removed `_query_loki_logs()`, `_query_prometheus_metrics()`, `_query_tempo_traces()`
+   - Now uses `self.telemetry_collector.collect_window()` as designed
+
+#### Architecture Compliance
+
+Now properly follows Research_V6.tex Section 4.1:
+- TelemetryCollector is the **single interface** to LGTM stack
+- BackgroundProcessor delegates to TelemetryCollector
+- No direct HTTP calls to observability backends
+
+#### Verification
+```bash
+curl http://localhost:8000/api/v1/telemetry/processor/status
+# Response: {"running":true,"total_cycles":2,"telemetry_processed":2,...}
+```
+
+---
+
+## [0.4.7] - 2026-01-07
+
+### Background Telemetry Processor - Continuous Fast Agent Scanning
+
+**Session**: Implementing continuous telemetry processing as described in Research_V6.tex
+
+#### Major Changes
+
+1. **Created Background Telemetry Processor** (`src/telemetry/background_processor.py`)
+   - Implements "System 1" continuous scanning from research paper
+   - Processes telemetry every 30 seconds from Loki/Prometheus/Tempo
+   - Fast Agent annotates anomalies automatically
+   - Escalates to Reasoning Agent when `needs_reasoning=true`
+   - Stores annotations and episodes in Neo4j graph
+
+2. **Updated Main Application** (`src/main.py`)
+   - Background processor starts on application startup
+   - Graceful shutdown of processor on application stop
+   - Logs processor activity for debugging
+
+3. **Added Processor Status API** (`src/api/routes/telemetry.py`)
+   - New endpoint: `GET /api/v1/telemetry/processor/status`
+   - Returns: running status, total cycles, anomalies detected, escalations, etc.
+
+#### Services Monitored
+- `aiops-backend`
+- `nextcloud`
+- `aiops-frontend`
+- `aiops-neo4j`
+
+#### Research Paper Reference
+From Research_V6.tex:
+> "Fast Annotation Agent (System 1): A 4B parameter model optimized for sub-100ms pattern recognition. It continuously scans OpenTelemetry streams to tag anomalies."
+
+---
+
 ## [0.4.6] - 2026-01-05
 
 ### Container Fixes, Chat UI Enhancements & Infrastructure Updates
