@@ -244,7 +244,12 @@ class TelemetryCollector:
             List of log entries
         """
         if query is None:
-            query = f'{{service="{service}"}}'
+            # Use job="containerlogs" which is how promtail labels Docker logs
+            # Filter by container name pattern if service specified
+            if service and service != "all":
+                query = f'{{job="containerlogs"}} |~ "{service}"'
+            else:
+                query = '{job="containerlogs"}'
 
         params = {
             "query": query,
@@ -301,12 +306,14 @@ class TelemetryCollector:
             List of metric points
         """
         if metrics is None:
+            # Query generic metrics available in Prometheus
+            # These are standard Go/Prometheus metrics that should exist
             metrics = [
-                f'rate(http_requests_total{{service="{service}"}}[5m])',
-                f'histogram_quantile(0.99, rate(http_request_duration_seconds_bucket{{service="{service}"}}[5m]))',
-                f'rate(http_requests_total{{service="{service}",status=~"5.."}}[5m])',
-                f'container_memory_usage_bytes{{service="{service}"}}',
-                f'container_cpu_usage_seconds_total{{service="{service}"}}',
+                'go_goroutines',
+                'go_memstats_alloc_bytes',
+                'process_cpu_seconds_total',
+                'prometheus_http_requests_total',
+                'up',  # Target health metric
             ]
 
         all_metrics = []
