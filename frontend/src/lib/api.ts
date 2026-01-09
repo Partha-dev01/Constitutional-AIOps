@@ -312,7 +312,7 @@ export const api = {
       if (params?.page_size) searchParams.set('page_size', String(params.page_size));
       params?.status?.forEach(s => searchParams.append('status', s));
       params?.severity?.forEach(s => searchParams.append('severity', s));
-      return request<IncidentList>(`/incidents?${searchParams}`);
+      return request<IncidentList>(`/incidents/?${searchParams}`);
     },
 
     get: (id: string) => request<Incident>(`/incidents/${id}`),
@@ -359,7 +359,7 @@ export const api = {
       if (params?.requires_approval !== undefined) {
         searchParams.set('requires_approval', String(params.requires_approval));
       }
-      return request<ActionList>(`/actions?${searchParams}`);
+      return request<ActionList>(`/actions/?${searchParams}`);
     },
 
     get: (id: string) => request<Action>(`/actions/${id}`),

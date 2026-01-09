@@ -172,7 +172,7 @@ async def get_containers(request: Request) -> InfrastructureResponse:
         except Exception as e:
             logger.error(f"Failed to get container status: {e}")
             # Fall back to static list if Docker fails
-            return _get_static_containers(request)
+            return await _get_static_containers(request)
     else:
         # Fall back to static list
         return await _get_static_containers(request)
