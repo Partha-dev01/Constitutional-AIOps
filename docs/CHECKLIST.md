@@ -1,10 +1,33 @@
 # Constitutional AIOps - Development Checklist
 
-> **Version**: 0.4.2
-> **Last Updated**: 2026-01-03
+> **Version**: 0.4.8
+> **Last Updated**: 2026-01-09
 > **Status**: 100% Core Complete
 > **Architecture**: Simultaneous Dual-Model (Qwen3-4B + Qwen3-14B on 24GB VRAM)
 > **Deployment**: Hybrid (Jarvis Labs A5000 GPU + Local Services)
+
+---
+
+## Recent Updates (2026-01-09) ✅
+
+### v0.4.8 - Architecture Compliance Fix
+- [x] Fixed `TelemetryCollector.query_logs()` to use correct Loki label `{job="containerlogs"}`
+- [x] Fixed `TelemetryCollector.query_metrics()` to query generic Prometheus metrics
+- [x] Removed HTTP bypass from `BackgroundTelemetryProcessor` - now uses TelemetryCollector
+- [x] Architecture compliant with Research_V6.tex: `LGTM → TelemetryCollector → BackgroundProcessor → Fast Agent`
+
+### v0.4.7 - Background Telemetry Processor
+- [x] Created `src/telemetry/background_processor.py` - Continuous Fast Agent scanning (System 1)
+- [x] Processes telemetry every 30 seconds via TelemetryCollector
+- [x] Escalates to Reasoning Agent when `needs_reasoning=true`
+- [x] Stores annotations and episodes in Neo4j graph
+- [x] Added `/api/v1/telemetry/processor/status` endpoint
+
+### v0.4.6 - Infrastructure Fixes
+- [x] Removed hardcoded Jarvis Labs URLs from docker-compose.yml
+- [x] Fixed Neo4j health check (curl → wget)
+- [x] Added Chat UI typewriter effect + thinking indicator
+- [x] Added Nextcloud to docker-compose.yml
 
 ---
 
