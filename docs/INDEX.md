@@ -1,7 +1,7 @@
 # Constitutional AIOps - Documentation Index
 
-> **Version**: 0.4.0
-> **Last Updated**: 2025-12-30
+> **Version**: 0.4.8
+> **Last Updated**: 2026-01-09
 > **Status**: Production Ready
 > **Total Files Indexed**: 93+
 > **Source of Truth**: [KEY_METRICS.md](KEY_METRICS.md)
@@ -119,6 +119,7 @@
 | File | Purpose |
 |------|---------|
 | [collector.py](../src/telemetry/collector.py) | LGTM stack queries (Loki, Prometheus, Tempo) |
+| [background_processor.py](../src/telemetry/background_processor.py) | Continuous Fast Agent scanning (System 1) |
 | [compressor.py](../src/telemetry/compressor.py) | Token compression for LLM context |
 | [aggregator.py](../src/telemetry/aggregator.py) | Health scoring, incident context |
 | [\_\_init\_\_.py](../src/telemetry/__init__.py) | Module exports |
