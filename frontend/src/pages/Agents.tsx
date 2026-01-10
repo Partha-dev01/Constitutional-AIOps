@@ -20,6 +20,7 @@ import {
   X,
 } from 'lucide-react'
 import api, { HealthResponse, isComponentHealthy } from '../lib/api'
+import { EpisodicGraphExplorer, EpisodicNode, EpisodicLink } from '../components/EpisodicGraphExplorer'
 
 // Tab type
 type AgentTab = 'fast' | 'reasoning' | 'telemetry' | 'graph' | 'tools' | 'infrastructure'
@@ -62,20 +63,6 @@ interface MetricPoint {
   label: string
 }
 
-// Graph node/edge types for visualization
-interface GraphNode {
-  id: string
-  label: string
-  type: 'service' | 'incident' | 'episode'
-  status?: 'healthy' | 'warning' | 'critical'
-}
-
-interface GraphEdge {
-  from: string
-  to: string
-  label?: string
-}
-
 // MCP Tool type
 interface MCPTool {
   name: string
@@ -102,11 +89,11 @@ export function Agents() {
   const [telemetryLoading, setTelemetryLoading] = useState(false)
   const [logFilter, setLogFilter] = useState<string>('all')
 
-  // Graph state
-  const [graphNodes, setGraphNodes] = useState<GraphNode[]>([])
-  const [graphEdges, setGraphEdges] = useState<GraphEdge[]>([])
+  // Graph state - using EpisodicNode/EpisodicLink for force-directed graph
+  const [graphNodes, setGraphNodes] = useState<EpisodicNode[]>([])
+  const [graphEdges, setGraphEdges] = useState<EpisodicLink[]>([])
   const [graphLoading, setGraphLoading] = useState(false)
-  const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null)
+  const [selectedNode, setSelectedNode] = useState<EpisodicNode | null>(null)
 
   // MCP Tools state
   const [tools, setTools] = useState<MCPTool[]>([])
@@ -238,40 +225,73 @@ export function Agents() {
       const response = await fetch('/api/v1/graph/episodes?limit=50')
       if (response.ok) {
         const data = await response.json()
-        // Transform episodes to nodes/edges for visualization
-        const nodes: GraphNode[] = []
-        const edges: GraphEdge[] = []
+        // Transform episodes to EpisodicNode/EpisodicLink for force-directed graph
+        const nodes: EpisodicNode[] = []
+        const links: EpisodicLink[] = []
 
         if (data.services) {
-          data.services.forEach((s: { name: string; status: string }) => {
+          data.services.forEach((s: { name: string; status: string; type?: string }) => {
             nodes.push({
               id: `service-${s.name}`,
               label: s.name,
               type: 'service',
-              status: s.status as 'healthy' | 'warning' | 'critical',
+              status: (s.status || 'healthy') as 'healthy' | 'warning' | 'critical',
             })
           })
         }
 
         if (data.episodes) {
-          data.episodes.forEach((ep: { id: string; title: string; services: string[] }) => {
+          data.episodes.forEach((ep: {
+            id: string;
+            title: string;
+            services: string[];
+            timestamp?: string;
+            severity?: string;
+            confidence?: number;
+          }) => {
             nodes.push({
               id: `episode-${ep.id}`,
               label: ep.title,
               type: 'episode',
+              status: 'detected',
+              timestamp: ep.timestamp,
+              severity: ep.severity,
+              confidence: ep.confidence,
             })
+            // Episode affects services
             ep.services.forEach((svc: string) => {
-              edges.push({
-                from: `episode-${ep.id}`,
-                to: `service-${svc}`,
+              links.push({
+                source: `episode-${ep.id}`,
+                target: `service-${svc}`,
                 label: 'affects',
+                type: 'affects',
               })
             })
           })
         }
 
+        // Process edges from backend (DEPENDS_ON relationships)
+        if (data.edges) {
+          data.edges.forEach((edge: { from: string; to: string; label?: string }) => {
+            // Avoid duplicates - use source/target for force-graph
+            const exists = links.some(l => {
+              const src = typeof l.source === 'string' ? l.source : l.source?.id
+              const tgt = typeof l.target === 'string' ? l.target : l.target?.id
+              return src === edge.from && tgt === edge.to
+            })
+            if (!exists) {
+              links.push({
+                source: edge.from,
+                target: edge.to,
+                label: edge.label || 'depends_on',
+                type: (edge.label || 'depends_on') as 'depends_on' | 'affects' | 'caused_by' | 'resolved_by' | 'similar_to',
+              })
+            }
+          })
+        }
+
         setGraphNodes(nodes)
-        setGraphEdges(edges)
+        setGraphEdges(links)
       } else {
         setGraphNodes([])
         setGraphEdges([])
@@ -849,207 +869,49 @@ export function Agents() {
               </div>
             </div>
 
-            {/* Graph Visualization */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <div className="lg:col-span-2 bg-card rounded-lg border border-border p-4">
-                <h3 className="font-semibold mb-4">Service Dependency Graph</h3>
-                {graphLoading ? (
-                  <div className="flex items-center justify-center h-[400px]">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                  </div>
-                ) : graphNodes.length > 0 ? (
-                  <div className="h-[400px] bg-gradient-to-br from-slate-900/50 to-slate-800/50 rounded-lg relative overflow-hidden">
-                    {/* Interactive SVG Graph */}
-                    <svg width="100%" height="100%" className="absolute inset-0">
-                      <defs>
-                        {/* Glow filter for nodes */}
-                        <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-                          <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-                          <feMerge>
-                            <feMergeNode in="coloredBlur"/>
-                            <feMergeNode in="SourceGraphic"/>
-                          </feMerge>
-                        </filter>
-                        {/* Arrow marker for directed edges */}
-                        <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
-                          <polygon points="0 0, 10 3.5, 0 7" fill="#64748b" />
-                        </marker>
-                      </defs>
-
-                      {/* Edges */}
-                      <g className="edges">
-                        {graphEdges.map((edge, i) => {
-                          const fromNode = graphNodes.find(n => n.id === edge.from)
-                          const toNode = graphNodes.find(n => n.id === edge.to)
-                          if (!fromNode || !toNode) return null
-
-                          const totalNodes = graphNodes.length
-                          const fromIndex = graphNodes.indexOf(fromNode)
-                          const toIndex = graphNodes.indexOf(toNode)
-
-                          // Circular layout
-                          const centerX = 280
-                          const centerY = 200
-                          const radius = 140
-
-                          const fromAngle = (fromIndex / totalNodes) * 2 * Math.PI - Math.PI / 2
-                          const toAngle = (toIndex / totalNodes) * 2 * Math.PI - Math.PI / 2
-
-                          const x1 = centerX + radius * Math.cos(fromAngle)
-                          const y1 = centerY + radius * Math.sin(fromAngle)
-                          const x2 = centerX + radius * Math.cos(toAngle)
-                          const y2 = centerY + radius * Math.sin(toAngle)
-
-                          // Curved path for edges
-                          const midX = centerX + (radius * 0.3) * Math.cos((fromAngle + toAngle) / 2)
-                          const midY = centerY + (radius * 0.3) * Math.sin((fromAngle + toAngle) / 2)
-
-                          return (
-                            <path
-                              key={`edge-${i}`}
-                              d={`M ${x1} ${y1} Q ${midX} ${midY} ${x2} ${y2}`}
-                              stroke="#3b82f6"
-                              strokeWidth="1.5"
-                              fill="none"
-                              opacity="0.5"
-                              markerEnd="url(#arrowhead)"
-                              className="transition-all duration-300 hover:stroke-cyan-400 hover:opacity-100 hover:stroke-[2.5]"
-                            />
-                          )
-                        })}
-                      </g>
-
-                      {/* Nodes */}
-                      <g className="nodes">
-                        {graphNodes.map((node, i) => {
-                          const totalNodes = graphNodes.length
-                          const centerX = 280
-                          const centerY = 200
-                          const radius = 140
-
-                          const angle = (i / totalNodes) * 2 * Math.PI - Math.PI / 2
-                          const x = centerX + radius * Math.cos(angle)
-                          const y = centerY + radius * Math.sin(angle)
-
-                          const nodeColor = node.type === 'service'
-                            ? node.status === 'healthy' ? '#22c55e' : node.status === 'critical' ? '#ef4444' : node.status === 'warning' ? '#f59e0b' : '#3b82f6'
-                            : node.type === 'episode' ? '#a855f7' : '#64748b'
-
-                          const isSelected = selectedNode?.id === node.id
-
-                          return (
-                            <g
-                              key={node.id}
-                              className="cursor-pointer transition-transform duration-200 hover:scale-110"
-                              onClick={() => setSelectedNode(node)}
-                              style={{ transform: `translate(${x}px, ${y}px)` }}
-                            >
-                              {/* Outer glow ring for selected node */}
-                              {isSelected && (
-                                <circle
-                                  cx="0"
-                                  cy="0"
-                                  r="28"
-                                  fill="none"
-                                  stroke={nodeColor}
-                                  strokeWidth="2"
-                                  opacity="0.4"
-                                  className="animate-pulse"
-                                />
-                              )}
-                              {/* Node circle */}
-                              <circle
-                                cx="0"
-                                cy="0"
-                                r={isSelected ? 22 : 18}
-                                fill={nodeColor}
-                                opacity={isSelected ? 1 : 0.8}
-                                filter={isSelected ? 'url(#glow)' : undefined}
-                                className="transition-all duration-200"
-                              />
-                              {/* Node label */}
-                              <text
-                                x="0"
-                                y="35"
-                                textAnchor="middle"
-                                fill="#94a3b8"
-                                fontSize="10"
-                                className="pointer-events-none"
-                              >
-                                {node.label.length > 12 ? node.label.slice(0, 10) + '...' : node.label}
-                              </text>
-                            </g>
-                          )
-                        })}
-                      </g>
-                    </svg>
-
-                    {/* Legend */}
-                    <div className="absolute bottom-3 left-3 flex gap-3 text-xs">
-                      <div className="flex items-center gap-1">
-                        <div className="w-3 h-3 rounded-full bg-green-500" />
-                        <span className="text-muted-foreground">Healthy</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <div className="w-3 h-3 rounded-full bg-blue-500" />
-                        <span className="text-muted-foreground">Service</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <div className="w-3 h-3 rounded-full bg-purple-500" />
-                        <span className="text-muted-foreground">Episode</span>
-                      </div>
-                    </div>
-
-                    {/* Stats overlay */}
-                    <div className="absolute top-3 right-3 text-xs text-muted-foreground bg-slate-900/70 px-2 py-1 rounded">
-                      {graphNodes.length} nodes • {graphEdges.length} edges
-                    </div>
-                  </div>
-                ) : (
-                  <div className="h-[400px] flex flex-col items-center justify-center text-muted-foreground bg-gradient-to-br from-slate-900/30 to-slate-800/30 rounded-lg">
-                    <GitBranch className="h-8 w-8 mb-2 opacity-50" />
-                    <p className="text-sm">No graph data available</p>
-                    <p className="text-xs mt-1">Start monitoring containers to populate the graph</p>
-                  </div>
-                )}
+            {/* Episodic Graph Explorer - Force-Directed Visualization */}
+            <div className="bg-card rounded-lg border border-border p-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold">Episodic Knowledge Graph</h3>
+                <button
+                  onClick={fetchGraphData}
+                  disabled={graphLoading}
+                  className="flex items-center gap-2 px-3 py-1.5 text-sm bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 rounded-md transition-colors disabled:opacity-50"
+                >
+                  <RefreshCw className={`h-4 w-4 ${graphLoading ? 'animate-spin' : ''}`} />
+                  Refresh
+                </button>
               </div>
 
-              {/* Node Details */}
-              <div className="bg-card rounded-lg border border-border p-4">
-                <h3 className="font-semibold mb-4">Node Details</h3>
-                {selectedNode ? (
-                  <div className="space-y-3">
-                    <div>
-                      <p className="text-xs text-muted-foreground">Label</p>
-                      <p className="font-medium">{selectedNode.label}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Type</p>
-                      <p className="capitalize">{selectedNode.type}</p>
-                    </div>
-                    {selectedNode.status && (
-                      <div>
-                        <p className="text-xs text-muted-foreground">Status</p>
-                        <span className={`px-2 py-0.5 rounded text-xs ${
-                          selectedNode.status === 'healthy' ? 'bg-green-500/10 text-green-500' :
-                          selectedNode.status === 'warning' ? 'bg-yellow-500/10 text-yellow-500' :
-                          'bg-red-500/10 text-red-500'
-                        }`}>
-                          {selectedNode.status}
-                        </span>
-                      </div>
-                    )}
-                    <div>
-                      <p className="text-xs text-muted-foreground">Connections</p>
-                      <p>{graphEdges.filter(e => e.from === selectedNode.id || e.to === selectedNode.id).length}</p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <p className="text-sm">Select a node to view details</p>
-                  </div>
-                )}
-              </div>
+              {graphNodes.length > 0 ? (
+                <EpisodicGraphExplorer
+                  nodes={graphNodes}
+                  links={graphEdges}
+                  loading={graphLoading}
+                  onNodeClick={(node) => setSelectedNode(node)}
+                  onRefresh={fetchGraphData}
+                  height={500}
+                />
+              ) : graphLoading ? (
+                <div className="flex items-center justify-center h-[500px] bg-gradient-to-br from-slate-900/50 to-slate-800/50 rounded-lg">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <div className="h-[500px] flex flex-col items-center justify-center text-muted-foreground bg-gradient-to-br from-slate-900/30 to-slate-800/30 rounded-lg">
+                  <GitBranch className="h-12 w-12 mb-3 opacity-50" />
+                  <p className="text-lg font-medium">No Graph Data Available</p>
+                  <p className="text-sm mt-1 max-w-md text-center">
+                    Start monitoring containers to build the episodic knowledge graph.
+                    The graph will show service dependencies and incident relationships.
+                  </p>
+                  <button
+                    onClick={fetchGraphData}
+                    className="mt-4 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+                  >
+                    Load Graph Data
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}
