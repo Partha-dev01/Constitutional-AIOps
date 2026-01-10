@@ -93,7 +93,8 @@ export function Agents() {
   const [graphNodes, setGraphNodes] = useState<EpisodicNode[]>([])
   const [graphEdges, setGraphEdges] = useState<EpisodicLink[]>([])
   const [graphLoading, setGraphLoading] = useState(false)
-  const [selectedNode, setSelectedNode] = useState<EpisodicNode | null>(null)
+  // Note: selectedNode is tracked internally by EpisodicGraphExplorer component
+  const [_selectedNode, setSelectedNode] = useState<EpisodicNode | null>(null)
 
   // MCP Tools state
   const [tools, setTools] = useState<MCPTool[]>([])

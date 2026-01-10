@@ -91,7 +91,7 @@ export function EpisodicGraphExplorer({
   height = 500,
   width = 800,
 }: EpisodicGraphExplorerProps) {
-  const graphRef = useRef<ForceGraphMethods<EpisodicNode, EpisodicLink>>()
+  const graphRef = useRef<ForceGraphMethods>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
   const [hoveredNode, setHoveredNode] = useState<EpisodicNode | null>(null)
@@ -272,13 +272,13 @@ export function EpisodicGraphExplorer({
       <div className="bg-gradient-to-br from-slate-900/80 to-slate-800/80 rounded-lg overflow-hidden">
         <ForceGraph2D
           ref={graphRef}
-          graphData={{ nodes: filteredNodes, links: filteredLinks }}
+          graphData={{ nodes: filteredNodes as NodeObject[], links: filteredLinks as LinkObject[] }}
           width={graphDimensions.width}
           height={graphDimensions.height}
-          nodeCanvasObject={nodeCanvasObject}
-          linkCanvasObject={linkCanvasObject}
-          onNodeClick={handleNodeClick}
-          onNodeHover={setHoveredNode}
+          nodeCanvasObject={(node, ctx, globalScale) => nodeCanvasObject(node as EpisodicNode, ctx, globalScale)}
+          linkCanvasObject={(link, ctx, globalScale) => linkCanvasObject(link as EpisodicLink, ctx, globalScale)}
+          onNodeClick={(node) => handleNodeClick(node as EpisodicNode)}
+          onNodeHover={(node) => setHoveredNode(node as EpisodicNode | null)}
           nodeId="id"
           linkSource="source"
           linkTarget="target"
