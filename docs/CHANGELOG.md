@@ -2,6 +2,64 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.0] - 2026-01-11
+
+### Graphiti-Style Force-Directed Graph Visualization
+
+**Session**: Implemented interactive force-directed graph for Neo4j episodic memory visualization
+
+#### New Features
+
+1. **EpisodicGraphExplorer Component** (`frontend/src/components/EpisodicGraphExplorer.tsx`)
+   - Force-directed graph using `react-force-graph-2d` library
+   - Interactive pan, zoom, and node dragging
+   - Physics simulation with pause/resume capability
+   - Responsive container with ResizeObserver
+
+2. **Graph Controls**
+   - Zoom In/Out buttons
+   - Fit to View (auto-zoom to show all nodes)
+   - Pause/Resume animation
+   - Reset view
+   - Refresh data button
+
+3. **Node Visualization**
+   - 5 node types: service, episode, incident, action, root_cause
+   - Color-coded by status: healthy (green), warning (amber), critical (red)
+   - Icon labels: S (Service), E (Episode), ! (Incident), A (Action), R (Root Cause)
+   - Glow effect on hover/selection
+   - Details panel showing confidence, severity, timestamp
+
+4. **Edge Visualization**
+   - 5 relationship types: depends_on, affects, caused_by, resolved_by, similar_to
+   - Directional arrows at midpoint
+   - Color-coded by relationship type
+   - Labels shown at high zoom levels
+
+5. **Filtering**
+   - Dropdown filter by node type
+   - Real-time node/edge count display
+   - Color legend for status types
+
+#### Technical Details
+
+- Added `react-force-graph-2d` dependency (v1.25.0)
+- Created custom TypeScript declarations (`frontend/src/types/react-force-graph-2d.d.ts`)
+- Fixed TypeScript issues with ForceGraphMethods ref type
+- Added type assertions for callback parameters
+
+#### Files Changed
+- `frontend/src/components/EpisodicGraphExplorer.tsx` (NEW - 456 lines)
+- `frontend/src/types/react-force-graph-2d.d.ts` (NEW - 135 lines)
+- `frontend/src/pages/Agents.tsx` (updated Graph Explorer tab)
+- `frontend/package.json` (added react-force-graph-2d)
+
+#### Infrastructure Updates
+- Updated Jarvis Labs SSH port to 11114 (ssho.jarvislabs.ai)
+- Fixed docker-compose hybrid configuration for production use
+
+---
+
 ## [0.4.8] - 2026-01-09
 
 ### Architecture Fix: TelemetryCollector Compliance with Research_V6.tex

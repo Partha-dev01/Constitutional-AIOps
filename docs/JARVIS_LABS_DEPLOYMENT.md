@@ -124,7 +124,7 @@ ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAUpDdcM1oSEwI9o+dsVbA9TDiTSoc5VvWd9hRuL7wp9
 
 ### Important: Copy These Values
 After launch, from the dashboard:
-- **SSH Command**: For terminal access (e.g., `ssh -p 11414 root@sshg.jarvislabs.ai`)
+- **SSH Command**: For terminal access (e.g., `ssh -p 11114 root@ssho.jarvislabs.ai`)
 - **API Endpoint**: For API access (e.g., `https://62d7ad3655361.notebooks.jarvislabs.net`)
 
 ---
@@ -134,11 +134,11 @@ After launch, from the dashboard:
 SSH into the instance and run the setup script:
 
 ```bash
-# SSH into the instance (use the port from dashboard)
-ssh -i .ssh/jarvis_labs_key -p [PORT] root@sshg.jarvislabs.ai
+# SSH into the instance (use the port from dashboard - currently 11114)
+ssh -i .ssh/jarvis_labs_key -p 11114 root@ssho.jarvislabs.ai
 
 # Or run the setup script directly
-ssh -i .ssh/jarvis_labs_key -p [PORT] root@sshg.jarvislabs.ai 'bash -s' < scripts/setup-jarvis-ollama.sh
+ssh -i .ssh/jarvis_labs_key -p 11114 root@ssho.jarvislabs.ai 'bash -s' < scripts/setup-jarvis-ollama.sh
 ```
 
 ### Manual Setup (if not using script)
@@ -388,7 +388,7 @@ Invoke-RestMethod -Uri "https://..." -Method POST -ContentType "application/json
 
 ### SSH Command
 ```bash
-ssh -i .ssh/jarvis_labs_key -p [PORT] root@sshg.jarvislabs.ai
+ssh -i .ssh/jarvis_labs_key -p 11114 root@ssho.jarvislabs.ai
 ```
 
 ### Start Local Services
