@@ -1,16 +1,31 @@
 # Constitutional AIOps - Development Checklist
 
-> **Version**: 0.4.8
-> **Last Updated**: 2026-01-09
+> **Version**: 0.5.0
+> **Last Updated**: 2026-01-11
 > **Status**: 100% Core Complete
 > **Architecture**: Simultaneous Dual-Model (Qwen3-4B + Qwen3-14B on 24GB VRAM)
 > **Deployment**: Hybrid (Jarvis Labs A5000 GPU + Local Services)
 
 ---
 
-## Recent Updates (2026-01-09) ✅
+## Recent Updates (2026-01-11) ✅
 
-### v0.4.8 - Architecture Compliance Fix
+### v0.5.0 - Graphiti-Style Force-Directed Graph Visualization
+- [x] Created `EpisodicGraphExplorer.tsx` - Force-directed graph with `react-force-graph-2d`
+- [x] Added custom TypeScript declarations for `react-force-graph-2d` library
+- [x] Interactive controls: Zoom In/Out, Fit to View, Pause/Resume Animation, Reset View
+- [x] Node filtering by type: Services, Episodes, Incidents, Actions
+- [x] Color-coded nodes by status: Healthy (green), Warning (amber), Critical (red)
+- [x] Edge rendering with directional arrows and relationship labels
+- [x] Node details panel on click with confidence, severity, timestamp
+- [x] Fixed edge display bug - now correctly shows service dependencies
+- [x] Updated Jarvis Labs SSH port to 11114 (ssho.jarvislabs.ai)
+
+---
+
+## Previous Updates
+
+### v0.4.8 - Architecture Compliance Fix (2026-01-09)
 - [x] Fixed `TelemetryCollector.query_logs()` to use correct Loki label `{job="containerlogs"}`
 - [x] Fixed `TelemetryCollector.query_metrics()` to query generic Prometheus metrics
 - [x] Removed HTTP bypass from `BackgroundTelemetryProcessor` - now uses TelemetryCollector
