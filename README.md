@@ -2,7 +2,7 @@
 
 > Autonomous Infrastructure Management with Constitutional AI Safety
 
-**Version**: 0.4.0 | **Status**: Production Ready | **Last Updated**: 2025-12-30
+**Version**: 0.5.0 | **Status**: Production Ready | **Last Updated**: 2026-01-11
 
 [![License](https://img.shields.io/badge/license-Proprietary-red.svg)]()
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)]()
@@ -13,7 +13,7 @@
 Constitutional AIOps is an autonomous infrastructure management system that combines:
 
 - **Dual-Agent LLM Architecture**: Qwen3-4B (fast) + Qwen3-14B (reasoning) running simultaneously
-- **Constitutional AI Safety**: 11 principles across 3 tiers ensuring safe autonomous actions
+- **Constitutional AI Safety**: 12 principles across 3 tiers ensuring safe autonomous actions
 - **Graph-Episodic Memory**: Neo4j-based incident correlation and context retention
 - **Human-in-the-Loop**: Approval workflows for uncertain actions
 
@@ -93,7 +93,7 @@ Best for development: Run LLMs on Jarvis Labs GPU cloud, everything else locally
 ```bash
 # 1. Launch Ollama template on Jarvis Labs (A5000 $0.49/hr)
 # 2. SSH in and run the setup script (stores models in /home for persistence):
-ssh -i .ssh/jarvis_labs_key -p [PORT] root@sshg.jarvislabs.ai 'bash -s' < scripts/setup-jarvis-ollama.sh
+ssh -i .ssh/jarvis_labs_key -p 11114 root@ssho.jarvislabs.ai 'bash -s' < scripts/setup-jarvis-ollama.sh
 
 # 3. Set API endpoint in .env
 echo "JARVIS_OLLAMA_URL=https://[your-endpoint].notebooks.jarvislabs.net" >> .env
