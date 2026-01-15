@@ -2,9 +2,16 @@
 Constitutional AIOps - Graph API Routes
 
 Provides endpoints for Neo4j graph queries including:
-- Service dependency graphs
-- Episodic memory retrieval
-- Incident correlation
+- Episodic memory graphs (Graphiti-style)
+- Root cause correlation
+- Action success patterns
+- Service impact analysis
+
+Graph Model (from Research_V6.tex):
+- Episodes → CAUSED_BY → RootCauseType
+- Episodes → RESOLVED_BY → Action
+- Episodes → AFFECTS → Service
+- Episodes → SIMILAR_TO → Episode
 """
 
 import logging
@@ -12,7 +19,7 @@ from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter, Request, Query, HTTPException, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 logger = logging.getLogger(__name__)
 
@@ -20,17 +27,106 @@ router = APIRouter()
 
 
 class ServiceNode(BaseModel):
-    """Service node in the dependency graph."""
+    """Service node - only shown when affected by episodes."""
     name: str
     type: str = "service"
-    status: str = Field(..., description="Status: healthy, warning, critical")
-    dependencies: list[str] = Field(default_factory=list)
-    dependents: list[str] = Field(default_factory=list)
+    status: str = Field(default="healthy", description="Status: healthy, warning, critical")
+    incident_count: int = Field(default=0, description="Number of incidents affecting this service")
+    last_incident: datetime | None = Field(default=None, description="Last incident timestamp")
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator("last_incident", mode="before")
+    @classmethod
+    def convert_neo4j_datetime(cls, v):
+        """Convert Neo4j DateTime to Python datetime."""
+        if v is None:
+            return None
+        if isinstance(v, datetime):
+            return v
+        if hasattr(v, "to_native"):
+            return v.to_native()
+        if isinstance(v, str):
+            return datetime.fromisoformat(v.replace("Z", "+00:00"))
+        return v
+
+
+class RootCauseNode(BaseModel):
+    """Root cause type node - semantic abstraction of failure patterns."""
+    id: str
+    name: str  # e.g., "connection_timeout", "memory_leak", "disk_full"
+    type: str = "root_cause"
+    frequency: int = Field(default=0, description="How many episodes caused by this")
+    avg_resolution_time_minutes: float = Field(default=0, description="Average time to resolve")
+    success_rate: float = Field(default=0, description="Success rate of resolutions")
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
+class ActionNode(BaseModel):
+    """Action node - remediation actions with success patterns."""
+    id: str
+    name: str  # e.g., "scale_replicas", "restart_pod", "increase_pool_size"
+    type: str = "action"
+    used_count: int = Field(default=0, description="Times this action was used")
+    success_rate: float = Field(default=0, description="Success rate 0-1")
+    avg_execution_time_seconds: float = Field(default=0, description="Average execution time")
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class EpisodeNode(BaseModel):
+    """Episode node - a complete incident lifecycle."""
+    id: str
+    title: str
+    type: str = "episode"
+    timestamp: datetime
+    category: str
+    severity: str  # critical, high, medium, low
+    status: str = "resolved"  # resolved, active, escalated
+    root_cause: str | None = None
+    confidence: float = 0
+    resolution_time_minutes: float | None = None
+    services: list[str] = Field(default_factory=list)
+    successful_actions: list[str] = Field(default_factory=list)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator("timestamp", mode="before")
+    @classmethod
+    def convert_neo4j_datetime(cls, v):
+        """Convert Neo4j DateTime to Python datetime."""
+        if v is None:
+            return datetime.now()
+        if isinstance(v, datetime):
+            return v
+        # Handle Neo4j DateTime object
+        if hasattr(v, "to_native"):
+            return v.to_native()
+        # Try to convert from ISO string
+        if isinstance(v, str):
+            return datetime.fromisoformat(v.replace("Z", "+00:00"))
+        return v
+
+
+class GraphEdge(BaseModel):
+    """Graph edge with relationship type."""
+    source: str  # Node ID
+    target: str  # Node ID
+    relationship: str  # CAUSED_BY, RESOLVED_BY, AFFECTS, SIMILAR_TO
+    weight: float = Field(default=1.0, description="Edge weight (e.g., similarity score)")
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class EpisodicGraphData(BaseModel):
+    """Complete episodic memory graph for visualization."""
+    episodes: list[EpisodeNode]
+    root_causes: list[RootCauseNode]
+    actions: list[ActionNode]
+    services: list[ServiceNode]
+    edges: list[GraphEdge]
+    stats: dict[str, Any] = Field(default_factory=dict)
+
+
+# Legacy models for backward compatibility
 class Episode(BaseModel):
-    """Episode from episodic memory."""
+    """Episode from episodic memory (legacy)."""
     id: str
     title: str
     timestamp: datetime
@@ -44,7 +140,7 @@ class Episode(BaseModel):
 
 
 class GraphData(BaseModel):
-    """Graph data for visualization."""
+    """Graph data for visualization (legacy)."""
     services: list[ServiceNode]
     episodes: list[Episode]
     edges: list[dict[str, Any]]
@@ -80,178 +176,238 @@ class GraphStatsResponse(BaseModel):
 
 @router.get(
     "/episodes",
-    response_model=GraphData,
-    summary="Get Episodes and Services",
-    description="Get episodic memory data with service nodes for graph visualization",
+    response_model=EpisodicGraphData,
+    summary="Get Episodic Memory Graph",
+    description="Get complete episodic memory graph with episodes, root causes, actions, and relationships",
 )
 async def get_episodes(
     request: Request,
     limit: int = Query(50, ge=1, le=200),
-    since_hours: int = Query(24, description="Get episodes from last N hours"),
-) -> GraphData:
+    since_hours: int = Query(168, description="Get episodes from last N hours (default 7 days)"),
+) -> EpisodicGraphData:
     """
-    Get episodes and services for graph visualization.
+    Get episodic memory graph for Graphiti-style visualization.
 
-    Returns nodes (services) and edges (relationships) for vis-network.
+    Returns:
+    - Episodes: Past incidents with full metadata
+    - Root Causes: Semantic abstractions (connection_timeout, memory_leak, etc.)
+    - Actions: Remediation actions with success rates
+    - Services: Only services affected by episodes
+    - Edges: CAUSED_BY, RESOLVED_BY, AFFECTS, SIMILAR_TO relationships
     """
     episode_store = getattr(request.app.state, "episode_store", None)
     neo4j_client = getattr(request.app.state, "neo4j_client", None)
 
-    services = []
-    episodes = []
-    edges = []
+    episodes: list[EpisodeNode] = []
+    root_causes: list[RootCauseNode] = []
+    actions: list[ActionNode] = []
+    services: list[ServiceNode] = []
+    edges: list[GraphEdge] = []
 
-    # Try to get data from Neo4j
+    # Track unique nodes
+    root_cause_map: dict[str, RootCauseNode] = {}
+    action_map: dict[str, ActionNode] = {}
+    service_map: dict[str, ServiceNode] = {}
+
+    # Try to get data from Neo4j first
+    has_neo4j_data = False
     if neo4j_client is not None:
         try:
-            # Get services
-            service_data = await neo4j_client.query(
-                """
-                MATCH (s:Service)
-                RETURN s.name as name, s.status as status, s.type as type
-                LIMIT $limit
-                """,
-                {"limit": limit},
-            )
-
-            for row in service_data:
-                services.append(ServiceNode(
-                    name=row["name"],
-                    type=row.get("type", "service"),
-                    status=row.get("status", "healthy"),
-                ))
-
-            # Get service dependencies
-            deps_data = await neo4j_client.query(
-                """
-                MATCH (s1:Service)-[r:DEPENDS_ON]->(s2:Service)
-                RETURN s1.name as from_service, s2.name as to_service
-                """,
-                {},
-            )
-
-            for row in deps_data:
-                edges.append({
-                    "from": f"service-{row['from_service']}",
-                    "to": f"service-{row['to_service']}",
-                    "label": "depends_on",
-                })
-
-            # Get recent episodes
-            episodes_data = await neo4j_client.query(
-                """
-                MATCH (e:Episode)
-                WHERE e.timestamp > datetime() - duration({hours: $hours})
-                RETURN e
-                ORDER BY e.timestamp DESC
-                LIMIT $limit
-                """,
-                {"hours": since_hours, "limit": limit},
-            )
+            # Query episodes with their relationships
+            async with neo4j_client.session() as session:
+                result = await session.run(
+                    """
+                    MATCH (e:Episode)
+                    OPTIONAL MATCH (e)-[:INVOLVES]->(s:Service)
+                    OPTIONAL MATCH (e)-[:CAUSED_BY]->(rc:RootCauseType)
+                    RETURN e, collect(DISTINCT s.name) as services, rc.name as root_cause_type
+                    ORDER BY e.detected_at DESC
+                    LIMIT $limit
+                    """,
+                    limit=limit,
+                )
+                episodes_data = await result.data()
 
             for row in episodes_data:
+                has_neo4j_data = True
                 ep = row["e"]
-                episodes.append(Episode(
-                    id=ep.get("id", ""),
-                    title=ep.get("title", ""),
-                    timestamp=ep.get("timestamp", datetime.utcnow()),
+                ep_id = ep.get("episode_id", ep.get("id", ""))
+                ep_services = [s for s in row.get("services", []) if s]
+                root_cause_type = row.get("root_cause_type")
+
+                episode_node = EpisodeNode(
+                    id=ep_id,
+                    title=ep.get("title", "Unknown Episode"),
+                    timestamp=ep.get("detected_at", datetime.utcnow()),
                     category=ep.get("category", "unknown"),
                     severity=ep.get("severity", "medium"),
-                    services=ep.get("services", []),
+                    status=ep.get("outcome", "resolved"),
                     root_cause=ep.get("root_cause"),
-                    resolution=ep.get("resolution"),
-                    confidence=ep.get("confidence", 0),
-                ))
+                    confidence=ep.get("confidence", 0.0),
+                    services=ep_services,
+                    successful_actions=ep.get("successful_actions", []),
+                )
+                episodes.append(episode_node)
 
-            # Get episode-service relationships
-            ep_svc_data = await neo4j_client.query(
-                """
-                MATCH (e:Episode)-[r:AFFECTS]->(s:Service)
-                RETURN e.id as episode_id, s.name as service_name
-                """,
-                {},
-            )
+                # Add AFFECTS edges to services
+                for svc_name in ep_services:
+                    edges.append(GraphEdge(
+                        source=f"episode-{ep_id}",
+                        target=f"service-{svc_name}",
+                        relationship="affects",
+                    ))
 
-            for row in ep_svc_data:
-                edges.append({
-                    "from": f"episode-{row['episode_id']}",
-                    "to": f"service-{row['service_name']}",
-                    "label": "affects",
-                })
+                    # Track service
+                    if svc_name not in service_map:
+                        service_map[svc_name] = ServiceNode(
+                            name=svc_name,
+                            status="warning" if episode_node.severity in ("critical", "high") else "healthy",
+                            incident_count=1,
+                            last_incident=episode_node.timestamp,
+                        )
+                    else:
+                        service_map[svc_name].incident_count += 1
+
+                # Add CAUSED_BY edge to root cause
+                if root_cause_type:
+                    edges.append(GraphEdge(
+                        source=f"episode-{ep_id}",
+                        target=f"rootcause-{root_cause_type}",
+                        relationship="caused_by",
+                    ))
+
+                    # Track root cause
+                    if root_cause_type not in root_cause_map:
+                        root_cause_map[root_cause_type] = RootCauseNode(
+                            id=f"rootcause-{root_cause_type}",
+                            name=root_cause_type,
+                            frequency=1,
+                        )
+                    else:
+                        root_cause_map[root_cause_type].frequency += 1
+
+                # Add RESOLVED_BY edges to actions
+                for action_name in episode_node.successful_actions:
+                    action_id = action_name.lower().replace(" ", "_")
+                    edges.append(GraphEdge(
+                        source=f"episode-{ep_id}",
+                        target=f"action-{action_id}",
+                        relationship="resolved_by",
+                    ))
+
+                    # Track action
+                    if action_id not in action_map:
+                        action_map[action_id] = ActionNode(
+                            id=f"action-{action_id}",
+                            name=action_name,
+                            used_count=1,
+                            success_rate=1.0,
+                        )
+                    else:
+                        action_map[action_id].used_count += 1
 
         except Exception as e:
-            logger.warning(f"Failed to query Neo4j: {e}")
+            logger.warning(f"Failed to query Neo4j for episodes: {e}")
 
-    # Fallback to episode store if no Neo4j data
-    if not episodes and episode_store is not None:
-        try:
-            store_episodes = episode_store.list_episodes(limit=limit)
-            for ep in store_episodes:
-                episodes.append(Episode(
-                    id=ep.id,
-                    title=ep.title,
-                    timestamp=ep.timestamp,
-                    category=ep.category,
-                    severity=ep.severity,
-                    services=ep.affected_services,
-                    root_cause=ep.root_cause,
-                    resolution=ep.resolution,
-                    confidence=ep.confidence,
-                ))
-
-                for svc in ep.affected_services:
-                    edges.append({
-                        "from": f"episode-{ep.id}",
-                        "to": f"service-{svc}",
-                        "label": "affects",
-                    })
-        except Exception as e:
-            logger.warning(f"Failed to query episode store: {e}")
-
-    # If no services found, create default services from monitored containers
-    if not services:
+    # If no Neo4j data, show monitored services (real infrastructure being watched)
+    if not has_neo4j_data:
+        logger.info("No Neo4j episode data found, showing monitored services")
+        # Get real monitored services from infrastructure module
         from src.api.routes.infrastructure import _monitored_containers
-
-        # Create service nodes from monitored containers
-        for container_name in _monitored_containers:
-            # Infer service name from container name
-            service_name = container_name.replace("aiops-", "")
-            services.append(ServiceNode(
-                name=service_name,
-                type="container",
+        monitored_services = [
+            ServiceNode(
+                name=name.replace("aiops-", "") if name.startswith("aiops-") else name,
                 status="healthy",
-            ))
+                incident_count=0,
+                metadata={"monitored": True, "container": name},
+            )
+            for name in sorted(_monitored_containers)
+        ]
+        return EpisodicGraphData(
+            episodes=[],
+            root_causes=[],
+            actions=[],
+            services=monitored_services,
+            edges=[],
+            stats={
+                "total_episodes": 0,
+                "monitored_services": len(monitored_services),
+                "message": "Monitoring active. Graph will populate as incidents are detected by the Fast Agent.",
+            },
+        )
+    else:
+        # Convert maps to lists
+        root_causes = list(root_cause_map.values())
+        actions = list(action_map.values())
+        services = list(service_map.values())
 
-    # Always add default service dependencies if they don't exist
-    # This ensures edges are shown even when Neo4j has no DEPENDS_ON relationships
-    default_deps = [
-        ("frontend", "backend"),
-        ("backend", "neo4j"),
-        ("backend", "loki"),
-        ("backend", "prometheus"),
-        ("grafana", "loki"),
-        ("grafana", "prometheus"),
-        ("grafana", "tempo"),
-        ("otel-collector", "loki"),
-        ("otel-collector", "prometheus"),
-        ("otel-collector", "tempo"),
-        ("promtail", "loki"),
-    ]
+        # Find similar episodes and add SIMILAR_TO edges
+        edges.extend(_find_similar_episode_edges(episodes))
 
-    # Get existing edge pairs to avoid duplicates
-    existing_edges = {(e.get("from"), e.get("to")) for e in edges}
-    service_names = {s.name for s in services}
+    # Calculate stats
+    stats = {
+        "total_episodes": len(episodes),
+        "total_root_causes": len(root_causes),
+        "total_actions": len(actions),
+        "total_services": len(services),
+        "total_edges": len(edges),
+        "critical_episodes": sum(1 for ep in episodes if ep.severity == "critical"),
+        "resolved_episodes": sum(1 for ep in episodes if ep.status == "resolved"),
+    }
 
-    for from_svc, to_svc in default_deps:
-        edge_pair = (f"service-{from_svc}", f"service-{to_svc}")
-        if from_svc in service_names and to_svc in service_names and edge_pair not in existing_edges:
-            edges.append({
-                "from": f"service-{from_svc}",
-                "to": f"service-{to_svc}",
-                "label": "depends_on",
-            })
+    return EpisodicGraphData(
+        episodes=episodes,
+        root_causes=root_causes,
+        actions=actions,
+        services=services,
+        edges=edges,
+        stats=stats,
+    )
 
-    return GraphData(services=services, episodes=episodes, edges=edges)
+
+def _find_similar_episode_edges(episodes: list[EpisodeNode]) -> list[GraphEdge]:
+    """Find and create SIMILAR_TO edges between episodes with same root cause or services."""
+    edges = []
+    seen_pairs = set()
+
+    for i, ep1 in enumerate(episodes):
+        for ep2 in episodes[i + 1:]:
+            # Skip if already paired
+            pair_key = tuple(sorted([ep1.id, ep2.id]))
+            if pair_key in seen_pairs:
+                continue
+
+            # Calculate similarity
+            similarity = 0.0
+
+            # Same category = 0.3
+            if ep1.category == ep2.category:
+                similarity += 0.3
+
+            # Same root cause = 0.4
+            if ep1.root_cause and ep2.root_cause and ep1.root_cause == ep2.root_cause:
+                similarity += 0.4
+
+            # Service overlap = 0.3 * overlap ratio
+            if ep1.services and ep2.services:
+                services1 = set(ep1.services)
+                services2 = set(ep2.services)
+                overlap = len(services1 & services2)
+                total = len(services1 | services2)
+                if total > 0:
+                    similarity += 0.3 * (overlap / total)
+
+            # Add edge if similarity > 0.5
+            if similarity >= 0.5:
+                seen_pairs.add(pair_key)
+                edges.append(GraphEdge(
+                    source=f"episode-{ep1.id}",
+                    target=f"episode-{ep2.id}",
+                    relationship="similar_to",
+                    weight=similarity,
+                ))
+
+    return edges
 
 
 @router.get(
@@ -282,7 +438,9 @@ async def list_services(
         if status_filter:
             query = query.replace("MATCH (s:Service)", f"MATCH (s:Service {{status: '{status_filter}'}})")
 
-        result = await neo4j_client.query(query, {})
+        async with neo4j_client.session() as session:
+            query_result = await session.run(query)
+            result = await query_result.data()
 
         services = []
         for row in result:
@@ -324,7 +482,9 @@ async def get_service_dependencies(
         MATCH (s:Service {{name: $name}})-[:DEPENDS_ON*1..{depth}]->(dep:Service)
         RETURN DISTINCT dep.name as name
         """
-        downstream_result = await neo4j_client.query(downstream_query, {"name": name})
+        async with neo4j_client.session() as session:
+            result = await session.run(downstream_query, name=name)
+            downstream_result = await result.data()
         downstream = [row["name"] for row in downstream_result]
 
         # Get upstream dependencies
@@ -332,7 +492,9 @@ async def get_service_dependencies(
         MATCH (upstream:Service)-[:DEPENDS_ON*1..{depth}]->(s:Service {{name: $name}})
         RETURN DISTINCT upstream.name as name
         """
-        upstream_result = await neo4j_client.query(upstream_query, {"name": name})
+        async with neo4j_client.session() as session:
+            result = await session.run(upstream_query, name=name)
+            upstream_result = await result.data()
         upstream = [row["name"] for row in upstream_result]
 
         return DependencyGraph(
@@ -474,17 +636,21 @@ async def get_graph_stats(request: Request) -> GraphStatsResponse:
 
     if neo4j_client is not None:
         try:
-            # Get node count
-            result = await neo4j_client.query("MATCH (n) RETURN count(n) as count", {})
-            node_count = result[0]["count"] if result else 0
+            async with neo4j_client.session() as session:
+                # Get node count
+                query_result = await session.run("MATCH (n) RETURN count(n) as count")
+                result = await query_result.data()
+                node_count = result[0]["count"] if result else 0
 
-            # Get edge count
-            result = await neo4j_client.query("MATCH ()-[r]->() RETURN count(r) as count", {})
-            edge_count = result[0]["count"] if result else 0
+                # Get edge count
+                query_result = await session.run("MATCH ()-[r]->() RETURN count(r) as count")
+                result = await query_result.data()
+                edge_count = result[0]["count"] if result else 0
 
-            # Get episode count
-            result = await neo4j_client.query("MATCH (e:Episode) RETURN count(e) as count", {})
-            episode_count = result[0]["count"] if result else 0
+                # Get episode count
+                query_result = await session.run("MATCH (e:Episode) RETURN count(e) as count")
+                result = await query_result.data()
+                episode_count = result[0]["count"] if result else 0
 
         except Exception as e:
             logger.warning(f"Failed to get graph stats: {e}")

@@ -1,7 +1,7 @@
 # Constitutional AIOps - Documentation Index
 
-> **Version**: 0.5.0
-> **Last Updated**: 2026-01-11
+> **Version**: 0.5.1
+> **Last Updated**: 2026-01-15
 > **Status**: Production Ready
 > **Total Files Indexed**: 93+
 > **Source of Truth**: [KEY_METRICS.md](KEY_METRICS.md)

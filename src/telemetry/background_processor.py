@@ -25,6 +25,8 @@ from datetime import datetime
 from typing import Any, Optional
 from uuid import uuid4
 
+from src.memory.episode_store import Episode
+
 logger = logging.getLogger(__name__)
 
 # Configuration
@@ -230,31 +232,55 @@ class BackgroundTelemetryProcessor:
         return "\n".join(summary_parts)
 
     async def _store_annotation(self, annotation: Any, window: Any) -> None:
-        """Store annotation in Neo4j graph."""
+        """Store annotation in Neo4j graph with episode compaction."""
         try:
             metadata = annotation.metadata or {}
             episode_id = str(uuid4())
 
-            episode = {
-                "id": episode_id,
-                "service": "combined",
-                "timestamp": datetime.utcnow().isoformat(),
-                "type": "annotation",
-                "severity": metadata.get("severity", "info"),
-                "category": metadata.get("category", "unknown"),
-                "summary": annotation.content,
-                "confidence": annotation.confidence,
-                "log_count": window.log_count,
-                "metric_count": len(window.metrics),
-                "trace_count": len(window.traces),
-                "anomaly_detected": metadata.get("anomaly_detected", False),
-                "needs_reasoning": metadata.get("needs_reasoning", False),
-            }
+            # Create proper Episode object for EpisodeStore
+            episode = Episode(
+                episode_id=episode_id,
+                incident_id=episode_id,  # Use same ID for incident
+                title=annotation.content[:100] if annotation.content else "Anomaly Detected",
+                description=annotation.content or "",
+                severity=metadata.get("severity", "info"),
+                category=metadata.get("category", "unknown"),
+                detected_at=datetime.utcnow(),
+                affected_services=["combined"],  # Track which services are affected
+                root_cause=metadata.get("category", "unknown"),
+                causal_chain=metadata.get("key_indicators", []),
+                confidence=annotation.confidence,
+                outcome="open",  # New episode, not yet resolved
+            )
 
+            # Episode compaction: Check for existing similar episodes
             if self.episode_store:
+                similar_episodes = await self.episode_store.find_similar_episodes(
+                    episode, limit=1, min_similarity=0.7
+                )
+
+                if similar_episodes:
+                    # Update existing episode instead of creating new one
+                    existing_episode, similarity = similar_episodes[0]
+                    logger.info(
+                        f"Compacting: Found similar episode {existing_episode.episode_id[:8]}... "
+                        f"(similarity: {similarity:.2f}) - skipping duplicate"
+                    )
+                    # Update the existing episode's timestamp and description
+                    await self.episode_store.update_episode(
+                        existing_episode.episode_id,
+                        {
+                            "description": f"{annotation.content}\n---\n{existing_episode.description[:500]}",
+                            "confidence": max(existing_episode.confidence, annotation.confidence),
+                        }
+                    )
+                    self.stats["telemetry_processed"] += 1  # Count as processed but not new
+                    return  # Don't create duplicate episode
+
+                # No similar episode found - create new one
                 await self.episode_store.store_episode(episode)
                 self.stats["episodes_created"] += 1
-                logger.debug(f"Stored episode {episode_id}")
+                logger.info(f"Stored NEW episode {episode_id}: {episode.title[:50]}")
 
             # Create graph node if Neo4j available
             if self.neo4j_client:
@@ -271,16 +297,17 @@ class BackgroundTelemetryProcessor:
                 CREATE (s)-[:HAS_ANNOTATION]->(a)
                 RETURN a.id
                 """
-                await self.neo4j_client.execute_query(
-                    query,
-                    service="combined",
-                    id=episode_id,
-                    timestamp=episode["timestamp"],
-                    severity=episode["severity"],
-                    category=episode["category"],
-                    summary=episode["summary"][:500],
-                    confidence=episode["confidence"],
-                )
+                async with self.neo4j_client.session() as session:
+                    await session.run(
+                        query,
+                        service="combined",
+                        id=episode_id,
+                        timestamp=episode.detected_at.isoformat(),
+                        severity=episode.severity,
+                        category=episode.category,
+                        summary=episode.description[:500],
+                        confidence=episode.confidence,
+                    )
                 logger.debug(f"Created graph node for annotation {episode_id}")
 
         except Exception as e:
@@ -308,19 +335,39 @@ Please perform root cause analysis and suggest remediation actions.
 
             logger.info(f"RCA completed: {rca_result.content[:200]}")
 
-            # Store RCA episode
+            # Store RCA episode with proper Episode object and compaction
             if self.episode_store:
-                rca_episode = {
-                    "id": str(uuid4()),
-                    "service": "combined",
-                    "timestamp": datetime.utcnow().isoformat(),
-                    "type": "rca",
-                    "summary": rca_result.content,
-                    "confidence": rca_result.confidence,
-                    "suggested_action": getattr(rca_result, 'suggested_action', None),
-                    "related_annotation": annotation.content,
-                }
-                await self.episode_store.store_episode(rca_episode)
+                rca_episode_id = str(uuid4())
+                rca_episode = Episode(
+                    episode_id=rca_episode_id,
+                    incident_id=rca_episode_id,
+                    title=f"RCA: {rca_result.content[:80]}" if rca_result.content else "Root Cause Analysis",
+                    description=rca_result.content or "",
+                    severity=annotation.metadata.get("severity", "warning"),
+                    category="rca",
+                    detected_at=datetime.utcnow(),
+                    affected_services=["combined"],
+                    root_cause=rca_result.content[:200] if rca_result.content else "unknown",
+                    causal_chain=[annotation.content[:100]] if annotation.content else [],
+                    confidence=rca_result.confidence,
+                    outcome="analyzed",
+                )
+
+                # Episode compaction for RCA too
+                similar_rcas = await self.episode_store.find_similar_episodes(
+                    rca_episode, limit=1, min_similarity=0.7
+                )
+
+                if similar_rcas:
+                    existing_rca, similarity = similar_rcas[0]
+                    logger.info(f"Compacting RCA: Found similar {existing_rca.episode_id[:8]}... - skipping")
+                    await self.episode_store.update_episode(
+                        existing_rca.episode_id,
+                        {"confidence": max(existing_rca.confidence, rca_result.confidence)}
+                    )
+                else:
+                    await self.episode_store.store_episode(rca_episode)
+                    logger.info(f"Stored NEW RCA episode {rca_episode_id[:8]}...")
 
         except Exception as e:
             logger.error(f"Reasoning Agent escalation failed: {e}")

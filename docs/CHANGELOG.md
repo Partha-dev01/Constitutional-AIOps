@@ -2,6 +2,61 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.1] - 2026-01-15
+
+### Docker Service Recovery & Bug Fixes
+
+**Session**: Fixed Docker services to properly recover after Docker Desktop restart, plus multiple backend bug fixes.
+
+#### Docker Infrastructure Improvements
+
+1. **Health Checks Added to All Services**
+   - `loki`: `/ready` endpoint check
+   - `prometheus`: `/-/healthy` endpoint check
+   - `tempo`: `/ready` endpoint check
+   - `grafana`: `/api/health` endpoint check
+   - `frontend`: Root endpoint check
+   - `otel-collector`: Health extension on port 13133
+
+2. **Conditional Dependencies**
+   - All `depends_on` now use `condition: service_healthy`
+   - Services wait for dependencies to be truly ready before starting
+   - Eliminates race conditions on Docker restart
+
+3. **Neo4j Health Check Standardization**
+   - Changed from `wget` to `curl` for consistency
+   - Added `start_period: 60s` for proper startup time
+
+#### Backend Bug Fixes
+
+1. **Neo4j Query Method Fix** (`src/api/routes/graph.py`)
+   - Fixed 7 locations using deprecated `execute_read()` method
+   - Changed to standard `run()` method for Neo4j queries
+
+2. **Fast Agent JSON Parsing** (`src/agents/fast_annotator.py`)
+   - Added brace-matching fallback parser for malformed JSON
+   - Handles LLM responses with extra text before/after JSON
+
+3. **Model Router System Prompt** (`src/agents/model_router.py`)
+   - Added system prompt for strict JSON output
+   - Improves determinism and parsing reliability
+
+4. **Episode Compaction** (`src/telemetry/background_processor.py`)
+   - Implemented episode deduplication using similarity matching
+   - Reduces graph clutter from repeated similar incidents
+
+#### Files Changed
+
+| File | Changes |
+|------|---------|
+| `docker-compose.yml` | Health checks, conditional dependencies |
+| `src/api/routes/graph.py` | Neo4j query method fix |
+| `src/agents/fast_annotator.py` | JSON brace-matching parser |
+| `src/agents/model_router.py` | System prompt addition |
+| `src/telemetry/background_processor.py` | Episode compaction |
+
+---
+
 ## [0.5.0] - 2026-01-11
 
 ### Graphiti-Style Force-Directed Graph Visualization

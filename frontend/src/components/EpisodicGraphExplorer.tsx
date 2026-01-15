@@ -12,6 +12,20 @@ interface EpisodicNode extends NodeObject {
   confidence?: number
   severity?: string
   metadata?: Record<string, unknown>
+  // Episode-specific
+  category?: string
+  rootCause?: string
+  resolutionTime?: number // minutes
+  // Root cause-specific
+  frequency?: number
+  avgResolutionTime?: number // minutes
+  successRate?: number
+  // Action-specific
+  usedCount?: number
+  avgExecutionTime?: number // seconds
+  // Service-specific
+  incidentCount?: number
+  lastIncident?: string
   // Force graph properties
   x?: number
   y?: number
@@ -88,7 +102,7 @@ export function EpisodicGraphExplorer({
   loading = false,
   onNodeClick,
   onRefresh,
-  height = 500,
+  height = 350,
   width = 800,
 }: EpisodicGraphExplorerProps) {
   const graphRef = useRef<ForceGraphMethods>(null)
@@ -145,8 +159,12 @@ export function EpisodicGraphExplorer({
   const nodeCanvasObject = useCallback((node: EpisodicNode, ctx: CanvasRenderingContext2D, globalScale: number) => {
     const isHovered = hoveredNode?.id === node.id
     const isSelected = selectedNode?.id === node.id
-    const size = isSelected ? 12 : isHovered ? 10 : 8
-    const fontSize = Math.max(10, 12 / globalScale)
+    // Variable node sizes by type for visual hierarchy
+    const baseSize = node.type === 'episode' ? 9 :
+                     node.type === 'root_cause' ? 7 :
+                     node.type === 'service' ? 6 : 5  // actions smallest
+    const size = isSelected ? baseSize + 4 : isHovered ? baseSize + 2 : baseSize
+    const fontSize = Math.max(9, 11 / globalScale)
 
     // Node glow for selected/hovered
     if (isSelected || isHovered) {
@@ -178,13 +196,13 @@ export function EpisodicGraphExplorer({
                  node.type === 'action' ? 'A' : 'R'
     ctx.fillText(icon, node.x || 0, node.y || 0)
 
-    // Node label
-    if (globalScale > 0.5 || isHovered || isSelected) {
+    // Node label - only show when zoomed in or hovering
+    if (globalScale > 1.2 || isHovered || isSelected) {
       ctx.font = `${fontSize}px Inter, sans-serif`
       ctx.fillStyle = '#94a3b8'
       ctx.textAlign = 'center'
       ctx.textBaseline = 'top'
-      const label = node.label.length > 15 ? node.label.slice(0, 12) + '...' : node.label
+      const label = node.label.length > 10 ? node.label.slice(0, 8) + '...' : node.label
       ctx.fillText(label, node.x || 0, (node.y || 0) + size + 4)
     }
   }, [hoveredNode, selectedNode])
@@ -284,7 +302,7 @@ export function EpisodicGraphExplorer({
           linkTarget="target"
           cooldownTicks={100}
           d3AlphaDecay={0.02}
-          d3VelocityDecay={0.3}
+          d3VelocityDecay={0.4}
           enableNodeDrag={true}
           enableZoomInteraction={true}
           enablePanInteraction={true}
@@ -353,10 +371,10 @@ export function EpisodicGraphExplorer({
           className="text-xs bg-slate-800/90 text-slate-300 border border-slate-700 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500"
         >
           <option value="all">All Types</option>
-          <option value="service">Services</option>
           <option value="episode">Episodes</option>
-          <option value="incident">Incidents</option>
+          <option value="root_cause">Root Causes</option>
           <option value="action">Actions</option>
+          <option value="service">Services</option>
         </select>
       </div>
 
@@ -367,46 +385,54 @@ export function EpisodicGraphExplorer({
       </div>
 
       {/* Legend */}
-      <div className="absolute bottom-3 left-3 flex flex-wrap gap-3 text-xs bg-slate-900/80 px-3 py-2 rounded-md border border-slate-700">
-        <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded-full bg-green-500" />
-          <span className="text-slate-400">Healthy</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded-full bg-amber-500" />
-          <span className="text-slate-400">Warning</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded-full bg-red-500" />
-          <span className="text-slate-400">Critical</span>
-        </div>
+      <div className="absolute bottom-3 left-3 flex flex-wrap gap-2.5 text-xs bg-slate-900/80 px-3 py-2 rounded-md border border-slate-700">
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded-full bg-purple-500" />
           <span className="text-slate-400">Episode</span>
         </div>
         <div className="flex items-center gap-1.5">
+          <div className="w-3 h-3 rounded-full bg-orange-500" />
+          <span className="text-slate-400">Root Cause</span>
+        </div>
+        <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded-full bg-cyan-500" />
           <span className="text-slate-400">Action</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-3 h-3 rounded-full bg-blue-500" />
+          <span className="text-slate-400">Service</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-3 h-3 rounded-full bg-green-500" />
+          <span className="text-slate-400">Resolved</span>
         </div>
       </div>
 
       {/* Selected Node Details */}
       {selectedNode && (
-        <div className="absolute top-14 left-3 bg-slate-900/95 border border-slate-700 rounded-lg p-3 max-w-xs shadow-lg">
+        <div className="absolute top-14 left-3 bg-slate-900/95 border border-slate-700 rounded-lg p-3 max-w-sm shadow-lg">
           <div className="flex items-start justify-between mb-2">
-            <h4 className="font-medium text-slate-200">{selectedNode.label}</h4>
+            <div>
+              <h4 className="font-medium text-slate-200">{selectedNode.label}</h4>
+              <span className={`text-xs px-1.5 py-0.5 rounded ${
+                selectedNode.type === 'episode' ? 'bg-purple-500/20 text-purple-400' :
+                selectedNode.type === 'root_cause' ? 'bg-orange-500/20 text-orange-400' :
+                selectedNode.type === 'action' ? 'bg-cyan-500/20 text-cyan-400' :
+                selectedNode.type === 'service' ? 'bg-blue-500/20 text-blue-400' :
+                'bg-slate-500/20 text-slate-400'
+              }`}>
+                {selectedNode.type.replace('_', ' ')}
+              </span>
+            </div>
             <button
               onClick={() => setSelectedNode(null)}
-              className="text-slate-500 hover:text-slate-300"
+              className="text-slate-500 hover:text-slate-300 ml-2"
             >
               &times;
             </button>
           </div>
-          <div className="space-y-1 text-xs">
-            <div className="flex justify-between">
-              <span className="text-slate-500">Type:</span>
-              <span className="text-slate-300 capitalize">{selectedNode.type}</span>
-            </div>
+          <div className="space-y-1.5 text-xs">
+            {/* Common fields */}
             {selectedNode.status && (
               <div className="flex justify-between">
                 <span className="text-slate-500">Status:</span>
@@ -419,31 +445,129 @@ export function EpisodicGraphExplorer({
                 </span>
               </div>
             )}
-            {selectedNode.confidence !== undefined && (
-              <div className="flex justify-between">
-                <span className="text-slate-500">Confidence:</span>
-                <span className="text-slate-300">{(selectedNode.confidence * 100).toFixed(1)}%</span>
-              </div>
+
+            {/* Episode-specific fields */}
+            {selectedNode.type === 'episode' && (
+              <>
+                {selectedNode.severity && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Severity:</span>
+                    <span className={`capitalize ${
+                      selectedNode.severity === 'critical' ? 'text-red-400' :
+                      selectedNode.severity === 'high' ? 'text-orange-400' :
+                      selectedNode.severity === 'medium' ? 'text-amber-400' : 'text-slate-300'
+                    }`}>
+                      {selectedNode.severity}
+                    </span>
+                  </div>
+                )}
+                {selectedNode.category && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Category:</span>
+                    <span className="text-slate-300 capitalize">{selectedNode.category}</span>
+                  </div>
+                )}
+                {selectedNode.rootCause && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Root Cause:</span>
+                    <span className="text-orange-400">{selectedNode.rootCause.replace(/_/g, ' ')}</span>
+                  </div>
+                )}
+                {selectedNode.confidence !== undefined && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Confidence:</span>
+                    <span className="text-slate-300">{(selectedNode.confidence * 100).toFixed(0)}%</span>
+                  </div>
+                )}
+                {selectedNode.resolutionTime !== undefined && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Resolution:</span>
+                    <span className="text-green-400">{selectedNode.resolutionTime} min</span>
+                  </div>
+                )}
+                {selectedNode.timestamp && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Detected:</span>
+                    <span className="text-slate-300">
+                      {new Date(selectedNode.timestamp).toLocaleString()}
+                    </span>
+                  </div>
+                )}
+              </>
             )}
-            {selectedNode.severity && (
-              <div className="flex justify-between">
-                <span className="text-slate-500">Severity:</span>
-                <span className={`capitalize ${
-                  selectedNode.severity === 'critical' ? 'text-red-400' :
-                  selectedNode.severity === 'high' ? 'text-orange-400' :
-                  selectedNode.severity === 'medium' ? 'text-amber-400' : 'text-slate-300'
-                }`}>
-                  {selectedNode.severity}
-                </span>
-              </div>
+
+            {/* Root Cause-specific fields */}
+            {selectedNode.type === 'root_cause' && (
+              <>
+                {selectedNode.frequency !== undefined && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Occurrences:</span>
+                    <span className="text-slate-300">{selectedNode.frequency}</span>
+                  </div>
+                )}
+                {selectedNode.avgResolutionTime !== undefined && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Avg Resolution:</span>
+                    <span className="text-slate-300">{selectedNode.avgResolutionTime} min</span>
+                  </div>
+                )}
+                {selectedNode.successRate !== undefined && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Success Rate:</span>
+                    <span className={selectedNode.successRate >= 0.9 ? 'text-green-400' : 'text-amber-400'}>
+                      {(selectedNode.successRate * 100).toFixed(0)}%
+                    </span>
+                  </div>
+                )}
+              </>
             )}
-            {selectedNode.timestamp && (
-              <div className="flex justify-between">
-                <span className="text-slate-500">Time:</span>
-                <span className="text-slate-300">
-                  {new Date(selectedNode.timestamp).toLocaleString()}
-                </span>
-              </div>
+
+            {/* Action-specific fields */}
+            {selectedNode.type === 'action' && (
+              <>
+                {selectedNode.usedCount !== undefined && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Times Used:</span>
+                    <span className="text-slate-300">{selectedNode.usedCount}</span>
+                  </div>
+                )}
+                {selectedNode.successRate !== undefined && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Success Rate:</span>
+                    <span className={selectedNode.successRate >= 0.9 ? 'text-green-400' : 'text-amber-400'}>
+                      {(selectedNode.successRate * 100).toFixed(0)}%
+                    </span>
+                  </div>
+                )}
+                {selectedNode.avgExecutionTime !== undefined && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Avg Execution:</span>
+                    <span className="text-slate-300">{selectedNode.avgExecutionTime}s</span>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Service-specific fields */}
+            {selectedNode.type === 'service' && (
+              <>
+                {selectedNode.incidentCount !== undefined && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Incidents:</span>
+                    <span className={selectedNode.incidentCount > 1 ? 'text-amber-400' : 'text-slate-300'}>
+                      {selectedNode.incidentCount}
+                    </span>
+                  </div>
+                )}
+                {selectedNode.lastIncident && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Last Incident:</span>
+                    <span className="text-slate-300">
+                      {new Date(selectedNode.lastIncident).toLocaleDateString()}
+                    </span>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
