@@ -1,16 +1,30 @@
 # Constitutional AIOps - Development Checklist
 
-> **Version**: 0.5.0
-> **Last Updated**: 2026-01-11
+> **Version**: 0.5.1
+> **Last Updated**: 2026-01-15
 > **Status**: 100% Core Complete
 > **Architecture**: Simultaneous Dual-Model (Qwen3-4B + Qwen3-14B on 24GB VRAM)
 > **Deployment**: Hybrid (Jarvis Labs A5000 GPU + Local Services)
 
 ---
 
-## Recent Updates (2026-01-11) ✅
+## Recent Updates (2026-01-15) ✅
 
-### v0.5.0 - Graphiti-Style Force-Directed Graph Visualization
+### v0.5.1 - Docker Service Recovery & Bug Fixes
+- [x] Added health checks to all docker-compose services (loki, prometheus, tempo, grafana, frontend, otel-collector)
+- [x] Added conditional dependencies (`service_healthy`) to ensure proper startup order
+- [x] Standardized Neo4j health check to use curl (was wget)
+- [x] Fixed services recovering properly after Docker Desktop restart
+- [x] Fixed Neo4j query method in `graph.py` (execute_read → run, 7 locations)
+- [x] Fixed Fast Agent JSON parsing with brace-matching fallback in `fast_annotator.py`
+- [x] Added system prompt for strict JSON output in `model_router.py`
+- [x] Implemented episode compaction to reduce graph clutter in `background_processor.py`
+
+---
+
+## Previous Updates
+
+### v0.5.0 - Graphiti-Style Force-Directed Graph Visualization (2026-01-11)
 - [x] Created `EpisodicGraphExplorer.tsx` - Force-directed graph with `react-force-graph-2d`
 - [x] Added custom TypeScript declarations for `react-force-graph-2d` library
 - [x] Interactive controls: Zoom In/Out, Fit to View, Pause/Resume Animation, Reset View

@@ -159,6 +159,15 @@ export function Agents() {
     }
   }, [activeTab])
 
+  // Auto-refresh graph data every 30s when graph tab is active (matches Fast Agent interval)
+  useEffect(() => {
+    if (activeTab !== 'graph') return
+    const interval = setInterval(() => {
+      fetchGraphData()
+    }, 30000) // 30 seconds - matches background processor interval
+    return () => clearInterval(interval)
+  }, [activeTab])
+
   const fetchFastActivity = async () => {
     setFastLoading(true)
     try {
@@ -226,73 +235,138 @@ export function Agents() {
       const response = await fetch('/api/v1/graph/episodes?limit=50')
       if (response.ok) {
         const data = await response.json()
-        // Transform episodes to EpisodicNode/EpisodicLink for force-directed graph
+        // Transform new EpisodicGraphData format to EpisodicNode/EpisodicLink for force-directed graph
         const nodes: EpisodicNode[] = []
         const links: EpisodicLink[] = []
 
-        if (data.services) {
-          data.services.forEach((s: { name: string; status: string; type?: string }) => {
-            nodes.push({
-              id: `service-${s.name}`,
-              label: s.name,
-              type: 'service',
-              status: (s.status || 'healthy') as 'healthy' | 'warning' | 'critical',
-            })
-          })
-        }
-
+        // Process Episodes - main nodes showing incidents
         if (data.episodes) {
           data.episodes.forEach((ep: {
             id: string;
             title: string;
-            services: string[];
+            type?: string;
             timestamp?: string;
+            category?: string;
             severity?: string;
+            status?: string;
+            root_cause?: string;
             confidence?: number;
+            resolution_time_minutes?: number;
+            services?: string[];
+            successful_actions?: string[];
           }) => {
             nodes.push({
               id: `episode-${ep.id}`,
               label: ep.title,
               type: 'episode',
-              status: 'detected',
+              status: ep.status === 'resolved' ? 'resolved' :
+                     ep.severity === 'critical' ? 'critical' :
+                     ep.severity === 'high' ? 'warning' : 'detected',
               timestamp: ep.timestamp,
               severity: ep.severity,
               confidence: ep.confidence,
-            })
-            // Episode affects services
-            ep.services.forEach((svc: string) => {
-              links.push({
-                source: `episode-${ep.id}`,
-                target: `service-${svc}`,
-                label: 'affects',
-                type: 'affects',
-              })
+              category: ep.category,
+              rootCause: ep.root_cause,
+              resolutionTime: ep.resolution_time_minutes,
             })
           })
         }
 
-        // Process edges from backend (DEPENDS_ON relationships)
-        if (data.edges) {
-          data.edges.forEach((edge: { from: string; to: string; label?: string }) => {
-            // Avoid duplicates - use source/target for force-graph
-            const exists = links.some(l => {
-              const src = typeof l.source === 'string' ? l.source : l.source?.id
-              const tgt = typeof l.target === 'string' ? l.target : l.target?.id
-              return src === edge.from && tgt === edge.to
+        // Process Root Causes - semantic abstractions of failure patterns
+        if (data.root_causes) {
+          data.root_causes.forEach((rc: {
+            id: string;
+            name: string;
+            type?: string;
+            frequency?: number;
+            avg_resolution_time_minutes?: number;
+            success_rate?: number;
+          }) => {
+            nodes.push({
+              id: rc.id,
+              label: rc.name.replace(/_/g, ' '),
+              type: 'root_cause',
+              status: rc.success_rate && rc.success_rate >= 0.9 ? 'healthy' :
+                     rc.success_rate && rc.success_rate >= 0.7 ? 'warning' : 'critical',
+              frequency: rc.frequency,
+              avgResolutionTime: rc.avg_resolution_time_minutes,
+              successRate: rc.success_rate,
             })
-            if (!exists) {
-              links.push({
-                source: edge.from,
-                target: edge.to,
-                label: edge.label || 'depends_on',
-                type: (edge.label || 'depends_on') as 'depends_on' | 'affects' | 'caused_by' | 'resolved_by' | 'similar_to',
-              })
-            }
+          })
+        }
+
+        // Process Actions - remediation patterns
+        if (data.actions) {
+          data.actions.forEach((action: {
+            id: string;
+            name: string;
+            type?: string;
+            used_count?: number;
+            success_rate?: number;
+            avg_execution_time_seconds?: number;
+          }) => {
+            nodes.push({
+              id: action.id,
+              label: action.name,
+              type: 'action',
+              status: action.success_rate && action.success_rate >= 0.9 ? 'healthy' :
+                     action.success_rate && action.success_rate >= 0.7 ? 'warning' : 'critical',
+              usedCount: action.used_count,
+              successRate: action.success_rate,
+              avgExecutionTime: action.avg_execution_time_seconds,
+            })
+          })
+        }
+
+        // Process Services - only those affected by episodes
+        if (data.services) {
+          data.services.forEach((s: {
+            name: string;
+            type?: string;
+            status?: string;
+            incident_count?: number;
+            last_incident?: string;
+          }) => {
+            nodes.push({
+              id: `service-${s.name}`,
+              label: s.name,
+              type: 'service',
+              status: (s.status || 'healthy') as 'healthy' | 'warning' | 'critical',
+              incidentCount: s.incident_count,
+              lastIncident: s.last_incident,
+            })
+          })
+        }
+
+        // Process Edges - relationships between nodes
+        if (data.edges) {
+          data.edges.forEach((edge: {
+            source: string;
+            target: string;
+            relationship: string;
+            weight?: number;
+            metadata?: Record<string, unknown>;
+          }) => {
+            // Map relationship to edge type
+            const edgeType = edge.relationship as 'depends_on' | 'affects' | 'caused_by' | 'resolved_by' | 'similar_to'
+
+            links.push({
+              source: edge.source,
+              target: edge.target,
+              label: edge.relationship.replace(/_/g, ' '),
+              type: edgeType,
+              weight: edge.weight,
+            })
           })
         }
 
         setGraphNodes(nodes)
         setGraphEdges(links)
+
+        // Log stats for debugging
+        if (data.stats) {
+          console.log('Episodic Graph Stats:', data.stats)
+        }
       } else {
         setGraphNodes([])
         setGraphEdges([])
@@ -891,14 +965,14 @@ export function Agents() {
                   loading={graphLoading}
                   onNodeClick={(node) => setSelectedNode(node)}
                   onRefresh={fetchGraphData}
-                  height={500}
+                  height={350}
                 />
               ) : graphLoading ? (
-                <div className="flex items-center justify-center h-[500px] bg-gradient-to-br from-slate-900/50 to-slate-800/50 rounded-lg">
+                <div className="flex items-center justify-center h-[350px] bg-gradient-to-br from-slate-900/50 to-slate-800/50 rounded-lg">
                   <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
               ) : (
-                <div className="h-[500px] flex flex-col items-center justify-center text-muted-foreground bg-gradient-to-br from-slate-900/30 to-slate-800/30 rounded-lg">
+                <div className="h-[350px] flex flex-col items-center justify-center text-muted-foreground bg-gradient-to-br from-slate-900/30 to-slate-800/30 rounded-lg">
                   <GitBranch className="h-12 w-12 mb-3 opacity-50" />
                   <p className="text-lg font-medium">No Graph Data Available</p>
                   <p className="text-sm mt-1 max-w-md text-center">

@@ -31,9 +31,12 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
-      - neo4j
-      - loki
-      - prometheus
+      neo4j:
+        condition: service_healthy
+      loki:
+        condition: service_healthy
+      prometheus:
+        condition: service_healthy
     networks:
       - aiops-network
     restart: unless-stopped
@@ -42,6 +45,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 30s
 
   frontend:
     build:
@@ -51,10 +55,17 @@ services:
     ports:
       - "3000:3000"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks:
       - aiops-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
   # ==========================================================================
   # Graph Memory (Neo4j)
@@ -78,15 +89,16 @@ services:
       - aiops-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:7474 || exit 1"]
+      test: ["CMD", "curl", "-f", "http://localhost:7474"]
       interval: 30s
       timeout: 10s
       retries: 5
+      start_period: 60s
 
   # ==========================================================================
   # Observability Stack (LGTM)
   # ==========================================================================
-  
+
   loki:
     image: grafana/loki:2.9.3
     container_name: aiops-loki
@@ -98,6 +110,12 @@ services:
     networks:
       - aiops-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3100/ready"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
   # Promtail - Log collector that ships container logs to Loki
   promtail:
@@ -109,7 +127,8 @@ services:
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
     command: -config.file=/etc/promtail/config.yml
     depends_on:
-      - loki
+      loki:
+        condition: service_healthy
     networks:
       - aiops-network
     restart: unless-stopped
@@ -129,6 +148,12 @@ services:
     networks:
       - aiops-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
   tempo:
     image: grafana/tempo:2.3.1
@@ -144,6 +169,12 @@ services:
     networks:
       - aiops-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3200/ready"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
   grafana:
     image: grafana/grafana:10.2.3
@@ -156,12 +187,21 @@ services:
     volumes:
       - grafana-data:/var/lib/grafana
     depends_on:
-      - loki
-      - prometheus
-      - tempo
+      loki:
+        condition: service_healthy
+      prometheus:
+        condition: service_healthy
+      tempo:
+        condition: service_healthy
     networks:
       - aiops-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
   # ==========================================================================
   # Monitored Services (for demo/metrics extraction)
@@ -189,16 +229,26 @@ services:
       - "4319:4317"   # OTLP gRPC (remapped to avoid conflict with Tempo)
       - "4320:4318"   # OTLP HTTP
       - "8888:8888"   # Prometheus metrics
+      - "13133:13133" # Health check extension
     volumes:
       - ./docker/configs/otel-collector.yaml:/etc/otel/config.yaml:ro
     command: --config=/etc/otel/config.yaml
     depends_on:
-      - loki
-      - prometheus
-      - tempo
+      loki:
+        condition: service_healthy
+      prometheus:
+        condition: service_healthy
+      tempo:
+        condition: service_healthy
     networks:
       - aiops-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:13133/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
 networks:
   aiops-network:

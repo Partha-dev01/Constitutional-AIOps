@@ -114,6 +114,7 @@ class ModelRouter:
         max_tokens: int = 512,
         temperature: float = 0.0,  # Changed from 0.1 for determinism
         seed: Optional[int] = None,  # Fixed seed for reproducibility
+        system_prompt: Optional[str] = None,  # System prompt for context
         **kwargs,
     ) -> dict[str, Any]:
         """
@@ -134,6 +135,7 @@ class ModelRouter:
             max_tokens: Maximum tokens to generate
             temperature: Sampling temperature (0.0 for determinism)
             seed: Random seed for reproducibility (default: hash of prompt)
+            system_prompt: Optional system prompt for context
             **kwargs: Additional parameters for the API
 
         Returns:
@@ -144,9 +146,15 @@ class ModelRouter:
         if seed is None:
             seed = prompt_hash
 
+        # Build messages list with optional system prompt
+        messages = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
+
         payload = {
             "model": config.llm.fast_agent_model,
-            "messages": [{"role": "user", "content": prompt}],
+            "messages": messages,
             "max_tokens": max_tokens,
             "temperature": temperature,
             "seed": seed,  # For deterministic outputs

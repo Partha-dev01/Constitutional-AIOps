@@ -1,7 +1,7 @@
 # Constitutional AIOps - Issue Tracker
 
-> **Version**: 0.4.8
-> **Last Updated**: 2026-01-09
+> **Version**: 0.5.1
+> **Last Updated**: 2026-01-15
 > **Open Issues**: 0
 > **Blockers**: 0
 
