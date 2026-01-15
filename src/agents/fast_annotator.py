@@ -32,7 +32,9 @@ MAX_ACTIVITY_LOG_SIZE = 50
 
 
 # System prompt for fast annotation
-FAST_ANNOTATOR_SYSTEM_PROMPT = """You are a fast telemetry annotator for an AIOps system.
+# /no_think disables Qwen3 thinking mode for faster, direct responses
+FAST_ANNOTATOR_SYSTEM_PROMPT = """/no_think
+You are a fast telemetry annotator for an AIOps system.
 
 Your job is to quickly analyze telemetry data (logs, metrics, traces) and:
 1. Detect anomalies or issues
@@ -41,14 +43,15 @@ Your job is to quickly analyze telemetry data (logs, metrics, traces) and:
 4. Provide a confidence score (0.0-1.0)
 5. Decide if deeper analysis is needed
 
-Respond in JSON format:
+IMPORTANT: You MUST respond with ONLY valid JSON, no additional text or explanation.
+
 {
-    "anomaly_detected": true/false,
-    "severity": "critical|warning|info",
-    "category": "performance|error|security|resource|unknown",
-    "confidence": 0.0-1.0,
-    "summary": "Brief description",
-    "needs_reasoning": true/false,
+    "anomaly_detected": true,
+    "severity": "critical",
+    "category": "error",
+    "confidence": 0.85,
+    "summary": "Brief description of the issue",
+    "needs_reasoning": false,
     "key_indicators": ["indicator1", "indicator2"]
 }
 
@@ -112,15 +115,30 @@ class FastAnnotator(BaseAgent):
         start_time = time.perf_counter()
 
         try:
-            # Get completion from fast agent
+            # Get completion from fast agent with system prompt for JSON format
+            # Qwen3 uses thinking mode which consumes tokens, so we need more
+            # Fast Agent has 8K context per CLAUDE.md spec
             response = await self.model_router.fast_completion(
                 prompt=prompt,
-                max_tokens=512,
+                max_tokens=2048,  # Qwen3 thinking overhead needs more tokens
                 temperature=0.0,  # Deterministic classification (greedy decoding)
+                system_prompt=self.get_system_prompt(),  # Include system prompt for context
             )
 
-            # Parse response
-            content = response["choices"][0]["message"]["content"]
+            # Parse response - Qwen3 may put content in reasoning field if thinking mode is on
+            message = response["choices"][0]["message"]
+            content = message.get("content", "")
+
+            # If content is empty, try to extract from reasoning field (Qwen3 thinking mode)
+            if not content and "reasoning" in message:
+                reasoning = message["reasoning"]
+                # Look for JSON in the reasoning output
+                if "{" in reasoning:
+                    start_idx = reasoning.find("{")
+                    end_idx = reasoning.rfind("}")
+                    if end_idx > start_idx:
+                        content = reasoning[start_idx:end_idx + 1]
+                        self.logger.info(f"Extracted JSON from Qwen3 reasoning field")
             annotation = self._parse_annotation(content)
             latency_ms = (time.perf_counter() - start_time) * 1000
 
@@ -194,22 +212,39 @@ class FastAnnotator(BaseAgent):
     def _parse_annotation(self, content: str) -> dict[str, Any]:
         """Parse JSON annotation from model response."""
         try:
-            # Try to extract JSON from response
-            # Handle potential markdown code blocks
+            # Strip whitespace first
+            content = content.strip()
+
+            # Try to extract JSON from markdown code blocks
             if "```json" in content:
-                content = content.split("```json")[1].split("```")[0]
+                content = content.split("```json")[1].split("```")[0].strip()
             elif "```" in content:
-                content = content.split("```")[1].split("```")[0]
-            
-            return json.loads(content.strip())
-        except json.JSONDecodeError:
-            self.logger.warning(f"Failed to parse annotation JSON: {content[:100]}...")
+                content = content.split("```")[1].split("```")[0].strip()
+
+            # Find the first complete JSON object by counting braces
+            start_idx = content.find('{')
+            if start_idx != -1:
+                brace_count = 0
+                end_idx = start_idx
+                for i, char in enumerate(content[start_idx:], start=start_idx):
+                    if char == '{':
+                        brace_count += 1
+                    elif char == '}':
+                        brace_count -= 1
+                        if brace_count == 0:
+                            end_idx = i
+                            break
+                content = content[start_idx:end_idx + 1]
+
+            return json.loads(content)
+        except (json.JSONDecodeError, ValueError) as e:
+            self.logger.warning(f"Failed to parse annotation JSON: {content[:100]}... Error: {e}")
             return {
                 "anomaly_detected": False,
                 "severity": "info",
                 "category": "unknown",
                 "confidence": 0.3,
-                "summary": content[:200],
+                "summary": content[:200] if content else "Parse error",
                 "needs_reasoning": True,
             }
 
