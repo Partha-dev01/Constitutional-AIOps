@@ -40,6 +40,10 @@ from src.constitutional.validator import ConstitutionalValidator
 from src.memory.neo4j_client import Neo4jClient, NEO4J_AVAILABLE
 from src.memory.episode_store import EpisodeStore
 from src.memory.retrieval import ContextRetriever
+from src.memory.embedding_service import get_embedding_service
+
+# Import confidence calculator
+from src.confidence import ConfidenceCalculator
 
 # Import telemetry components
 from src.telemetry.collector import TelemetryCollector
@@ -83,10 +87,15 @@ async def lifespan(app: FastAPI):
     # Initialize Constitutional Validator
     app.state.validator = ConstitutionalValidator()
 
+    # Initialize embedding service (lazy-loads model on first use)
+    app.state.embedding_service = get_embedding_service()
+    logger.info(f"Embedding service initialized (available: {app.state.embedding_service.is_available})")
+
     # Initialize Neo4j client and memory components
     app.state.neo4j_client = None
     app.state.episode_store = None
     app.state.context_retriever = None
+    app.state.confidence_calculator = None
 
     if NEO4J_AVAILABLE:
         try:
@@ -94,25 +103,54 @@ async def lifespan(app: FastAPI):
             connected = await neo4j_client.connect()
             if connected:
                 app.state.neo4j_client = neo4j_client
-                app.state.episode_store = EpisodeStore(neo4j_client=neo4j_client)
+                app.state.episode_store = EpisodeStore(
+                    neo4j_client=neo4j_client,
+                    embedding_service=app.state.embedding_service,
+                )
                 app.state.context_retriever = ContextRetriever(
                     episode_store=app.state.episode_store,
                     neo4j_client=neo4j_client,
                 )
+                # Initialize confidence calculator with all components
+                app.state.confidence_calculator = ConfidenceCalculator(
+                    neo4j_client=neo4j_client,
+                    episode_store=app.state.episode_store,
+                )
                 logger.info("Neo4j and memory components initialized successfully")
+                logger.info(
+                    f"Confidence calculator initialized: "
+                    f"C(a) = {ConfidenceCalculator.ALPHA}·LLM + "
+                    f"{ConfidenceCalculator.BETA}·hist + "
+                    f"{ConfidenceCalculator.GAMMA}·sim"
+                )
             else:
                 logger.warning("Neo4j connection failed, memory features disabled")
                 # Still create episode store with in-memory fallback
-                app.state.episode_store = EpisodeStore()
+                app.state.episode_store = EpisodeStore(
+                    embedding_service=app.state.embedding_service,
+                )
                 app.state.context_retriever = ContextRetriever(episode_store=app.state.episode_store)
+                app.state.confidence_calculator = ConfidenceCalculator(
+                    episode_store=app.state.episode_store,
+                )
         except Exception as e:
             logger.warning(f"Failed to initialize Neo4j: {e}")
-            app.state.episode_store = EpisodeStore()
+            app.state.episode_store = EpisodeStore(
+                embedding_service=app.state.embedding_service,
+            )
             app.state.context_retriever = ContextRetriever(episode_store=app.state.episode_store)
+            app.state.confidence_calculator = ConfidenceCalculator(
+                episode_store=app.state.episode_store,
+            )
     else:
         logger.info("Neo4j driver not available, using in-memory episode store")
-        app.state.episode_store = EpisodeStore()
+        app.state.episode_store = EpisodeStore(
+            embedding_service=app.state.embedding_service,
+        )
         app.state.context_retriever = ContextRetriever(episode_store=app.state.episode_store)
+        app.state.confidence_calculator = ConfidenceCalculator(
+            episode_store=app.state.episode_store,
+        )
 
     # Initialize telemetry components
     app.state.telemetry_collector = TelemetryCollector()

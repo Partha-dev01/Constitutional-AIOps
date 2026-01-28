@@ -6,6 +6,7 @@ Provides endpoints for Neo4j graph queries including:
 - Root cause correlation
 - Action success patterns
 - Service impact analysis
+- Episode generation via Reasoning Agent
 
 Graph Model (from Research_V6.tex):
 - Episodes → CAUSED_BY → RootCauseType
@@ -15,8 +16,10 @@ Graph Model (from Research_V6.tex):
 """
 
 import logging
-from datetime import datetime
+import json
+from datetime import datetime, timedelta
 from typing import Any
+from uuid import uuid4
 
 from fastapi import APIRouter, Request, Query, HTTPException, status
 from pydantic import BaseModel, Field, field_validator
@@ -24,6 +27,26 @@ from pydantic import BaseModel, Field, field_validator
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+# =============================================================================
+# Graph Schema Constants (v0.6.0 - Optimized for clean visualization)
+# =============================================================================
+# These constants prevent the "hairball" graph problem by limiting edge creation
+
+# SIMILAR_TO edge threshold: Only connect highly similar episodes
+# Old value: 0.5 (created O(n²) edges) → New value: 0.75
+SIMILAR_TO_THRESHOLD = 0.75
+
+# Maximum SIMILAR_TO edges per episode (prevents hub-and-spoke patterns)
+MAX_SIMILAR_EDGES_PER_EPISODE = 3
+
+# Minimum confidence for LLM-extracted entity triplets
+MIN_TRIPLET_CONFIDENCE = 0.70
+
+# Maximum edges per node for visualization (degree capping)
+MAX_EDGES_PER_NODE = 5
+
+# =============================================================================
 
 
 class ServiceNode(BaseModel):
@@ -93,16 +116,23 @@ class EpisodeNode(BaseModel):
     def convert_neo4j_datetime(cls, v):
         """Convert Neo4j DateTime to Python datetime."""
         if v is None:
-            return datetime.now()
+            return datetime.utcnow()
         if isinstance(v, datetime):
             return v
-        # Handle Neo4j DateTime object
         if hasattr(v, "to_native"):
             return v.to_native()
-        # Try to convert from ISO string
         if isinstance(v, str):
             return datetime.fromisoformat(v.replace("Z", "+00:00"))
         return v
+
+
+class EntityNode(BaseModel):
+    """Entity node - LLM-extracted entity from semantic triplets."""
+    id: str
+    name: str
+    type: str = "entity"
+    relation_count: int = Field(default=0, description="Number of relations involving this entity")
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class GraphEdge(BaseModel):
@@ -120,6 +150,7 @@ class EpisodicGraphData(BaseModel):
     root_causes: list[RootCauseNode]
     actions: list[ActionNode]
     services: list[ServiceNode]
+    entities: list[EntityNode] = Field(default_factory=list)  # LLM-extracted entities
     edges: list[GraphEdge]
     stats: dict[str, Any] = Field(default_factory=dict)
 
@@ -137,6 +168,20 @@ class Episode(BaseModel):
     resolution: str | None = None
     confidence: float = 0
     metadata: dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator("timestamp", mode="before")
+    @classmethod
+    def convert_neo4j_datetime(cls, v):
+        """Convert Neo4j DateTime to Python datetime."""
+        if v is None:
+            return datetime.utcnow()
+        if isinstance(v, datetime):
+            return v
+        if hasattr(v, "to_native"):
+            return v.to_native()
+        if isinstance(v, str):
+            return datetime.fromisoformat(v.replace("Z", "+00:00"))
+        return v
 
 
 class GraphData(BaseModel):
@@ -184,6 +229,33 @@ async def get_episodes(
     request: Request,
     limit: int = Query(50, ge=1, le=200),
     since_hours: int = Query(168, description="Get episodes from last N hours (default 7 days)"),
+    # v0.6.0: Filtering parameters to prevent hairball visualization
+    min_similarity: float = Query(
+        SIMILAR_TO_THRESHOLD,
+        ge=0.5,
+        le=1.0,
+        description="Minimum similarity threshold for SIMILAR_TO edges (default 0.75)",
+    ),
+    min_confidence: float = Query(
+        MIN_TRIPLET_CONFIDENCE,
+        ge=0.0,
+        le=1.0,
+        description="Minimum confidence for entity edges (default 0.70)",
+    ),
+    include_similar_to: bool = Query(
+        True,
+        description="Include SIMILAR_TO edges between episodes",
+    ),
+    include_entities: bool = Query(
+        True,
+        description="Include LLM-extracted entity nodes and edges",
+    ),
+    max_edges_per_node: int = Query(
+        MAX_EDGES_PER_NODE,
+        ge=1,
+        le=20,
+        description="Maximum edges per node to prevent hairball (default 5)",
+    ),
 ) -> EpisodicGraphData:
     """
     Get episodic memory graph for Graphiti-style visualization.
@@ -202,12 +274,14 @@ async def get_episodes(
     root_causes: list[RootCauseNode] = []
     actions: list[ActionNode] = []
     services: list[ServiceNode] = []
+    entities: list[EntityNode] = []  # Phase 2: LLM-extracted entities
     edges: list[GraphEdge] = []
 
     # Track unique nodes
     root_cause_map: dict[str, RootCauseNode] = {}
     action_map: dict[str, ActionNode] = {}
     service_map: dict[str, ServiceNode] = {}
+    entity_map: dict[str, EntityNode] = {}  # Phase 2: Track entities
 
     # Try to get data from Neo4j first
     has_neo4j_data = False
@@ -306,6 +380,55 @@ async def get_episodes(
                     else:
                         action_map[action_id].used_count += 1
 
+            # Phase 2: Query LLM-extracted semantic triplets (Entity nodes with RELATES edges)
+            async with neo4j_client.session() as session:
+                triplet_result = await session.run(
+                    """
+                    MATCH (s:Entity)-[r:RELATES]->(o:Entity)
+                    RETURN s.name as subject, r.type as relation, o.name as object,
+                           r.source_episode as episode_id, r.extraction_method as method
+                    ORDER BY r.timestamp DESC
+                    LIMIT 100
+                    """,
+                )
+                triplets_data = await triplet_result.data()
+
+            # Add dynamic edges from LLM-extracted triplets
+            for triplet in triplets_data:
+                subject = triplet.get("subject", "")
+                relation = triplet.get("relation", "RELATES")
+                obj = triplet.get("object", "")
+
+                if not subject or not obj:
+                    continue
+
+                # Track entities
+                if subject not in entity_map:
+                    entity_map[subject] = EntityNode(
+                        id=f"entity-{subject}",
+                        name=subject,
+                        relation_count=1,
+                    )
+                else:
+                    entity_map[subject].relation_count += 1
+
+                if obj not in entity_map:
+                    entity_map[obj] = EntityNode(
+                        id=f"entity-{obj}",
+                        name=obj,
+                        relation_count=1,
+                    )
+                else:
+                    entity_map[obj].relation_count += 1
+
+                # Add dynamic edge with LLM-extracted relation type
+                edges.append(GraphEdge(
+                    source=f"entity-{subject}",
+                    target=f"entity-{obj}",
+                    relationship=relation.lower(),  # Dynamic relation from LLM
+                    metadata={"extraction_method": triplet.get("method", "llm")},
+                ))
+
         except Exception as e:
             logger.warning(f"Failed to query Neo4j for episodes: {e}")
 
@@ -328,6 +451,7 @@ async def get_episodes(
             root_causes=[],
             actions=[],
             services=monitored_services,
+            entities=[],
             edges=[],
             stats={
                 "total_episodes": 0,
@@ -341,8 +465,28 @@ async def get_episodes(
         actions = list(action_map.values())
         services = list(service_map.values())
 
-        # Find similar episodes and add SIMILAR_TO edges
-        edges.extend(_find_similar_episode_edges(episodes))
+        # v0.6.0: Filter entities based on include_entities parameter
+        if include_entities:
+            entities = list(entity_map.values())
+        else:
+            entities = []
+            # Remove entity edges if entities disabled
+            edges = [e for e in edges if not e.relationship.startswith("relates")]
+
+        # v0.6.0: Filter edges by confidence
+        edges = [e for e in edges if (e.weight or 1.0) >= min_confidence]
+
+        # v0.6.0: Find similar episodes and add SIMILAR_TO edges (if enabled)
+        if include_similar_to:
+            similar_edges = _find_similar_episode_edges(
+                episodes,
+                threshold=min_similarity,
+                max_per_episode=MAX_SIMILAR_EDGES_PER_EPISODE,
+            )
+            edges.extend(similar_edges)
+
+        # v0.6.0: Apply degree capping to prevent hairball
+        edges = _prune_edges(edges, max_per_node=max_edges_per_node)
 
     # Calculate stats
     stats = {
@@ -350,9 +494,11 @@ async def get_episodes(
         "total_root_causes": len(root_causes),
         "total_actions": len(actions),
         "total_services": len(services),
+        "total_entities": len(entities),
         "total_edges": len(edges),
         "critical_episodes": sum(1 for ep in episodes if ep.severity == "critical"),
         "resolved_episodes": sum(1 for ep in episodes if ep.status == "resolved"),
+        "dynamic_edges": sum(1 for e in edges if e.metadata.get("extraction_method") == "llm"),
     }
 
     return EpisodicGraphData(
@@ -360,14 +506,32 @@ async def get_episodes(
         root_causes=root_causes,
         actions=actions,
         services=services,
+        entities=entities,
         edges=edges,
         stats=stats,
     )
 
 
-def _find_similar_episode_edges(episodes: list[EpisodeNode]) -> list[GraphEdge]:
-    """Find and create SIMILAR_TO edges between episodes with same root cause or services."""
-    edges = []
+def _find_similar_episode_edges(
+    episodes: list[EpisodeNode],
+    threshold: float = SIMILAR_TO_THRESHOLD,
+    max_per_episode: int = MAX_SIMILAR_EDGES_PER_EPISODE,
+) -> list[GraphEdge]:
+    """
+    Find and create SIMILAR_TO edges between highly similar episodes.
+
+    Uses higher threshold (0.75) and limits edges per episode to prevent hairball.
+
+    Args:
+        episodes: List of episode nodes
+        threshold: Minimum similarity score (default: 0.75)
+        max_per_episode: Maximum SIMILAR_TO edges per episode (default: 3)
+
+    Returns:
+        List of SIMILAR_TO edges (pruned to prevent O(n²) explosion)
+    """
+    # Calculate all similarities first, then keep only top-k per episode
+    all_similarities: list[tuple[str, str, float]] = []
     seen_pairs = set()
 
     for i, ep1 in enumerate(episodes):
@@ -397,17 +561,74 @@ def _find_similar_episode_edges(episodes: list[EpisodeNode]) -> list[GraphEdge]:
                 if total > 0:
                     similarity += 0.3 * (overlap / total)
 
-            # Add edge if similarity > 0.5
-            if similarity >= 0.5:
+            # Only consider if above threshold (0.75 instead of 0.5)
+            if similarity >= threshold:
                 seen_pairs.add(pair_key)
-                edges.append(GraphEdge(
-                    source=f"episode-{ep1.id}",
-                    target=f"episode-{ep2.id}",
-                    relationship="similar_to",
-                    weight=similarity,
-                ))
+                all_similarities.append((ep1.id, ep2.id, similarity))
 
+    # Sort by similarity descending
+    all_similarities.sort(key=lambda x: x[2], reverse=True)
+
+    # Limit edges per episode (degree capping)
+    episode_edge_count: dict[str, int] = {}
+    edges = []
+
+    for ep1_id, ep2_id, similarity in all_similarities:
+        count1 = episode_edge_count.get(ep1_id, 0)
+        count2 = episode_edge_count.get(ep2_id, 0)
+
+        # Only add if both episodes have room for more edges
+        if count1 < max_per_episode and count2 < max_per_episode:
+            edges.append(GraphEdge(
+                source=f"episode-{ep1_id}",
+                target=f"episode-{ep2_id}",
+                relationship="similar_to",
+                weight=similarity,
+            ))
+            episode_edge_count[ep1_id] = count1 + 1
+            episode_edge_count[ep2_id] = count2 + 1
+
+    logger.debug(f"Created {len(edges)} SIMILAR_TO edges (threshold={threshold}, max_per_episode={max_per_episode})")
     return edges
+
+
+def _prune_edges(
+    edges: list[GraphEdge],
+    max_per_node: int = MAX_EDGES_PER_NODE,
+) -> list[GraphEdge]:
+    """
+    Limit edges per node to prevent hairball visualization.
+
+    Uses degree capping: keeps highest-weight edges up to max_per_node per node.
+
+    Args:
+        edges: List of graph edges
+        max_per_node: Maximum edges per node (default: 5)
+
+    Returns:
+        Pruned list of edges
+    """
+    if not edges:
+        return edges
+
+    # Sort by weight descending (keep best edges)
+    sorted_edges = sorted(edges, key=lambda e: e.weight or 0, reverse=True)
+
+    node_edge_count: dict[str, int] = {}
+    pruned = []
+
+    for edge in sorted_edges:
+        source_count = node_edge_count.get(edge.source, 0)
+        target_count = node_edge_count.get(edge.target, 0)
+
+        # Only add if both nodes have room for more edges
+        if source_count < max_per_node and target_count < max_per_node:
+            pruned.append(edge)
+            node_edge_count[edge.source] = source_count + 1
+            node_edge_count[edge.target] = target_count + 1
+
+    logger.debug(f"Pruned edges: {len(edges)} -> {len(pruned)} (max_per_node={max_per_node})")
+    return pruned
 
 
 @router.get(
@@ -619,6 +840,42 @@ async def find_similar_episodes(
 
 
 @router.get(
+    "/embedding/status",
+    summary="Get Embedding Status",
+    description="Get status of the embedding service for vector similarity",
+)
+async def get_embedding_status(request: Request) -> dict:
+    """
+    Get embedding service status.
+
+    Returns information about:
+    - Model availability
+    - Device (CUDA/CPU)
+    - Embedding dimensions
+    - Similarity threshold
+
+    This implements the semantic similarity from Research_V6.tex:
+    - Model: sentence-transformers/all-MiniLM-L6-v2
+    - Dimensions: 384
+    - Threshold: 0.70 cosine similarity
+    """
+    embedding_service = getattr(request.app.state, "embedding_service", None)
+
+    if embedding_service is None:
+        return {
+            "available": False,
+            "loaded": False,
+            "model": "sentence-transformers/all-MiniLM-L6-v2",
+            "dimensions": 384,
+            "device": None,
+            "similarity_threshold": 0.70,
+            "error": "Embedding service not initialized",
+        }
+
+    return embedding_service.get_status()
+
+
+@router.get(
     "/stats",
     response_model=GraphStatsResponse,
     summary="Graph Stats",
@@ -668,6 +925,488 @@ async def get_graph_stats(request: Request) -> GraphStatsResponse:
         edge_count=edge_count,
         episode_count=episode_count,
     )
+
+
+class GraphCleanupRequest(BaseModel):
+    """Request for graph cleanup operation."""
+    delete_similar_to: bool = Field(default=True, description="Delete all SIMILAR_TO edges")
+    merge_duplicate_entities: bool = Field(default=True, description="Merge duplicate entities")
+    delete_orphan_entities: bool = Field(default=True, description="Delete orphan entities")
+    keep_episodes: int = Field(default=50, ge=0, le=500, description="Keep N most recent episodes (0=all)")
+
+
+class GraphCleanupResponse(BaseModel):
+    """Response from graph cleanup operation."""
+    success: bool
+    similar_to_deleted: int = 0
+    entities_merged: int = 0
+    orphan_entities_deleted: int = 0
+    old_episodes_deleted: int = 0
+    message: str = ""
+
+
+@router.post(
+    "/cleanup",
+    response_model=GraphCleanupResponse,
+    summary="Cleanup Graph",
+    description="Clean up the graph to prevent hairball visualization. Deletes SIMILAR_TO edges, merges duplicates, removes orphans.",
+)
+async def cleanup_graph(
+    request: Request,
+    cleanup_request: GraphCleanupRequest = GraphCleanupRequest(),
+) -> GraphCleanupResponse:
+    """
+    Clean up the Neo4j graph to establish a clean baseline.
+
+    This is useful when the graph has become too dense with:
+    - Too many SIMILAR_TO edges (will be recalculated with proper threshold)
+    - Duplicate entity nodes
+    - Orphan entities with no relationships
+    - Old episodes that are no longer relevant
+
+    Use this endpoint before deploying graph schema changes.
+    """
+    neo4j_client = getattr(request.app.state, "neo4j_client", None)
+
+    if neo4j_client is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Neo4j client not available",
+        )
+
+    try:
+        stats = await neo4j_client.cleanup_graph(
+            delete_similar_to=cleanup_request.delete_similar_to,
+            merge_duplicate_entities=cleanup_request.merge_duplicate_entities,
+            delete_orphan_entities=cleanup_request.delete_orphan_entities,
+            keep_episodes=cleanup_request.keep_episodes,
+        )
+
+        return GraphCleanupResponse(
+            success=True,
+            similar_to_deleted=stats.get("similar_to_deleted", 0),
+            entities_merged=stats.get("entities_merged", 0),
+            orphan_entities_deleted=stats.get("orphan_entities_deleted", 0),
+            old_episodes_deleted=stats.get("old_episodes_deleted", 0),
+            message=f"Graph cleanup complete. Removed {stats.get('similar_to_deleted', 0)} SIMILAR_TO edges.",
+        )
+
+    except Exception as e:
+        logger.error(f"Graph cleanup failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Cleanup failed: {str(e)}",
+        )
+
+
+@router.get(
+    "/detailed-stats",
+    summary="Detailed Graph Stats",
+    description="Get detailed statistics including node/edge counts by type",
+)
+async def get_detailed_graph_stats(request: Request) -> dict:
+    """Get detailed graph statistics by node and edge type."""
+    neo4j_client = getattr(request.app.state, "neo4j_client", None)
+
+    if neo4j_client is None:
+        return {"error": "Neo4j client not available"}
+
+    try:
+        return await neo4j_client.get_graph_stats()
+    except Exception as e:
+        logger.error(f"Failed to get detailed stats: {e}")
+        return {"error": str(e)}
+
+
+# =============================================================================
+# Episode Generation via Reasoning Agent
+# =============================================================================
+
+# Template-based schema for service definitions
+SERVICE_TEMPLATES = [
+    {
+        "name": "neo4j",
+        "type": "database",
+        "port": 7687,
+        "description": "Graph database for episodic memory and knowledge storage",
+        "health_endpoint": "/",
+        "dependencies": ["backend"],
+        "common_issues": ["memory_pressure", "connection_pool_exhaustion", "slow_queries"],
+    },
+    {
+        "name": "prometheus",
+        "type": "monitoring",
+        "port": 9090,
+        "description": "Metrics collection, alerting, and time-series database",
+        "health_endpoint": "/-/healthy",
+        "dependencies": ["otel-collector"],
+        "common_issues": ["scrape_target_down", "storage_full", "query_timeout"],
+    },
+    {
+        "name": "grafana",
+        "type": "visualization",
+        "port": 3001,
+        "description": "Dashboard visualization and alerting UI",
+        "health_endpoint": "/api/health",
+        "dependencies": ["prometheus", "loki", "tempo"],
+        "common_issues": ["dashboard_load_timeout", "datasource_error", "auth_failure"],
+    },
+    {
+        "name": "loki",
+        "type": "logging",
+        "port": 3100,
+        "description": "Log aggregation and querying system",
+        "health_endpoint": "/ready",
+        "dependencies": ["otel-collector"],
+        "common_issues": ["ingestion_backlog", "storage_limit", "rate_limiting"],
+    },
+    {
+        "name": "tempo",
+        "type": "tracing",
+        "port": 3200,
+        "description": "Distributed tracing backend for trace storage and querying",
+        "health_endpoint": "/ready",
+        "dependencies": ["otel-collector"],
+        "common_issues": ["trace_storage_full", "span_drop", "query_timeout"],
+    },
+    {
+        "name": "otel-collector",
+        "type": "telemetry",
+        "port": 4317,
+        "description": "OpenTelemetry collector for unified telemetry pipeline",
+        "health_endpoint": "/",
+        "dependencies": [],
+        "common_issues": ["exporter_failure", "pipeline_blocked", "memory_limit"],
+    },
+    {
+        "name": "backend",
+        "type": "api",
+        "port": 8000,
+        "description": "FastAPI backend with dual LLM agents (Qwen3-4B + Qwen3-14B)",
+        "health_endpoint": "/api/v1/health",
+        "dependencies": ["neo4j", "prometheus", "loki"],
+        "common_issues": ["llm_timeout", "api_latency", "database_connection"],
+    },
+    {
+        "name": "frontend",
+        "type": "ui",
+        "port": 3000,
+        "description": "React dashboard for Constitutional AIOps visualization",
+        "health_endpoint": "/",
+        "dependencies": ["backend"],
+        "common_issues": ["api_unreachable", "render_error", "websocket_disconnect"],
+    },
+]
+
+# Episode generation prompt template
+EPISODE_GENERATION_TEMPLATE = """You are an expert SRE analyzing infrastructure for the Constitutional AIOps system.
+
+Generate a realistic, resolved incident episode for the {service_name} service based on:
+- Service Type: {service_type}
+- Description: {service_description}
+- Port: {service_port}
+- Dependencies: {dependencies}
+- Common Issues: {common_issues}
+
+Connected services in this infrastructure:
+{all_services}
+
+Generate a detailed, realistic incident that:
+1. Could actually occur with this service type
+2. Has a clear root cause
+3. Shows proper causal chain
+4. Includes remediation actions that worked
+5. Affects appropriate dependent services
+
+Return ONLY valid JSON matching this exact schema:
+{{
+    "title": "Concise incident title (50 chars max)",
+    "description": "Detailed technical description of what happened, including metrics and symptoms",
+    "severity": "critical|warning|info",
+    "category": "performance|connectivity|resource|error|security",
+    "root_cause": "The underlying technical cause",
+    "causal_chain": ["Initial event", "Cascading effect", "Final symptom"],
+    "confidence": 0.85,
+    "remediation_actions": ["Action 1 that resolved it", "Action 2"],
+    "affected_services": ["{service_name}", "other affected service"],
+    "resolution_time_minutes": 30,
+    "key_metrics": {{
+        "metric_name": "abnormal_value",
+        "threshold": "normal_threshold"
+    }}
+}}"""
+
+
+class GenerateEpisodesRequest(BaseModel):
+    """Request to generate demo episodes via Reasoning Agent."""
+    services: list[str] | None = Field(
+        default=None,
+        description="Specific services to generate episodes for. If None, generates for all."
+    )
+    count_per_service: int = Field(
+        default=1,
+        ge=1,
+        le=3,
+        description="Number of episodes per service (1-3)"
+    )
+    clear_existing: bool = Field(
+        default=True,
+        description="Clear existing graph data before generating"
+    )
+
+
+class GenerateEpisodesResponse(BaseModel):
+    """Response from episode generation."""
+    success: bool
+    episodes_created: int
+    services_processed: list[str]
+    errors: list[str]
+    message: str
+
+
+@router.post(
+    "/generate-episodes",
+    response_model=GenerateEpisodesResponse,
+    summary="Generate Episodes via Reasoning Agent",
+    description="Generate realistic demo episodes using Qwen3-14B based on actual service templates",
+)
+async def generate_episodes(
+    request: Request,
+    gen_request: GenerateEpisodesRequest = GenerateEpisodesRequest(),
+) -> GenerateEpisodesResponse:
+    """
+    Generate realistic episodes using the Reasoning Agent (Qwen3-14B).
+
+    This uses template-based schemas for each service to create episodes
+    that accurately reflect the Constitutional AIOps architecture.
+    """
+    reasoning_agent = getattr(request.app.state, "reasoning_agent", None)
+    neo4j_client = getattr(request.app.state, "neo4j_client", None)
+
+    if reasoning_agent is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Reasoning Agent not available. Ensure Jarvis Labs VM is running.",
+        )
+
+    if neo4j_client is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Neo4j client not available.",
+        )
+
+    errors: list[str] = []
+    episodes_created = 0
+    services_processed: list[str] = []
+
+    try:
+        # Clear existing data if requested
+        if gen_request.clear_existing:
+            async with neo4j_client.session() as session:
+                await session.run("MATCH (n) DETACH DELETE n")
+            logger.info("Cleared existing graph data")
+
+        # Determine which services to process
+        target_services = gen_request.services or [s["name"] for s in SERVICE_TEMPLATES]
+        all_services_text = "\n".join([
+            f"- {s['name']} ({s['type']}): {s['description']}"
+            for s in SERVICE_TEMPLATES
+        ])
+
+        now = datetime.utcnow()
+
+        for service_template in SERVICE_TEMPLATES:
+            if service_template["name"] not in target_services:
+                continue
+
+            svc_name = service_template["name"]
+            services_processed.append(svc_name)
+
+            for i in range(gen_request.count_per_service):
+                try:
+                    # Build prompt from template
+                    prompt = EPISODE_GENERATION_TEMPLATE.format(
+                        service_name=svc_name,
+                        service_type=service_template["type"],
+                        service_description=service_template["description"],
+                        service_port=service_template["port"],
+                        dependencies=", ".join(service_template["dependencies"]) or "none",
+                        common_issues=", ".join(service_template["common_issues"]),
+                        all_services=all_services_text,
+                    )
+
+                    # Call reasoning agent
+                    logger.info(f"Generating episode for {svc_name} ({i+1}/{gen_request.count_per_service})")
+                    response = await reasoning_agent.chat(prompt)
+
+                    # Parse JSON from response - AgentResponse has .content attribute
+                    response_text = response.content if hasattr(response, 'content') else str(response)
+
+                    # Remove thinking tags if present (Qwen3 sometimes outputs <think>...</think>)
+                    if "<think>" in response_text:
+                        response_text = response_text.split("</think>")[-1].strip()
+
+                    # Extract JSON from markdown code blocks if present
+                    if "```json" in response_text:
+                        response_text = response_text.split("```json")[1].split("```")[0]
+                    elif "```" in response_text:
+                        response_text = response_text.split("```")[1].split("```")[0]
+
+                    # Try to find JSON object in response
+                    response_text = response_text.strip()
+                    if not response_text.startswith("{"):
+                        # Find first { and last }
+                        start = response_text.find("{")
+                        end = response_text.rfind("}") + 1
+                        if start != -1 and end > start:
+                            response_text = response_text[start:end]
+
+                    episode_data = json.loads(response_text)
+
+                    # Generate IDs
+                    episode_id = f"ep-{svc_name}-{uuid4().hex[:6]}"
+                    detected_at = now - timedelta(hours=i * 4 + 2)
+                    resolved_at = detected_at + timedelta(minutes=episode_data.get("resolution_time_minutes", 30))
+
+                    # Store in Neo4j with full schema
+                    async with neo4j_client.session() as session:
+                        # Create Service node with full details
+                        await session.run("""
+                            MERGE (s:Service {name: $name})
+                            SET s.type = $type,
+                                s.port = $port,
+                                s.description = $description,
+                                s.health_endpoint = $health,
+                                s.status = 'healthy',
+                                s.last_checked = $now,
+                                s.uptime_percent = 99.9
+                        """, {
+                            "name": svc_name,
+                            "type": service_template["type"],
+                            "port": service_template["port"],
+                            "description": service_template["description"],
+                            "health": service_template["health_endpoint"],
+                            "now": now.isoformat(),
+                        })
+
+                        # Create Episode node
+                        await session.run("""
+                            CREATE (e:Episode {
+                                episode_id: $eid,
+                                title: $title,
+                                description: $desc,
+                                severity: $severity,
+                                category: $category,
+                                root_cause: $root_cause,
+                                confidence: $confidence,
+                                outcome: 'resolved',
+                                detected_at: $detected,
+                                resolved_at: $resolved,
+                                resolution_time_minutes: $resolution_time
+                            })
+                        """, {
+                            "eid": episode_id,
+                            "title": episode_data["title"],
+                            "desc": episode_data["description"],
+                            "severity": episode_data["severity"],
+                            "category": episode_data["category"],
+                            "root_cause": episode_data["root_cause"],
+                            "confidence": episode_data["confidence"],
+                            "detected": detected_at.isoformat(),
+                            "resolved": resolved_at.isoformat(),
+                            "resolution_time": episode_data.get("resolution_time_minutes", 30),
+                        })
+
+                        # Create INVOLVES relationship (Episode -> Service)
+                        await session.run("""
+                            MATCH (e:Episode {episode_id: $eid}), (s:Service {name: $name})
+                            MERGE (e)-[:INVOLVES {weight: 1.0}]->(s)
+                        """, {"eid": episode_id, "name": svc_name})
+
+                        # Create additional affected services
+                        for affected_svc in episode_data.get("affected_services", []):
+                            if affected_svc != svc_name:
+                                # Find template for affected service
+                                affected_template = next(
+                                    (t for t in SERVICE_TEMPLATES if t["name"] == affected_svc),
+                                    None
+                                )
+                                if affected_template:
+                                    await session.run("""
+                                        MERGE (s:Service {name: $name})
+                                        SET s.type = $type, s.status = 'healthy'
+                                        WITH s
+                                        MATCH (e:Episode {episode_id: $eid})
+                                        MERGE (e)-[:INVOLVES {weight: 0.5}]->(s)
+                                    """, {
+                                        "name": affected_svc,
+                                        "type": affected_template["type"],
+                                        "eid": episode_id,
+                                    })
+
+                        # Create RootCauseType node
+                        rc_id = episode_data["root_cause"].lower().replace(" ", "_")[:50]
+                        await session.run("""
+                            MERGE (rc:RootCauseType {id: $id})
+                            SET rc.name = $name
+                            WITH rc
+                            MATCH (e:Episode {episode_id: $eid})
+                            MERGE (e)-[:CAUSED_BY {confidence: $conf}]->(rc)
+                        """, {
+                            "id": rc_id,
+                            "name": episode_data["root_cause"],
+                            "eid": episode_id,
+                            "conf": episode_data["confidence"],
+                        })
+
+                        # Create Action nodes
+                        for action in episode_data.get("remediation_actions", [])[:3]:
+                            action_id = action.lower().replace(" ", "_")[:50]
+                            await session.run("""
+                                MERGE (a:Action {id: $id})
+                                SET a.name = $name, a.success_rate = 0.95
+                                WITH a
+                                MATCH (e:Episode {episode_id: $eid})
+                                MERGE (e)-[:RESOLVED_BY]->(a)
+                            """, {"id": action_id, "name": action, "eid": episode_id})
+
+                        # Create causal chain as Entity nodes
+                        chain = episode_data.get("causal_chain", [])
+                        for j in range(len(chain) - 1):
+                            await session.run("""
+                                MERGE (e1:Entity {name: $from_name})
+                                MERGE (e2:Entity {name: $to_name})
+                                MERGE (e1)-[:CAUSED {source_episode: $eid}]->(e2)
+                            """, {
+                                "from_name": chain[j],
+                                "to_name": chain[j + 1],
+                                "eid": episode_id,
+                            })
+
+                    episodes_created += 1
+                    logger.info(f"Created episode: {episode_data['title']}")
+
+                except json.JSONDecodeError as e:
+                    errors.append(f"{svc_name}: Invalid JSON response - {str(e)[:50]}")
+                    logger.warning(f"JSON parse error for {svc_name}: {e}")
+                except Exception as e:
+                    errors.append(f"{svc_name}: {str(e)[:50]}")
+                    logger.warning(f"Error generating episode for {svc_name}: {e}")
+
+        return GenerateEpisodesResponse(
+            success=episodes_created > 0,
+            episodes_created=episodes_created,
+            services_processed=services_processed,
+            errors=errors,
+            message=f"Generated {episodes_created} episodes for {len(services_processed)} services via Reasoning Agent (Qwen3-14B)",
+        )
+
+    except Exception as e:
+        logger.error(f"Episode generation failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Episode generation failed: {str(e)}",
+        )
 
 
 __all__ = ["router"]

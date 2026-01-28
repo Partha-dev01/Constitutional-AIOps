@@ -32,6 +32,7 @@ logger = logging.getLogger(__name__)
 # Configuration
 PROCESSING_INTERVAL_SECONDS = 30  # How often to process telemetry
 TELEMETRY_WINDOW_MINUTES = 5  # How far back to look for telemetry
+REASONING_INTERVAL_CYCLES = 10  # Run reasoning every N fast cycles (10 * 30s = 5 min)
 
 
 class BackgroundTelemetryProcessor:
@@ -81,10 +82,14 @@ class BackgroundTelemetryProcessor:
             "telemetry_processed": 0,
             "anomalies_detected": 0,
             "escalations_to_reasoning": 0,
+            "routine_reasoning_runs": 0,
             "episodes_created": 0,
             "errors": 0,
             "last_run": None,
         }
+
+        # Routine reasoning counter (Phase 5)
+        self._fast_cycle_count = 0
 
         logger.info(f"BackgroundTelemetryProcessor initialized (interval: {processing_interval}s)")
 
@@ -131,11 +136,13 @@ class BackgroundTelemetryProcessor:
         2. Process through Fast Agent
         3. Escalate if needed
         4. Store in graph
+        5. Periodic routine reasoning (every REASONING_INTERVAL_CYCLES)
         """
         self.stats["total_cycles"] += 1
         self.stats["last_run"] = datetime.utcnow().isoformat()
+        self._fast_cycle_count += 1
 
-        logger.debug(f"Starting processing cycle #{self.stats['total_cycles']}")
+        logger.debug(f"Starting processing cycle #{self.stats['total_cycles']} (reasoning in {REASONING_INTERVAL_CYCLES - self._fast_cycle_count} cycles)")
 
         # Use TelemetryCollector - the proper architecture interface
         try:
@@ -187,6 +194,90 @@ class BackgroundTelemetryProcessor:
             logger.warning(f"Fast Agent annotation failed: {e}")
             self.stats["errors"] += 1
 
+        # Phase 5: Periodic routine reasoning (every REASONING_INTERVAL_CYCLES)
+        if self._fast_cycle_count >= REASONING_INTERVAL_CYCLES:
+            self._fast_cycle_count = 0
+            await self._routine_reasoning_analysis()
+
+    async def _routine_reasoning_analysis(self) -> None:
+        """
+        Periodic deep analysis by Reasoning Agent.
+
+        Phase 5: Runs every REASONING_INTERVAL_CYCLES (default: 10 cycles = 5 minutes)
+        Analyzes recent episodes for patterns, trends, and systemic issues.
+        """
+        logger.info("Starting routine reasoning analysis...")
+        self.stats["routine_reasoning_runs"] += 1
+
+        try:
+            # Query recent episodes (last 5 minutes)
+            if not self.episode_store:
+                logger.warning("No episode store available for routine reasoning")
+                return
+
+            recent_episodes = await self.episode_store.get_recent_episodes(minutes=5)
+
+            if not recent_episodes or len(recent_episodes) == 0:
+                logger.info("No recent episodes for routine reasoning - system healthy")
+                return
+
+            logger.info(f"Analyzing {len(recent_episodes)} recent episodes for patterns...")
+
+            # Build context for trend analysis
+            episodes_summary = []
+            for ep in recent_episodes[:10]:  # Limit to 10 most recent
+                episodes_summary.append(
+                    f"- [{ep.severity}] {ep.title}: {ep.description[:100]}... "
+                    f"(services: {', '.join(ep.affected_services)})"
+                )
+
+            analysis_prompt = f"""Analyze these {len(recent_episodes)} recent incidents for patterns and trends:
+
+{chr(10).join(episodes_summary)}
+
+Identify:
+1. Recurring root causes
+2. Service correlation patterns
+3. Potential systemic issues
+4. Preventive recommendations
+
+Provide a brief summary of system health and any concerning patterns."""
+
+            # Use reasoning agent for trend analysis
+            trend_result = await self.reasoning_agent.analyze_incident({
+                "service": "system-wide",
+                "description": "Routine trend analysis",
+                "severity": "info",
+                "context": analysis_prompt,
+            })
+
+            logger.info(f"Routine reasoning complete: {trend_result.content[:200] if trend_result.content else 'No insights'}")
+
+            # Store as insight episode if significant patterns found
+            if trend_result.content and len(trend_result.content) > 50:
+                insight_episode = Episode(
+                    episode_id=str(uuid4()),
+                    incident_id=str(uuid4()),
+                    title=f"Trend Analysis: {trend_result.content[:60]}",
+                    description=trend_result.content,
+                    severity="info",
+                    category="trend_analysis",
+                    detected_at=datetime.utcnow(),
+                    affected_services=list(set(
+                        svc for ep in recent_episodes for svc in ep.affected_services
+                    ))[:10],  # Aggregate affected services
+                    root_cause="routine_analysis",
+                    causal_chain=[],
+                    confidence=trend_result.confidence,
+                    outcome="insight",
+                )
+                await self.episode_store.store_episode(insight_episode)
+                logger.info(f"Stored trend analysis insight: {insight_episode.episode_id[:8]}...")
+
+        except Exception as e:
+            logger.error(f"Routine reasoning analysis failed: {e}")
+            self.stats["errors"] += 1
+
     def _build_window_summary(self, window: Any) -> str:
         """Build a summary of telemetry from TelemetryWindow for the Fast Agent."""
         summary_parts = [f"=== Telemetry Summary (last {TELEMETRY_WINDOW_MINUTES} min) ==="]
@@ -231,11 +322,54 @@ class BackgroundTelemetryProcessor:
 
         return "\n".join(summary_parts)
 
+    def _extract_services_from_window(self, window: Any) -> list[str]:
+        """
+        Extract actual service/container names from telemetry window.
+
+        Phase 1: Replace hardcoded "combined" with actual container names.
+        Extracts from Loki log labels (container_name) and trace service names.
+        """
+        services = set()
+
+        # Extract from log labels (Loki includes container_name label)
+        for log in window.logs:
+            if hasattr(log, 'labels') and log.labels:
+                # Try different label names that promtail might use
+                container = (
+                    log.labels.get('container_name') or
+                    log.labels.get('container') or
+                    log.labels.get('service') or
+                    log.labels.get('job')
+                )
+                if container and container not in ('containerlogs', 'varlogs'):
+                    # Clean up container name (remove aiops- prefix for cleaner display)
+                    clean_name = container.replace('aiops-', '')
+                    services.add(clean_name)
+
+            # Also check service attribute
+            if hasattr(log, 'service') and log.service and log.service != 'all':
+                services.add(log.service)
+
+        # Extract from traces (service names)
+        for trace in window.traces:
+            if hasattr(trace, 'service') and trace.service:
+                services.add(trace.service)
+
+        # If no services found, return list of known containers
+        if not services:
+            # Default to known container names from docker-compose
+            services = {'backend', 'frontend', 'neo4j', 'grafana', 'prometheus', 'loki'}
+
+        return list(services) if services else ['unknown']
+
     async def _store_annotation(self, annotation: Any, window: Any) -> None:
         """Store annotation in Neo4j graph with episode compaction."""
         try:
             metadata = annotation.metadata or {}
             episode_id = str(uuid4())
+
+            # Extract actual service names from telemetry (Phase 1 fix)
+            affected_services = self._extract_services_from_window(window)
 
             # Create proper Episode object for EpisodeStore
             episode = Episode(
@@ -246,11 +380,12 @@ class BackgroundTelemetryProcessor:
                 severity=metadata.get("severity", "info"),
                 category=metadata.get("category", "unknown"),
                 detected_at=datetime.utcnow(),
-                affected_services=["combined"],  # Track which services are affected
+                affected_services=affected_services,  # Use extracted services instead of "combined"
                 root_cause=metadata.get("category", "unknown"),
                 causal_chain=metadata.get("key_indicators", []),
                 confidence=annotation.confidence,
                 outcome="open",  # New episode, not yet resolved
+                triplets=metadata.get("triplets", []),  # Phase 2: Store semantic triplets
             )
 
             # Episode compaction: Check for existing similar episodes
@@ -282,33 +417,34 @@ class BackgroundTelemetryProcessor:
                 self.stats["episodes_created"] += 1
                 logger.info(f"Stored NEW episode {episode_id}: {episode.title[:50]}")
 
-            # Create graph node if Neo4j available
+            # Create graph nodes for each affected service if Neo4j available
             if self.neo4j_client:
-                query = """
-                MERGE (s:Service {name: $service})
-                CREATE (a:Annotation {
-                    id: $id,
-                    timestamp: datetime($timestamp),
-                    severity: $severity,
-                    category: $category,
-                    summary: $summary,
-                    confidence: $confidence
-                })
-                CREATE (s)-[:HAS_ANNOTATION]->(a)
-                RETURN a.id
-                """
-                async with self.neo4j_client.session() as session:
-                    await session.run(
-                        query,
-                        service="combined",
-                        id=episode_id,
-                        timestamp=episode.detected_at.isoformat(),
-                        severity=episode.severity,
-                        category=episode.category,
-                        summary=episode.description[:500],
-                        confidence=episode.confidence,
-                    )
-                logger.debug(f"Created graph node for annotation {episode_id}")
+                for service_name in affected_services:
+                    query = """
+                    MERGE (s:Service {name: $service})
+                    CREATE (a:Annotation {
+                        id: $id,
+                        timestamp: datetime($timestamp),
+                        severity: $severity,
+                        category: $category,
+                        summary: $summary,
+                        confidence: $confidence
+                    })
+                    CREATE (s)-[:HAS_ANNOTATION]->(a)
+                    RETURN a.id
+                    """
+                    async with self.neo4j_client.session() as session:
+                        await session.run(
+                            query,
+                            service=service_name,  # Use actual service name
+                            id=episode_id,
+                            timestamp=episode.detected_at.isoformat(),
+                            severity=episode.severity,
+                            category=episode.category,
+                            summary=episode.description[:500],
+                            confidence=episode.confidence,
+                        )
+                logger.debug(f"Created graph nodes for annotation {episode_id} (services: {affected_services})")
 
         except Exception as e:
             logger.warning(f"Failed to store annotation: {e}")
@@ -317,17 +453,22 @@ class BackgroundTelemetryProcessor:
         """Escalate to Reasoning Agent for deep analysis."""
         logger.info("Escalating to Reasoning Agent for RCA")
 
+        # Extract actual services for context
+        affected_services = self._extract_services_from_window(window)
+        services_str = ', '.join(affected_services)
+
         try:
             context = f"""
 Fast Agent Assessment: {annotation.content}
 Severity: {annotation.metadata.get('severity', 'unknown')}
 Category: {annotation.metadata.get('category', 'unknown')}
+Affected Services: {services_str}
 Telemetry: {window.log_count} logs, {len(window.metrics)} metrics, {len(window.traces)} traces
 
 Please perform root cause analysis and suggest remediation actions.
 """
             rca_result = await self.reasoning_agent.analyze_incident({
-                "service": "combined",
+                "service": services_str,
                 "description": annotation.content,
                 "severity": annotation.metadata.get("severity", "warning"),
                 "context": context,
@@ -346,7 +487,7 @@ Please perform root cause analysis and suggest remediation actions.
                     severity=annotation.metadata.get("severity", "warning"),
                     category="rca",
                     detected_at=datetime.utcnow(),
-                    affected_services=["combined"],
+                    affected_services=affected_services,  # Use extracted services
                     root_cause=rca_result.content[:200] if rca_result.content else "unknown",
                     causal_chain=[annotation.content[:100]] if annotation.content else [],
                     confidence=rca_result.confidence,

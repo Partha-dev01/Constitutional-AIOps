@@ -30,6 +30,84 @@ logger = logging.getLogger(__name__)
 # Maximum activity log entries to keep (prevent memory growth)
 MAX_ACTIVITY_LOG_SIZE = 50
 
+# =============================================================================
+# Entity Canonicalization (v0.6.0 - Prevent entity proliferation)
+# =============================================================================
+# Maps entity variants to canonical forms to reduce node count in graph
+# Without this, LLM creates: "api-gateway", "api_gateway", "ApiGateway", "API Gateway" → 4 nodes
+# With this: All map to "api_gateway" → 1 node
+
+ENTITY_CANONICALIZATION: dict[str, list[str]] = {
+    # Infrastructure services
+    "api_gateway": ["api-gateway", "apigateway", "api gateway", "gateway", "apigw"],
+    "database": ["db", "postgres", "postgresql", "mysql", "mongodb", "redis_db", "data_store"],
+    "cache": ["redis", "memcached", "cache_service", "caching", "redis_cache"],
+    "load_balancer": ["lb", "load-balancer", "loadbalancer", "nginx", "haproxy", "elb", "alb"],
+    "message_queue": ["mq", "rabbitmq", "kafka", "sqs", "message_broker", "queue", "pubsub"],
+
+    # Error types
+    "connection_timeout": ["timeout", "conn_timeout", "request_timeout", "gateway_timeout", "504"],
+    "memory_error": ["oom", "out_of_memory", "oom_error", "memory_exhausted", "heap_overflow"],
+    "cpu_error": ["cpu_throttle", "cpu_high", "high_cpu", "cpu_saturation"],
+    "disk_error": ["disk_full", "disk_space", "no_space", "storage_full", "enospc"],
+    "rate_limit": ["throttle", "rate_limited", "429", "too_many_requests"],
+
+    # Common services
+    "backend": ["backend_service", "api_server", "app_server", "application"],
+    "frontend": ["frontend_service", "web_server", "ui", "client"],
+    "auth_service": ["auth", "authentication", "authorization", "oauth", "identity"],
+    "payment_service": ["payment", "payments", "billing", "checkout"],
+    "notification_service": ["notification", "notifications", "alerting", "email_service"],
+
+    # Observability
+    "prometheus": ["prom", "prometheus_server", "metrics_server"],
+    "grafana": ["graf", "grafana_server", "dashboard"],
+    "loki": ["loki_server", "log_aggregator"],
+
+    # Actions
+    "restart": ["restart_service", "restart_pod", "service_restart", "pod_restart"],
+    "scale": ["scale_up", "scale_down", "scale_replicas", "horizontal_scale", "autoscale"],
+    "rollback": ["rollback_deployment", "revert", "undo_deployment"],
+}
+
+
+def canonicalize_entity(name: str) -> str:
+    """
+    Map entity variants to canonical form.
+
+    This reduces entity node proliferation in the graph by mapping
+    common variants to a single canonical name.
+
+    Args:
+        name: Raw entity name from LLM extraction
+
+    Returns:
+        Canonical entity name (lowercase, underscores)
+
+    Examples:
+        "API Gateway" → "api_gateway"
+        "Redis" → "cache"
+        "connection timeout" → "connection_timeout"
+        "my_custom_service" → "my_custom_service" (unchanged)
+    """
+    # Normalize: lowercase, replace hyphens/spaces with underscores
+    name_lower = name.lower().strip().replace("-", "_").replace(" ", "_")
+
+    # Remove consecutive underscores
+    while "__" in name_lower:
+        name_lower = name_lower.replace("__", "_")
+
+    # Strip leading/trailing underscores
+    name_lower = name_lower.strip("_")
+
+    # Check if it matches a canonical form or any variant
+    for canonical, variants in ENTITY_CANONICALIZATION.items():
+        if name_lower == canonical or name_lower in variants:
+            return canonical
+
+    # Not found - return normalized name as-is
+    return name_lower
+
 
 # System prompt for fast annotation
 # /no_think disables Qwen3 thinking mode for faster, direct responses
@@ -42,6 +120,7 @@ Your job is to quickly analyze telemetry data (logs, metrics, traces) and:
 3. Categorize the issue type (performance, error, security, resource)
 4. Provide a confidence score (0.0-1.0)
 5. Decide if deeper analysis is needed
+6. Extract semantic triplets: relationships between entities found in the telemetry
 
 IMPORTANT: You MUST respond with ONLY valid JSON, no additional text or explanation.
 
@@ -52,8 +131,22 @@ IMPORTANT: You MUST respond with ONLY valid JSON, no additional text or explanat
     "confidence": 0.85,
     "summary": "Brief description of the issue",
     "needs_reasoning": false,
-    "key_indicators": ["indicator1", "indicator2"]
+    "key_indicators": ["indicator1", "indicator2"],
+    "triplets": [
+        {"subject": "entity1", "relation": "VERB_PHRASE", "object": "entity2"}
+    ]
 }
+
+TRIPLET EXTRACTION RULES:
+- Extract meaningful relationships from the telemetry data
+- subject/object: service names, components, resources (e.g., "backend", "database", "memory")
+- relation: action verbs in UPPER_CASE (e.g., "EXPERIENCED", "CAUSED", "AFFECTED", "CONNECTED_TO", "DEPENDS_ON", "TRIGGERED", "RESOLVED", "DEGRADED")
+- Examples:
+  - {"subject": "backend", "relation": "EXPERIENCED", "object": "high_latency"}
+  - {"subject": "memory_leak", "relation": "CAUSED", "object": "oom_error"}
+  - {"subject": "database", "relation": "AFFECTED", "object": "api_gateway"}
+  - {"subject": "prometheus", "relation": "MONITORS", "object": "backend"}
+- Extract 1-5 triplets per analysis
 
 Be fast and decisive. When in doubt, set needs_reasoning=true.
 """
@@ -144,6 +237,21 @@ class FastAnnotator(BaseAgent):
 
             # Build agent response
             confidence = annotation.get("confidence", 0.5)
+
+            # Extract and validate triplets (Phase 2: Semantic triplet extraction)
+            # Uses canonicalize_entity() to map variants to canonical forms
+            raw_triplets = annotation.get("triplets", [])
+            validated_triplets = []
+            for triplet in raw_triplets:
+                if isinstance(triplet, dict) and all(k in triplet for k in ["subject", "relation", "object"]):
+                    # Canonicalize entities to prevent node proliferation
+                    # e.g., "API Gateway", "api-gateway", "apigateway" all → "api_gateway"
+                    validated_triplets.append({
+                        "subject": canonicalize_entity(str(triplet["subject"])),
+                        "relation": str(triplet["relation"]).upper().replace(" ", "_").replace("-", "_"),
+                        "object": canonicalize_entity(str(triplet["object"])),
+                    })
+
             result = AgentResponse(
                 content=annotation.get("summary", "Unknown"),
                 confidence=confidence,
@@ -156,6 +264,7 @@ class FastAnnotator(BaseAgent):
                     "category": annotation.get("category", "unknown"),
                     "key_indicators": annotation.get("key_indicators", []),
                     "needs_reasoning": annotation.get("needs_reasoning", False),
+                    "triplets": validated_triplets,  # Phase 2: Include semantic triplets
                 },
             )
 

@@ -6,7 +6,7 @@ import { Loader2, ZoomIn, ZoomOut, Maximize2, Play, Pause, RotateCcw, Filter } f
 interface EpisodicNode extends NodeObject {
   id: string
   label: string
-  type: 'service' | 'episode' | 'incident' | 'action' | 'root_cause'
+  type: 'service' | 'episode' | 'incident' | 'action' | 'root_cause' | 'entity'
   status?: 'healthy' | 'warning' | 'critical' | 'detected' | 'analyzing' | 'remediating' | 'resolved'
   timestamp?: string
   confidence?: number
@@ -26,6 +26,8 @@ interface EpisodicNode extends NodeObject {
   // Service-specific
   incidentCount?: number
   lastIncident?: string
+  // Entity-specific (LLM-extracted)
+  relationCount?: number
   // Force graph properties
   x?: number
   y?: number
@@ -39,8 +41,9 @@ interface EpisodicLink extends LinkObject {
   source: string | EpisodicNode
   target: string | EpisodicNode
   label?: string
-  type?: 'depends_on' | 'affects' | 'caused_by' | 'resolved_by' | 'similar_to'
+  type?: string  // Dynamic: depends_on, affects, caused_by, resolved_by, similar_to, or LLM-extracted relations
   weight?: number
+  metadata?: Record<string, unknown>  // Contains extraction_method for LLM edges
 }
 
 interface EpisodicGraphExplorerProps {
@@ -55,45 +58,64 @@ interface EpisodicGraphExplorerProps {
 
 // Node color mapping by type and status
 const getNodeColor = (node: EpisodicNode): string => {
-  const colors = {
-    service: {
-      healthy: '#22c55e',    // green
-      warning: '#f59e0b',    // amber
-      critical: '#ef4444',   // red
-      default: '#3b82f6',    // blue
-    },
-    episode: {
-      detected: '#f59e0b',   // amber
-      analyzing: '#8b5cf6',  // purple
-      remediating: '#3b82f6', // blue
-      resolved: '#22c55e',   // green
-      default: '#a855f7',    // purple
-    },
+  // Status-based colors for service and episode
+  const serviceColors: Record<string, string> = {
+    healthy: '#22c55e',    // green
+    warning: '#f59e0b',    // amber
+    critical: '#ef4444',   // red
+    default: '#3b82f6',    // blue
+  }
+
+  const episodeColors: Record<string, string> = {
+    detected: '#f59e0b',   // amber
+    analyzing: '#8b5cf6',  // purple
+    remediating: '#3b82f6', // blue
+    resolved: '#22c55e',   // green
+    default: '#a855f7',    // purple
+  }
+
+  // Type-based colors for other node types
+  const typeColors: Record<string, string> = {
     incident: '#ef4444',     // red
     action: '#06b6d4',       // cyan
     root_cause: '#f97316',   // orange
+    entity: '#ec4899',       // pink - LLM-extracted entities
   }
 
   if (node.type === 'service') {
-    return colors.service[node.status as keyof typeof colors.service] || colors.service.default
+    return serviceColors[node.status || 'default'] || serviceColors.default
   }
   if (node.type === 'episode') {
-    return colors.episode[node.status as keyof typeof colors.episode] || colors.episode.default
+    return episodeColors[node.status || 'default'] || episodeColors.default
   }
-  return colors[node.type] || '#64748b'
+  return typeColors[node.type] || '#64748b'
 }
 
 // Link color by relationship type
 const getLinkColor = (link: EpisodicLink): string => {
-  const colors = {
+  const colors: Record<string, string> = {
     depends_on: '#3b82f6',   // blue
     affects: '#ef4444',      // red
     caused_by: '#f97316',    // orange
     resolved_by: '#22c55e',  // green
     similar_to: '#8b5cf6',   // purple
+    // LLM-extracted dynamic relations
+    experienced: '#f97316',  // orange
+    caused: '#ef4444',       // red
+    affected: '#f59e0b',     // amber
+    triggered: '#dc2626',    // red
+    degraded: '#f59e0b',     // amber
+    monitors: '#3b82f6',     // blue
+    connected_to: '#3b82f6', // blue
     default: '#64748b',      // gray
   }
-  return colors[link.type || 'default'] || colors.default
+  const linkType = (link.type || 'default').toLowerCase()
+  // Check if it's an LLM-extracted relation (from metadata)
+  const isLLMRelation = link.metadata?.extraction_method === 'llm'
+  if (isLLMRelation && !colors[linkType]) {
+    return '#ec4899' // pink for unknown LLM relations
+  }
+  return colors[linkType] || colors.default
 }
 
 export function EpisodicGraphExplorer({
@@ -114,16 +136,45 @@ export function EpisodicGraphExplorer({
   const [filterType, setFilterType] = useState<string>('all')
   const [graphDimensions, setGraphDimensions] = useState({ width, height })
 
+  // v0.6.0: Visualization controls to prevent hairball
+  const [showSimilarTo, setShowSimilarTo] = useState(true)
+  const [showEntities, setShowEntities] = useState(true)
+  const [layoutMode, setLayoutMode] = useState<'force' | 'dag'>('force')
+
   // Filter nodes based on type
-  const filteredNodes = filterType === 'all'
+  // v0.6.0: Also filter entities if showEntities is disabled
+  let filteredNodes = filterType === 'all'
     ? nodes
     : nodes.filter(n => n.type === filterType)
 
+  // v0.6.0: Filter out entity nodes if disabled
+  if (!showEntities) {
+    filteredNodes = filteredNodes.filter(n => n.type !== 'entity')
+  }
+
   const filteredNodeIds = new Set(filteredNodes.map(n => n.id))
+
+  // v0.6.0: Filter links based on edge visibility toggles
   const filteredLinks = links.filter(l => {
     const sourceId = typeof l.source === 'string' ? l.source : l.source?.id
     const targetId = typeof l.target === 'string' ? l.target : l.target?.id
-    return filteredNodeIds.has(sourceId || '') && filteredNodeIds.has(targetId || '')
+
+    // Must connect filtered nodes
+    if (!filteredNodeIds.has(sourceId || '') || !filteredNodeIds.has(targetId || '')) {
+      return false
+    }
+
+    // v0.6.0: Filter out SIMILAR_TO edges if disabled
+    if (!showSimilarTo && l.type?.toLowerCase() === 'similar_to') {
+      return false
+    }
+
+    // v0.6.0: Filter out entity-related edges if entities disabled
+    if (!showEntities && (l.type?.toLowerCase() === 'relates' || l.metadata?.extraction_method === 'llm')) {
+      return false
+    }
+
+    return true
   })
 
   // Resize observer
@@ -143,15 +194,58 @@ export function EpisodicGraphExplorer({
     return () => resizeObserver.disconnect()
   }, [width, height])
 
-  // Handle node click
+  // Configure d3 forces for better node separation
+  // v0.6.1: Stable physics to prevent clumping without instability
+  useEffect(() => {
+    if (graphRef.current) {
+      const fg = graphRef.current
+
+      // v0.6.1: Moderate charge repulsion (-300) - stable spreading
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const chargeForce = fg.d3Force('charge') as any
+      if (chargeForce?.strength) chargeForce.strength(-300)
+
+      // v0.6.1: Variable link distance - services spread further from episodes
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const linkForce = fg.d3Force('link') as any
+      if (linkForce?.distance) {
+        linkForce.distance((link: EpisodicLink) => {
+          const linkType = link.type?.toLowerCase() || ''
+          switch (linkType) {
+            case 'similar_to':
+              return 80  // Similar episodes nearby
+            case 'affects':
+            case 'involves':
+              return 120  // Services spread from episodes (was 80)
+            case 'caused_by':
+            case 'experienced':
+              return 100 // Causal relationships
+            case 'resolved_by':
+            case 'remediates':
+              return 130 // Resolutions further out
+            case 'relates':
+              return 90 // LLM-extracted entity relations
+            default:
+              return 100
+          }
+        })
+      }
+
+      // Note: forceCenter doesn't have strength() method, skip it
+
+      // Reheat simulation to apply new forces
+      fg.d3ReheatSimulation()
+    }
+  }, [filteredNodes, filteredLinks])
+
+  // Handle node click - gentle pan without zoom (v0.6.1 fix)
   const handleNodeClick = useCallback((node: EpisodicNode) => {
     setSelectedNode(node)
     onNodeClick?.(node)
 
-    // Center view on clicked node
+    // Gently pan to clicked node without zooming (prevents "fly off" effect)
     if (graphRef.current) {
-      graphRef.current.centerAt(node.x, node.y, 500)
-      graphRef.current.zoom(2, 500)
+      graphRef.current.centerAt(node.x, node.y, 800)  // Slower pan, no zoom
     }
   }, [onNodeClick])
 
@@ -162,7 +256,8 @@ export function EpisodicGraphExplorer({
     // Variable node sizes by type for visual hierarchy
     const baseSize = node.type === 'episode' ? 9 :
                      node.type === 'root_cause' ? 7 :
-                     node.type === 'service' ? 6 : 5  // actions smallest
+                     node.type === 'service' ? 6 :
+                     node.type === 'entity' ? 6 : 5  // actions smallest
     const size = isSelected ? baseSize + 4 : isHovered ? baseSize + 2 : baseSize
     const fontSize = Math.max(9, 11 / globalScale)
 
@@ -193,7 +288,8 @@ export function EpisodicGraphExplorer({
     const icon = node.type === 'service' ? 'S' :
                  node.type === 'episode' ? 'E' :
                  node.type === 'incident' ? '!' :
-                 node.type === 'action' ? 'A' : 'R'
+                 node.type === 'action' ? 'A' :
+                 node.type === 'entity' ? '◆' : 'R'  // Diamond for LLM-extracted entities
     ctx.fillText(icon, node.x || 0, node.y || 0)
 
     // Node label - only show when zoomed in or hovering
@@ -244,13 +340,17 @@ export function EpisodicGraphExplorer({
     ctx.fillStyle = getLinkColor(link)
     ctx.fill()
 
-    // Link label
-    if (link.label && globalScale > 1) {
-      ctx.font = '8px Inter, sans-serif'
-      ctx.fillStyle = '#64748b'
+    // Link label - show relation type when zoomed in or for dynamic relations
+    const relationLabel = link.label || link.type
+    const isLLMRelation = link.metadata?.extraction_method === 'llm'
+    if (relationLabel && (globalScale > 1 || isLLMRelation)) {
+      ctx.font = isLLMRelation ? 'bold 8px Inter, sans-serif' : '8px Inter, sans-serif'
+      ctx.fillStyle = isLLMRelation ? '#ec4899' : '#64748b'
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
-      ctx.fillText(link.label, midX, midY - 8)
+      // Format relation label (replace underscores, capitalize)
+      const displayLabel = relationLabel.replace(/_/g, ' ')
+      ctx.fillText(displayLabel, midX, midY - 8)
     }
   }, [])
 
@@ -303,10 +403,20 @@ export function EpisodicGraphExplorer({
           cooldownTicks={100}
           d3AlphaDecay={0.02}
           d3VelocityDecay={0.4}
+          d3AlphaMin={0.01}
+          // Node size for force calculation
+          nodeRelSize={8}
+          // Auto-fit when simulation stops
+          onEngineStop={() => graphRef.current?.zoomToFit(400, 60)}
           enableNodeDrag={true}
           enableZoomInteraction={true}
           enablePanInteraction={true}
           backgroundColor="transparent"
+          minZoom={0.3}
+          maxZoom={8}
+          // v0.6.0: DAG mode for hierarchical layout
+          dagMode={layoutMode === 'dag' ? 'lr' : null}
+          dagLevelDistance={100}
         />
       </div>
 
@@ -363,19 +473,69 @@ export function EpisodicGraphExplorer({
       </div>
 
       {/* Filter Panel */}
-      <div className="absolute top-3 left-3 flex items-center gap-2">
-        <Filter className="h-4 w-4 text-slate-400" />
-        <select
-          value={filterType}
-          onChange={(e) => setFilterType(e.target.value)}
-          className="text-xs bg-slate-800/90 text-slate-300 border border-slate-700 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500"
-        >
-          <option value="all">All Types</option>
-          <option value="episode">Episodes</option>
-          <option value="root_cause">Root Causes</option>
-          <option value="action">Actions</option>
-          <option value="service">Services</option>
-        </select>
+      <div className="absolute top-3 left-3 flex flex-col gap-2">
+        {/* Node Type Filter */}
+        <div className="flex items-center gap-2">
+          <Filter className="h-4 w-4 text-slate-400" />
+          <select
+            value={filterType}
+            onChange={(e) => setFilterType(e.target.value)}
+            className="text-xs bg-slate-800/90 text-slate-300 border border-slate-700 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          >
+            <option value="all">All Types</option>
+            <option value="episode">Episodes</option>
+            <option value="root_cause">Root Causes</option>
+            <option value="action">Actions</option>
+            <option value="service">Services</option>
+            <option value="entity">Entities (LLM)</option>
+          </select>
+        </div>
+
+        {/* v0.6.0: Edge Visibility Toggles */}
+        <div className="flex items-center gap-3 text-xs bg-slate-800/90 text-slate-300 border border-slate-700 rounded-md px-2 py-1.5">
+          <label className="flex items-center gap-1.5 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showSimilarTo}
+              onChange={(e) => setShowSimilarTo(e.target.checked)}
+              className="w-3 h-3 rounded border-slate-600 bg-slate-700 text-blue-500 focus:ring-blue-500 focus:ring-offset-0"
+            />
+            <span>Similar To</span>
+          </label>
+          <label className="flex items-center gap-1.5 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showEntities}
+              onChange={(e) => setShowEntities(e.target.checked)}
+              className="w-3 h-3 rounded border-slate-600 bg-slate-700 text-pink-500 focus:ring-pink-500 focus:ring-offset-0"
+            />
+            <span>Entities</span>
+          </label>
+        </div>
+
+        {/* v0.6.0: Layout Mode Toggle */}
+        <div className="flex items-center gap-1 text-xs">
+          <button
+            onClick={() => setLayoutMode('force')}
+            className={`px-2 py-1 rounded-l-md border transition-colors ${
+              layoutMode === 'force'
+                ? 'bg-blue-600 text-white border-blue-500'
+                : 'bg-slate-800/90 text-slate-400 border-slate-700 hover:bg-slate-700'
+            }`}
+          >
+            Force
+          </button>
+          <button
+            onClick={() => setLayoutMode('dag')}
+            className={`px-2 py-1 rounded-r-md border-t border-r border-b transition-colors ${
+              layoutMode === 'dag'
+                ? 'bg-blue-600 text-white border-blue-500'
+                : 'bg-slate-800/90 text-slate-400 border-slate-700 hover:bg-slate-700'
+            }`}
+          >
+            Hierarchy
+          </button>
+        </div>
       </div>
 
       {/* Stats Overlay */}
@@ -403,6 +563,10 @@ export function EpisodicGraphExplorer({
           <span className="text-slate-400">Service</span>
         </div>
         <div className="flex items-center gap-1.5">
+          <div className="w-3 h-3 rounded-full bg-pink-500" />
+          <span className="text-slate-400">Entity (LLM)</span>
+        </div>
+        <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded-full bg-green-500" />
           <span className="text-slate-400">Resolved</span>
         </div>
@@ -419,6 +583,7 @@ export function EpisodicGraphExplorer({
                 selectedNode.type === 'root_cause' ? 'bg-orange-500/20 text-orange-400' :
                 selectedNode.type === 'action' ? 'bg-cyan-500/20 text-cyan-400' :
                 selectedNode.type === 'service' ? 'bg-blue-500/20 text-blue-400' :
+                selectedNode.type === 'entity' ? 'bg-pink-500/20 text-pink-400' :
                 'bg-slate-500/20 text-slate-400'
               }`}>
                 {selectedNode.type.replace('_', ' ')}
@@ -567,6 +732,22 @@ export function EpisodicGraphExplorer({
                     </span>
                   </div>
                 )}
+              </>
+            )}
+
+            {/* Entity-specific fields (LLM-extracted) */}
+            {selectedNode.type === 'entity' && (
+              <>
+                {selectedNode.relationCount !== undefined && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Relations:</span>
+                    <span className="text-pink-400">{selectedNode.relationCount}</span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Source:</span>
+                  <span className="text-pink-400">LLM Extracted</span>
+                </div>
               </>
             )}
           </div>

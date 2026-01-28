@@ -1,7 +1,7 @@
 # Constitutional AIOps - System Architecture
 
-> **Version**: 0.4.0
-> **Last Updated**: 2025-12-30
+> **Version**: 0.6.1
+> **Last Updated**: 2026-01-28
 > **Status**: Production Ready
 > **Source of Truth**: [KEY_METRICS.md](KEY_METRICS.md)
 
@@ -14,8 +14,10 @@
 3. [LLM Architecture](#3-llm-architecture)
 4. [Data Flow](#4-data-flow)
 5. [Memory Architecture](#5-memory-architecture)
-6. [API Architecture](#6-api-architecture)
-7. [Deployment Architecture](#7-deployment-architecture)
+6. [Graph Schema Optimization](#6-graph-schema-optimization) (v0.6.0)
+7. [Episode Generation](#7-episode-generation) (v0.6.1)
+8. [API Architecture](#8-api-architecture)
+9. [Deployment Architecture](#9-deployment-architecture)
 
 ---
 
@@ -302,9 +304,99 @@ ORDER BY success_count DESC
 
 ---
 
-## 6. API Architecture
+## 6. Graph Schema Optimization (v0.6.0)
 
-### 6.1 REST Endpoints
+### 6.1 Hairball Prevention
+
+The graph visualization faced a "hairball" problem with O(n²) SIMILAR_TO edges. The following constants prevent over-connected graphs:
+
+| Constant | Value | Purpose |
+|----------|-------|---------|
+| `SIMILAR_TO_THRESHOLD` | 0.75 | Minimum similarity for episode edges (was 0.5) |
+| `MAX_SIMILAR_EDGES_PER_EPISODE` | 3 | Degree cap per episode |
+| `MIN_TRIPLET_CONFIDENCE` | 0.70 | Filter low-quality LLM-extracted triplets |
+| `MAX_EDGES_PER_NODE` | 5 | Global degree cap |
+
+**Result**: 94% edge reduction (2,450 → ~150 SIMILAR_TO edges)
+
+### 6.2 Entity Canonicalization
+
+Entity variants are mapped to canonical forms to prevent node proliferation:
+
+```python
+ENTITY_CANONICALIZATION = {
+    "api_gateway": ["api-gateway", "apigateway", "api gateway", "gateway"],
+    "database": ["db", "postgres", "postgresql", "mysql", "mongodb"],
+    "cache": ["redis", "memcached", "cache_service"],
+    "load_balancer": ["lb", "nginx", "haproxy", "elb", "alb"],
+    "connection_timeout": ["timeout", "conn_timeout", "504"],
+    "memory_error": ["oom", "out_of_memory", "heap_overflow"],
+    # ... 70+ variants → 15 canonical forms
+}
+```
+
+### 6.3 Frontend Physics (EpisodicGraphExplorer.tsx)
+
+```typescript
+const CHARGE_STRENGTH = -300;  // Node repulsion
+const LINK_DISTANCES = {
+  'similar_to': 80,
+  'affects': 120,
+  'caused_by': 100,
+  'resolved_by': 130,
+  'relates': 90
+};
+```
+
+---
+
+## 7. Episode Generation (v0.6.1)
+
+### 7.1 Reasoning Agent Episode Generation
+
+The system can generate realistic demo episodes using the Reasoning Agent (Qwen3-14B):
+
+```
+POST /api/v1/graph/generate-episodes
+```
+
+### 7.2 Service Templates
+
+8 services defined with metadata for episode generation:
+
+| Service | Type | Port | Dependencies |
+|---------|------|------|--------------|
+| neo4j | database | 7687 | backend |
+| prometheus | monitoring | 9090 | otel-collector |
+| grafana | visualization | 3001 | prometheus, loki, tempo |
+| loki | logging | 3100 | otel-collector |
+| tempo | tracing | 3200 | otel-collector |
+| otel-collector | telemetry | 4317 | (none) |
+| backend | api | 8000 | neo4j, prometheus, loki |
+| frontend | ui | 3000 | backend |
+
+### 7.3 Generated Graph Schema
+
+| Node Type | Properties |
+|-----------|------------|
+| `:Episode` | episode_id, title, description, severity, category, root_cause, confidence, outcome |
+| `:Service` | name, type, port, description, health_endpoint, status |
+| `:RootCauseType` | id, name |
+| `:Action` | id, name, success_rate |
+| `:Entity` | name (causal chain elements) |
+
+| Relationship | Pattern |
+|--------------|---------|
+| `INVOLVES` | Episode → Service |
+| `CAUSED_BY` | Episode → RootCauseType |
+| `RESOLVED_BY` | Episode → Action |
+| `CAUSED` | Entity → Entity |
+
+---
+
+## 8. API Architecture
+
+### 8.1 REST Endpoints
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -323,7 +415,7 @@ ORDER BY success_count DESC
 | GET | `/api/v1/graph/services` | Service dependency graph |
 | POST | `/api/v1/demo/start` | Start demo mode |
 
-### 6.2 WebSocket Endpoint
+### 8.2 WebSocket Endpoint
 
 ```
 WS /ws - Real-time updates for incidents, actions, RCA results
@@ -331,9 +423,9 @@ WS /ws - Real-time updates for incidents, actions, RCA results
 
 ---
 
-## 7. Deployment Architecture
+## 9. Deployment Architecture
 
-### 7.1 Primary: Jarvis Labs Hybrid (Recommended)
+### 9.1 Primary: Jarvis Labs Hybrid (Recommended)
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -360,7 +452,7 @@ WS /ws - Real-time updates for incidents, actions, RCA results
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### 7.2 Alternative: AWS g6.xlarge
+### 9.2 Alternative: AWS g6.xlarge
 
 ```
 AWS g6.xlarge (L4 24GB, 4 vCPU, 16GB RAM)
@@ -368,7 +460,7 @@ Cost: ~$0.35/hr (Spot)
 Use for: Self-contained deployment when Jarvis Labs unavailable
 ```
 
-### 7.3 Local Development (No GPU)
+### 9.3 Local Development (No GPU)
 
 ```
 docker-compose -f docker-compose.yml -f docker/docker-compose.local.yml up
@@ -432,5 +524,5 @@ C(a) = 0.4 · C_LLM + 0.35 · C_hist + 0.25 · C_sim
 
 ---
 
-**Last Updated**: 2025-12-30
-**Version**: 0.4.0
+**Last Updated**: 2026-01-28
+**Version**: 0.6.1

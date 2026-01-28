@@ -1,9 +1,9 @@
 # Constitutional AIOps - Documentation Index
 
-> **Version**: 0.5.1
-> **Last Updated**: 2026-01-15
+> **Version**: 0.6.1
+> **Last Updated**: 2026-01-28
 > **Status**: Production Ready
-> **Total Files Indexed**: 93+
+> **Total Files Indexed**: 100+
 > **Source of Truth**: [KEY_METRICS.md](KEY_METRICS.md)
 
 ---
@@ -24,10 +24,11 @@
 
 | File | Last Updated | Description |
 |------|--------------|-------------|
-| [ARCHITECTURE.md](ARCHITECTURE.md) | 2025-12-27 | System architecture, components, data flow |
-| [BACKEND.md](BACKEND.md) | 2025-12-28 | Python backend module reference (43 files) |
-| [API.md](API.md) | 2025-12-28 | REST API endpoint reference (50+ endpoints) |
-| [FRONTEND.md](FRONTEND.md) | 2025-12-28 | React frontend architecture (23 files) |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 2026-01-28 | System architecture, graph schema, episode generation |
+| [BACKEND.md](BACKEND.md) | 2026-01-27 | Python backend module reference (45+ files) |
+| [API.md](API.md) | 2026-01-27 | REST API endpoint reference (50+ endpoints) |
+| [FRONTEND.md](FRONTEND.md) | 2026-01-28 | React frontend architecture (25+ files) |
+| [KEY_METRICS.md](KEY_METRICS.md) | 2026-01-28 | Performance targets, schema constants |
 | [DEPLOYMENT.md](DEPLOYMENT.md) | 2025-12-27 | Deployment overview (Jarvis Labs, Local, AWS) |
 
 ### Development & Progress
@@ -107,11 +108,18 @@
 | [validator.py](../src/constitutional/validator.py) | ValidationReport, confidence→authorization |
 | [\_\_init\_\_.py](../src/constitutional/__init__.py) | Module exports |
 
+#### Confidence (src/confidence/) - NEW v0.6.0
+| File | Purpose |
+|------|---------|
+| [calculator.py](../src/confidence/calculator.py) | Composite confidence: C(a) = α·C_LLM + β·C_hist + γ·C_sim |
+| [\_\_init\_\_.py](../src/confidence/__init__.py) | Module exports |
+
 #### Memory (src/memory/)
 | File | Purpose |
 |------|---------|
 | [neo4j_client.py](../src/memory/neo4j_client.py) | Graph DB operations, incident/action/service nodes |
-| [episode_store.py](../src/memory/episode_store.py) | Episode dataclass, similarity matching |
+| [episode_store.py](../src/memory/episode_store.py) | Episode dataclass, similarity matching, triplet filtering |
+| [embedding_service.py](../src/memory/embedding_service.py) | 384-dim sentence embeddings (NEW v0.6.0) |
 | [retrieval.py](../src/memory/retrieval.py) | RAG context retrieval for RCA/planning |
 | [\_\_init\_\_.py](../src/memory/__init__.py) | Module exports |
 
@@ -169,12 +177,15 @@
 | [Incidents.tsx](../frontend/src/pages/Incidents.tsx) | Incident management, RCA, approval |
 | [Chat.tsx](../frontend/src/pages/Chat.tsx) | Interactive agent chat |
 | [Agents.tsx](../frontend/src/pages/Agents.tsx) | Agent hub (6 tabs) |
+| [Graph.tsx](../frontend/src/pages/Graph.tsx) | Dedicated graph visualization page (NEW v0.6.1) |
+| [Metrics.tsx](../frontend/src/pages/Metrics.tsx) | LGTM observability metrics |
 | [Settings.tsx](../frontend/src/pages/Settings.tsx) | Configuration (5 tabs) |
 
 #### Components (src/components/)
 | File | Purpose |
 |------|---------|
 | [Layout.tsx](../frontend/src/components/Layout.tsx) | App shell, sidebar navigation |
+| [EpisodicGraphExplorer.tsx](../frontend/src/components/EpisodicGraphExplorer.tsx) | Force-directed graph with physics controls (NEW v0.5.0) |
 | [IncidentTimeline.tsx](../frontend/src/components/IncidentTimeline.tsx) | Event timeline visualization |
 | [DependencyGraph.tsx](../frontend/src/components/DependencyGraph.tsx) | Service dependency graph |
 | [index.ts](../frontend/src/components/index.ts) | Component exports |
@@ -227,7 +238,7 @@
 
 ---
 
-### Scripts - 4 Files
+### Scripts - 7 Files
 
 | File | Purpose |
 |------|---------|
@@ -235,6 +246,9 @@
 | [scripts/install.sh](../scripts/install.sh) | One-command installation wizard |
 | [scripts/setup-jarvis-ollama.sh](../scripts/setup-jarvis-ollama.sh) | Jarvis Labs Ollama setup |
 | [scripts/setup.sh](../scripts/setup.sh) | Development environment setup |
+| [scripts/generate_real_episodes.py](../scripts/generate_real_episodes.py) | Generate episodes via Reasoning Agent (NEW v0.6.1) |
+| [scripts/create_demo_episodes.py](../scripts/create_demo_episodes.py) | Create hardcoded demo episodes |
+| [scripts/cleanup_graph.cypher](../scripts/cleanup_graph.cypher) | Neo4j graph cleanup queries |
 
 ---
 
@@ -268,28 +282,30 @@ constitutional-aiops/
 ├── README.md                    # Quick Start (entry point)
 ├── CLAUDE.md                    # AI Session Guide
 │
-├── src/                         # Backend (43 Python files)
+├── src/                         # Backend (45+ Python files)
 │   ├── main.py, config.py
 │   ├── agents/                  # 5 files
 │   ├── api/routes/              # 12 files
 │   ├── api/schemas/             # 4 files
+│   ├── confidence/              # 2 files (NEW v0.6.0)
 │   ├── constitutional/          # 3 files
-│   ├── memory/                  # 4 files
+│   ├── memory/                  # 5 files
 │   ├── telemetry/               # 4 files
 │   ├── mcp/                     # 3 files
 │   └── utils/                   # 4 files
 │
-├── frontend/                    # Frontend (23 files)
-│   ├── src/pages/               # 5 files
-│   ├── src/components/          # 4 files
+├── frontend/                    # Frontend (25+ files)
+│   ├── src/pages/               # 7 files
+│   ├── src/components/          # 5 files
 │   └── src/lib/                 # 3 files
 │
 ├── docker/                      # Docker (11 files)
-├── scripts/                     # Scripts (4 files)
+├── scripts/                     # Scripts (7 files)
 ├── tests/                       # Tests (5 files)
 │
 └── docs/
     ├── INDEX.md                 # THIS FILE - Master index
+    ├── KEY_METRICS.md           # Performance metrics reference
     ├── BACKEND.md               # Backend reference
     ├── API.md                   # API reference
     ├── FRONTEND.md              # Frontend reference
@@ -339,6 +355,10 @@ See [DOCUMENTATION_SCHEMA.md](DOCUMENTATION_SCHEMA.md) for detailed guidelines.
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.6.1 | 2026-01-28 | Episode generation via Reasoning Agent, Graph.tsx page |
+| 0.6.0 | 2026-01-25 | Graph schema redesign (hairball prevention), confidence module |
+| 0.5.1 | 2026-01-15 | Docker health checks, Neo4j query fixes |
+| 0.5.0 | 2026-01-11 | EpisodicGraphExplorer with force-directed layout |
 | 0.4.0 | 2025-12-28 | Added BACKEND.md, API.md, FRONTEND.md, complete file inventory |
 | 0.3.2 | 2025-12-28 | Fixed SVG diagrams to match code |
 | 0.3.1 | 2025-12-27 | Complete documentation restructure |
@@ -348,4 +368,4 @@ See [DOCUMENTATION_SCHEMA.md](DOCUMENTATION_SCHEMA.md) for detailed guidelines.
 
 ---
 
-**Last Updated**: 2025-12-30
+**Last Updated**: 2026-01-28

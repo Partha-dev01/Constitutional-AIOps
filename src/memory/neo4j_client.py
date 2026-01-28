@@ -829,6 +829,158 @@ class Neo4jClient:
             records = await result.data()
             return records
 
+    # --- Graph Cleanup Operations ---
+
+    async def cleanup_graph(
+        self,
+        delete_similar_to: bool = True,
+        merge_duplicate_entities: bool = True,
+        delete_orphan_entities: bool = True,
+        keep_episodes: int = 50,
+    ) -> dict[str, int]:
+        """
+        Clean up the graph to prevent hairball visualization.
+
+        Performs:
+        1. Delete all SIMILAR_TO edges (recalculated at query time)
+        2. Merge duplicate Entity nodes (case-insensitive)
+        3. Delete orphan entities with no relationships
+        4. Keep only the most recent N episodes
+
+        Args:
+            delete_similar_to: Delete all SIMILAR_TO edges
+            merge_duplicate_entities: Merge entities with same name (case-insensitive)
+            delete_orphan_entities: Delete entities with no relationships
+            keep_episodes: Number of recent episodes to keep (0 = keep all)
+
+        Returns:
+            Dict with counts of deleted/merged items
+        """
+        if not self._connected:
+            return {"error": "Not connected"}
+
+        stats = {
+            "similar_to_deleted": 0,
+            "entities_merged": 0,
+            "orphan_entities_deleted": 0,
+            "old_episodes_deleted": 0,
+        }
+
+        async with self.session() as session:
+            # 1. Delete SIMILAR_TO edges
+            if delete_similar_to:
+                result = await session.run("""
+                    MATCH ()-[r:SIMILAR_TO]->()
+                    WITH r LIMIT 10000
+                    DELETE r
+                    RETURN count(r) as deleted
+                """)
+                record = await result.single()
+                stats["similar_to_deleted"] = record["deleted"] if record else 0
+                logger.info(f"Deleted {stats['similar_to_deleted']} SIMILAR_TO edges")
+
+            # 2. Merge duplicate entities (case-insensitive)
+            # Note: This requires iterating since Neo4j doesn't have native case-insensitive merge
+            if merge_duplicate_entities:
+                # Find duplicate entity names
+                result = await session.run("""
+                    MATCH (e:Entity)
+                    WITH toLower(e.name) as lower_name, collect(e) as entities
+                    WHERE size(entities) > 1
+                    RETURN lower_name, entities
+                """)
+                duplicates = await result.data()
+
+                merged_count = 0
+                for dup in duplicates:
+                    entities = dup["entities"]
+                    if len(entities) > 1:
+                        # Keep first entity, merge others into it
+                        keep_id = entities[0].element_id if hasattr(entities[0], 'element_id') else entities[0].id
+                        for other in entities[1:]:
+                            other_id = other.element_id if hasattr(other, 'element_id') else other.id
+                            # Transfer relationships and delete duplicate
+                            await session.run("""
+                                MATCH (keep:Entity) WHERE elementId(keep) = $keep_id
+                                MATCH (dup:Entity) WHERE elementId(dup) = $dup_id
+                                OPTIONAL MATCH (dup)-[r_out]->(target)
+                                OPTIONAL MATCH (source)-[r_in]->(dup)
+                                FOREACH (r IN CASE WHEN r_out IS NOT NULL THEN [r_out] ELSE [] END |
+                                    MERGE (keep)-[:RELATES]->(target)
+                                )
+                                FOREACH (r IN CASE WHEN r_in IS NOT NULL THEN [r_in] ELSE [] END |
+                                    MERGE (source)-[:RELATES]->(keep)
+                                )
+                                DETACH DELETE dup
+                            """, keep_id=keep_id, dup_id=other_id)
+                            merged_count += 1
+
+                stats["entities_merged"] = merged_count
+                logger.info(f"Merged {merged_count} duplicate entities")
+
+            # 3. Delete orphan entities
+            if delete_orphan_entities:
+                result = await session.run("""
+                    MATCH (e:Entity)
+                    WHERE NOT (e)--()
+                    WITH e LIMIT 1000
+                    DELETE e
+                    RETURN count(e) as deleted
+                """)
+                record = await result.single()
+                stats["orphan_entities_deleted"] = record["deleted"] if record else 0
+                logger.info(f"Deleted {stats['orphan_entities_deleted']} orphan entities")
+
+            # 4. Keep only recent episodes
+            if keep_episodes > 0:
+                result = await session.run("""
+                    MATCH (ep:Episode)
+                    WITH ep ORDER BY ep.detected_at DESC
+                    SKIP $keep
+                    DETACH DELETE ep
+                    RETURN count(ep) as deleted
+                """, keep=keep_episodes)
+                record = await result.single()
+                stats["old_episodes_deleted"] = record["deleted"] if record else 0
+                logger.info(f"Deleted {stats['old_episodes_deleted']} old episodes")
+
+        logger.info(f"Graph cleanup complete: {stats}")
+        return stats
+
+    async def get_graph_stats(self) -> dict[str, Any]:
+        """
+        Get current graph statistics for monitoring.
+
+        Returns:
+            Dict with node and edge counts by type
+        """
+        if not self._connected:
+            return {"error": "Not connected"}
+
+        async with self.session() as session:
+            result = await session.run("""
+                MATCH (n)
+                WITH labels(n)[0] as label, count(n) as count
+                RETURN collect({label: label, count: count}) as nodes
+            """)
+            nodes_record = await result.single()
+            nodes = {item["label"]: item["count"] for item in nodes_record["nodes"]} if nodes_record else {}
+
+            result = await session.run("""
+                MATCH ()-[r]->()
+                WITH type(r) as rel_type, count(r) as count
+                RETURN collect({type: rel_type, count: count}) as edges
+            """)
+            edges_record = await result.single()
+            edges = {item["type"]: item["count"] for item in edges_record["edges"]} if edges_record else {}
+
+            return {
+                "nodes": nodes,
+                "edges": edges,
+                "total_nodes": sum(nodes.values()),
+                "total_edges": sum(edges.values()),
+            }
+
 
 # Singleton instance (optional)
 _client: Optional[Neo4jClient] = None
