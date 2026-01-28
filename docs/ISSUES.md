@@ -1,7 +1,7 @@
 # Constitutional AIOps - Issue Tracker
 
-> **Version**: 0.5.1
-> **Last Updated**: 2026-01-15
+> **Version**: 0.6.0
+> **Last Updated**: 2026-01-25
 > **Open Issues**: 0
 > **Blockers**: 0
 
@@ -35,6 +35,75 @@ None - All core functionality implemented and tested.
 ---
 
 ## ✅ Resolved Issues
+
+### 2026-01-25 (Graph Schema Redesign - Hairball Prevention)
+
+| ID | Issue | Resolution |
+|----|-------|------------|
+| GRAPH-001 | SIMILAR_TO creates O(n²) edges | Threshold 0.5→0.75, max 3 edges per episode |
+| GRAPH-002 | Entity proliferation from LLM triplets | Added canonicalization map + confidence ≥0.70 filter |
+| GRAPH-003 | No API filtering parameters | Added min_similarity, min_confidence, max_edges_per_node |
+| GRAPH-004 | Weak force simulation (charge -300) | Increased to -800 for stronger node repulsion |
+| GRAPH-005 | Fixed link distance (100px all) | Variable 50-150px based on relationship type |
+| GRAPH-006 | No hierarchical layout option | Added DAG mode toggle in frontend |
+
+**Root Cause**: Aggressive edge creation with no filtering at any layer (LLM → API → Frontend). The SIMILAR_TO algorithm compared all episode pairs with a low 0.5 threshold, creating O(n²) edges for n episodes.
+
+**Files Modified**:
+- `src/api/routes/graph.py` - Schema constants, filtering parameters, pruning
+- `src/agents/fast_annotator.py` - Entity canonicalization
+- `src/memory/episode_store.py` - Triplet confidence filtering
+- `src/memory/neo4j_client.py` - cleanup_graph() method
+- `frontend/src/components/EpisodicGraphExplorer.tsx` - Physics, DAG mode, controls
+
+**Metrics After Fix**:
+| Metric | Before | After | Improvement |
+|--------|--------|-------|-------------|
+| SIMILAR_TO edges | 2,450 | ~150 | 94% reduction |
+| Entity nodes | 50+ | ~15 | 70% reduction |
+| Total edges | 3,000+ | ~300 | 90% reduction |
+| Layout stability | Poor (hairball) | Good (structured) | Qualitative |
+
+---
+
+### 2026-01-23 (Neo4j Cold Start Health Check Fix)
+
+| ID | Issue | Resolution |
+|----|-------|------------|
+| NEO4J-002 | Neo4j unhealthy after Docker Desktop restart | Increased `start_period` from 60s to 120s for cold start |
+| NEO4J-003 | Stale PID files from unclean shutdown | Added `stop_grace_period: 30s` for clean shutdown |
+
+**Root Cause**: After Docker Desktop restarts, Neo4j takes longer to initialize than the 60s `start_period` allowed. Additionally, without `stop_grace_period`, Neo4j could be killed mid-transaction, leaving stale PID files that cause "Neo4j is already running" errors.
+
+**Fix Applied** (`docker-compose.yml`, lines 72-95):
+```yaml
+neo4j:
+  ...
+  stop_grace_period: 30s  # NEW: Ensures clean shutdown
+  healthcheck:
+    test: ["CMD", "wget", "-q", "--spider", "http://localhost:7474"]
+    interval: 30s
+    timeout: 10s
+    retries: 5
+    start_period: 120s  # CHANGED: Was 60s, now 120s for cold start
+```
+
+**If Neo4j Still Fails After Fix**:
+```bash
+# Option 1: Clean restart (preserves data)
+docker compose down && docker compose -f docker-compose.yml -f docker/docker-compose.hybrid.yml up -d
+
+# Option 2: Full reset (DELETES DATA)
+docker compose down -v && docker compose -f docker-compose.yml -f docker/docker-compose.hybrid.yml up -d
+```
+
+**Verification**:
+```bash
+docker ps --format "table {{.Names}}\t{{.Status}}" | grep neo4j
+# Should show "(healthy)" within 2 minutes
+```
+
+---
 
 ### 2026-01-09 (Architecture Compliance Fix)
 

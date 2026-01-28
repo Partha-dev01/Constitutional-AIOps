@@ -3,12 +3,20 @@ Constitutional AIOps - Actions API Routes
 
 Action management endpoints with Constitutional AI validation.
 All actions are validated against 12 constitutional principles before execution.
+
+Confidence Formula (from Research_V6.tex):
+  C(a) = 0.4·C_LLM + 0.35·C_hist + 0.25·C_sim
+
+Authorization levels based on composite confidence:
+  - >90%: Automatic execution
+  - 70-90%: Requires human approval
+  - <70%: Alert only, no execution
 """
 
 import logging
 import uuid
 from datetime import datetime, timedelta
-from typing import Any
+from typing import Any, Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request, status
 
@@ -26,6 +34,7 @@ from src.api.schemas.action import (
     ConstitutionalValidation,
     PendingApprovals,
 )
+from src.confidence import ConfidenceCalculator, ConfidenceBreakdown
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +74,10 @@ async def create_action(
     2. Tier 2 (Operational) - Violations require approval
     3. Tier 3 (Learning) - Soft warnings logged
 
-    Authorization levels based on confidence:
+    Confidence Formula (Research_V6.tex):
+      C(a) = 0.4·C_LLM + 0.35·C_hist + 0.25·C_sim
+
+    Authorization levels based on composite confidence:
     - >90%: Automatic execution
     - 70-90%: Requires human approval
     - <70%: Alert only, no execution
@@ -79,7 +91,44 @@ async def create_action(
     action_id = _generate_action_id()
     now = datetime.utcnow()
 
-    # Create initial action
+    # Get confidence calculator from app state
+    calculator: Optional[ConfidenceCalculator] = getattr(
+        request.app.state, "confidence_calculator", None
+    )
+
+    # Calculate composite confidence using the formula from Research_V6.tex
+    llm_confidence = action_create.confidence
+    composite_confidence = llm_confidence
+    confidence_breakdown: Optional[ConfidenceBreakdown] = None
+
+    if calculator:
+        try:
+            # Build incident context for similarity lookup
+            incident_context = None
+            if action_create.incident_id:
+                # Try to get incident details for similarity matching
+                incident_context = {
+                    "incident_id": action_create.incident_id,
+                    "affected_services": [action_create.target_service] if action_create.target_service else [],
+                    "category": action_create.action_type.value,
+                }
+
+            composite_confidence, confidence_breakdown = await calculator.calculate_composite(
+                llm_confidence=llm_confidence,
+                action_type=action_create.action_type.value,
+                incident_context=incident_context,
+            )
+
+            logger.info(
+                f"Composite confidence for {action_id}: {composite_confidence:.4f} "
+                f"(LLM={llm_confidence:.2f}, hist={confidence_breakdown.c_hist:.2f}, "
+                f"sim={confidence_breakdown.c_sim:.2f})"
+            )
+        except Exception as e:
+            logger.warning(f"Failed to calculate composite confidence: {e}")
+            # Fall back to LLM confidence only
+
+    # Create initial action with composite confidence
     action = Action(
         id=action_id,
         action_type=action_create.action_type,
@@ -89,7 +138,7 @@ async def create_action(
         parameters=action_create.parameters,
         incident_id=action_create.incident_id,
         plan_id=action_create.plan_id,
-        confidence=action_create.confidence,
+        confidence=composite_confidence,  # Use composite confidence
         status=ActionStatus.PENDING,
         created_at=now,
         updated_at=now,
@@ -97,7 +146,11 @@ async def create_action(
         audit_log=[{
             "timestamp": now.isoformat(),
             "event": "created",
-            "details": {"confidence": action_create.confidence},
+            "details": {
+                "llm_confidence": llm_confidence,
+                "composite_confidence": composite_confidence,
+                "confidence_breakdown": confidence_breakdown.to_dict() if confidence_breakdown else None,
+            },
         }],
     )
 
@@ -113,7 +166,7 @@ async def create_action(
         logger.warning(f"Validation skipped for action {action_id}")
         return action
 
-    # Run Constitutional AI validation
+    # Run Constitutional AI validation with composite confidence
     action.status = ActionStatus.VALIDATING
     validation = await _validate_action(request, action, action_create.evidence or {})
 
@@ -138,7 +191,7 @@ async def create_action(
     elif validation.authorization_level == AuthorizationLevel.AUTOMATIC:
         action.status = ActionStatus.APPROVED
         action.requires_approval = False
-        logger.info(f"Action {action_id} auto-approved (confidence: {action.confidence})")
+        logger.info(f"Action {action_id} auto-approved (composite confidence: {composite_confidence:.4f})")
     elif validation.authorization_level == AuthorizationLevel.APPROVAL_REQUIRED:
         action.status = ActionStatus.AWAITING_APPROVAL
         action.requires_approval = True
@@ -253,6 +306,38 @@ async def get_pending_approvals() -> PendingApprovals:
         oldest_pending=oldest,
         urgency_breakdown=urgency,
     )
+
+
+@router.get(
+    "/confidence/formula",
+    summary="Get Confidence Formula",
+    description="Get the composite confidence formula from Research_V6.tex",
+    tags=["confidence"],
+)
+async def get_confidence_formula():
+    """
+    Get the confidence formula used for action authorization.
+
+    Returns the formula and current weights from Research_V6.tex:
+    C(a) = α·C_LLM + β·C_hist + γ·C_sim
+
+    Returns:
+        Formula description and weight configuration
+    """
+    return {
+        "formula": "C(a) = α·C_LLM + β·C_hist + γ·C_sim",
+        "description": ConfidenceCalculator.get_formula_description(),
+        "weights": ConfidenceCalculator.get_weights(),
+        "thresholds": {
+            "automatic": 0.90,
+            "approval_required": 0.70,
+            "alert_only": 0.00,
+        },
+        "defaults": {
+            "historical_no_data": ConfidenceCalculator.DEFAULT_HISTORICAL,
+            "similarity_no_data": ConfidenceCalculator.DEFAULT_SIMILARITY,
+        },
+    }
 
 
 @router.get(

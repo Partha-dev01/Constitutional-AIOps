@@ -207,6 +207,20 @@ Where:
 - **Semantic Triplets**: `T = {(e₁, r, e₂) | e₁, e₂ ∈ Entities, r ∈ Relations}`
 - **Hybrid Retrieval**: `score(e) = α · vector_sim(e) + (1-α) · graph_sim(e)`
 
+### Graph Schema Redesign (v0.6.0 - 2026-01-25)
+**Purpose**: Prevent "hairball" visualization in Graph Explorer
+
+| Constant | Value | File | Purpose |
+|----------|-------|------|---------|
+| `SIMILAR_TO_THRESHOLD` | 0.75 | graph.py | Min similarity for episode edges |
+| `MAX_SIMILAR_EDGES_PER_EPISODE` | 3 | graph.py | Degree cap per episode |
+| `MIN_TRIPLET_CONFIDENCE` | 0.70 | episode_store.py | Filter low-quality triplets |
+| `MAX_EDGES_PER_NODE` | 5 | graph.py | Global degree cap |
+| `CHARGE_STRENGTH` | -800 | EpisodicGraphExplorer.tsx | Node repulsion |
+| `CENTER_STRENGTH` | 0.2 | EpisodicGraphExplorer.tsx | Centering force |
+
+**If resuming after context compaction**: Check `docs/SESSION_STATE.md` for current progress.
+
 ### Data Retention
 | Store | Retention |
 |-------|-----------|

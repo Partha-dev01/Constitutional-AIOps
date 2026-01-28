@@ -1,7 +1,7 @@
 # Key Metrics Reference & Collection Guide
 
-> **Version**: 0.5.0
-> **Last Updated**: 2026-01-03
+> **Version**: 0.6.1
+> **Last Updated**: 2026-01-28
 > **Purpose**: Single source of truth for all metrics in Research_V6.tex
 > **Usage**: Run the system and collect metrics using the documented endpoints
 
@@ -67,22 +67,58 @@
 | Approval Required | 0.70-0.90 | APPROVAL_REQUIRED | `src/constitutional/validator.py` |
 | Alert-Only | <0.70 | ALERT_ONLY | `src/constitutional/validator.py` |
 
-### 2.3 Confidence Formula
+### 2.3 Confidence Formula (Fully Implemented)
 
 ```
 C(a) = α · C_LLM(a) + β · C_hist(a) + γ · C_sim(a)
 
 Where:
-  α = 0.4  (LLM confidence weight)
+  α = 0.40 (LLM confidence weight)
   β = 0.35 (Historical success rate weight)
   γ = 0.25 (Similarity to past incidents weight)
 
   C_LLM(a)  = Reasoning agent's self-reported confidence (0.0-1.0)
-  C_hist(a) = successful_executions / total_executions
-  C_sim(a)  = max(cosine_similarity(current, past_resolutions))
+  C_hist(a) = Action success rate from Neo4j (last 30 days)
+  C_sim(a)  = Weighted similarity to past resolved episodes
+
+Default Values (when data unavailable):
+  C_hist = 0.5 (neutral contribution)
+  C_sim  = 0.5 (neutral contribution)
 ```
 
-**Source**: `src/validation/constants.py`, `src/constitutional/validator.py`
+**API Endpoint**: `GET /api/v1/actions/confidence/formula`
+
+```bash
+# Get confidence formula details
+curl -s http://localhost:8000/api/v1/actions/confidence/formula | jq
+```
+
+**Source**: `src/confidence/calculator.py`, `src/api/routes/actions.py`
+
+### 2.4 Graph Schema Constants (v0.6.0)
+
+| Constant | Value | File | Purpose |
+|----------|-------|------|---------|
+| `SIMILAR_TO_THRESHOLD` | 0.75 | `src/api/routes/graph.py` | Min similarity for episode edges |
+| `MAX_SIMILAR_EDGES_PER_EPISODE` | 3 | `src/api/routes/graph.py` | Degree cap per episode |
+| `MIN_TRIPLET_CONFIDENCE` | 0.70 | `src/memory/episode_store.py` | Filter low-quality triplets |
+| `MAX_EDGES_PER_NODE` | 5 | `src/api/routes/graph.py` | Global degree cap |
+| `CHARGE_STRENGTH` | -300 | `EpisodicGraphExplorer.tsx` | Node repulsion force |
+| `EMBEDDING_DIMENSIONS` | 384 | `src/memory/embedding_service.py` | Vector size (MiniLM-L6-v2) |
+| `SIMILARITY_THRESHOLD` | 0.70 | `src/memory/episode_store.py` | Min cosine for matching |
+| `RETRIEVAL_ALPHA` | 0.6 | `src/memory/episode_store.py` | Vector vs graph weight |
+
+**Hairball Prevention Results (v0.6.0)**:
+- SIMILAR_TO edges: 2,450 → ~150 (94% reduction)
+- Entity nodes: 50+ → ~15 (70% reduction via canonicalization)
+
+### 2.5 Episode Generation (v0.6.1)
+
+| Metric | Value | Source |
+|--------|-------|--------|
+| Service Templates | 8 services | `src/api/routes/graph.py` |
+| Episode Node Types | 5 (Episode, Service, RootCauseType, Action, Entity) | Neo4j schema |
+| Relationship Types | 4 (INVOLVES, CAUSED_BY, RESOLVED_BY, CAUSED) | Neo4j schema |
 
 ---
 
@@ -327,28 +363,97 @@ curl -s http://localhost:8000/api/v1/telemetry/stats | jq '.compression'
 |--------|-------|--------|
 | Graph Database | Neo4j 5.x | `docker-compose.yml` |
 | Retrieval Complexity | O(log n) | Index-based |
-| Embedding Model | sentence-transformers/all-MiniLM-L6-v2 | `src/memory/episode_store.py` |
+| Embedding Model | sentence-transformers/all-MiniLM-L6-v2 | `src/memory/embedding_service.py` |
 | Embedding Dimensions | 384 | Fixed by model |
-| Similarity Threshold | ≥0.70 cosine | `src/validation/constants.py` |
+| Similarity Threshold | ≥0.70 cosine | `src/memory/episode_store.py` |
 | Similar Incident Limit | Top 5 | Design choice |
+| Embedding Storage | JSON array property | Neo4j Community compatible |
 
-### 5.2 Hybrid Retrieval Formula
+### 5.2 Embedding Service (Fully Implemented)
+
+**API Endpoint**: `GET /api/v1/graph/embedding/status`
+
+```bash
+# Get embedding service status
+curl -s http://localhost:8000/api/v1/graph/embedding/status | jq
+
+# Expected output:
+{
+  "available": true,
+  "loaded": true,
+  "model": "sentence-transformers/all-MiniLM-L6-v2",
+  "dimensions": 384,
+  "device": "cuda",  # or "cpu"
+  "similarity_threshold": 0.70
+}
+```
+
+**GPU Support**: Automatically uses CUDA if available (NVIDIA GTX 1650+)
+
+**Source**: `src/memory/embedding_service.py`
+
+### 5.3 Hybrid Retrieval Formula
 
 ```
 score(e) = α · vector_sim(e) + (1-α) · graph_sim(e)
 
 Where α = 0.6 (vector similarity weight)
+
+vector_sim = cosine_similarity(embedding_a, embedding_b)
+graph_sim  = rule-based similarity (category + services + root cause)
 ```
 
-**Source**: `src/memory/retrieval.py`
+**Source**: `src/memory/episode_store.py`
 
-### 5.3 Data Retention
+### 5.4 Data Retention
 
 | Store | Retention | Source |
 |-------|-----------|--------|
 | Logs (Loki) | 30 days | `docker/configs/loki-config.yaml` |
 | Traces (Tempo) | 7 days | `docker/configs/tempo-config.yaml` |
 | Metrics (Mimir) | 90 days | `docker/configs/mimir-config.yaml` |
+
+### 5.5 Graph Optimization (v0.6.0)
+
+**Purpose**: Prevent "hairball" visualization and reduce edge explosion
+
+#### Edge Threshold Constants
+
+| Constant | Value | Location | Purpose |
+|----------|-------|----------|---------|
+| `SIMILAR_TO_THRESHOLD` | 0.75 | `src/api/routes/graph.py` | Minimum similarity for episode-to-episode edges |
+| `MAX_SIMILAR_EDGES_PER_EPISODE` | 3 | `src/api/routes/graph.py` | Degree cap per episode |
+| `MIN_TRIPLET_CONFIDENCE` | 0.70 | `src/memory/episode_store.py` | Filter low-quality LLM triplets |
+| `MAX_EDGES_PER_NODE` | 5 | `src/api/routes/graph.py` | Global degree cap for pruning |
+
+#### Entity Canonicalization
+
+**Source**: `src/agents/fast_annotator.py:ENTITY_CANONICALIZATION`
+
+Maps entity variants to canonical forms to prevent node proliferation:
+- `api_gateway` ← ["api-gateway", "apigateway", "api gateway", "gateway"]
+- `database` ← ["db", "postgres", "postgresql", "mysql", "mongodb"]
+- `connection_timeout` ← ["timeout", "conn_timeout", "request_timeout", "504"]
+
+#### Frontend Physics (v0.6.0)
+
+| Parameter | Old Value | New Value | Purpose |
+|-----------|-----------|-----------|---------|
+| Charge Strength | -300 | -800 | Stronger node repulsion |
+| Center Strength | 0.05 | 0.2 | Tighter centering |
+| Link Distance | 100px (fixed) | 50-150px (variable) | Hierarchy-based spacing |
+
+**Source**: `frontend/src/components/EpisodicGraphExplorer.tsx`
+
+#### Improvement Metrics
+
+| Metric | Before v0.6.0 | After v0.6.0 | Improvement |
+|--------|---------------|--------------|-------------|
+| SIMILAR_TO edges (50 episodes) | 2,450 | ~150 | 94% reduction |
+| Entity nodes | 50+ | ~15 | 70% reduction |
+| Total edges | 3,000+ | ~300 | 90% reduction |
+| API response size | ~500KB | ~50KB | 90% reduction |
+| Layout stability | Poor (hairball) | Good (structured) | Qualitative |
 
 ---
 
@@ -606,10 +711,39 @@ To create meaningful test data:
 | Metrics API | `src/api/routes/metrics.py` |
 | Accuracy Validation | `src/validation/accuracy_validator.py` |
 | Constitutional AI | `src/constitutional/validator.py` |
+| Confidence Calculator | `src/confidence/calculator.py` |
+| Embedding Service | `src/memory/embedding_service.py` |
 | Determinism | `src/agents/model_router.py:111-154` (fast), `192-277` (reasoning) |
 | Token Compression | `src/telemetry/compressor.py` |
 | Memory System | `src/memory/episode_store.py`, `src/memory/retrieval.py` |
 
 ---
 
-**Last Verified Against Research_V6.tex**: 2026-01-03
+## Appendix C: Installation for GPU Support (CUDA)
+
+For NVIDIA GPUs (GTX 1650 and above):
+
+```bash
+# Install PyTorch with CUDA support (CUDA 11.8 recommended)
+pip install torch --index-url https://download.pytorch.org/whl/cu118
+
+# Install sentence-transformers
+pip install sentence-transformers
+
+# Verify CUDA is available
+python -c "import torch; print(f'CUDA available: {torch.cuda.is_available()}')"
+```
+
+For CPU-only installation:
+
+```bash
+# Install CPU-only PyTorch
+pip install torch --index-url https://download.pytorch.org/whl/cpu
+
+# Install sentence-transformers
+pip install sentence-transformers
+```
+
+---
+
+**Last Verified Against Research_V6.tex**: 2026-01-16

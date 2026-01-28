@@ -44,3 +44,10 @@ pandas>=2.1.0
 
 # Docker SDK (for container discovery and demo mode)
 docker>=7.0.0
+
+# Embedding & Vector Similarity (Research_V6.tex Section 3.2)
+# NOTE: torch with CUDA support requires separate install:
+#   pip install torch --index-url https://download.pytorch.org/whl/cu118
+# For NVIDIA GTX 1650, use CUDA 11.8 or higher
+torch>=2.0.0
+sentence-transformers>=2.2.0

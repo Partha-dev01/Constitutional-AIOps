@@ -9,6 +9,10 @@ Memory System Constants (from Research_V6.tex):
 - Embedding Dimensions: 384
 - Similarity Threshold: ≥0.70 cosine
 - Retrieval Complexity: O(log n)
+
+Hybrid Retrieval Formula (from Research_V6.tex):
+  score(e) = α·vector_sim(e) + (1-α)·graph_sim(e)
+  where α = 0.6
 """
 
 import hashlib
@@ -16,14 +20,27 @@ import json
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any, Callable, Optional, TYPE_CHECKING
 
 from src.memory.neo4j_client import Neo4jClient, NEO4J_AVAILABLE
+
+if TYPE_CHECKING:
+    from src.memory.embedding_service import EmbeddingService
 
 # Memory System Constants (from Research_V6.tex)
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 EMBEDDING_DIMENSIONS = 384
 SIMILARITY_THRESHOLD = 0.70  # Minimum cosine similarity for matching
+
+# Hybrid retrieval weight (from Research_V6.tex)
+RETRIEVAL_ALPHA = 0.6  # Weight for vector similarity vs graph similarity
+
+# =============================================================================
+# Triplet Confidence Filtering (v0.6.0 - Prevent low-quality triplets)
+# =============================================================================
+# Only store LLM-extracted triplets with confidence >= this threshold
+# This prevents noisy/speculative entity relationships from cluttering the graph
+MIN_TRIPLET_CONFIDENCE = 0.70
 
 logger = logging.getLogger(__name__)
 
@@ -76,6 +93,9 @@ class Episode:
     # Embedding for similarity search (optional)
     embedding: Optional[list[float]] = None
 
+    # LLM-extracted semantic triplets (Phase 2: Dynamic edge labels)
+    triplets: list[dict[str, str]] = field(default_factory=list)
+
     def to_dict(self) -> dict[str, Any]:
         """Convert episode to dictionary."""
         return {
@@ -101,6 +121,7 @@ class Episode:
             "outcome": self.outcome,
             "resolution_notes": self.resolution_notes,
             "human_feedback": self.human_feedback,
+            "triplets": self.triplets,  # LLM-extracted semantic triplets
         }
 
     @classmethod
@@ -129,6 +150,8 @@ class Episode:
             outcome=data.get("outcome", "unknown"),
             resolution_notes=data.get("resolution_notes"),
             human_feedback=data.get("human_feedback"),
+            embedding=data.get("embedding"),  # 384-dim vector
+            triplets=data.get("triplets", []),  # LLM-extracted semantic triplets
         )
 
     def generate_signature(self) -> str:
@@ -283,24 +306,77 @@ class EpisodeStore:
 
     Uses Neo4j for graph-based storage and similarity search.
     Falls back to in-memory storage if Neo4j is unavailable.
+
+    Features:
+    - Semantic embeddings via sentence-transformers
+    - Hybrid retrieval combining vector and graph similarity
+    - On-the-fly embedding generation with optional notification
     """
 
-    def __init__(self, neo4j_client: Optional[Neo4jClient] = None):
+    def __init__(
+        self,
+        neo4j_client: Optional[Neo4jClient] = None,
+        embedding_service: Optional["EmbeddingService"] = None,
+    ):
         """
         Initialize episode store.
 
         Args:
             neo4j_client: Optional Neo4j client instance
+            embedding_service: Optional embedding service for vector similarity
         """
         self.neo4j_client = neo4j_client
         self._memory_store: dict[str, Episode] = {}  # Fallback storage
         self._signature_index: dict[str, list[str]] = {}  # Signature -> episode_ids
 
+        # Embedding service (lazy-load if not provided)
+        self._embedding_service = embedding_service
+        self._embedding_callback: Optional[Callable[[str, str], None]] = None
+
         logger.info("EpisodeStore initialized")
+
+    @property
+    def embedding_service(self) -> Optional["EmbeddingService"]:
+        """Get embedding service, lazy-loading if needed."""
+        if self._embedding_service is None:
+            try:
+                from src.memory.embedding_service import get_embedding_service
+                self._embedding_service = get_embedding_service()
+            except Exception as e:
+                logger.debug(f"Could not load embedding service: {e}")
+        return self._embedding_service
+
+    def set_embedding_callback(
+        self,
+        callback: Callable[[str, str], None],
+    ) -> None:
+        """
+        Set callback for embedding generation notifications.
+
+        Callback receives (episode_id, status) where status is:
+        - 'generating': Embedding generation started
+        - 'completed': Embedding generation completed
+        - 'failed': Embedding generation failed
+
+        Args:
+            callback: Callback function
+        """
+        self._embedding_callback = callback
+
+    def _notify_embedding_status(self, episode_id: str, status: str) -> None:
+        """Notify about embedding generation status."""
+        if self._embedding_callback:
+            try:
+                self._embedding_callback(episode_id, status)
+            except Exception as e:
+                logger.warning(f"Embedding callback failed: {e}")
 
     async def store_episode(self, episode: Episode) -> str:
         """
         Store an episode in the database.
+
+        Generates embeddings on-the-fly if not already present.
+        Notifies via callback when embedding generation starts/completes.
 
         Args:
             episode: Episode to store
@@ -308,6 +384,22 @@ class EpisodeStore:
         Returns:
             Episode ID
         """
+        # Generate embedding if not already present
+        if episode.embedding is None and self.embedding_service:
+            self._notify_embedding_status(episode.episode_id, "generating")
+            try:
+                embedding_text = episode.get_embedding_text()
+                embedding = self.embedding_service.encode(embedding_text)
+                if embedding:
+                    episode.embedding = embedding
+                    self._notify_embedding_status(episode.episode_id, "completed")
+                    logger.debug(f"Generated embedding for episode {episode.episode_id}")
+                else:
+                    self._notify_embedding_status(episode.episode_id, "failed")
+            except Exception as e:
+                logger.warning(f"Failed to generate embedding: {e}")
+                self._notify_embedding_status(episode.episode_id, "failed")
+
         # Always store in memory for fast access
         self._memory_store[episode.episode_id] = episode
 
@@ -441,6 +533,36 @@ class EpisodeStore:
         results.sort(key=lambda e: e.detected_at, reverse=True)
         return results[:limit]
 
+    async def get_recent_episodes(
+        self,
+        minutes: int = 5,
+        limit: int = 20,
+    ) -> list[Episode]:
+        """
+        Get episodes from the last N minutes.
+
+        Used by routine reasoning for trend analysis.
+
+        Args:
+            minutes: Time window in minutes
+            limit: Maximum results
+
+        Returns:
+            List of recent episodes
+        """
+        from datetime import timedelta
+
+        cutoff = datetime.utcnow() - timedelta(minutes=minutes)
+        results = []
+
+        for episode in self._memory_store.values():
+            if episode.detected_at >= cutoff:
+                results.append(episode)
+
+        # Sort by recency (most recent first)
+        results.sort(key=lambda e: e.detected_at, reverse=True)
+        return results[:limit]
+
     async def update_episode(
         self,
         episode_id: str,
@@ -543,7 +665,39 @@ class EpisodeStore:
         return patterns[:limit]
 
     def _calculate_similarity(self, ep1: Episode, ep2: Episode) -> float:
-        """Calculate similarity score between two episodes."""
+        """
+        Calculate hybrid similarity score between two episodes.
+
+        Uses the formula from Research_V6.tex:
+        score(e) = α·vector_sim(e) + (1-α)·graph_sim(e)
+        where α = 0.6 (RETRIEVAL_ALPHA)
+
+        Falls back to rule-based similarity if embeddings unavailable.
+        """
+        # Calculate rule-based/graph similarity
+        graph_sim = self._calculate_rule_similarity(ep1, ep2)
+
+        # Try vector similarity if embeddings available
+        if ep1.embedding and ep2.embedding and self.embedding_service:
+            try:
+                vector_sim = self.embedding_service.cosine_similarity(
+                    ep1.embedding,
+                    ep2.embedding,
+                )
+                # Hybrid: α·vector + (1-α)·graph
+                return RETRIEVAL_ALPHA * vector_sim + (1 - RETRIEVAL_ALPHA) * graph_sim
+            except Exception as e:
+                logger.debug(f"Vector similarity failed, using rule-based: {e}")
+
+        # Fallback to rule-based only
+        return graph_sim
+
+    def _calculate_rule_similarity(self, ep1: Episode, ep2: Episode) -> float:
+        """
+        Calculate rule-based similarity (graph similarity component).
+
+        This is the original heuristic-based similarity.
+        """
         score = 0.0
         weights_total = 0.0
 
@@ -570,38 +724,59 @@ class EpisodeStore:
         return score / weights_total if weights_total > 0 else 0.0
 
     async def _store_episode_graph(self, episode: Episode) -> None:
-        """Store episode in Neo4j graph."""
+        """
+        Store episode in Neo4j graph with full semantic triplets.
+
+        Creates:
+        - Episode node with embedding as JSON array
+        - Service nodes with INVOLVES relationship
+        - RootCauseType node with CAUSED_BY relationship
+        - Semantic triplets from episode analysis
+
+        Stores embedding as JSON array property for Neo4j Community Edition
+        compatibility (no vector index required).
+        """
         if not self.neo4j_client:
             return
 
         async with self.neo4j_client.session() as session:
-            # Create Episode node
+            # Create Episode node with embedding as JSON array
             query = """
             MERGE (e:Episode {episode_id: $episode_id})
             SET e.incident_id = $incident_id,
                 e.title = $title,
+                e.description = $description,
                 e.category = $category,
                 e.severity = $severity,
                 e.root_cause = $root_cause,
                 e.outcome = $outcome,
                 e.confidence = $confidence,
-                e.detected_at = datetime($detected_at)
+                e.detected_at = datetime($detected_at),
+                e.embedding = $embedding,
+                e.has_embedding = $has_embedding,
+                e.updated_at = datetime()
             """
+
+            # Store embedding as JSON string (Neo4j Community doesn't have vector type)
+            embedding_json = json.dumps(episode.embedding) if episode.embedding else None
 
             await session.run(
                 query,
                 episode_id=episode.episode_id,
                 incident_id=episode.incident_id,
                 title=episode.title,
+                description=episode.description[:500] if episode.description else None,
                 category=episode.category,
                 severity=episode.severity,
                 root_cause=episode.root_cause,
                 outcome=episode.outcome,
                 confidence=episode.confidence,
                 detected_at=episode.detected_at.isoformat(),
+                embedding=embedding_json,
+                has_embedding=episode.embedding is not None,
             )
 
-            # Link to services
+            # Link to services with INVOLVES relationship
             for service in episode.affected_services:
                 service_query = """
                 MATCH (e:Episode {episode_id: $episode_id})
@@ -614,8 +789,136 @@ class EpisodeStore:
                     service_name=service,
                 )
 
+            # Create RootCauseType node and link with CAUSED_BY relationship
+            root_cause_type = episode._extract_root_cause_type()
+            if root_cause_type and root_cause_type != "unknown":
+                root_cause_query = """
+                MATCH (e:Episode {episode_id: $episode_id})
+                MERGE (rct:RootCauseType {name: $root_cause_type})
+                MERGE (e)-[:CAUSED_BY {confidence: $confidence}]->(rct)
+                """
+                await session.run(
+                    root_cause_query,
+                    episode_id=episode.episode_id,
+                    root_cause_type=root_cause_type,
+                    confidence=episode.confidence,
+                )
+
+            # Store semantic triplets for knowledge graph enrichment
+            triplets = episode.extract_semantic_triplets()
+            for triplet in triplets:
+                if triplet["relation"] == "RESOLVED_BY" and triplet["entity2"]:
+                    # Create Action node and link from RootCauseType
+                    action_query = """
+                    MERGE (rct:RootCauseType {name: $root_cause_type})
+                    MERGE (a:Action {name: $action_name})
+                    MERGE (rct)-[:RESOLVED_BY {
+                        confidence: $confidence,
+                        source_episode: $episode_id
+                    }]->(a)
+                    """
+                    await session.run(
+                        action_query,
+                        root_cause_type=triplet["entity1"],
+                        action_name=triplet["entity2"],
+                        confidence=triplet["confidence"],
+                        episode_id=triplet["source_episode_id"],
+                    )
+                elif triplet["relation"] == "EXPERIENCED":
+                    # Service experienced a root cause type
+                    exp_query = """
+                    MERGE (s:Service {name: $service_name})
+                    MERGE (rct:RootCauseType {name: $root_cause_type})
+                    MERGE (s)-[:EXPERIENCED {
+                        confidence: $confidence,
+                        source_episode: $episode_id
+                    }]->(rct)
+                    """
+                    await session.run(
+                        exp_query,
+                        service_name=triplet["entity1"],
+                        root_cause_type=triplet["entity2"],
+                        confidence=triplet["confidence"],
+                        episode_id=triplet["source_episode_id"],
+                    )
+                elif triplet["relation"] == "IMPACTED":
+                    # Service impacted another service
+                    impact_query = """
+                    MERGE (s1:Service {name: $source_service})
+                    MERGE (s2:Service {name: $target_service})
+                    MERGE (s1)-[:IMPACTED {
+                        confidence: $confidence,
+                        source_episode: $episode_id
+                    }]->(s2)
+                    """
+                    await session.run(
+                        impact_query,
+                        source_service=triplet["entity1"],
+                        target_service=triplet["entity2"],
+                        confidence=triplet["confidence"],
+                        episode_id=triplet["source_episode_id"],
+                    )
+
+            # Phase 2: Store LLM-extracted semantic triplets (dynamic edge labels)
+            # v0.6.0: Added confidence filtering (MIN_TRIPLET_CONFIDENCE = 0.70)
+            # v0.6.0: Entities are already canonicalized in fast_annotator.py
+            llm_triplet_count = 0
+            llm_triplet_skipped = 0
+            for triplet in episode.triplets:
+                if not isinstance(triplet, dict):
+                    continue
+                subject = triplet.get("subject", "")
+                relation = triplet.get("relation", "")
+                obj = triplet.get("object", "")
+                # Get confidence from triplet (set in fast_annotator via episode metadata)
+                triplet_confidence = triplet.get("confidence", episode.confidence)
+
+                if not subject or not relation or not obj:
+                    continue
+
+                # Filter by confidence to prevent low-quality triplets
+                if triplet_confidence < MIN_TRIPLET_CONFIDENCE:
+                    llm_triplet_skipped += 1
+                    continue
+
+                # Store as Entity nodes with dynamic RELATES edge
+                # Note: Entities are already canonicalized in fast_annotator.py
+                llm_triplet_query = """
+                MERGE (s:Entity {name: $subject})
+                MERGE (o:Entity {name: $object})
+                MERGE (s)-[r:RELATES {
+                    type: $relation,
+                    source_episode: $episode_id,
+                    extraction_method: 'llm'
+                }]->(o)
+                SET r.timestamp = datetime(),
+                    r.confidence = $confidence
+                """
+                await session.run(
+                    llm_triplet_query,
+                    subject=subject,
+                    relation=relation,
+                    object=obj,
+                    episode_id=episode.episode_id,
+                    confidence=triplet_confidence,
+                )
+                llm_triplet_count += 1
+
+            logger.debug(
+                f"Stored episode {episode.episode_id} in Neo4j with "
+                f"{len(episode.affected_services)} services, "
+                f"root_cause_type={root_cause_type}, "
+                f"{len(triplets)} rule triplets, "
+                f"{llm_triplet_count} LLM triplets stored "
+                f"({llm_triplet_skipped} skipped below confidence {MIN_TRIPLET_CONFIDENCE})"
+            )
+
     async def _get_episode_graph(self, episode_id: str) -> Optional[Episode]:
-        """Get episode from Neo4j graph."""
+        """
+        Get episode from Neo4j graph.
+
+        Parses embedding from JSON string if stored.
+        """
         if not self.neo4j_client:
             return None
 
@@ -634,6 +937,13 @@ class EpisodeStore:
 
             ep_data = dict(record["e"])
             ep_data["affected_services"] = record["services"]
+
+            # Parse embedding from JSON if stored
+            if "embedding" in ep_data and ep_data["embedding"]:
+                try:
+                    ep_data["embedding"] = json.loads(ep_data["embedding"])
+                except (json.JSONDecodeError, TypeError):
+                    ep_data["embedding"] = None
 
             return Episode.from_dict(ep_data)
 

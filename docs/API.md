@@ -1,7 +1,7 @@
 # API Reference
 
-> **Version**: 0.4.0
-> **Last Updated**: 2025-12-30
+> **Version**: 0.6.1
+> **Last Updated**: 2026-01-27
 > **Base URL**: `/api/v1`
 
 ---
@@ -568,7 +568,12 @@ Get graph data for visualization.
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | limit | int | 50 | Max episodes |
-| since_hours | int | 24 | Time window |
+| since_hours | int | 168 | Time window (7 days) |
+| min_similarity | float | 0.75 | Min similarity for SIMILAR_TO edges (v0.6.0) |
+| min_confidence | float | 0.70 | Min confidence for entity edges (v0.6.0) |
+| include_similar_to | bool | true | Include SIMILAR_TO edges (v0.6.0) |
+| include_entities | bool | true | Include LLM-extracted entities (v0.6.0) |
+| max_edges_per_node | int | 5 | Max edges per node (v0.6.0) |
 
 **Response** `200 OK`
 ```json
@@ -581,9 +586,91 @@ Get graph data for visualization.
   ],
   "edges": [
     {"from": "backend", "to": "neo4j", "type": "DEPENDS_ON"}
-  ]
+  ],
+  "stats": {
+    "total_episodes": 50,
+    "total_edges": 287,
+    "critical_episodes": 3
+  }
 }
 ```
+
+#### POST /graph/cleanup (v0.6.0)
+Clean up graph data to prevent hairball visualization.
+
+**Request Body**
+```json
+{
+  "delete_similar_to": true,
+  "merge_duplicate_entities": true,
+  "delete_orphan_entities": true,
+  "keep_episodes": 50
+}
+```
+
+**Response** `200 OK`
+```json
+{
+  "deleted_similar_to": 2450,
+  "merged_entities": 35,
+  "deleted_orphans": 12,
+  "pruned_episodes": 5
+}
+```
+
+#### POST /graph/generate-episodes (v0.6.1)
+Generate realistic demo episodes using the Reasoning Agent (Qwen3-14B).
+
+Uses template-based schemas for each service to create episodes that accurately reflect the Constitutional AIOps architecture. Each service template includes:
+- Service metadata (name, type, port, description)
+- Dependencies and health endpoints
+- Common issues for realistic incident generation
+
+**Request Body**
+```json
+{
+  "services": ["neo4j", "backend"],
+  "count_per_service": 1,
+  "clear_existing": true
+}
+```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| services | list[str] | null | Specific services to generate for. If null, generates for all 8 services |
+| count_per_service | int | 1 | Episodes per service (1-3) |
+| clear_existing | bool | true | Clear Neo4j before generating |
+
+**Response** `200 OK`
+```json
+{
+  "success": true,
+  "episodes_created": 8,
+  "services_processed": ["neo4j", "prometheus", "grafana", "loki", "tempo", "otel-collector", "backend", "frontend"],
+  "errors": [],
+  "message": "Generated 8 episodes for 8 services via Reasoning Agent (Qwen3-14B)"
+}
+```
+
+**Service Templates**
+| Service | Type | Port | Common Issues |
+|---------|------|------|---------------|
+| neo4j | database | 7687 | memory_pressure, connection_pool_exhaustion, slow_queries |
+| prometheus | monitoring | 9090 | scrape_target_down, storage_full, query_timeout |
+| grafana | visualization | 3001 | dashboard_load_timeout, datasource_error, auth_failure |
+| loki | logging | 3100 | ingestion_backlog, storage_limit, rate_limiting |
+| tempo | tracing | 3200 | trace_storage_full, span_drop, query_timeout |
+| otel-collector | telemetry | 4317 | exporter_failure, pipeline_blocked, memory_limit |
+| backend | api | 8000 | llm_timeout, api_latency, database_connection |
+| frontend | ui | 3000 | api_unreachable, render_error, websocket_disconnect |
+
+**Generated Graph Schema**
+- `:Episode` nodes with title, description, severity, category, root_cause, confidence
+- `:Service` nodes with type, port, description, health_endpoint, status
+- `:RootCauseType` nodes for failure pattern tracking
+- `:Action` nodes for remediation steps
+- `:Entity` nodes for causal chain elements
+- Relationships: `INVOLVES`, `CAUSED_BY`, `RESOLVED_BY`, `CAUSED`
 
 #### GET /graph/services
 List all services with dependencies.

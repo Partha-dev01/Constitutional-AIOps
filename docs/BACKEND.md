@@ -1,7 +1,7 @@
 # Backend Architecture
 
-> **Version**: 0.4.0
-> **Last Updated**: 2025-12-30
+> **Version**: 0.6.1
+> **Last Updated**: 2026-01-27
 > **Framework**: FastAPI (Python 3.11+)
 > **Source of Truth**: [KEY_METRICS.md](KEY_METRICS.md)
 
@@ -78,8 +78,9 @@ class ConfidenceLevel(Enum):
 #### fast_annotator.py
 - **Model**: Qwen3-4B Q4_K_M
 - **Purpose**: Telemetry annotation, anomaly detection, classification
-- **Output Fields**: `anomaly_detected`, `severity`, `category`, `confidence`, `summary`, `needs_reasoning`, `key_indicators`
+- **Output Fields**: `anomaly_detected`, `severity`, `category`, `confidence`, `summary`, `needs_reasoning`, `key_indicators`, `triplets`
 - **Statistics**: Tracks requests, latency, success/error rates
+- **Entity Canonicalization (v0.6.0)**: `ENTITY_CANONICALIZATION` dict + `canonicalize_entity()` function maps variants to canonical forms (e.g., "api-gateway" → "api_gateway")
 
 #### reasoning_agent.py
 - **Model**: Qwen3-14B Q4_K_M
@@ -161,6 +162,30 @@ class AuthorizationLevel(Enum): automatic, approval_required, alert_only
 
 ---
 
+### Confidence (src/confidence/)
+
+| File | Purpose | Key Exports |
+|------|---------|-------------|
+| `calculator.py` | Composite confidence calculation | `ConfidenceCalculator`, `ConfidenceBreakdown` |
+| `__init__.py` | Module exports | All above |
+
+#### Confidence Formula (Research_V6.tex)
+```
+C(a) = α·C_LLM + β·C_hist + γ·C_sim
+
+Weights:
+  α = 0.40 (LLM confidence)
+  β = 0.35 (Historical success rate)
+  γ = 0.25 (Similarity to past incidents)
+```
+
+#### ConfidenceCalculator Methods
+- `calculate_composite()`: Returns (confidence, breakdown) tuple
+- `_get_historical_success_rate()`: Query Neo4j action success rates
+- `_get_similarity_score()`: Find similar resolved episodes
+
+---
+
 ### Memory (src/memory/)
 
 | File | Purpose | Key Exports |
@@ -168,6 +193,7 @@ class AuthorizationLevel(Enum): automatic, approval_required, alert_only
 | `neo4j_client.py` | Graph database operations | `Neo4jClient`, `get_neo4j_client()` |
 | `episode_store.py` | Episodic memory for incidents | `Episode`, `EpisodeStore` |
 | `retrieval.py` | RAG context retrieval | `RetrievalContext`, `ContextRetriever` |
+| `embedding_service.py` | Semantic embeddings for vector similarity | `EmbeddingService`, `get_embedding_service()` |
 | `__init__.py` | Module exports | All above |
 
 #### neo4j_client.py Operations
@@ -175,11 +201,20 @@ class AuthorizationLevel(Enum): automatic, approval_required, alert_only
 - **Action**: `create_action()`, `link_action_to_incident()`, `record_action_outcome()`
 - **Service Graph**: `create_service_dependency()`, `get_service_dependencies()`, `get_affected_by_service()`
 - **Analytics**: `get_incident_stats()`, `get_action_success_rate()`
+- **Graph Maintenance (v0.6.0)**: `cleanup_graph()`, `get_graph_stats()`
 
 #### episode_store.py
 - **Episode Dataclass**: Complete incident lifecycle (detection → resolution)
-- **Similarity Matching**: Category (30%) + Service overlap (40%) + Root cause type (30%)
-- **Hybrid Storage**: In-memory + Neo4j with fallback
+- **Hybrid Similarity**: `α·vector_sim + (1-α)·graph_sim` where α=0.6
+- **Embedding Generation**: On-the-fly via EmbeddingService with callback notification
+- **Storage**: In-memory + Neo4j with fallback
+- **Triplet Confidence (v0.6.0)**: `MIN_TRIPLET_CONFIDENCE = 0.70` filters low-quality LLM extractions
+
+#### embedding_service.py
+- **Model**: sentence-transformers/all-MiniLM-L6-v2 (384-dim)
+- **GPU Support**: Automatic CUDA detection (NVIDIA GTX 1650+)
+- **Singleton Pattern**: Lazy loading, one instance per process
+- **Methods**: `encode()`, `encode_batch()`, `cosine_similarity()`, `find_most_similar()`
 
 #### retrieval.py (RAG)
 - **retrieve_for_incident()**: Full context for incident analysis

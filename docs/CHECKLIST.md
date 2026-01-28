@@ -1,14 +1,38 @@
 # Constitutional AIOps - Development Checklist
 
-> **Version**: 0.5.1
-> **Last Updated**: 2026-01-15
+> **Version**: 0.6.1
+> **Last Updated**: 2026-01-28
 > **Status**: 100% Core Complete
 > **Architecture**: Simultaneous Dual-Model (Qwen3-4B + Qwen3-14B on 24GB VRAM)
 > **Deployment**: Hybrid (Jarvis Labs A5000 GPU + Local Services)
 
 ---
 
-## Recent Updates (2026-01-15) ✅
+## Recent Updates (2026-01-28) ✅
+
+### v0.6.1 - Episode Generation via Reasoning Agent
+- [x] Created `/api/v1/graph/generate-episodes` endpoint for LLM-based episode generation
+- [x] Implemented SERVICE_TEMPLATES with 8 services (neo4j, prometheus, grafana, loki, tempo, otel-collector, backend, frontend)
+- [x] Added EPISODE_GENERATION_TEMPLATE for Qwen3-14B prompts
+- [x] Created `frontend/src/pages/Graph.tsx` - Dedicated graph visualization page
+- [x] Added Graph page to sidebar navigation in Layout.tsx
+- [x] Created `scripts/generate_real_episodes.py` for batch episode generation
+- [x] Updated all documentation to v0.6.1
+
+### v0.6.0 - Graph Schema Redesign (2026-01-25)
+- [x] Implemented hairball prevention with degree capping
+- [x] Added `SIMILAR_TO_THRESHOLD = 0.75` for episode similarity edges
+- [x] Added `MAX_SIMILAR_EDGES_PER_EPISODE = 3` degree cap
+- [x] Added `MIN_TRIPLET_CONFIDENCE = 0.70` for LLM-extracted triplet filtering
+- [x] Added `MAX_EDGES_PER_NODE = 5` global degree cap
+- [x] Created `src/confidence/calculator.py` with composite formula
+- [x] Entity canonicalization (70+ variants → 15 canonical forms)
+- [x] Created `src/memory/embedding_service.py` for 384-dim embeddings
+- [x] Updated EpisodicGraphExplorer physics (CHARGE_STRENGTH=-300)
+
+---
+
+## Previous Updates (2026-01-15) ✅
 
 ### v0.5.1 - Docker Service Recovery & Bug Fixes
 - [x] Added health checks to all docker-compose services (loki, prometheus, tempo, grafana, frontend, otel-collector)
@@ -108,7 +132,7 @@ Created `src/validation/constants.py` with:
 
 ## Component Status
 
-### Backend (43 Python files) ✅
+### Backend (45+ Python files) ✅
 
 #### Core Modules
 - [x] `src/main.py` - FastAPI entry point with lifespan management
@@ -124,9 +148,13 @@ Created `src/validation/constants.py` with:
 - [x] `principles.py` - 12 principles, 3 tiers
 - [x] `validator.py` - Action validation engine
 
+#### Confidence (src/confidence/) - NEW v0.6.0
+- [x] `calculator.py` - Composite confidence: C(a) = α·C_LLM + β·C_hist + γ·C_sim
+
 #### Memory System (src/memory/)
 - [x] `neo4j_client.py` - Neo4j async client
-- [x] `episode_store.py` - Episodic memory storage
+- [x] `episode_store.py` - Episodic memory storage with triplet filtering
+- [x] `embedding_service.py` - 384-dim sentence embeddings (NEW v0.6.0)
 - [x] `retrieval.py` - RAG context retrieval
 
 #### Telemetry (src/telemetry/)
@@ -158,17 +186,20 @@ Created `src/validation/constants.py` with:
 
 ---
 
-### Frontend (23 React files) ✅
+### Frontend (25+ React files) ✅
 
 #### Pages
 - [x] `Dashboard.tsx` - Overview with real-time updates
 - [x] `Incidents.tsx` - Incident list with CRUD
 - [x] `Chat.tsx` - Interactive chat interface
 - [x] `Agents.tsx` - Agent management (6 tabs)
+- [x] `Graph.tsx` - Dedicated episodic graph page (NEW v0.6.1)
+- [x] `Metrics.tsx` - LGTM observability metrics
 - [x] `Settings.tsx` - Configuration (5 tabs)
 
 #### Components
 - [x] `Layout.tsx` - Navigation and structure
+- [x] `EpisodicGraphExplorer.tsx` - Force-directed graph (NEW v0.5.0)
 - [x] `IncidentTimeline.tsx` - Event timeline
 - [x] `DependencyGraph.tsx` - Service dependencies
 
@@ -290,5 +321,5 @@ See [CLAUDE.md](../CLAUDE.md) for session management.
 
 ---
 
-**Last Updated**: 2026-01-03
-**Version**: 0.4.2
+**Last Updated**: 2026-01-28
+**Version**: 0.6.1

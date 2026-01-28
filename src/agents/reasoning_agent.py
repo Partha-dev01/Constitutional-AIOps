@@ -331,22 +331,29 @@ class ReasoningAgent(BaseAgent):
     async def analyze_rca(
         self,
         incident_data: dict[str, Any],
+        historical_context: str = "",
         enable_thinking: bool = True,
     ) -> AgentResponse:
         """
         Perform root cause analysis on an incident.
-        
+
         Args:
             incident_data: Incident information and telemetry
+            historical_context: Context from episodic memory (similar past incidents)
             enable_thinking: Enable extended thinking mode
-            
+
         Returns:
             AgentResponse with RCA results
         """
+        # Build context with historical information if available
+        context = json.dumps(incident_data, indent=2)
+        if historical_context:
+            context = f"## Historical Context (Similar Past Incidents)\n{historical_context}\n\n## Current Incident\n{context}"
+
         return await self.process({
             "mode": "rca",
             "query": "Perform root cause analysis",
-            "context": json.dumps(incident_data, indent=2),
+            "context": context,
             "enable_thinking": enable_thinking,
         })
     
