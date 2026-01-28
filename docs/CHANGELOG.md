@@ -2,6 +2,224 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.1] - 2026-01-27
+
+### Episode Generation via Reasoning Agent
+
+**Feature**: New API endpoint to generate realistic demo episodes using the Reasoning Agent (Qwen3-14B) with template-based schemas.
+
+#### New Endpoint: `POST /api/v1/graph/generate-episodes`
+
+Generates realistic incident episodes for each service in the Constitutional AIOps architecture. The Reasoning Agent analyzes service templates and creates contextually appropriate incidents.
+
+**Implementation Details**
+
+**Backend (src/api/routes/graph.py)**
+- Added `SERVICE_TEMPLATES` array defining 8 services with:
+  - Name, type, port, description
+  - Health endpoint, dependencies
+  - Common issues for realistic incident generation
+- Added `EPISODE_GENERATION_TEMPLATE` prompt for Qwen3-14B
+- Added `GenerateEpisodesRequest` and `GenerateEpisodesResponse` models
+- Added `/generate-episodes` endpoint that:
+  1. Calls ReasoningAgent.chat() for each service
+  2. Parses JSON response (handles `<think>` tags, markdown blocks)
+  3. Stores in Neo4j with full graph schema
+
+**Graph Schema Created**
+| Node Type | Properties |
+|-----------|------------|
+| `:Episode` | episode_id, title, description, severity, category, root_cause, confidence, outcome, detected_at, resolved_at |
+| `:Service` | name, type, port, description, health_endpoint, status, uptime_percent |
+| `:RootCauseType` | id, name |
+| `:Action` | id, name, success_rate |
+| `:Entity` | name (causal chain elements) |
+
+| Relationship | Pattern |
+|--------------|---------|
+| `INVOLVES` | Episode → Service |
+| `CAUSED_BY` | Episode → RootCauseType |
+| `RESOLVED_BY` | Episode → Action |
+| `CAUSED` | Entity → Entity (causal chain) |
+
+**Usage**
+```bash
+# Generate episodes for all services
+curl -X POST "http://localhost:8000/api/v1/graph/generate-episodes" \
+  -H "Content-Type: application/json" \
+  -d '{"clear_existing": true, "count_per_service": 1}'
+
+# Generate for specific services
+curl -X POST "http://localhost:8000/api/v1/graph/generate-episodes" \
+  -H "Content-Type: application/json" \
+  -d '{"services": ["neo4j", "backend"], "count_per_service": 2}'
+```
+
+**Requirements**
+- Jarvis Labs VM must be running with Ollama
+- Both Qwen3-4B and Qwen3-14B models loaded
+- Neo4j container healthy
+
+#### Bug Fixes
+- Fixed graph node click "fly off" behavior (removed zoom(2, 500))
+- Adjusted physics settings for better service node distribution
+- Removed duplicate `/graph` route (now only in Agents tab)
+
+---
+
+## [0.6.0] - 2026-01-25
+
+### Graph Schema Redesign - Hairball Prevention
+
+**Issue**: Graph visualization was a tangled mess ("hairball") with 2,450+ SIMILAR_TO edges due to O(n²) algorithm with 0.5 threshold, entity proliferation from LLM triplets without deduplication, and weak force simulation parameters.
+
+#### Changes Made
+
+**Backend (src/api/routes/graph.py)**
+- `SIMILAR_TO_THRESHOLD`: 0.5 → 0.75 (94% edge reduction)
+- Added `MAX_SIMILAR_EDGES_PER_EPISODE = 3` (degree capping)
+- Added `MIN_TRIPLET_CONFIDENCE = 0.70` (quality filtering)
+- Added `MAX_EDGES_PER_NODE = 5` (hairball prevention)
+- New API query parameters: `min_similarity`, `min_confidence`, `include_similar_to`, `include_entities`, `max_edges_per_node`
+- Added `_prune_edges()` function for server-side degree capping
+- Added `/cleanup` endpoint for graph maintenance
+
+**Backend (src/agents/fast_annotator.py)**
+- Added `ENTITY_CANONICALIZATION` dictionary (30+ entity mappings)
+- Added `canonicalize_entity()` function to map variants to canonical forms
+- Example: "API Gateway", "api-gateway", "apigateway" all → "api_gateway"
+
+**Backend (src/memory/episode_store.py)**
+- Added `MIN_TRIPLET_CONFIDENCE = 0.70` constant
+- Triplets below confidence threshold are now filtered out
+- Added confidence field to RELATES edges
+
+**Backend (src/memory/neo4j_client.py)**
+- Added `cleanup_graph()` method for data maintenance
+- Added `get_graph_stats()` method for monitoring
+
+**Frontend (frontend/src/components/EpisodicGraphExplorer.tsx)**
+- Charge strength: -300 → -800 (stronger node repulsion)
+- Center strength: 0.05 → 0.2 (tighter centering)
+- Variable link distance based on relationship type (50-150px)
+- Added DAG/hierarchical layout mode option
+- Added edge visibility toggles (Similar To, Entities)
+- Added layout mode toggle (Force vs Hierarchy)
+
+#### Expected Improvements
+| Metric | Before | After | Improvement |
+|--------|--------|-------|-------------|
+| SIMILAR_TO edges | 2,450 | ~150 | 94% reduction |
+| Entity nodes | 50+ | ~15 | 70% reduction |
+| Total edges | 3,000+ | ~300 | 90% reduction |
+| API response size | ~500KB | ~50KB | 90% reduction |
+
+---
+
+## [0.5.3] - 2026-01-23
+
+### Neo4j Health Check Resilience Fix
+
+**Issue**: Neo4j container becomes "unhealthy" after Docker Desktop restarts, blocking backend startup due to `depends_on: service_healthy` dependency.
+
+#### Root Cause
+1. `start_period: 60s` was too short for Neo4j cold start initialization
+2. No `stop_grace_period` meant unclean shutdowns left stale PID files
+3. Stale PIDs caused "Neo4j is already running" errors on restart
+
+#### Fix Applied
+
+**File**: `docker-compose.yml` (Neo4j service, lines 72-95)
+
+```yaml
+neo4j:
+  ...
+  stop_grace_period: 30s  # NEW: Ensures Neo4j shuts down cleanly
+  healthcheck:
+    test: ["CMD", "wget", "-q", "--spider", "http://localhost:7474"]
+    interval: 30s
+    timeout: 10s
+    retries: 5
+    start_period: 120s  # CHANGED: Was 60s, increased for cold start
+```
+
+#### Recovery Commands (if issue persists)
+```bash
+# Clean restart (preserves data)
+docker compose down && docker compose -f docker-compose.yml -f docker/docker-compose.hybrid.yml up -d
+
+# Full reset (DELETES DATA - use only if corrupted)
+docker compose down -v && docker compose -f docker-compose.yml -f docker/docker-compose.hybrid.yml up -d
+```
+
+#### Verification
+```bash
+docker ps --format "table {{.Names}}\t{{.Status}}" | grep neo4j
+# Expected: aiops-neo4j ... (healthy)
+```
+
+---
+
+## [0.5.2] - 2026-01-16
+
+### Confidence Formula & Embeddings Implementation
+
+**Session**: Implemented the composite confidence formula and vector embeddings from Research_V6.tex.
+
+#### New Features
+
+1. **Confidence Calculator Module** (`src/confidence/`)
+   - Implements formula: `C(a) = 0.4·C_LLM + 0.35·C_hist + 0.25·C_sim`
+   - Queries Neo4j for historical action success rates
+   - Uses episode similarity for context-aware confidence
+   - Falls back to neutral defaults (0.5) when data unavailable
+
+2. **Embedding Service** (`src/memory/embedding_service.py`)
+   - Uses sentence-transformers/all-MiniLM-L6-v2 (384-dim)
+   - Automatic CUDA detection for GPU acceleration (GTX 1650+)
+   - Singleton pattern with lazy loading
+   - Batch encoding support
+
+3. **Hybrid Retrieval** (`src/memory/episode_store.py`)
+   - Formula: `score = 0.6·vector_sim + 0.4·graph_sim`
+   - On-the-fly embedding generation with callback notification
+   - Stores embeddings as JSON array in Neo4j (Community compatible)
+
+4. **New API Endpoints**
+   - `GET /api/v1/actions/confidence/formula` - Get formula details
+   - `GET /api/v1/graph/embedding/status` - Get embedding service status
+
+#### Files Created
+
+| File | Purpose |
+|------|---------|
+| `src/confidence/__init__.py` | Module init |
+| `src/confidence/calculator.py` | ConfidenceCalculator class |
+| `src/memory/embedding_service.py` | EmbeddingService with CUDA support |
+
+#### Files Modified
+
+| File | Changes |
+|------|---------|
+| `requirements.txt` | Added torch>=2.0.0, sentence-transformers>=2.2.0 |
+| `src/main.py` | Initialize embedding service and confidence calculator |
+| `src/memory/episode_store.py` | Integrate embeddings, hybrid similarity |
+| `src/memory/__init__.py` | Export embedding service |
+| `src/api/routes/actions.py` | Use composite confidence, add formula endpoint |
+| `src/api/routes/graph.py` | Add embedding status endpoint |
+| `docs/KEY_METRICS.md` | Document confidence formula and embeddings |
+| `docs/BACKEND.md` | Document new modules |
+
+#### GPU Installation
+
+```bash
+# NVIDIA GTX 1650+ with CUDA 11.8
+pip install torch --index-url https://download.pytorch.org/whl/cu118
+pip install sentence-transformers
+```
+
+---
+
 ## [0.5.1] - 2026-01-15
 
 ### Docker Service Recovery & Bug Fixes

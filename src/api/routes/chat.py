@@ -8,8 +8,8 @@ Supports general chat, RCA analysis, and remediation planning.
 import logging
 import time
 import uuid
-from datetime import datetime
-from typing import Any
+from datetime import datetime, timedelta
+from typing import Any, Optional
 
 from fastapi import APIRouter, HTTPException, Request, status
 
@@ -23,7 +23,209 @@ from src.api.schemas.chat import (
     ConversationHistory,
 )
 
+# Import MCP tool executor for automatic tool calls during chat
+from src.api.routes.tools import execute_tool_call
+
 logger = logging.getLogger(__name__)
+
+# Known services in the Constitutional AIOps stack
+KNOWN_SERVICES = [
+    "nextcloud", "neo4j", "loki", "prometheus", "grafana", "tempo",
+    "backend", "frontend", "promtail", "otel-collector", "mimir"
+]
+
+
+def _extract_service_from_query(message: str) -> Optional[str]:
+    """
+    Extract service name from user query using keyword matching.
+
+    Args:
+        message: User's message/query
+
+    Returns:
+        Service name if found, None otherwise
+    """
+    message_lower = message.lower()
+    for service in KNOWN_SERVICES:
+        if service in message_lower:
+            return service
+    return None
+
+
+async def _build_telemetry_context(
+    request: Request,
+    service: str,
+    duration_minutes: int = 15
+) -> str:
+    """
+    Build telemetry context with actual logs and metrics from LGTM stack.
+
+    Args:
+        request: FastAPI request object
+        service: Service name to query telemetry for
+        duration_minutes: How far back to query
+
+    Returns:
+        Formatted telemetry context string for LLM
+    """
+    telemetry_collector = getattr(request.app.state, "telemetry_collector", None)
+    if not telemetry_collector or not service:
+        return ""
+
+    context_parts = []
+    end_time = datetime.utcnow()
+    start_time = end_time - timedelta(minutes=duration_minutes)
+
+    # Query recent logs from Loki
+    try:
+        logs = await telemetry_collector.query_logs(
+            service=service,
+            start_time=start_time,
+            end_time=end_time,
+            limit=50,
+        )
+        if logs:
+            error_logs = [l for l in logs if l.level.lower() in ("error", "fatal", "critical")]
+            warn_logs = [l for l in logs if l.level.lower() in ("warn", "warning")]
+
+            log_text = f"## Recent Logs for {service} (last {duration_minutes} min)\n"
+            log_text += f"Total: {len(logs)} logs ({len(error_logs)} errors, {len(warn_logs)} warnings)\n\n"
+
+            # Prioritize errors, then warnings, then others
+            sample_logs = (error_logs + warn_logs + logs)[:10]
+            for log in sample_logs:
+                timestamp_str = log.timestamp.strftime('%H:%M:%S')
+                msg_preview = log.message[:200] if len(log.message) > 200 else log.message
+                log_text += f"[{timestamp_str}] [{log.level}] {msg_preview}\n"
+
+            context_parts.append(log_text)
+    except Exception as e:
+        logger.debug(f"Failed to query logs for {service}: {e}")
+
+    # Query metrics from Prometheus
+    try:
+        metrics = await telemetry_collector.query_metrics(
+            service=service,
+            start_time=start_time,
+            end_time=end_time,
+        )
+        if metrics:
+            metric_text = f"## Metrics for {service}\n"
+            # Group by metric name and show latest value
+            metric_latest: dict[str, float] = {}
+            for m in metrics:
+                metric_latest[m.name] = m.value
+
+            for name, value in list(metric_latest.items())[:8]:
+                metric_text += f"- {name}: {value:.2f}\n"
+
+            context_parts.append(metric_text)
+    except Exception as e:
+        logger.debug(f"Failed to query metrics for {service}: {e}")
+
+    return "\n\n".join(context_parts) if context_parts else ""
+
+
+async def _invoke_mcp_tools_for_query(request: Request, message: str, service: Optional[str]) -> str:
+    """
+    Automatically invoke relevant MCP tools based on user query.
+
+    This function analyzes the user's query and calls appropriate MCP tools:
+    - find_similar: When query mentions "similar", "past", "history", or "incidents"
+    - get_dependencies: When query mentions "dependencies", "impact", "upstream/downstream"
+    - analyze_logs: When query mentions "logs", "errors", "analyze"
+
+    Args:
+        request: FastAPI request object
+        message: User's query message
+        service: Extracted service name (if any)
+
+    Returns:
+        Formatted string with MCP tool results for LLM context
+    """
+    message_lower = message.lower()
+    tool_results = []
+
+    # Keywords that trigger each MCP tool
+    similar_keywords = ["similar", "past", "history", "previous", "before", "incident"]
+    dependency_keywords = ["dependency", "dependencies", "impact", "upstream", "downstream", "affects", "affected"]
+    log_keywords = ["log", "logs", "error", "errors", "analyze", "pattern", "debug"]
+
+    # 1. Call find_similar if relevant keywords present
+    if any(kw in message_lower for kw in similar_keywords):
+        try:
+            result = await execute_tool_call(
+                request,
+                tool_name="find_similar",
+                parameters={
+                    "title": message[:200],  # Use query as search title
+                    "affected_services": [service] if service else [],
+                    "limit": 5
+                }
+            )
+            if result.get("success") and result.get("data", {}).get("similar_incidents"):
+                incidents = result["data"]["similar_incidents"]
+                tool_results.append(f"## Similar Past Incidents (from Neo4j Memory)\n")
+                for idx, inc in enumerate(incidents[:3], 1):
+                    tool_results.append(
+                        f"{idx}. **{inc.get('title', 'Unknown')}** "
+                        f"(Severity: {inc.get('severity', 'N/A')}, "
+                        f"Root Cause: {inc.get('root_cause', 'Unknown')})"
+                    )
+            else:
+                tool_results.append("## Similar Past Incidents\nNo similar incidents found in memory.")
+        except Exception as e:
+            logger.debug(f"find_similar tool call failed: {e}")
+
+    # 2. Call get_dependencies if service mentioned and dependency keywords present
+    if service and any(kw in message_lower for kw in dependency_keywords):
+        try:
+            result = await execute_tool_call(
+                request,
+                tool_name="get_dependencies",
+                parameters={"service_name": service, "depth": 2}
+            )
+            if result.get("success") and result.get("data"):
+                deps = result["data"]
+                tool_results.append(f"\n## Service Dependencies for {service}")
+                upstream = deps.get("upstream", [])
+                downstream = deps.get("downstream", [])
+                if upstream:
+                    tool_results.append(f"- Upstream: {', '.join(upstream)}")
+                if downstream:
+                    tool_results.append(f"- Downstream: {', '.join(downstream)}")
+                if not upstream and not downstream:
+                    tool_results.append("- No dependencies found in graph")
+        except Exception as e:
+            logger.debug(f"get_dependencies tool call failed: {e}")
+
+    # 3. Call analyze_logs if service mentioned and log keywords present
+    if service and any(kw in message_lower for kw in log_keywords):
+        try:
+            result = await execute_tool_call(
+                request,
+                tool_name="analyze_logs",
+                parameters={
+                    "service_name": service,
+                    "time_range_minutes": 15,
+                    "log_level": "error"
+                }
+            )
+            if result.get("success") and result.get("data"):
+                log_data = result["data"]
+                tool_results.append(f"\n## Log Analysis for {service}")
+                tool_results.append(f"- Total logs: {log_data.get('total_logs', 0)}")
+                tool_results.append(f"- Error count: {log_data.get('error_count', 0)}")
+                patterns = log_data.get("patterns", [])
+                if patterns:
+                    tool_results.append(f"- Top patterns: {', '.join(patterns[:3])}")
+        except Exception as e:
+            logger.debug(f"analyze_logs tool call failed: {e}")
+
+    if tool_results:
+        logger.info(f"MCP tools invoked for query, {len(tool_results)} results")
+        return "\n".join(tool_results)
+    return ""
 
 
 async def _build_runtime_context(request: Request) -> str:
@@ -173,11 +375,28 @@ async def chat(request: Request, chat_request: ChatRequest) -> ChatResponse:
         # Build runtime context with current system state
         runtime_context = await _build_runtime_context(request)
 
-        # Get response from reasoning agent with runtime context
+        # Extract service from query and get real telemetry data
+        service = _extract_service_from_query(chat_request.message)
+        telemetry_context = ""
+        if service:
+            telemetry_context = await _build_telemetry_context(request, service)
+            logger.info(f"Built telemetry context for service: {service}")
+
+        # Invoke MCP tools automatically based on query keywords
+        mcp_tool_context = await _invoke_mcp_tools_for_query(request, chat_request.message, service)
+
+        # Combine telemetry + MCP tools + runtime context for comprehensive LLM input
+        full_context = runtime_context
+        if mcp_tool_context:
+            full_context = mcp_tool_context + "\n\n" + full_context
+        if telemetry_context:
+            full_context = telemetry_context + "\n\n" + full_context
+
+        # Get response from reasoning agent with full context (including real telemetry)
         agent_response = await reasoning_agent.chat(
             message=chat_request.message,
             conversation_history=history[:-1],  # Exclude current message
-            runtime_context=runtime_context,
+            runtime_context=full_context,
         )
 
         assistant_response = {
@@ -252,10 +471,62 @@ async def analyze(request: Request, analysis_request: AnalysisRequest) -> Analys
 
     try:
         if analysis_request.mode == "rca":
+            # Retrieve historical context from episodic memory for better RCA
+            context_retriever = getattr(request.app.state, "context_retriever", None)
+            historical_context = ""
+
+            if context_retriever:
+                try:
+                    historical_context = await context_retriever.retrieve_for_rca(
+                        incident=analysis_request.data,
+                        telemetry_summary=None,
+                    )
+                    logger.info(f"Retrieved historical context for RCA ({len(historical_context)} chars)")
+                except Exception as e:
+                    logger.warning(f"Failed to retrieve RCA context: {e}")
+
             agent_response = await reasoning_agent.analyze_rca(
                 incident_data=analysis_request.data,
+                historical_context=historical_context,
                 enable_thinking=analysis_request.enable_thinking,
             )
+
+            # Store RCA result as Episode in Neo4j (per Research Paper Section 4.4)
+            episode_store = getattr(request.app.state, "episode_store", None)
+            if episode_store and agent_response.content:
+                try:
+                    from src.memory.episode_store import Episode
+
+                    # Extract service from analysis data
+                    affected_services = analysis_request.data.get("services", [])
+                    if not affected_services:
+                        service = _extract_service_from_query(
+                            analysis_request.data.get("title", "") +
+                            analysis_request.data.get("description", "")
+                        )
+                        if service:
+                            affected_services = [service]
+
+                    # Create Episode for graph storage
+                    rca_episode = Episode(
+                        episode_id=str(uuid.uuid4()),
+                        incident_id=analysis_request.data.get("incident_id", str(uuid.uuid4())),
+                        title=f"RCA: {analysis_request.data.get('title', 'Manual Analysis')[:80]}",
+                        description=agent_response.content[:2000],
+                        severity=analysis_request.data.get("severity", "info"),
+                        category="rca",
+                        detected_at=datetime.utcnow(),
+                        affected_services=affected_services,
+                        root_cause=agent_response.metadata.get("root_cause") if agent_response.metadata else None,
+                        confidence=agent_response.confidence,
+                        outcome="analyzed",
+                    )
+
+                    await episode_store.store_episode(rca_episode)
+                    logger.info(f"Stored RCA episode in Neo4j: {rca_episode.episode_id}")
+                except Exception as e:
+                    logger.warning(f"Failed to store RCA episode: {e}")
+
         else:  # planning
             root_cause = analysis_request.data.get("root_cause", "Unknown")
             agent_response = await reasoning_agent.create_plan(
@@ -419,19 +690,39 @@ def _check_approval_required(result: dict, confidence: float) -> bool:
 
 
 async def _find_related_incidents(request: Request, query: str) -> list[str] | None:
-    """Find related incidents from graph memory."""
-    neo4j_client = getattr(request.app.state, "neo4j_client", None)
+    """
+    Find related incidents from graph-episodic memory.
 
-    if neo4j_client is None:
-        return None
+    Uses EpisodeStore to query Neo4j for similar past incidents
+    based on the service mentioned in the query.
 
-    try:
-        # This would use Neo4j full-text search or vector similarity
-        # For now, return None until memory module is implemented
-        return None
-    except Exception as e:
-        logger.warning(f"Failed to find related incidents: {e}")
-        return None
+    Args:
+        request: FastAPI request object
+        query: User's query string
+
+    Returns:
+        List of related incident descriptions, or None if none found
+    """
+    episode_store = getattr(request.app.state, "episode_store", None)
+
+    # Extract service from query
+    service = _extract_service_from_query(query)
+
+    if episode_store and service:
+        try:
+            episodes = await episode_store.find_by_service(service, limit=5)
+            if episodes:
+                related = []
+                for ep in episodes:
+                    root_cause = ep.root_cause or "Unknown"
+                    related.append(
+                        f"{ep.title} (Severity: {ep.severity}, Root Cause: {root_cause})"
+                    )
+                return related
+        except Exception as e:
+            logger.warning(f"Failed to find related incidents: {e}")
+
+    return None
 
 
 __all__ = ["router"]

@@ -5,8 +5,6 @@
 #   Local (no GPU):   docker-compose -f docker-compose.yml -f docker/docker-compose.local.yml up
 #   GPU deployment:   docker-compose -f docker-compose.yml -f docker/docker-compose.gpu.yml up
 
-version: "3.9"
-
 services:
   # ==========================================================================
   # Core Application
@@ -88,12 +86,13 @@ services:
     networks:
       - aiops-network
     restart: unless-stopped
+    stop_grace_period: 30s
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:7474"]
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:7474"]
       interval: 30s
       timeout: 10s
       retries: 5
-      start_period: 60s
+      start_period: 120s
 
   # ==========================================================================
   # Observability Stack (LGTM)
@@ -243,12 +242,10 @@ services:
     networks:
       - aiops-network
     restart: unless-stopped
+    # Note: otel-collector uses distroless image without wget/curl
+    # Health is verified via metrics export logs and port 13133 externally
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:13133/"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
+      disable: true
 
 networks:
   aiops-network:

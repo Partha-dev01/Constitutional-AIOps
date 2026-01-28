@@ -1,8 +1,9 @@
 # Frontend Architecture
 
-> **Version**: 0.4.0
-> **Last Updated**: 2025-12-30
+> **Version**: 0.6.1
+> **Last Updated**: 2026-01-28
 > **Framework**: React 18 + TypeScript + Vite
+> **Source of Truth**: [KEY_METRICS.md](KEY_METRICS.md)
 
 ---
 
@@ -15,6 +16,7 @@ The Constitutional AIOps frontend is a React single-page application providing:
 - **Action Approval Workflow**: Constitutional AI validation UI
 - **Interactive Chat**: Multi-turn conversation with Reasoning Agent
 - **Agent Monitoring**: Activity streams, telemetry, graph visualization
+- **Graph Explorer**: Episodic knowledge graph with force-directed visualization (v0.5.0+)
 - **Settings Management**: Constitutional thresholds, prompts, notifications
 
 ---
@@ -33,6 +35,7 @@ The Constitutional AIOps frontend is a React single-page application providing:
 | Axios | 1.6.0 | HTTP client |
 | Recharts | 2.10.0 | Charts |
 | Lucide React | 0.300.0 | Icons |
+| react-force-graph-2d | 1.25.x | Force-directed graph (v0.5.0+) |
 
 ---
 
@@ -58,12 +61,14 @@ frontend/
     │   ├── Incidents.tsx   # Incident management
     │   ├── Chat.tsx        # Agent chat interface
     │   ├── Agents.tsx      # Agent hub (6 tabs)
+    │   ├── Graph.tsx       # Episodic graph explorer (v0.6.0+)
     │   └── Settings.tsx    # Configuration (5 tabs)
     │
     ├── components/         # Shared components
     │   ├── Layout.tsx      # App shell with sidebar
     │   ├── IncidentTimeline.tsx
     │   ├── DependencyGraph.tsx
+    │   ├── EpisodicGraphExplorer.tsx  # Force-directed graph (v0.5.0+)
     │   └── index.ts        # Exports
     │
     └── lib/                # Utilities
@@ -312,6 +317,43 @@ const [editingPrompt, setEditingPrompt] = useState<string | null>(null);
 
 ---
 
+### Graph (`src/pages/Graph.tsx`) - v0.6.0+
+
+**Purpose**: Dedicated episodic knowledge graph visualization page
+
+**Features**:
+- Full-page force-directed graph visualization
+- Refresh and loading states
+- Error handling with retry
+- Responsive layout
+
+**Data Transformation**:
+Transforms backend graph data to visualization format:
+```typescript
+interface GraphNode {
+  id: string;
+  label: string;
+  type: 'service' | 'episode' | 'incident' | 'action' | 'root_cause' | 'entity';
+  status?: 'healthy' | 'warning' | 'critical' | 'detected' | 'analyzing' | 'remediating' | 'resolved';
+  confidence?: number;
+  severity?: string;
+  category?: string;
+  rootCause?: string;
+}
+
+interface GraphLink {
+  source: string;
+  target: string;
+  label?: string;
+  type?: string;
+  weight?: number;
+}
+```
+
+**API Endpoint**: `GET /api/v1/graph/episodes`
+
+---
+
 ## Components
 
 ### Layout (`src/components/Layout.tsx`)
@@ -423,6 +465,97 @@ interface ServiceNode {
   };
 }
 ```
+
+---
+
+### EpisodicGraphExplorer (`src/components/EpisodicGraphExplorer.tsx`) - v0.5.0+
+
+**Purpose**: Force-directed episodic knowledge graph visualization using react-force-graph-2d
+
+**Features**:
+- Interactive force-directed layout with D3 physics
+- Pan to clicked node (800ms animation)
+- Node type filtering controls
+- Edge visibility toggles (SIMILAR_TO, entities)
+- Stats overlay showing node/edge counts
+- Interactive legend with color coding
+- Pause/resume animation control
+
+**Physics Constants (v0.6.0)**:
+```typescript
+const CHARGE_STRENGTH = -300;  // Node repulsion force
+
+// Variable link distances by relationship type
+const LINK_DISTANCES = {
+  'similar_to': 80,      // Similar episodes nearby
+  'affects': 120,        // Service impact
+  'involves': 120,       // Service involvement
+  'caused_by': 100,      // Causal relationships
+  'experienced': 100,    // Root cause experience
+  'resolved_by': 130,    // Resolution actions
+  'remediates': 130,     // Remediation
+  'relates': 90          // LLM-extracted relations
+};
+
+// Node sizes by type
+const NODE_SIZES = {
+  'episode': 9,
+  'root_cause': 7,
+  'service': 6,
+  'entity': 6,
+  'action': 5
+};
+```
+
+**D3 Force Configuration**:
+```typescript
+{
+  cooldownTicks: 100,
+  d3AlphaDecay: 0.02,
+  d3VelocityDecay: 0.4,
+  d3AlphaMin: 0.01,
+  nodeRelSize: 8
+}
+```
+
+**Props**:
+```typescript
+interface EpisodicGraphExplorerProps {
+  nodes: GraphNode[];
+  links: GraphLink[];
+  onNodeClick?: (node: GraphNode) => void;
+  selectedNode?: string;
+  height?: number;
+}
+```
+
+**Node Color Scheme**:
+| Node Type | Color |
+|-----------|-------|
+| Service (healthy) | Blue (#3B82F6) |
+| Service (warning) | Amber (#F59E0B) |
+| Service (critical) | Red (#EF4444) |
+| Episode (resolved) | Green (#10B981) |
+| Episode (analyzing) | Blue (#3B82F6) |
+| Root Cause | Orange (#F97316) |
+| Action | Cyan (#06B6D4) |
+| Entity | Pink (#EC4899) |
+
+**Edge Color Scheme**:
+| Edge Type | Color |
+|-----------|-------|
+| depends_on | Blue |
+| affects/involves | Red |
+| caused_by/experienced | Orange |
+| resolved_by/remediates | Green |
+| similar_to | Purple |
+| LLM relations | Pink |
+
+**Controls**:
+- Show/Hide SIMILAR_TO edges
+- Show/Hide Entity nodes
+- Pause/Resume animation
+- Node type filter checkboxes
 
 ---
 
@@ -716,10 +849,12 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 | Incidents.tsx | ~720 | Incident management |
 | Chat.tsx | ~210 | Agent chat |
 | Agents.tsx | ~1400 | Agent hub (6 tabs) |
+| Graph.tsx | ~300 | Episodic graph page (v0.6.0+) |
 | Settings.tsx | ~810 | Configuration (5 tabs) |
 | Layout.tsx | ~250 | App shell |
 | IncidentTimeline.tsx | ~390 | Timeline visualization |
 | DependencyGraph.tsx | ~480 | Service graph |
+| EpisodicGraphExplorer.tsx | ~600 | Force-directed graph (v0.5.0+) |
 | api.ts | ~460 | API client |
 | websocket.ts | ~385 | Real-time events |
 | utils.ts | ~35 | Utilities |
