@@ -110,9 +110,8 @@ def canonicalize_entity(name: str) -> str:
 
 
 # System prompt for fast annotation
-# /no_think disables Qwen3 thinking mode for faster, direct responses
-FAST_ANNOTATOR_SYSTEM_PROMPT = """/no_think
-You are a fast telemetry annotator for an AIOps system.
+# Using qwen3:4b-instruct (no thinking mode) - no /no_think prefix needed
+FAST_ANNOTATOR_SYSTEM_PROMPT = """You are a fast telemetry annotator for an AIOps system.
 
 Your job is to quickly analyze telemetry data (logs, metrics, traces) and:
 1. Detect anomalies or issues
@@ -209,29 +208,19 @@ class FastAnnotator(BaseAgent):
 
         try:
             # Get completion from fast agent with system prompt for JSON format
-            # Qwen3 uses thinking mode which consumes tokens, so we need more
-            # Fast Agent has 8K context per CLAUDE.md spec
+            # Using qwen3:4b-instruct (no thinking mode) - 2048 tokens is sufficient
+            # for direct JSON annotation output without chain-of-thought overhead.
             response = await self.model_router.fast_completion(
                 prompt=prompt,
-                max_tokens=2048,  # Qwen3 thinking overhead needs more tokens
+                max_tokens=2048,  # No thinking overhead with instruct model
                 temperature=0.0,  # Deterministic classification (greedy decoding)
                 system_prompt=self.get_system_prompt(),  # Include system prompt for context
             )
 
-            # Parse response - Qwen3 may put content in reasoning field if thinking mode is on
+            # Parse response - ModelRouter already fixes thinking mode
+            # (moves reasoning to content when content is empty)
             message = response["choices"][0]["message"]
             content = message.get("content", "")
-
-            # If content is empty, try to extract from reasoning field (Qwen3 thinking mode)
-            if not content and "reasoning" in message:
-                reasoning = message["reasoning"]
-                # Look for JSON in the reasoning output
-                if "{" in reasoning:
-                    start_idx = reasoning.find("{")
-                    end_idx = reasoning.rfind("}")
-                    if end_idx > start_idx:
-                        content = reasoning[start_idx:end_idx + 1]
-                        self.logger.info(f"Extracted JSON from Qwen3 reasoning field")
             annotation = self._parse_annotation(content)
             latency_ms = (time.perf_counter() - start_time) * 1000
 
@@ -319,7 +308,13 @@ class FastAnnotator(BaseAgent):
         return prompt
     
     def _parse_annotation(self, content: str) -> dict[str, Any]:
-        """Parse JSON annotation from model response."""
+        """Parse JSON annotation from model response.
+
+        Handles Qwen3 thinking mode where chain-of-thought text precedes
+        the actual JSON. Searches for the JSON object that contains
+        expected annotation keys (anomaly_detected, severity) rather than
+        just the first '{' which may be a small object from thinking.
+        """
         try:
             # Strip whitespace first
             content = content.strip()
@@ -330,9 +325,22 @@ class FastAnnotator(BaseAgent):
             elif "```" in content:
                 content = content.split("```")[1].split("```")[0].strip()
 
-            # Find the first complete JSON object by counting braces
-            start_idx = content.find('{')
-            if start_idx != -1:
+            # Try direct parse first (works when content is clean JSON)
+            try:
+                return json.loads(content)
+            except json.JSONDecodeError:
+                pass
+
+            # Find ALL complete JSON objects by brace-matching, then pick the best
+            # This handles Qwen3 thinking mode where content contains
+            # chain-of-thought text with small JSON objects (triplet examples)
+            # before the actual annotation JSON.
+            candidates = []
+            search_start = 0
+            while search_start < len(content):
+                start_idx = content.find('{', search_start)
+                if start_idx == -1:
+                    break
                 brace_count = 0
                 end_idx = start_idx
                 for i, char in enumerate(content[start_idx:], start=start_idx):
@@ -343,9 +351,35 @@ class FastAnnotator(BaseAgent):
                         if brace_count == 0:
                             end_idx = i
                             break
-                content = content[start_idx:end_idx + 1]
+                if brace_count == 0:
+                    json_str = content[start_idx:end_idx + 1]
+                    try:
+                        parsed = json.loads(json_str)
+                        if isinstance(parsed, dict):
+                            candidates.append(parsed)
+                    except json.JSONDecodeError:
+                        pass
+                search_start = end_idx + 1 if brace_count == 0 else start_idx + 1
 
-            return json.loads(content)
+            if candidates:
+                # Prefer the candidate with annotation keys
+                for c in candidates:
+                    if "anomaly_detected" in c and "severity" in c:
+                        return c
+                # Fallback: return the largest candidate (most complete)
+                return max(candidates, key=lambda c: len(c))
+
+            # No JSON found at all
+            self.logger.warning(f"No JSON object found in content ({len(content)} chars)")
+            return {
+                "anomaly_detected": False,
+                "severity": "info",
+                "category": "unknown",
+                "confidence": 0.3,
+                "summary": content[:200] if content else "Parse error",
+                "needs_reasoning": True,
+            }
+
         except (json.JSONDecodeError, ValueError) as e:
             self.logger.warning(f"Failed to parse annotation JSON: {content[:100]}... Error: {e}")
             return {

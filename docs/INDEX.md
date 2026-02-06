@@ -1,9 +1,9 @@
 # Constitutional AIOps - Documentation Index
 
-> **Version**: 0.6.1
-> **Last Updated**: 2026-01-28
+> **Version**: 0.7.0
+> **Last Updated**: 2026-01-29
 > **Status**: Production Ready
-> **Total Files Indexed**: 100+
+> **Total Files Indexed**: 110+
 > **Source of Truth**: [KEY_METRICS.md](KEY_METRICS.md)
 
 ---
@@ -25,10 +25,11 @@
 | File | Last Updated | Description |
 |------|--------------|-------------|
 | [ARCHITECTURE.md](ARCHITECTURE.md) | 2026-01-28 | System architecture, graph schema, episode generation |
-| [BACKEND.md](BACKEND.md) | 2026-01-27 | Python backend module reference (45+ files) |
-| [API.md](API.md) | 2026-01-27 | REST API endpoint reference (50+ endpoints) |
-| [FRONTEND.md](FRONTEND.md) | 2026-01-28 | React frontend architecture (25+ files) |
+| [BACKEND.md](BACKEND.md) | 2026-01-29 | Python backend module reference (47+ files) |
+| [API.md](API.md) | 2026-01-29 | REST API endpoint reference (55+ endpoints) |
+| [FRONTEND.md](FRONTEND.md) | 2026-01-29 | React frontend architecture (26+ files) |
 | [KEY_METRICS.md](KEY_METRICS.md) | 2026-01-28 | Performance targets, schema constants |
+| [BENCHMARK.md](BENCHMARK.md) | 2026-01-29 | Benchmarking system documentation (NEW) |
 | [DEPLOYMENT.md](DEPLOYMENT.md) | 2025-12-27 | Deployment overview (Jarvis Labs, Local, AWS) |
 
 ### Development & Progress
@@ -90,6 +91,7 @@
 | [graph.py](../src/api/routes/graph.py) | `/graph` | Neo4j episodic memory |
 | [prompts.py](../src/api/routes/prompts.py) | `/prompts` | System prompt management |
 | [infrastructure.py](../src/api/routes/infrastructure.py) | `/infrastructure` | Docker container monitoring |
+| [benchmark.py](../src/api/routes/benchmark.py) | `/benchmark` | LLM benchmarking API (NEW v0.7.0) |
 | [demo.py](../src/api/routes/demo.py) | `/demo` | Anomaly injection for demos |
 | [\_\_init\_\_.py](../src/api/routes/__init__.py) | - | Route exports |
 
@@ -113,6 +115,13 @@
 |------|---------|
 | [calculator.py](../src/confidence/calculator.py) | Composite confidence: C(a) = α·C_LLM + β·C_hist + γ·C_sim |
 | [\_\_init\_\_.py](../src/confidence/__init__.py) | Module exports |
+
+#### Benchmark (src/benchmark/) - NEW v0.7.0
+| File | Purpose |
+|------|---------|
+| [runner.py](../src/benchmark/runner.py) | BenchmarkRunner class for orchestrating evaluations |
+| [evaluator.py](../src/benchmark/evaluator.py) | BenchmarkEvaluator with BERTScore, accuracy metrics |
+| [\_\_init\_\_.py](../src/benchmark/__init__.py) | Module exports |
 
 #### Memory (src/memory/)
 | File | Purpose |
@@ -179,6 +188,7 @@
 | [Agents.tsx](../frontend/src/pages/Agents.tsx) | Agent hub (6 tabs) |
 | [Graph.tsx](../frontend/src/pages/Graph.tsx) | Dedicated graph visualization page (NEW v0.6.1) |
 | [Metrics.tsx](../frontend/src/pages/Metrics.tsx) | LGTM observability metrics |
+| [Benchmark.tsx](../frontend/src/pages/Benchmark.tsx) | LLM benchmarking interface (NEW v0.7.0) |
 | [Settings.tsx](../frontend/src/pages/Settings.tsx) | Configuration (5 tabs) |
 
 #### Components (src/components/)
@@ -238,6 +248,16 @@
 
 ---
 
+### Benchmark Scripts (benchmark/) - NEW v0.7.0
+
+| File | Purpose |
+|------|---------|
+| [benchmark/scripts/download_datasets.py](../benchmark/scripts/download_datasets.py) | Download OpsEval + Loghub datasets |
+| [benchmark/scripts/prepare_datasets.py](../benchmark/scripts/prepare_datasets.py) | Convert to standardized JSON format |
+| [benchmark/scripts/run_benchmark.py](../benchmark/scripts/run_benchmark.py) | Execute benchmarks with latency compensation |
+| [benchmark/scripts/evaluate_results.py](../benchmark/scripts/evaluate_results.py) | Calculate BERTScore + accuracy metrics |
+| [benchmark/scripts/export_metrics.py](../benchmark/scripts/export_metrics.py) | Export results (JSON, CSV, LaTeX) |
+
 ### Scripts - 7 Files
 
 | File | Purpose |
@@ -282,11 +302,12 @@ constitutional-aiops/
 ├── README.md                    # Quick Start (entry point)
 ├── CLAUDE.md                    # AI Session Guide
 │
-├── src/                         # Backend (45+ Python files)
+├── src/                         # Backend (47+ Python files)
 │   ├── main.py, config.py
 │   ├── agents/                  # 5 files
-│   ├── api/routes/              # 12 files
+│   ├── api/routes/              # 13 files (includes benchmark.py)
 │   ├── api/schemas/             # 4 files
+│   ├── benchmark/               # 3 files (NEW v0.7.0)
 │   ├── confidence/              # 2 files (NEW v0.6.0)
 │   ├── constitutional/          # 3 files
 │   ├── memory/                  # 5 files
@@ -294,8 +315,16 @@ constitutional-aiops/
 │   ├── mcp/                     # 3 files
 │   └── utils/                   # 4 files
 │
-├── frontend/                    # Frontend (25+ files)
-│   ├── src/pages/               # 7 files
+├── benchmark/                   # Benchmarking System (NEW v0.7.0)
+│   ├── datasets/                # OpsEval + Loghub datasets
+│   │   ├── raw/                 # Original downloads
+│   │   └── processed/           # Standardized JSON
+│   ├── scripts/                 # 5 Python scripts
+│   ├── results/                 # Model evaluation outputs
+│   └── reports/                 # Paper-ready tables
+│
+├── frontend/                    # Frontend (26+ files)
+│   ├── src/pages/               # 8 files (includes Benchmark.tsx)
 │   ├── src/components/          # 5 files
 │   └── src/lib/                 # 3 files
 │
@@ -306,6 +335,7 @@ constitutional-aiops/
 └── docs/
     ├── INDEX.md                 # THIS FILE - Master index
     ├── KEY_METRICS.md           # Performance metrics reference
+    ├── BENCHMARK.md             # Benchmarking documentation (NEW v0.7.0)
     ├── BACKEND.md               # Backend reference
     ├── API.md                   # API reference
     ├── FRONTEND.md              # Frontend reference
@@ -355,6 +385,7 @@ See [DOCUMENTATION_SCHEMA.md](DOCUMENTATION_SCHEMA.md) for detailed guidelines.
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.7.0 | 2026-01-29 | Conference-level benchmarking system (OpsEval + Loghub datasets, BERTScore) |
 | 0.6.1 | 2026-01-28 | Episode generation via Reasoning Agent, Graph.tsx page |
 | 0.6.0 | 2026-01-25 | Graph schema redesign (hairball prevention), confidence module |
 | 0.5.1 | 2026-01-15 | Docker health checks, Neo4j query fixes |
@@ -368,4 +399,4 @@ See [DOCUMENTATION_SCHEMA.md](DOCUMENTATION_SCHEMA.md) for detailed guidelines.
 
 ---
 
-**Last Updated**: 2026-01-28
+**Last Updated**: 2026-01-29

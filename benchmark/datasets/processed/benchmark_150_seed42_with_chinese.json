@@ -1,0 +1,2981 @@
+{
+  "version": "2.0-sampled",
+  "created": "2026-02-01T14:13:54.727956",
+  "description": "Sampled benchmark dataset (seed=42)",
+  "seed": 42,
+  "sampling": {
+    "annotation_pool": 138,
+    "annotation_sampled": 100,
+    "rca_pool": 180,
+    "rca_sampled": 50
+  },
+  "total_cases": 150,
+  "test_cases": [
+    {
+      "id": "ANN_083",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 091550 8683 WARN dfs.DataNode$DataXceiver: 10.251.111.209:50010:Got exception while serving blk_7505828172725463922 to /10.251.111.209:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_023",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 231241 26 INFO dfs.FSNamesystem: BLOCK* NameSystem.delete: blk_-1335063409877429524 is added to invalidSet of 10.251.107.196:50010",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_007",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 104224 34 INFO dfs.FSNamesystem: BLOCK* NameSystem.allocateBlock: /user/root/rand/_temporary/_task_200811101024_0001_m_000346_0/part-00346. blk_-2016403519138424998",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_028",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081111 063859 22169 INFO dfs.DataNode$DataXceiver: Receiving block blk_1606295458729964667 src: /10.251.214.32:47910 dest: /10.251.214.32:50010",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_037",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081111 085924 27 INFO dfs.FSNamesystem: BLOCK* NameSystem.delete: blk_-793506372912437289 is added to invalidSet of 10.250.17.225:50010",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_168",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "Error receiving packet on tree network, expecting type 57 instead of type 3 (softheader=00ce22e8 e6200003 00000002 00000000) PSR0=00001f01 PSR1=00000000 PRXF=00000002 PIXF=00000007",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "critical",
+        "category": "error",
+        "classification": "alert"
+      },
+      "ground_truth_label": "alert",
+      "alert_category": "KERNREC",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_067",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 192015 14269 WARN dfs.DataNode$DataXceiver: 10.250.10.223:50010:Got exception while serving blk_9095955277706686312 to /10.250.5.161:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_054",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 081515 8312 WARN dfs.DataNode$DataXceiver: 10.251.31.5:50010:Got exception while serving blk_6332892729727950039 to /10.251.123.1:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_059",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 124817 11533 WARN dfs.DataNode$DataXceiver: 10.251.74.79:50010:Got exception while serving blk_2139707931694085102 to /10.251.111.228:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_077",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 131041 11754 WARN dfs.DataNode$DataXceiver: 10.251.122.38:50010:Got exception while serving blk_7489155602821840025 to /10.251.26.8:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_090",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 135653 12034 WARN dfs.DataNode$DataXceiver: 10.251.214.130:50010:Got exception while serving blk_424461424221613461 to /10.251.71.193:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_100",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 071657 7700 WARN dfs.DataNode$DataXceiver: 10.251.38.214:50010:Got exception while serving blk_5547569777499890340 to /10.251.195.52:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_086",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 091657 8720 WARN dfs.DataNode$DataXceiver: 10.251.70.211:50010:Got exception while serving blk_424255210146453297 to /10.251.203.179:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_171",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "rts: kernel terminated for reason 1004",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "critical",
+        "category": "error",
+        "classification": "alert"
+      },
+      "ground_truth_label": "alert",
+      "alert_category": "KERNTERM",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_194",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "Lustre mount FAILED : bglio78 : block_id : location",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "critical",
+        "category": "error",
+        "classification": "alert"
+      },
+      "ground_truth_label": "alert",
+      "alert_category": "KERNMNTF",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_024",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081111 041004 30 INFO dfs.FSNamesystem: BLOCK* NameSystem.addStoredBlock: blockMap updated: 10.251.71.240:50010 is added to blk_-5580048401594934039 size 67108864",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_089",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 082737 8341 WARN dfs.DataNode$DataXceiver: 10.250.19.227:50010:Got exception while serving blk_-7372087176866857012 to /10.251.110.68:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_013",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081111 092311 35 INFO dfs.FSNamesystem: BLOCK* NameSystem.allocateBlock: /user/root/rand8/_temporary/_task_200811101024_0015_m_000882_0/part-00882. blk_-3152434225121092058",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_164",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "Lustre mount FAILED : bglio388 : point /p/gb1",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "critical",
+        "category": "error",
+        "classification": "alert"
+      },
+      "ground_truth_label": "alert",
+      "alert_category": "KERNMNTF",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_182",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "Lustre mount FAILED : bglio23 : point /p/gb1",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "critical",
+        "category": "error",
+        "classification": "alert"
+      },
+      "ground_truth_label": "alert",
+      "alert_category": "KERNMNTF",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_174",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "ciod: Error reading message prefix on CioStream socket to 172.16.96.116:55929, Link has been severed",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "critical",
+        "category": "error",
+        "classification": "alert"
+      },
+      "ground_truth_label": "alert",
+      "alert_category": "APPSEV",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_014",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081111 025424 26 INFO dfs.FSNamesystem: BLOCK* NameSystem.addStoredBlock: blockMap updated: 10.251.110.160:50010 is added to blk_-1675768179383804109 size 67108864",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_084",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 131950 11797 WARN dfs.DataNode$DataXceiver: 10.251.30.85:50010:Got exception while serving blk_8059204889272489644 to /10.250.7.96:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_118",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "CE sym 29, at 0x14123c20, mask 0x08",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_079",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 193334 14294 WARN dfs.DataNode$DataXceiver: 10.251.39.179:50010:Got exception while serving blk_-8558281124275910849 to /10.251.30.134:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_021",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 103818 35 INFO dfs.FSNamesystem: BLOCK* NameSystem.addStoredBlock: blockMap updated: 10.251.194.147:50010 is added to blk_5277338321835341602 size 67108864",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_060",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081109 221151 3361 WARN dfs.DataNode$DataXceiver: 10.250.10.144:50010:Got exception while serving blk_5126469776250053435 to /10.250.11.100:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_022",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 105345 19 INFO dfs.FSDataset: Deleting block blk_-4304240611296196935 file /mnt/hadoop/dfs/data/current/subdir55/blk_-4304240611296196935",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_009",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081111 065435 19 INFO dfs.FSDataset: Deleting block blk_1587615395786683981 file /mnt/hadoop/dfs/data/current/subdir14/blk_1587615395786683981",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_166",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "ciod: Error reading message prefix after LOAD_MESSAGE on CioStream socket to 172.16.96.116:47696: Link has been severed",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "critical",
+        "category": "error",
+        "classification": "alert"
+      },
+      "ground_truth_label": "alert",
+      "alert_category": "APPSEV",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_179",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "ciod: Error reading message prefix on CioStream socket to 172.16.96.116:52930, Connection reset by peer",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "critical",
+        "category": "error",
+        "classification": "alert"
+      },
+      "ground_truth_label": "alert",
+      "alert_category": "APPRES",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_142",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "15 floating point alignment exceptions",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_030",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081111 061857 17075 INFO dfs.DataNode$PacketResponder: Received block blk_3961831045048378097 of size 67108864 from /10.251.39.160",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_031",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 212942 15258 INFO dfs.DataNode$PacketResponder: Received block blk_-2242088550278361724 of size 67108864 from /10.251.123.20",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_020",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 012357 5523 INFO dfs.DataNode$PacketResponder: Received block blk_6534693994677948144 of size 67108864 from /10.251.201.204",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_170",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "ciod: Error reading message prefix after LOAD_MESSAGE on CioStream socket to 172.16.96.116:37916: Link has been severed",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "critical",
+        "category": "error",
+        "classification": "alert"
+      },
+      "ground_truth_label": "alert",
+      "alert_category": "APPSEV",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_151",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "ciod: Error reading message prefix after LOAD_MESSAGE on CioStream socket to 172.16.96.116:45713: Link has been severed",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "critical",
+        "category": "error",
+        "classification": "alert"
+      },
+      "ground_truth_label": "alert",
+      "alert_category": "APPSEV",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_088",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081109 215136 2868 WARN dfs.DataNode$DataXceiver: 10.251.199.19:50010:Got exception while serving blk_8466246428293623262 to /10.251.106.37:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_043",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 213423 14805 INFO dfs.DataNode$PacketResponder: Received block blk_6323743466920239525 of size 67108864 from /10.250.15.67",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_057",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 191403 14120 WARN dfs.DataNode$DataXceiver: 10.250.14.196:50010:Got exception while serving blk_2967299761311489673 to /10.251.89.155:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_085",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081111 011254 17716 WARN dfs.DataNode$DataXceiver: 10.251.39.144:50010:Got exception while serving blk_-8083036675630459841 to /10.251.39.209:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_074",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081109 224234 3638 WARN dfs.DataNode$DataXceiver: 10.251.73.220:50010:Got exception while serving blk_4934527196392001803 to /10.251.203.246:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_141",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "5 floating point alignment exceptions",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_041",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 103035 34 INFO dfs.FSNamesystem: BLOCK* NameSystem.delete: blk_9111860234027679206 is added to invalidSet of 10.251.39.209:50010",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_046",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 103735 19 INFO dfs.FSDataset: Deleting block blk_7519257846502835091 file /mnt/hadoop/dfs/data/current/subdir15/blk_7519257846502835091",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_065",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 233954 17191 WARN dfs.DataNode$DataXceiver: 10.250.7.230:50010:Got exception while serving blk_-7029628814943626474 to /10.251.38.197:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_011",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081111 052812 21102 INFO dfs.DataNode$DataXceiver: Receiving block blk_-7228803354694123939 src: /10.251.195.70:50389 dest: /10.251.195.70:50010",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_055",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081109 215259 2934 WARN dfs.DataNode$DataXceiver: 10.250.9.207:50010:Got exception while serving blk_-3140754468249228022 to /10.250.9.207:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_003",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081109 211528 29 INFO dfs.FSNamesystem: BLOCK* NameSystem.addStoredBlock: blockMap updated: 10.251.110.8:50010 is added to blk_-1661553043410372067 size 67108864",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_092",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 081643 8247 WARN dfs.DataNode$DataXceiver: 10.250.17.225:50010:Got exception while serving blk_-5935642747315643391 to /10.251.199.150:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_153",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "rts: kernel terminated for reason 1003",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "critical",
+        "category": "error",
+        "classification": "alert"
+      },
+      "ground_truth_label": "alert",
+      "alert_category": "KERNTERM",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_070",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081109 222650 3459 WARN dfs.DataNode$DataXceiver: 10.251.214.112:50010:Got exception while serving blk_5905933788014151041 to /10.251.214.112:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_004",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081111 065504 18 INFO dfs.FSDataset: Deleting block blk_3336810835691486095 file /mnt/hadoop/dfs/data/current/subdir11/blk_3336810835691486095",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_105",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "0 microseconds spent in the rbs signal handler during 0 calls. 0 microseconds was the maximum time for a single instance of a correctable ddr.",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_045",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 103027 34 INFO dfs.FSNamesystem: BLOCK* NameSystem.delete: blk_-8026264173633579073 is added to invalidSet of 10.251.214.18:50010",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_015",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 011406 5296 INFO dfs.DataNode$DataXceiver: Receiving block blk_5760391051658436046 src: /10.251.42.84:59752 dest: /10.251.42.84:50010",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_066",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 080847 8088 WARN dfs.DataNode$DataXceiver: 10.251.26.8:50010:Got exception while serving blk_-8522942048313632858 to /10.251.31.85:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_135",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "5 ddr error(s) detected and corrected on rank 0, symbol 28 over 2946 seconds",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_119",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "5 floating point alignment exceptions",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_107",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "MACHINE CHECK DCR read timeout (mc=e08x iar 0x00000000 lr 0xc00045a4)",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_010",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 013559 5614 INFO dfs.DataNode$PacketResponder: Received block blk_7736147489540456118 of size 67108864 from /10.251.74.227",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_121",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "critical input interrupt (unit=0x0b bit=0x17): warning for tree C1 wire, suppressing further interrupts of same type",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_169",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "ciod: failed to read message prefix on control stream (CioStream socket to 172.16.96.116:51706",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "critical",
+        "category": "error",
+        "classification": "alert"
+      },
+      "ground_truth_label": "alert",
+      "alert_category": "APPREAD",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_026",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081111 031257 18567 INFO dfs.DataNode$DataXceiver: Receiving block blk_-6380328072112550668 src: /10.250.6.191:37701 dest: /10.250.6.191:50010",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_068",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 175354 14021 WARN dfs.DataNode$DataXceiver: 10.250.11.53:50010:Got exception while serving blk_-7125370327234065733 to /10.250.15.240:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_032",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 103840 19 INFO dfs.FSDataset: Deleting block blk_6497260538939100482 file /mnt/hadoop/dfs/data/current/subdir46/blk_6497260538939100482",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_096",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 132523 11832 WARN dfs.DataNode$DataXceiver: 10.251.39.179:50010:Got exception while serving blk_1683075246463470765 to /10.250.14.38:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_091",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 125920 11517 WARN dfs.DataNode$DataXceiver: 10.251.42.16:50010:Got exception while serving blk_4963214289850966664 to /10.251.202.181:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_049",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 012245 5396 INFO dfs.DataNode$PacketResponder: PacketResponder 0 for block blk_-9161369067334198861 terminating",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_044",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 150600 35 INFO dfs.FSNamesystem: BLOCK* NameSystem.addStoredBlock: blockMap updated: 10.251.73.220:50010 is added to blk_578261619176233743 size 67108864",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_155",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "Error receiving packet on tree network, expecting type 57 instead of type 3 (softheader=00589370 90990003 00000002 00000000) PSR0=00001f01 PSR1=00000000 PRXF=00000002 PIXF=00000007",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "critical",
+        "category": "error",
+        "classification": "alert"
+      },
+      "ground_truth_label": "alert",
+      "alert_category": "KERNREC",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_008",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 070347 7574 INFO dfs.DataNode$DataXceiver: 10.250.10.6:50010 Served block blk_1598414622053793245 to /10.251.90.239",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_069",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 131233 11867 WARN dfs.DataNode$DataXceiver: 10.251.197.226:50010:Got exception while serving blk_2101007907134483259 to /10.251.31.242:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_019",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081109 212440 31 INFO dfs.FSNamesystem: BLOCK* NameSystem.addStoredBlock: blockMap updated: 10.251.198.196:50010 is added to blk_427714267500527780 size 67108864",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_073",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 175934 12298 WARN dfs.DataNode$DataXceiver: 10.251.107.50:50010:Got exception while serving blk_-4737948505610037427 to /10.251.75.79:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_033",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 220651 32 INFO dfs.FSNamesystem: BLOCK* NameSystem.delete: blk_1714886759174770356 is added to invalidSet of 10.251.31.5:50010",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_034",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081111 035417 19387 INFO dfs.DataNode$PacketResponder: PacketResponder 2 for block blk_-633826175832239328 terminating",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_005",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 115226 10579 INFO dfs.DataNode$DataXceiver: Receiving block blk_8992894896370738220 src: /10.251.43.210:54766 dest: /10.251.43.210:50010",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_035",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 115737 27 INFO dfs.FSNamesystem: BLOCK* NameSystem.addStoredBlock: blockMap updated: 10.251.195.33:50010 is added to blk_512039711533506696 size 67108864",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_167",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "ciod: failed to read message prefix on control stream (CioStream socket to 172.16.96.116:33569",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "critical",
+        "category": "error",
+        "classification": "alert"
+      },
+      "ground_truth_label": "alert",
+      "alert_category": "APPREAD",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_192",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "rts: kernel terminated for reason 1004",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "critical",
+        "category": "error",
+        "classification": "alert"
+      },
+      "ground_truth_label": "alert",
+      "alert_category": "KERNTERM",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_039",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081111 071042 31 INFO dfs.FSNamesystem: BLOCK* NameSystem.addStoredBlock: blockMap updated: 10.251.30.134:50010 is added to blk_-5214060566378896158 size 67108864",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_098",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 135429 12030 WARN dfs.DataNode$DataXceiver: 10.251.70.37:50010:Got exception while serving blk_1646534811870220828 to /10.250.11.100:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_154",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "ciod: Error reading message prefix after LOAD_MESSAGE on CioStream socket to 172.16.96.116:42213: Link has been severed",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "critical",
+        "category": "error",
+        "classification": "alert"
+      },
+      "ground_truth_label": "alert",
+      "alert_category": "APPSEV",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_081",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 030331 6561 WARN dfs.DataNode$DataXceiver: 10.251.42.191:50010:Got exception while serving blk_-8023826090828946372 to /10.251.214.130:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_052",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 093020 8827 WARN dfs.DataNode$DataXceiver: 10.251.70.211:50010:Got exception while serving blk_-667933171485085225 to /10.251.203.246:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_078",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 030942 6646 WARN dfs.DataNode$DataXceiver: 10.251.31.5:50010:Got exception while serving blk_-1367876730256254709 to /10.251.67.225:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_173",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "ciod: Error reading message prefix on CioStream socket to 172.16.96.116:47189, Link has been severed",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "critical",
+        "category": "error",
+        "classification": "alert"
+      },
+      "ground_truth_label": "alert",
+      "alert_category": "APPSEV",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_094",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 082954 8543 WARN dfs.DataNode$DataXceiver: 10.251.70.112:50010:Got exception while serving blk_4357276972386184626 to /10.251.74.79:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_038",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081109 204908 31 INFO dfs.FSNamesystem: BLOCK* NameSystem.addStoredBlock: blockMap updated: 10.251.110.8:50010 is added to blk_8015913224713045110 size 67108864",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_129",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "ciod: Error loading /bgl/apps/scaletest/performance/MINIBEN/mb_243_0810/allreduce.rts: invalid or missing program image, Exec format error",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_036",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081111 075854 19 INFO dfs.FSDataset: Deleting block blk_5806397523737304814 file /mnt/hadoop/dfs/data/current/subdir34/blk_5806397523737304814",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_050",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 210354 19 INFO dfs.FSDataset: Deleting block blk_-6901909114834172466 file /mnt/hadoop/dfs/data/current/subdir57/blk_-6901909114834172466",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_058",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081109 223910 3540 WARN dfs.DataNode$DataXceiver: 10.251.43.210:50010:Got exception while serving blk_2969087638814291714 to /10.251.199.86:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_012",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081111 065500 22388 INFO dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_-352190670750948803 terminating",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_051",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081109 222041 3390 WARN dfs.DataNode$DataXceiver: 10.251.67.113:50010:Got exception while serving blk_-62891505109755100 to /10.250.7.96:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_156",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "ciod: Error reading message prefix on CioStream socket to 172.16.96.116:60243, Link has been severed",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "critical",
+        "category": "error",
+        "classification": "alert"
+      },
+      "ground_truth_label": "alert",
+      "alert_category": "APPSEV",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_177",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "ciod: Error reading message prefix on CioStream socket to 172.16.96.116:41554, Connection timed out",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "critical",
+        "category": "error",
+        "classification": "alert"
+      },
+      "ground_truth_label": "alert",
+      "alert_category": "APPTO",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_001",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081111 044556 19 INFO dfs.FSDataset: Deleting block blk_-5429042599096020592 file /mnt/hadoop/dfs/data/current/subdir34/blk_-5429042599096020592",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal",
+      "task_type": "annotation"
+    },
+    {
+      "id": "ANN_082",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081109 222342 3462 WARN dfs.DataNode$DataXceiver: 10.251.74.79:50010:Got exception while serving blk_2244903517044280975 to /10.251.74.134:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly",
+      "task_type": "annotation"
+    },
+    {
+      "id": "RCA_034",
+      "source": "opseval_Mobile Communication Network",
+      "incident": {
+        "title": "In a Bash automation script, which command is used to loop through the files in a directory?",
+        "severity": "high",
+        "question": "In a Bash automation script, which command is used to loop through the files in a directory?",
+        "choices": [
+          "for",
+          "while",
+          "if",
+          "case"
+        ],
+        "topics": []
+      },
+      "expected_root_cause": "for",
+      "expected_answer_raw": "A",
+      "expected_category": "network",
+      "solution": "",
+      "acceptable_answers": [
+        "for"
+      ],
+      "task_type": "rca"
+    },
+    {
+      "id": "RCA_155",
+      "source": "lemma_rca_cloud",
+      "incident": {
+        "title": "Cloud Computing Fault: cpu_spike",
+        "severity": "high",
+        "fault_type": "cpu_spike",
+        "logs": [
+          "stdout F",
+          "stdout F Type     Name                                                                          # reqs      # fails |    Avg     Min     Max    Med |   req/s  failures/s",
+          "stdout F --------|----------------------------------------------------------------------------|-------|-------------|-------|-------|-------|-------|--------|-----------"
+        ],
+        "metrics": {},
+        "system_id": "cloud_computing_loadgenerator"
+      },
+      "expected_root_cause": "loadgenerator_cpu_spike",
+      "expected_category": "cloud",
+      "acceptable_answers": [
+        "cpu spike",
+        "loadgenerator cpu spike",
+        "cpu_spike"
+      ],
+      "task_type": "rca"
+    },
+    {
+      "id": "RCA_177",
+      "source": "lemma_rca_cloud",
+      "incident": {
+        "title": "Cloud Computing Fault: network_latency",
+        "severity": "high",
+        "fault_type": "network_latency",
+        "logs": [
+          "stderr F  I!  D! [EC2] Found active network interface",
+          "stderr F I! Detected the instance is EC2",
+          "stderr F  Reading json config file path: /opt/aws/amazon-cloudwatch-agent/bin/default_linux_config.json ..."
+        ],
+        "metrics": {},
+        "system_id": "cloud_computing_cloudwatch"
+      },
+      "expected_root_cause": "cloudwatch_network_latency",
+      "expected_category": "cloud",
+      "acceptable_answers": [
+        "network latency",
+        "cloudwatch network latency",
+        "network_latency"
+      ],
+      "task_type": "rca"
+    },
+    {
+      "id": "RCA_012",
+      "source": "opseval_Wired Network",
+      "incident": {
+        "title": "以下哪些网络概念经常使用虚拟互联网协议（IP）地址来提供高可用性？（选择所有适用项。）",
+        "severity": "high",
+        "question": "以下哪些网络概念经常使用虚拟互联网协议（IP）地址来提供高可用性？（选择所有适用项。）",
+        "choices": [
+          "聚类",
+          "负载均衡",
+          "网络地址转换（NAT）",
+          "网络接口卡（NIC）组合。"
+        ],
+        "topics": [
+          "网络运营"
+        ]
+      },
+      "expected_root_cause": "聚类; 负载均衡",
+      "expected_answer_raw": "A,B",
+      "expected_category": "network",
+      "solution": "高可用性虚拟IP地址实现是指多个服务器被识别为单个地址，使得所有服务器都能接收到传入的客户端流量。在服务器集群和网络负载平衡安排的情况下，集群本身具有独特的名称和IP地址，与单个服务器的名称和IP地址不同。客户端将自己的地址定向到集群，而不是集群中的某个服务器。NAT不是高可用性技术，NIC团队不使用虚拟IP地址。",
+      "acceptable_answers": [
+        "聚类; 负载均衡"
+      ],
+      "task_type": "rca"
+    },
+    {
+      "id": "RCA_162",
+      "source": "lemma_rca_cloud",
+      "incident": {
+        "title": "Cloud Computing Fault: memory_leak",
+        "severity": "high",
+        "fault_type": "memory_leak",
+        "logs": [
+          "Symfony\\\\Component\\\\HttpKernel\\\\Event\\\\KernelEvent::isMasterRequest()\" is deprecated, use \"isMainRequest()\" instead. {\"exception\":\"[object] (ErrorException(code: 0): User Deprecated: Since symfony/htt",
+          "stdout F  app.INFO: Annotated DataCenter us-west1 [] []",
+          "pdo_connectivity\":true} []"
+        ],
+        "metrics": {},
+        "system_id": "cloud_computing_ratings"
+      },
+      "expected_root_cause": "ratings_memory_leak",
+      "expected_category": "cloud",
+      "acceptable_answers": [
+        "memory leak",
+        "ratings memory leak",
+        "memory_leak"
+      ],
+      "task_type": "rca"
+    },
+    {
+      "id": "RCA_060",
+      "source": "opseval_Wired Network",
+      "incident": {
+        "title": "Which of the following is the true definition of the term _modem_?",
+        "severity": "high",
+        "question": "Which of the following is the true definition of the term _modem_?",
+        "choices": [
+          "A device that connects a computer to the Public Switched Telephone Network (PSTN)",
+          "A device that connects a Local Area Network (LAN) to the Internet",
+          "A device that converts analog signals to digital signals and back again",
+          "A device that connects a Local Area Network (LAN) to a Wide Area Network (WAN)"
+        ],
+        "topics": [
+          "Network Implementations"
+        ]
+      },
+      "expected_root_cause": "A device that converts analog signals to digital signals and back again",
+      "expected_answer_raw": "C",
+      "expected_category": "network",
+      "solution": "A modem (modulator/demodulator) is any device that converts analog signals to digital signals and digital signals back to analog signals. The digital device does not have to be a computer, and the analog device does not have to be the PSTN. There are many devices that are incorrectly referred to as modems, such as devices that connect a digital LAN to a digital WAN or all-digital devices that connect computers to the Internet",
+      "acceptable_answers": [
+        "device that converts",
+        "device converts analog signals digital",
+        "a device that converts analog signals to digital signals and back again"
+      ],
+      "task_type": "rca"
+    },
+    {
+      "id": "RCA_171",
+      "source": "lemma_rca_cloud",
+      "incident": {
+        "title": "Cloud Computing Fault: disk_io_issue",
+        "severity": "high",
+        "fault_type": "disk_io_issue",
+        "logs": [
+          "stderr F ts= caller=middlewares.go:157 method=Health result=2 took=511.109Âµs",
+          "stderr F ts= caller=middlewares.go:157 method=Health result=2 took=519.353Âµs",
+          "stderr F ts= caller=middlewares.go:157 method=Health result=2 took=812.565Âµs"
+        ],
+        "metrics": {},
+        "system_id": "cloud_computing_user"
+      },
+      "expected_root_cause": "user_disk_io_issue",
+      "expected_category": "cloud",
+      "acceptable_answers": [
+        "disk io issue",
+        "user disk io issue",
+        "disk_io_issue"
+      ],
+      "task_type": "rca"
+    },
+    {
+      "id": "RCA_082",
+      "source": "opseval_Mobile Communication Network",
+      "incident": {
+        "title": "In dealing with system performance bottlenecks, which of the following methods is usually not the first choice?",
+        "severity": "high",
+        "question": "In dealing with system performance bottlenecks, which of the following methods is usually not the first choice?",
+        "choices": [
+          "Analyze system resource usage",
+          "Increase hardware resources",
+          "Reduce user access volume",
+          "Optimize software configuration"
+        ],
+        "topics": []
+      },
+      "expected_root_cause": "Reduce user access volume",
+      "expected_answer_raw": "C",
+      "expected_category": "network",
+      "solution": "",
+      "acceptable_answers": [
+        "reduce user access",
+        "reduce user access volume"
+      ],
+      "task_type": "rca"
+    },
+    {
+      "id": "RCA_122",
+      "source": "lemma_rca_cloud",
+      "incident": {
+        "title": "Cloud Computing Fault: dependency_failure",
+        "severity": "high",
+        "fault_type": "dependency_failure",
+        "logs": [
+          "stderr F \\\tINFO\\\tmanager/internal.go:576\\\tStopping and waiting for non leader election runnables",
+          "stderr F \\\tINFO\\\tmanager/internal.go:580\\\tStopping and waiting for leader election runnables",
+          "controller\": \"schedule-cron\", \"controllerGroup\": \"chaos-mesh.org\", \"controllerKind\": \"Schedule"
+        ],
+        "metrics": {},
+        "system_id": "cloud_computing_chaos-controller"
+      },
+      "expected_root_cause": "chaos-controller_dependency_failure",
+      "expected_category": "cloud",
+      "acceptable_answers": [
+        "dependency failure",
+        "chaos-controller dependency failure",
+        "dependency_failure"
+      ],
+      "task_type": "rca"
+    },
+    {
+      "id": "RCA_002",
+      "source": "opseval_Wired Network",
+      "incident": {
+        "title": "What is the protocol of choice for network device access control?",
+        "severity": "high",
+        "question": "What is the protocol of choice for network device access control?",
+        "choices": [
+          "RADIUS",
+          "SSHv2",
+          "Telnet",
+          "TACACS+"
+        ],
+        "topics": [
+          "Network Device Access Control and Infrastructure Security"
+        ]
+      },
+      "expected_root_cause": "TACACS+",
+      "expected_answer_raw": "D",
+      "expected_category": "network",
+      "solution": "TACACS+ is preferred for device access control because it can individually authorize every command that a user tries to execute after logging in to a device. In contrast, RADIUS requires those commands to be sent in the initial authentication response, and because there could be thousands of CLI command combinations, a large authorization result list could trigger memory exhaustion on the network device",
+      "acceptable_answers": [
+        "tacacs+"
+      ],
+      "task_type": "rca"
+    },
+    {
+      "id": "RCA_087",
+      "source": "opseval_Wired Network",
+      "incident": {
+        "title": "哪个TCP/IP实用程序最常用于测试IP主机是否正常运行？",
+        "severity": "high",
+        "question": "哪个TCP/IP实用程序最常用于测试IP主机是否正常运行？",
+        "choices": [
+          "`ftp`",
+          "`telnet`",
+          "`ping`",
+          "`netstat`"
+        ],
+        "topics": [
+          "网络软件工具和命令"
+        ]
+      },
+      "expected_root_cause": "`ping`",
+      "expected_answer_raw": "C",
+      "expected_category": "network",
+      "solution": "程序“Packet Internet Groper”（`ping`）用于确定主机是否已初始化IP堆栈。",
+      "acceptable_answers": [
+        "`ping`"
+      ],
+      "task_type": "rca"
+    },
+    {
+      "id": "RCA_064",
+      "source": "opseval_Wired Network",
+      "incident": {
+        "title": "思科身份服务引擎（ISE）是：",
+        "severity": "high",
+        "question": "思科身份服务引擎（ISE）是：",
+        "choices": [
+          "运动医学方法来治疗肿胀和疼痛的肌肉",
+          "一个网络管理平台",
+          "一个网络安全和策略平台",
+          "一个集成了终端虚拟化的统一计算系统。"
+        ],
+        "topics": [
+          "思科身份服务引擎架构"
+        ]
+      },
+      "expected_root_cause": "一个网络安全和策略平台",
+      "expected_answer_raw": "C",
+      "expected_category": "network",
+      "solution": "思科身份服务引擎（ISE）是一个网络安全和策略平台。使用思科ISE，网络管理员可以从一个中心位置维护和提供安全策略给所有网络设备。",
+      "acceptable_answers": [
+        "一个网络安全和策略平台"
+      ],
+      "task_type": "rca"
+    },
+    {
+      "id": "RCA_096",
+      "source": "opseval_Wired Network",
+      "incident": {
+        "title": "Where does the SDN controller interface with the switching fabric?",
+        "severity": "high",
+        "question": "Where does the SDN controller interface with the switching fabric?",
+        "choices": [
+          "Spine",
+          "Control plane",
+          "Forwarding plane",
+          "P Core"
+        ],
+        "topics": [
+          "Data Center Architecture and Cloud Concepts"
+        ]
+      },
+      "expected_root_cause": "Control plane",
+      "expected_answer_raw": "B",
+      "expected_category": "network",
+      "solution": "The software-defined networking controller provides the control plane for a SDN-based switching fabric",
+      "acceptable_answers": [
+        "control plane"
+      ],
+      "task_type": "rca"
+    },
+    {
+      "id": "RCA_038",
+      "source": "opseval_Wired Network",
+      "incident": {
+        "title": "Ralph是一名网络顾问，他的客户希望他为公司的新分支机构设计本地区域网络（LAN）。该站点由一栋已经安装了无屏蔽双绞线（UTP）电缆的建筑组成，客户在选择物业时认为这是一个重要的卖点。他希望Ralph使用现有的电缆安装最快的LAN。在检查了现场后，Ralph注意到电缆是类别5（CAT5），使用星型",
+        "severity": "high",
+        "question": "Ralph是一名网络顾问，他的客户希望他为公司的新分支机构设计本地区域网络（LAN）。该站点由一栋已经安装了无屏蔽双绞线（UTP）电缆的建筑组成，客户在选择物业时认为这是一个重要的卖点。他希望Ralph使用现有的电缆安装最快的LAN。在检查了现场后，Ralph注意到电缆是类别5（CAT5），使用星型拓扑结构安装，并且每个电缆运行距离都不到100米。以下哪种以太网物理层规范可以让Ralph在不更换电缆的情况下为新网络提供最快的传输速度？",
+        "choices": [
+          "10GBase-T",
+          "100Base-TX",
+          "1000Base-T",
+          "1000Base-LX",
+          "1000Base-SX"
+        ],
+        "topics": [
+          "网络基础知识"
+        ]
+      },
+      "expected_root_cause": "1000Base-T",
+      "expected_answer_raw": "C",
+      "expected_category": "network",
+      "solution": "1000Base-T是可以在CAT5 UTP电缆上运行的最快的以太网规范。10GBase-T需要至少Category 5e（CAT5e）或Category 6（CAT6）UTP电缆。100Base-TX可以使用CAT5电缆，但速度只有1000Base-T的十分之一。1000Base-LX和1000Base-SX是光纤规范，不能在CAT5 UTP或任何铜电缆上运行。",
+      "acceptable_answers": [
+        "1000base-t"
+      ],
+      "task_type": "rca"
+    },
+    {
+      "id": "RCA_003",
+      "source": "opseval_Wired Network",
+      "incident": {
+        "title": "You are testing a twisted-pair cable run using a tone generator and locator. When you apply the tone generator to a particular pin at one end of the c",
+        "severity": "high",
+        "question": "You are testing a twisted-pair cable run using a tone generator and locator. When you apply the tone generator to a particular pin at one end of the cable, you detect a tone on two pins at the other end. Which of the following faults have you discovered?",
+        "choices": [
+          "Split pair",
+          "Open",
+          "Short",
+          "Crosstalk"
+        ],
+        "topics": []
+      },
+      "expected_root_cause": "Short",
+      "expected_answer_raw": "C",
+      "expected_category": "network",
+      "solution": "A short is when a wire is connected to two or more pins at one end of the cable or when the conductors of two or more wires are touching inside the cable. This would cause a tone applied to a single pin at one end to be heard on multiple pins at the other end. The other three options would not cause this to occur. An open circuit would manifest as a failure to detect a tone on a wire, indicating that there is either a break in the wire somewhere inside the cable or a bad connection with the pin in one or both connectors. A split pair is a connection in which two wires are incorrectly mapped in exactly the same way on both ends of the cable. Crosstalk is a type of interference caused by signals on one wire bleeding over to other wires",
+      "acceptable_answers": [
+        "short"
+      ],
+      "task_type": "rca"
+    },
+    {
+      "id": "RCA_079",
+      "source": "opseval_Wired Network",
+      "incident": {
+        "title": "以下哪些可能是问题的来源？（选择所有适用项。）\n\n- The data cable is faulty.\n- The patch cable is faulty.\n- The network switch is faulty.\n- The patch panel is faulty.\n- The c",
+        "severity": "high",
+        "question": "以下哪些可能是问题的来源？（选择所有适用项。）\n\n- The data cable is faulty.\n- The patch cable is faulty.\n- The network switch is faulty.\n- The patch panel is faulty.\n- The computer's network card is faulty.\n- The wall plate is faulty.",
+        "choices": [
+          "DNS服务器出现故障。",
+          "该交换机端口已禁用。",
+          "NAT服务器未正常运行。",
+          "该交换机已配置使用端口安全。"
+        ],
+        "topics": [
+          "网络故障排除"
+        ]
+      },
+      "expected_root_cause": "该交换机端口已禁用。; 该交换机已配置使用端口安全。",
+      "expected_answer_raw": "B,D",
+      "expected_category": "network",
+      "solution": "在许多网络上，通常会禁用未使用的交换机端口，以防未经授权的个人将设备插入其中。一些网络还使用端口安全性，其中交换机配置了访问控制列表（ACL），指定允许使用它们的设备的媒体访问控制（MAC）地址。这两者都可能是 Ralph 问题的源头。因为没有其他网络用户报告问题，因此故障服务（如网络地址转换（NAT）和域名系统（DNS））不太可能是原因。",
+      "acceptable_answers": [
+        "该交换机端口已禁用。; 该交换机已配置使用端口安全。"
+      ],
+      "task_type": "rca"
+    },
+    {
+      "id": "RCA_009",
+      "source": "opseval_Wired Network",
+      "incident": {
+        "title": "以下哪些无线IEEE标准在2.4 GHz无线电频率上运行并且直接兼容？（选择两个。）",
+        "severity": "high",
+        "question": "以下哪些无线IEEE标准在2.4 GHz无线电频率上运行并且直接兼容？（选择两个。）",
+        "choices": [
+          "802.11a是一种无线网络标准，工作在5GHz频段，最高传输速率可达54Mbps。",
+          "802.11b是一种无线网络标准，也称为Wi-Fi标准，它使用2.4GHz频段进行通信，最高传输速率为11Mbps。",
+          "802.11ac是一种无线网络标准，也被称为Wi-Fi 5，它提供更快的数据传输速度和更好的网络性能。",
+          "802.11g是一种无线网络标准，它支持2.4GHz频段，最高传输速率为54Mbps。"
+        ],
+        "topics": [
+          "无线和SOHO网络"
+        ]
+      },
+      "expected_root_cause": "802.11b是一种无线网络标准，也称为Wi-Fi标准，它使用2.4GHz频段进行通信，最高传输速率为11Mbps。; 802.11g是一种无线网络标准，它支持2.4GHz频段，最高传输速率为54Mbps。",
+      "expected_answer_raw": "B,D",
+      "expected_category": "network",
+      "solution": "802.11b和802.11g都在2.4 GHz范围内运行，并使用类似的传输标准。一些旧设备被列为802.11b/g，意味着它们可以与任一系统配合使用。另外，802.11a和802.11ac在5 GHz范围内运行。",
+      "acceptable_answers": [
+        "802.11b是一种无线网络标准，也称为wi-fi标准，它使用2.4ghz频段进行通信，最高传输速率为11mbps。; 802.11g是一种无线网络标准，它支持2.4ghz频段，最高传输速率为54mbps。"
+      ],
+      "task_type": "rca"
+    },
+    {
+      "id": "RCA_040",
+      "source": "opseval_Wired Network",
+      "incident": {
+        "title": "Which routing protocols support variable-length subnet masks (VLSMs)?",
+        "severity": "high",
+        "question": "Which routing protocols support variable-length subnet masks (VLSMs)?",
+        "choices": [
+          "EIGRP",
+          "OSPF",
+          "IS-IS",
+          "A and B",
+          "A and C",
+          "B and C",
+          "A, B, and C"
+        ],
+        "topics": [
+          "OSPF, BGP, Route Manipulation, and IP Multicast"
+        ]
+      },
+      "expected_root_cause": "A, B, and C",
+      "expected_answer_raw": "G",
+      "expected_category": "network",
+      "solution": "EIGRP, OSPF, and IS-IS support VLSMs",
+      "acceptable_answers": [
+        "a, b, and c"
+      ],
+      "task_type": "rca"
+    },
+    {
+      "id": "RCA_180",
+      "source": "lemma_rca_cloud",
+      "incident": {
+        "title": "Cloud Computing Fault: cpu_spike",
+        "severity": "high",
+        "fault_type": "cpu_spike",
+        "logs": [
+          "stderr F I1207        1 main.go:149] calling CSI driver to discover driver name",
+          "ebs.csi.aws.com",
+          "0.0.0.0:9808"
+        ],
+        "metrics": {},
+        "system_id": "cloud_computing_ebs"
+      },
+      "expected_root_cause": "ebs_cpu_spike",
+      "expected_category": "cloud",
+      "acceptable_answers": [
+        "cpu spike",
+        "ebs cpu spike",
+        "cpu_spike"
+      ],
+      "task_type": "rca"
+    },
+    {
+      "id": "RCA_067",
+      "source": "opseval_5G Communication",
+      "incident": {
+        "title": "What is the maximum bandwidth that can be supported by the sub-6GHz frequency band in 5G?",
+        "severity": "high",
+        "question": "What is the maximum bandwidth that can be supported by the sub-6GHz frequency band in 5G?",
+        "choices": [
+          "200MHz",
+          "100MHz",
+          "80MHz",
+          "60MHz"
+        ],
+        "topics": []
+      },
+      "expected_root_cause": "100MHz",
+      "expected_answer_raw": "B",
+      "expected_category": "network",
+      "solution": "",
+      "acceptable_answers": [
+        "100mhz"
+      ],
+      "task_type": "rca"
+    },
+    {
+      "id": "RCA_139",
+      "source": "lemma_rca_cloud",
+      "incident": {
+        "title": "Cloud Computing Fault: memory_leak",
+        "severity": "high",
+        "fault_type": "memory_leak",
+        "logs": [
+          "stdout F   INFO [carts,,,] 8 --- [           main] o.s.w.s.handler.SimpleUrlHandlerMapping  : Mapped URL path [/**] onto handler of type [class org.springframework.web.servlet.resource.ResourceHttpReq",
+          "stdout F   INFO [carts,,,] 8 --- [           main] o.s.w.s.handler.SimpleUrlHandlerMapping  : Mapped URL path [/browser/**] onto handler of type [class org.springframework.web.servlet.resource.Resourc",
+          "stdout F   INFO [carts,,,] 8 --- [           main] o.s.w.s.handler.SimpleUrlHandlerMapping  : Mapped URL path [/actuator/] onto handler of type [class org.springframework.web.servlet.resource.Resource"
+        ],
+        "metrics": {},
+        "system_id": "cloud_computing_carts"
+      },
+      "expected_root_cause": "carts_memory_leak",
+      "expected_category": "cloud",
+      "acceptable_answers": [
+        "memory leak",
+        "carts memory leak",
+        "memory_leak"
+      ],
+      "task_type": "rca"
+    },
+    {
+      "id": "RCA_170",
+      "source": "lemma_rca_cloud",
+      "incident": {
+        "title": "Cloud Computing Fault: connection_timeout",
+        "severity": "high",
+        "fault_type": "connection_timeout",
+        "logs": [
+          "stderr F ts= caller=logging.go:85 method=Health result=2 took=41.924Âµs",
+          "stderr F ts= caller=logging.go:85 method=Health result=2 took=42.817Âµs",
+          "stderr F ts= caller=logging.go:85 method=Health result=2 took=42.429Âµs"
+        ],
+        "metrics": {},
+        "system_id": "cloud_computing_catalogue"
+      },
+      "expected_root_cause": "catalogue_connection_timeout",
+      "expected_category": "cloud",
+      "acceptable_answers": [
+        "connection timeout",
+        "catalogue connection timeout",
+        "connection_timeout"
+      ],
+      "task_type": "rca"
+    },
+    {
+      "id": "RCA_161",
+      "source": "lemma_rca_cloud",
+      "incident": {
+        "title": "Cloud Computing Fault: memory_leak",
+        "severity": "high",
+        "fault_type": "memory_leak",
+        "logs": [
+          "stdout F DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): details:9080",
+          "stdout F send: b'GET /details/0 HTTP/1.1\\\\r\\\\nHost: details:9080\\\\r\\\\nuser-agent: Apache-HttpClient/4.5.12 (Java/1.8.0_212)\\\\r\\\\nAccept-Encoding: gzip, deflate\\\\r\\\\nAccept: */*\\\\r\\\\nConnection: keep-a",
+          "stdout F reply: 'HTTP/1.1 200 OK\\\\r\\\\n'"
+        ],
+        "metrics": {},
+        "system_id": "cloud_computing_productpage"
+      },
+      "expected_root_cause": "productpage_memory_leak",
+      "expected_category": "cloud",
+      "acceptable_answers": [
+        "memory leak",
+        "productpage memory leak",
+        "memory_leak"
+      ],
+      "task_type": "rca"
+    },
+    {
+      "id": "RCA_136",
+      "source": "lemma_rca_cloud",
+      "incident": {
+        "title": "Cloud Computing Fault: network_latency",
+        "severity": "high",
+        "fault_type": "network_latency",
+        "logs": [
+          "stdout F Connection accepted",
+          "stdout F Received first command on ingress connection since session start or auth handshake",
+          "stdout F Connection ended"
+        ],
+        "metrics": {},
+        "system_id": "cloud_computing_orders-db"
+      },
+      "expected_root_cause": "orders-db_network_latency",
+      "expected_category": "cloud",
+      "acceptable_answers": [
+        "network latency",
+        "orders-db network latency",
+        "network_latency"
+      ],
+      "task_type": "rca"
+    },
+    {
+      "id": "RCA_051",
+      "source": "opseval_Wired Network",
+      "incident": {
+        "title": "以下哪种网络交换机攻击类型可以通过洪水防护来预防？",
+        "severity": "high",
+        "question": "以下哪种网络交换机攻击类型可以通过洪水防护来预防？",
+        "choices": [
+          "DNS污染",
+          "战车驾驶",
+          "MAC泛洪攻击",
+          "邪恶的孪生。"
+        ],
+        "topics": [
+          "网络安全"
+        ]
+      },
+      "expected_root_cause": "MAC泛洪攻击",
+      "expected_answer_raw": "C",
+      "expected_category": "network",
+      "solution": "通过向交换机发送包含许多不同虚假媒体访问控制（MAC）地址的数据包，攻击者可以导致交换机中的合法条目被设备老化并替换为虚假条目。当入站数据包的目的地在表中找不到时，交换机会在整个网络中广播它们，从而更容易被捕获和攻击。洪泛保护是一种机制，可以防止表中的确认MAC地址被替换。交换机中的洪泛保护无法防止域名系统（DNS）污染、战车驾驶或恶意双胞胎攻击。",
+      "acceptable_answers": [
+        "mac泛洪攻击"
+      ],
+      "task_type": "rca"
+    },
+    {
+      "id": "RCA_147",
+      "source": "lemma_rca_cloud",
+      "incident": {
+        "title": "Cloud Computing Fault: pod_crash",
+        "severity": "high",
+        "fault_type": "pod_crash",
+        "logs": [
+          "severity\":\"info\",\"time\":1701880760433,\"pid\":1,\"hostname\":\"currencyservice-696d6df76c-xdz9b\",\"name\":\"currencyservice-server\",\"message\":\"Getting supported currencies...",
+          "severity\":\"info\",\"time\":1701880760440,\"pid\":1,\"hostname\":\"currencyservice-696d6df76c-xdz9b\",\"name\":\"currencyservice-server\",\"message\":\"conversion request successful",
+          "severity\":\"info\",\"time\":1701880760443,\"pid\":1,\"hostname\":\"currencyservice-696d6df76c-xdz9b\",\"name\":\"currencyservice-server\",\"message\":\"conversion request successful"
+        ],
+        "metrics": {},
+        "system_id": "cloud_computing_currencyservice"
+      },
+      "expected_root_cause": "currencyservice_pod_crash",
+      "expected_category": "cloud",
+      "acceptable_answers": [
+        "pod crash",
+        "currencyservice pod crash",
+        "pod_crash"
+      ],
+      "task_type": "rca"
+    },
+    {
+      "id": "RCA_041",
+      "source": "opseval_Wired Network",
+      "incident": {
+        "title": "When specifying the **timestamp** parameter with the Cisco DNA Center APIs, what format should the time be in?",
+        "severity": "high",
+        "question": "When specifying the **timestamp** parameter with the Cisco DNA Center APIs, what format should the time be in?",
+        "choices": [
+          "UNIX time",
+          "OS/2",
+          "OpenVMS",
+          "SYSTEMTIME"
+        ],
+        "topics": [
+          "Cisco Enterprise Networking Management Platforms and APIs"
+        ]
+      },
+      "expected_root_cause": "UNIX time",
+      "expected_answer_raw": "A",
+      "expected_category": "network",
+      "solution": "The **timestamp** parameter in Cisco DNA Center APIs is in UNIX epoch time, in milliseconds",
+      "acceptable_answers": [
+        "unix time"
+      ],
+      "task_type": "rca"
+    },
+    {
+      "id": "RCA_006",
+      "source": "opseval_Wired Network",
+      "incident": {
+        "title": "In current data center networking architecture, which network layer is used to transmit VXLAN packets or other overlay packets?",
+        "severity": "high",
+        "question": "In current data center networking architecture, which network layer is used to transmit VXLAN packets or other overlay packets?",
+        "choices": [
+          "Overlay network",
+          "SD-WAN",
+          "Underlay network",
+          "MPLS"
+        ],
+        "topics": [
+          "Implementing Data Center Overlay Protocols"
+        ]
+      },
+      "expected_root_cause": "Underlay network",
+      "expected_answer_raw": "C",
+      "expected_category": "network",
+      "solution": "The underlay network—the bottom of that layer—provides a foundation for all other network services. The underlay transmits VXLAN and other overlay packets, so administrators must understand a different way to address connectivity issues",
+      "acceptable_answers": [
+        "underlay network"
+      ],
+      "task_type": "rca"
+    },
+    {
+      "id": "RCA_091",
+      "source": "opseval_Wired Network",
+      "incident": {
+        "title": "Which of the following types of cable, when installed, sometimes employed a device called a vampire tap?",
+        "severity": "high",
+        "question": "Which of the following types of cable, when installed, sometimes employed a device called a vampire tap?",
+        "choices": [
+          "Unshielded twisted pair",
+          "Shielded twisted pair",
+          "Multimode fiber optic",
+          "Single-mode fiber optic",
+          "Coaxial"
+        ],
+        "topics": [
+          "Networking Fundamentals"
+        ]
+      },
+      "expected_root_cause": "Coaxial",
+      "expected_answer_raw": "E",
+      "expected_category": "network",
+      "solution": "Thick Ethernet installations used a type of coaxial cable called RG-8. To connect a node to the network, installers ran a separate cable called an Attachment Unit Interface (AUI) cable from the computer to the RG-8 and connected it using a device called a vampire tap that pierced the sheathing to make contact with the conductors within. All of the other cable types listed use different types of connectors",
+      "acceptable_answers": [
+        "coaxial"
+      ],
+      "task_type": "rca"
+    },
+    {
+      "id": "RCA_094",
+      "source": "opseval_Wired Network",
+      "incident": {
+        "title": "真或假：MST根桥向所有其他MST交换机广告VLAN到实例的映射。",
+        "severity": "high",
+        "question": "真或假：MST根桥向所有其他MST交换机广告VLAN到实例的映射。",
+        "choices": [
+          "正确的",
+          "错误的，不正确的。"
+        ],
+        "topics": [
+          "多重生成树协议（Multiple Spanning Tree Protocol）"
+        ]
+      },
+      "expected_root_cause": "错误的，不正确的。",
+      "expected_answer_raw": "B",
+      "expected_category": "network",
+      "solution": "错误。MST使用内部生成树（IST）来广告自身和其他MST实例以建立拓扑。本地交换机配置将VLAN关联到MST实例。",
+      "acceptable_answers": [
+        "错误的，不正确的。"
+      ],
+      "task_type": "rca"
+    },
+    {
+      "id": "RCA_172",
+      "source": "lemma_rca_cloud",
+      "incident": {
+        "title": "Cloud Computing Fault: memory_leak",
+        "severity": "high",
+        "fault_type": "memory_leak",
+        "logs": [
+          "stdout F Connection ended",
+          "stdout F Connection ended",
+          "stdout F Connection accepted"
+        ],
+        "metrics": {},
+        "system_id": "cloud_computing_orders-db"
+      },
+      "expected_root_cause": "orders-db_memory_leak",
+      "expected_category": "cloud",
+      "acceptable_answers": [
+        "memory leak",
+        "orders-db memory leak",
+        "memory_leak"
+      ],
+      "task_type": "rca"
+    },
+    {
+      "id": "RCA_023",
+      "source": "opseval_Log Analysis",
+      "incident": {
+        "title": "日志产品关于字段抽取的方法通常有哪些，例如正则表达式解析？",
+        "severity": "high",
+        "question": "日志产品关于字段抽取的方法通常有哪些，例如正则表达式解析？",
+        "choices": [],
+        "topics": []
+      },
+      "expected_root_cause": "正则表达式解析：使用正则表达式匹配日志行中的特定模式，并提取所需的字段。这种方法通常用于日志格式比较固定、规则明确的情况。\n模板解析：有些日志格式是基于模板生成的，可以根据日志模板的定义来解析日志行，提取所需的字段。这种方法适用于模板格式的日志。\n分割符解析：根据指定的分隔符将日志行分割成多个字段。这种方法适用于简单的日志格式，如以空格或逗号分隔的日志行。\n机器学习算法：使用机器学习算法对日志数据进行训练和学习，自动识别和提取字段。这种方法适用于复杂的日志格式和不规则的文本数据。\nNLP（自然语言处理）技术：通过自然语言处理技术对日志文本进行解析和语义理解，提取所需的字段。这种方法适用于包含人类可读信息的日志数据。\n根据不同的日志格式和需求，可以选择适合的方法进行字段抽取。在实际应用中，可能需要根据具体情况组合使用多种方法。",
+      "expected_answer_raw": "正则表达式解析：使用正则表达式匹配日志行中的特定模式，并提取所需的字段。这种方法通常用于日志格式比较固定、规则明确的情况。\n模板解析：有些日志格式是基于模板生成的，可以根据日志模板的定义来解析日志行，提取所需的字段。这种方法适用于模板格式的日志。\n分割符解析：根据指定的分隔符将日志行分割成多个字段。这种方法适用于简单的日志格式，如以空格或逗号分隔的日志行。\n机器学习算法：使用机器学习算法对日志数据进行训练和学习，自动识别和提取字段。这种方法适用于复杂的日志格式和不规则的文本数据。\nNLP（自然语言处理）技术：通过自然语言处理技术对日志文本进行解析和语义理解，提取所需的字段。这种方法适用于包含人类可读信息的日志数据。\n根据不同的日志格式和需求，可以选择适合的方法进行字段抽取。在实际应用中，可能需要根据具体情况组合使用多种方法。",
+      "expected_category": "logging",
+      "solution": "",
+      "acceptable_answers": [
+        "正则表达式解析：使用正则表达式匹配日志行中的特定模式，并提取所需的字段。这种方法通常用于日志格式比较固定、规则明确的情况。\n模板解析：有些日志格式是基于模板生成的，可以根据日志模板的定义来解析日志行，提取所需的字段。这种方法适用于模板格式的日志。\n分割符解析：根据指定的分隔符将日志行分割成多个字段。这种方法适用于简单的日志格式，如以空格或逗号分隔的日志行。\n机器学习算法：使用机器学习算法对日志数据进行训练和学习，自动识别和提取字段。这种方法适用于复杂的日志格式和不规则的文本数据。\nnlp（自然语言处理）技术：通过自然语言处理技术对日志文本进行解析和语义理解，提取所需的字段。这种方法适用于包含人类可读信息的日志数据。\n根据不同的日志格式和需求，可以选择适合的方法进行字段抽取。在实际应用中，可能需要根据具体情况组合使用多种方法。",
+        "正则表达式解析：使用正则表达式匹配日志行中的特定模式，并提取所需的字段。这种方法通常用于日志格式比较固定、规则明确的情况。 模板解析：有些日志格式是基于模板生成的，可以根据日志模板的定义来解析日志行，提取所需的字段。这种方法适用于模板格式的日志。 分割符解析：根据指定的分隔符将日志行分割成多个字段。这种方法适用于简单的日志格式，如以空格或逗号分隔的日志行。 机器学习算法：使用机器学习算法对日志数据进行训练和学习，自动识别和提取字段。这种方法适用于复杂的日志格式和不规则的文本数据。 nlp（自然语言处理）技术：通过自然语言处理技术对日志文本进行解析和语义理解，提取所需的字段。这种方法适用于包含人类可读信息的日志数据。"
+      ],
+      "task_type": "rca"
+    },
+    {
+      "id": "RCA_048",
+      "source": "opseval_Wired Network",
+      "incident": {
+        "title": "域名服务（DNS）服务器中的A记录在您的网络中扮演什么角色？",
+        "severity": "high",
+        "question": "域名服务（DNS）服务器中的A记录在您的网络中扮演什么角色？",
+        "choices": [
+          "将人名转换为IP地址",
+          "将IP地址转换为人类可读的名称",
+          "使得从一个设备上可以打印、复印和传真。",
+          "控制网络数据包以优化性能。"
+        ],
+        "topics": [
+          "网络设备"
+        ]
+      },
+      "expected_root_cause": "将人名转换为IP地址",
+      "expected_answer_raw": "A",
+      "expected_category": "network",
+      "solution": "DNS将人类可读的名称翻译成IP地址，以便通过互联网路由数据包。主机可以接收此DNS服务器的IP地址，然后将主机名解析为IP地址。",
+      "acceptable_answers": [
+        "将人名转换为ip地址"
+      ],
+      "task_type": "rca"
+    },
+    {
+      "id": "RCA_104",
+      "source": "lemma_rca_cloud",
+      "incident": {
+        "title": "Cloud Computing Fault: disk_io_issue",
+        "severity": "high",
+        "fault_type": "disk_io_issue",
+        "logs": [
+          "stdout F WiredTiger message",
+          "stdout F WiredTiger message",
+          "stdout F WiredTiger message"
+        ],
+        "metrics": {},
+        "system_id": "cloud_computing_mongodb"
+      },
+      "expected_root_cause": "mongodb_disk_io_issue",
+      "expected_category": "cloud",
+      "acceptable_answers": [
+        "disk io issue",
+        "mongodb disk io issue",
+        "disk_io_issue"
+      ],
+      "task_type": "rca"
+    },
+    {
+      "id": "RCA_035",
+      "source": "opseval_Wired Network",
+      "incident": {
+        "title": "以下哪些是可用于执行网络配置文件的遥测类型？",
+        "severity": "high",
+        "question": "以下哪些是可用于执行网络配置文件的遥测类型？",
+        "choices": [
+          "已使用和开放的端口",
+          "吞吐量",
+          "会话持续时间",
+          "所有这些答案都是正确的。"
+        ],
+        "topics": [
+          "网络基础设施设备遥测和分析"
+        ]
+      },
+      "expected_root_cause": "所有这些答案都是正确的。",
+      "expected_answer_raw": "D",
+      "expected_category": "network",
+      "solution": "使用的端口、开放的端口、吞吐量和会话持续时间都是可以用来进行网络配置文件分析的遥测类型。",
+      "acceptable_answers": [
+        "所有这些答案都是正确的。"
+      ],
+      "task_type": "rca"
+    },
+    {
+      "id": "RCA_153",
+      "source": "lemma_rca_cloud",
+      "incident": {
+        "title": "Cloud Computing Fault: network_latency",
+        "severity": "high",
+        "fault_type": "network_latency",
+        "logs": [
+          "stdout F GetCartAsync called with userId=e66c88d6-3711-4db8-8f70-ae433ef73f6c",
+          "stdout F GetCartAsync called with userId=1374eb0b-a49f-414d-99d9-3a0c6c5a8c29",
+          "stdout F GetCartAsync called with userId=608e8db4-e0bf-4ff4-97fc-aaa2bbf2a5b6"
+        ],
+        "metrics": {},
+        "system_id": "cloud_computing_cartservice"
+      },
+      "expected_root_cause": "cartservice_network_latency",
+      "expected_category": "cloud",
+      "acceptable_answers": [
+        "network latency",
+        "cartservice network latency",
+        "network_latency"
+      ],
+      "task_type": "rca"
+    },
+    {
+      "id": "RCA_022",
+      "source": "opseval_Wired Network",
+      "incident": {
+        "title": "Which SIP message is used to instruct SIP IP phones to join a specific multicast paging IP address and port in order to receive an inbound page?",
+        "severity": "high",
+        "question": "Which SIP message is used to instruct SIP IP phones to join a specific multicast paging IP address and port in order to receive an inbound page?",
+        "choices": [
+          "INVITE",
+          "NOTIFY",
+          "REFER",
+          "UPDATE"
+        ],
+        "topics": [
+          "Unified CME and SRST"
+        ]
+      },
+      "expected_root_cause": "REFER",
+      "expected_answer_raw": "C",
+      "expected_category": "network",
+      "solution": "Unified CME sends an out-of-dialog SIP REFER to the IP phone with a multipart/mixed message body that contains information about the multicast paging IP address and port the phone should join",
+      "acceptable_answers": [
+        "refer"
+      ],
+      "task_type": "rca"
+    },
+    {
+      "id": "RCA_149",
+      "source": "lemma_rca_cloud",
+      "incident": {
+        "title": "Cloud Computing Fault: resource_exhaustion",
+        "severity": "high",
+        "fault_type": "resource_exhaustion",
+        "logs": [
+          "stderr F  8 [Note] Aborted connection 8 to db: 'socksdb' user: 'catalogue_user' host: '10.1.32.11' (Got timeout reading communication packets)",
+          "stderr F  7 [Note] Aborted connection 7 to db: 'socksdb' user: 'catalogue_user' host: '10.1.32.11' (Got timeout reading communication packets)"
+        ],
+        "metrics": {},
+        "system_id": "cloud_computing_catalogue-db"
+      },
+      "expected_root_cause": "catalogue-db_resource_exhaustion",
+      "expected_category": "cloud",
+      "acceptable_answers": [
+        "resource exhaustion",
+        "catalogue-db resource exhaustion",
+        "resource_exhaustion"
+      ],
+      "task_type": "rca"
+    },
+    {
+      "id": "RCA_054",
+      "source": "opseval_Wired Network",
+      "incident": {
+        "title": "哪些EIGRP数据包类型使用组播发送？（选择所有适用项。）",
+        "severity": "high",
+        "question": "哪些EIGRP数据包类型使用组播发送？（选择所有适用项。）",
+        "choices": [
+          "Hello",
+          "Reply",
+          "Acknowledgement",
+          "Update",
+          "Query"
+        ],
+        "topics": [
+          "第三层技术"
+        ]
+      },
+      "expected_root_cause": "Hello; Update; Query",
+      "expected_answer_raw": "A,D,E",
+      "expected_category": "network",
+      "solution": "邻居关系是通过hello数据包发现和维护的。这些数据包使用组播发送。更新消息用于向邻居发送路由信息。这些数据包可以通过单播发送到一个邻居，也可以通过组播发送到多个邻居。它们使用可靠传输协议发送。当路由器失去到网络的路径时，EIGRP使用查询数据包。路由器向其邻居发送查询数据包，询问它们是否有关于该网络的信息。这些数据包通过组播和使用可靠传输协议发送。",
+      "acceptable_answers": [
+        "hello; update; query"
+      ],
+      "task_type": "rca"
+    },
+    {
+      "id": "RCA_181",
+      "source": "lemma_rca_cloud",
+      "incident": {
+        "title": "Cloud Computing Fault: network_latency",
+        "severity": "high",
+        "fault_type": "network_latency",
+        "logs": [
+          "stdout F send: b'GET /reviews/0 HTTP/1.1\\\\r\\\\nHost: reviews:9080\\\\r\\\\nuser-agent: Apache-HttpClient/4.5.12 (Java/1.8.0_212)\\\\r\\\\nAccept-Encoding: gzip, deflate\\\\r\\\\nAccept: */*\\\\r\\\\nConnection: keep-a",
+          "stdout F reply: 'HTTP/1.1 200 OK\\\\r\\\\n'",
+          "stdout F header: X-Powered-By: Servlet/3.1"
+        ],
+        "metrics": {},
+        "system_id": "cloud_computing_productpage"
+      },
+      "expected_root_cause": "productpage_network_latency",
+      "expected_category": "cloud",
+      "acceptable_answers": [
+        "network latency",
+        "productpage network latency",
+        "network_latency"
+      ],
+      "task_type": "rca"
+    },
+    {
+      "id": "RCA_160",
+      "source": "lemma_rca_cloud",
+      "incident": {
+        "title": "Cloud Computing Fault: pod_crash",
+        "severity": "high",
+        "fault_type": "pod_crash",
+        "logs": [
+          "stderr F I1207        1 adapter.go:108] successfully using in-cluster auth",
+          "stderr F I1207        1 serving.go:341] Generated self-signed cert (/var/run/serving-cert/apiserver.crt, /var/run/serving-cert/apiserver.key)",
+          "stderr F W1207        1 secure_serving.go:69] Use of insecure cipher 'TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256' detected."
+        ],
+        "metrics": {},
+        "system_id": "cloud_computing_prometheus"
+      },
+      "expected_root_cause": "prometheus_pod_crash",
+      "expected_category": "cloud",
+      "acceptable_answers": [
+        "pod crash",
+        "prometheus pod crash",
+        "pod_crash"
+      ],
+      "task_type": "rca"
+    },
+    {
+      "id": "RCA_032",
+      "source": "opseval_Wired Network",
+      "incident": {
+        "title": "以下哪个不是解决IEEE 802.11g无线电脑与IEEE 802.11b/g接入点（AP）连接时出现间歇性问题的潜在解决方案？",
+        "severity": "high",
+        "question": "以下哪个不是解决IEEE 802.11g无线电脑与IEEE 802.11b/g接入点（AP）连接时出现间歇性问题的潜在解决方案？",
+        "choices": [
+          "在接入点上安装一个增益更高的天线。",
+          "将AP替换为支持802.11n的型号。",
+          "将计算机移近接入点。",
+          "更改AP使用的信道。"
+        ],
+        "topics": [
+          "网络故障排除"
+        ]
+      },
+      "expected_root_cause": "将AP替换为支持802.11n的型号。",
+      "expected_answer_raw": "B",
+      "expected_category": "network",
+      "solution": "仅仅将AP更换为802.11n型号并不会有任何效果，除非您也升级计算机的网络适配器。在AP上安装更高增益的天线可以改善其范围，使计算机更容易连接。将计算机移近AP可以增强信号并提高其接收信号强度指示器（RSSI），使其更可靠地连接。将AP的信道更改为使用较少的信道可以使计算机更容易连接。",
+      "acceptable_answers": [
+        "将ap替换为支持802.11n的型号。"
+      ],
+      "task_type": "rca"
+    },
+    {
+      "id": "RCA_019",
+      "source": "opseval_Wired Network",
+      "incident": {
+        "title": "以下哪个组件通常不会在无线局域网（WLAN）中找到？",
+        "severity": "high",
+        "question": "以下哪个组件通常不会在无线局域网（WLAN）中找到？",
+        "choices": [
+          "无线局域网路由器",
+          "无线局域网网关",
+          "无线局域网服务器",
+          "无线局域网客户端"
+        ],
+        "topics": [
+          "网络化，联网，网络建设，人际关系网络"
+        ]
+      },
+      "expected_root_cause": "无线局域网服务器",
+      "expected_answer_raw": "C",
+      "expected_category": "network",
+      "solution": "无线局域网（WLAN）通常有三种类型的节点：客户端、路由器和网关。它们通常不包括服务器，而且往往是流动性的，设备根据需要进出。它们可能包括打印机。 WLAN可用于将无线用户连接到有线网络。",
+      "acceptable_answers": [
+        "无线局域网服务器"
+      ],
+      "task_type": "rca"
+    },
+    {
+      "id": "RCA_144",
+      "source": "lemma_rca_cloud",
+      "incident": {
+        "title": "Cloud Computing Fault: connection_timeout",
+        "severity": "high",
+        "fault_type": "connection_timeout",
+        "logs": [
+          "GET /healthz HTTP/1.1\" 200 13 \"\" \"dashboard/v2.0.0",
+          "GET / HTTP/1.1\" 200 6 \"\" \"kube-probe/1.28+",
+          "GET /healthz HTTP/1.1\" 200 13 \"\" \"dashboard/v2.0.0"
+        ],
+        "metrics": {},
+        "system_id": "cloud_computing_dashboard"
+      },
+      "expected_root_cause": "dashboard_connection_timeout",
+      "expected_category": "cloud",
+      "acceptable_answers": [
+        "connection timeout",
+        "dashboard connection timeout",
+        "connection_timeout"
+      ],
+      "task_type": "rca"
+    },
+    {
+      "id": "RCA_011",
+      "source": "opseval_Log Analysis",
+      "incident": {
+        "title": "以下选项中属于可直接使用的日志格式是？\nA. TXT\nB. CSV\nC. Excel\nD. JSON",
+        "severity": "high",
+        "question": "以下选项中属于可直接使用的日志格式是？\nA. TXT\nB. CSV\nC. Excel\nD. JSON",
+        "choices": [],
+        "topics": []
+      },
+      "expected_root_cause": "ABD",
+      "expected_answer_raw": "ABD",
+      "expected_category": "logging",
+      "solution": "",
+      "acceptable_answers": [
+        "abd"
+      ],
+      "task_type": "rca"
+    },
+    {
+      "id": "RCA_021",
+      "source": "opseval_Wired Network",
+      "incident": {
+        "title": "REST和RESTful是什么？（选择两个。）",
+        "severity": "high",
+        "question": "REST和RESTful是什么？（选择两个。）",
+        "choices": [
+          "REST代表表述性状态转移。",
+          "REST是一种基于HTTP的协议，为访问在YANG中定义的数据提供编程接口。",
+          "RESTful指的是应用REST架构概念编写的Web服务，它们被称为RESTful服务。",
+          "RESTful指的是通过向实现XML-RPC的服务器发送HTTP请求并接收HTTP响应来执行RPC的Web服务。"
+        ],
+        "topics": [
+          "网络APIs"
+        ]
+      },
+      "expected_root_cause": "REST代表表述性状态转移。; RESTful指的是应用REST架构概念编写的Web服务，它们被称为RESTful服务。",
+      "expected_answer_raw": "A,C",
+      "expected_category": "network",
+      "solution": "REST代表表述性状态转移；它是编写Web API的相对较新的方面。答案B和D是不正确的，因为REST/RESTful API不是开发人员在创建API时遵循的一组规则。",
+      "acceptable_answers": [
+        "rest代表表述性状态转移。; restful指的是应用rest架构概念编写的web服务，它们被称为restful服务。"
+      ],
+      "task_type": "rca"
+    },
+    {
+      "id": "RCA_081",
+      "source": "opseval_Wired Network",
+      "incident": {
+        "title": "最初，存储区域网络（SAN）仅专用于基于存储的流量。局域网（LAN）也需要用于其他类型的流量。然而，今天，SAN和LAN流量可以共存于单个网络介质上。以下哪些SAN协议能够与标准LAN流量共享网络介质？（选择所有适用项。）",
+        "severity": "high",
+        "question": "最初，存储区域网络（SAN）仅专用于基于存储的流量。局域网（LAN）也需要用于其他类型的流量。然而，今天，SAN和LAN流量可以共存于单个网络介质上。以下哪些SAN协议能够与标准LAN流量共享网络介质？（选择所有适用项。）",
+        "choices": [
+          "无限带宽（InfiniBand）",
+          "光纤通道",
+          "iSCSI（Internet Small Computer System Interface）是一种基于IP网络的存储协议，用于在计算机之间传输数据块。它允许远程访问存储设备，使得多个计算机可以共享存储资源。",
+          "FCoE"
+        ],
+        "topics": []
+      },
+      "expected_root_cause": "iSCSI（Internet Small Computer System Interface）是一种基于IP网络的存储协议，用于在计算机之间传输数据块。它允许远程访问存储设备，使得多个计算机可以共享存储资源。; FCoE",
+      "expected_answer_raw": "C,D",
+      "expected_category": "network",
+      "solution": "iSCSI协议运行在标准IP网络上，而基于以太网的光纤通道（FCoE）变体则运行在标准以太网网络上。这两种协议都可以与局域网流量共享网络，尽管通常建议使用服务质量（QoS）机制。原始的光纤通道实现和InfiniBand都需要一个专用的网络介质，不支持局域网流量。",
+      "acceptable_answers": [
+        "small computer system",
+        "iscsi（internet small computer system interface）是一种基于ip网络的存储协议，用于在计算机之间传输数据块。它允许远程访问存储设备，使得多个计算机可以共享存储资源。;",
+        "iscsi（internet small computer system interface）是一种基于ip网络的存储协议，用于在计算机之间传输数据块。它允许远程访问存储设备，使得多个计算机可以共享存储资源。; fcoe"
+      ],
+      "task_type": "rca"
+    },
+    {
+      "id": "RCA_029",
+      "source": "opseval_Mobile Communication Network",
+      "incident": {
+        "title": "In operations and maintenance work, which of the following measures is the most effective in improving system security?",
+        "severity": "high",
+        "question": "In operations and maintenance work, which of the following measures is the most effective in improving system security?",
+        "choices": [
+          "Increase the number of system users",
+          "Regularly update security patches",
+          "Ignore security warnings",
+          "Randomly configure firewalls"
+        ],
+        "topics": []
+      },
+      "expected_root_cause": "Regularly update security patches",
+      "expected_answer_raw": "B",
+      "expected_category": "network",
+      "solution": "",
+      "acceptable_answers": [
+        "regularly update security patches",
+        "regularly update security"
+      ],
+      "task_type": "rca"
+    },
+    {
+      "id": "RCA_039",
+      "source": "opseval_Wired Network",
+      "incident": {
+        "title": "WPA2 with 802.1x and AES was introduced in which one of the following CCX versions?",
+        "severity": "high",
+        "question": "WPA2 with 802.1x and AES was introduced in which one of the following CCX versions?",
+        "choices": [
+          "CCXv1",
+          "CCXv2",
+          "CCXv3",
+          "CCXv4",
+          "CCXv5"
+        ],
+        "topics": [
+          "Configuring Client Connectivity"
+        ]
+      },
+      "expected_root_cause": "CCXv3",
+      "expected_answer_raw": "C",
+      "expected_category": "network",
+      "solution": "WPA2 with 802.1x was introduced in CCXv3 and so is supported in it and later versions",
+      "acceptable_answers": [
+        "ccxv3"
+      ],
+      "task_type": "rca"
+    },
+    {
+      "id": "RCA_095",
+      "source": "opseval_5G Communication",
+      "incident": {
+        "title": "According to the propagation loss model of free space, when the distance doubles, the propagation loss increases by:",
+        "severity": "high",
+        "question": "According to the propagation loss model of free space, when the distance doubles, the propagation loss increases by:",
+        "choices": [
+          "6 dB",
+          "5 dB",
+          "4 dB",
+          "3 dB"
+        ],
+        "topics": []
+      },
+      "expected_root_cause": "6 dB",
+      "expected_answer_raw": "A",
+      "expected_category": "network",
+      "solution": "",
+      "acceptable_answers": [
+        "6 db"
+      ],
+      "task_type": "rca"
+    }
+  ]
+}
