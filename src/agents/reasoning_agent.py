@@ -438,15 +438,43 @@ User Query: {query}
         return prompt
     
     def _parse_json_response(self, content: str) -> dict[str, Any]:
-        """Parse JSON from model response."""
+        """Parse JSON from model response with robust brace-matching fallback."""
         try:
+            content = content.strip()
+
+            # Step 1: Try markdown code block extraction
             if "```json" in content:
-                content = content.split("```json")[1].split("```")[0]
+                content = content.split("```json")[1].split("```")[0].strip()
             elif "```" in content:
-                content = content.split("```")[1].split("```")[0]
-            
-            return json.loads(content.strip())
-        except json.JSONDecodeError:
+                content = content.split("```")[1].split("```")[0].strip()
+
+            # Step 2: Try direct parse first
+            try:
+                return json.loads(content)
+            except json.JSONDecodeError:
+                pass
+
+            # Step 3: Brace-matching fallback (same technique as FastAnnotator)
+            # Handles cases where model outputs extra text around JSON
+            start_idx = content.find('{')
+            if start_idx != -1:
+                brace_count = 0
+                end_idx = start_idx
+                for i, char in enumerate(content[start_idx:], start=start_idx):
+                    if char == '{':
+                        brace_count += 1
+                    elif char == '}':
+                        brace_count -= 1
+                        if brace_count == 0:
+                            end_idx = i
+                            break
+                json_str = content[start_idx:end_idx + 1]
+                return json.loads(json_str)
+
+            # No JSON object found
+            return {"raw_content": content, "confidence": 0.5}
+
+        except (json.JSONDecodeError, ValueError):
             return {"raw_content": content, "confidence": 0.5}
     
     def _extract_action(self, parsed: dict, mode: str) -> Optional[str]:

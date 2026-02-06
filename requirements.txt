@@ -51,3 +51,11 @@ docker>=7.0.0
 # For NVIDIA GTX 1650, use CUDA 11.8 or higher
 torch>=2.0.0
 sentence-transformers>=2.2.0
+
+# Benchmark Evaluation (BERTScore for semantic similarity)
+bert-score>=0.3.13
+transformers>=4.30.0
+
+# HuggingFace Datasets (for LEMMA-RCA benchmark download)
+datasets>=2.14.0
+huggingface-hub>=0.17.0

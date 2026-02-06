@@ -1,14 +1,52 @@
 # Constitutional AIOps - Development Checklist
 
-> **Version**: 0.6.1
-> **Last Updated**: 2026-01-28
+> **Version**: 0.7.1
+> **Last Updated**: 2026-01-30
 > **Status**: 100% Core Complete
 > **Architecture**: Simultaneous Dual-Model (Qwen3-4B + Qwen3-14B on 24GB VRAM)
 > **Deployment**: Hybrid (Jarvis Labs A5000 GPU + Local Services)
 
 ---
 
-## Recent Updates (2026-01-28) ✅
+## Recent Updates (2026-01-30) ✅
+
+### v0.7.1 - LEMMA-RCA Cloud Computing Integration
+- [x] Added LEMMA-RCA Cloud Computing dataset from HuggingFace (~4.74GB)
+- [x] Updated `requirements.txt` - Added datasets>=2.14.0, huggingface-hub>=0.17.0
+- [x] Added `download_lemma_rca()` function to `benchmark/scripts/download_datasets.py`
+- [x] Added `--skip-lemma` and `--lemma-only` CLI flags for download flexibility
+- [x] Added `load_lemma_rca()` function to `benchmark/scripts/prepare_datasets.py`
+- [x] Updated `create_rca_dataset()` to merge OpsEval (100) + LEMMA-RCA (100) = 200 RCA cases
+- [x] Total benchmark cases: 200 annotation + 200 RCA = **400 test cases**
+- [x] Updated all documentation (CHECKLIST, CHANGELOG, BENCHMARK.md)
+
+---
+
+## Previous Updates (2026-01-29) ✅
+
+### v0.7.0 - Conference-Level Benchmarking System
+- [x] Created `benchmark/` directory structure with datasets, scripts, results folders
+- [x] Downloaded REAL datasets from OpsEval (8,920 QA) and Loghub (HDFS + BGL logs)
+- [x] Created `benchmark/scripts/download_datasets.py` for automated dataset download
+- [x] Created `benchmark/scripts/prepare_datasets.py` for data preprocessing
+- [x] Created `benchmark/scripts/run_benchmark.py` with network latency compensation
+- [x] Created `benchmark/scripts/evaluate_results.py` with BERTScore (DeBERTa-XLarge-MNLI)
+- [x] Created `benchmark/scripts/export_metrics.py` for JSON/CSV/LaTeX export
+- [x] Created `src/benchmark/runner.py` - BenchmarkRunner class
+- [x] Created `src/benchmark/evaluator.py` - BenchmarkEvaluator with metrics
+- [x] Created `src/api/routes/benchmark.py` - REST API endpoints (/models, /datasets, /run, /results, /compare, /export)
+- [x] Created `frontend/src/pages/Benchmark.tsx` - Full benchmark UI (4 tabs: Datasets, Run, Results, Compare)
+- [x] Updated `frontend/src/components/Layout.tsx` - Removed Demo Mode, added Benchmark nav
+- [x] Updated `frontend/src/App.tsx` - Added /benchmark route
+- [x] Updated `requirements.txt` - Added bert-score>=0.3.13, transformers>=4.30.0
+- [x] Created `docs/BENCHMARK.md` - Comprehensive benchmark documentation
+- [x] Updated all documentation files (README, INDEX, CHECKLIST, CHANGELOG, API)
+- [x] Prepared 200 annotation test cases (100 HDFS + 100 BGL, balanced normal/anomaly)
+- [x] Prepared 100 RCA test cases from OpsEval QA questions
+
+---
+
+## Previous Updates (2026-01-28) ✅
 
 ### v0.6.1 - Episode Generation via Reasoning Agent
 - [x] Created `/api/v1/graph/generate-episodes` endpoint for LLM-based episode generation
@@ -132,7 +170,7 @@ Created `src/validation/constants.py` with:
 
 ## Component Status
 
-### Backend (45+ Python files) ✅
+### Backend (47+ Python files) ✅
 
 #### Core Modules
 - [x] `src/main.py` - FastAPI entry point with lifespan management
@@ -150,6 +188,10 @@ Created `src/validation/constants.py` with:
 
 #### Confidence (src/confidence/) - NEW v0.6.0
 - [x] `calculator.py` - Composite confidence: C(a) = α·C_LLM + β·C_hist + γ·C_sim
+
+#### Benchmark (src/benchmark/) - NEW v0.7.0
+- [x] `runner.py` - BenchmarkRunner class for multi-model evaluation
+- [x] `evaluator.py` - BenchmarkEvaluator with BERTScore metrics
 
 #### Memory System (src/memory/)
 - [x] `neo4j_client.py` - Neo4j async client
@@ -186,7 +228,7 @@ Created `src/validation/constants.py` with:
 
 ---
 
-### Frontend (25+ React files) ✅
+### Frontend (26+ React files) ✅
 
 #### Pages
 - [x] `Dashboard.tsx` - Overview with real-time updates
@@ -195,6 +237,7 @@ Created `src/validation/constants.py` with:
 - [x] `Agents.tsx` - Agent management (6 tabs)
 - [x] `Graph.tsx` - Dedicated episodic graph page (NEW v0.6.1)
 - [x] `Metrics.tsx` - LGTM observability metrics
+- [x] `Benchmark.tsx` - LLM benchmarking interface (NEW v0.7.0)
 - [x] `Settings.tsx` - Configuration (5 tabs)
 
 #### Components
@@ -240,6 +283,7 @@ Created `src/validation/constants.py` with:
 #### docs/ Directory
 - [x] `INDEX.md` - Master documentation index
 - [x] `KEY_METRICS.md` - Exportable paper metrics
+- [x] `BENCHMARK.md` - Benchmarking system documentation (NEW v0.7.0)
 - [x] `ARCHITECTURE.md` - System architecture
 - [x] `BACKEND.md` - Python backend reference
 - [x] `API.md` - REST API reference
@@ -321,5 +365,5 @@ See [CLAUDE.md](../CLAUDE.md) for session management.
 
 ---
 
-**Last Updated**: 2026-01-28
-**Version**: 0.6.1
+**Last Updated**: 2026-01-29
+**Version**: 0.7.0
