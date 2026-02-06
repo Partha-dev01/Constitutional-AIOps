@@ -2,7 +2,7 @@
 # Constitutional AIOps - Jarvis Labs Ollama Setup Script
 #
 # Run this ON the Jarvis Labs instance via SSH:
-#   ssh -p [PORT] root@sshg.jarvislabs.ai 'bash -s' < scripts/setup-jarvis-ollama.sh
+#   ssh -p [PORT] root@sshn.jarvislabs.ai 'bash -s' < scripts/setup-jarvis-ollama.sh
 #
 # Or copy and paste commands manually after SSH-ing in.
 
@@ -125,6 +125,18 @@ echo "4. Start local services:"
 echo "   docker compose -f docker-compose.yml -f docker/docker-compose.hybrid.yml up -d"
 echo ""
 echo "5. Open http://localhost:3000 in your browser"
+echo ""
+echo "=============================================="
+echo "OPTIONAL: Benchmark Evaluation Setup"
+echo "=============================================="
+echo ""
+echo "To run benchmarks with BERTScore + cosine similarity"
+echo "metrics (GPU-accelerated on A5000), run:"
+echo ""
+echo "  bash scripts/setup-jarvis-benchmark.sh"
+echo ""
+echo "This installs sentence-transformers, bert-score, and"
+echo "pre-downloads ML models (~2GB total)."
 echo ""
 echo "=============================================="
 echo "COST REMINDER: Pause instance when not using!"

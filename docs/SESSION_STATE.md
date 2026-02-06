@@ -1,7 +1,7 @@
-# Session State - Benchmark Complete v0.8.1
+# Session State - Multi-Metric Benchmark v0.9.1
 
 > **Last Updated**: 2026-02-06
-> **Session**: Model Switch to qwen3:4b-instruct + Full Benchmark Run
+> **Session**: Session 4 - Fresh Full Benchmark + Full Ablation + Auto-Export Pipeline
 > **Purpose**: Track progress for context compaction recovery
 > **Plan File**: `C:\Users\you\.claude\plans\greedy-sauteeing-balloon.md`
 
@@ -9,192 +9,152 @@
 
 ## Current Task
 
-Full benchmark COMPLETE. 133 tests run (100 annotation + 33 RCA). 88.7% overall accuracy. Both annotation (89%) and RCA (87.9%) within Research_V6.tex target ranges.
+ALL COMPLETE. Fresh full 150-test benchmark and 4-config full ablation study (150 tests each) run on Jarvis Labs with all 4 metrics populated. Auto-export pipeline generates all output files on completion.
 
 ---
 
 ## Jarvis Labs Status: ACTIVE
-Endpoint: `https://96c3f93672471.notebooks.jarvislabs.net`
-Models loaded: `qwen3:4b-instruct`, `qwen3:14b`, `qwen3:4b`, `qwen3-4b-nothink`
+- Endpoint: `https://96c3f93672471.notebooks.jarvislabs.net`
+- Ollama port: `6006` (OLLAMA_HOST=0.0.0.0:6006)
+- Models path: `/home/.ollama/models/` (NOT /home/ollama-models)
+- Models loaded: `qwen3:4b-instruct`, `qwen3:14b`
+- ML deps installed: `sentence-transformers`, `bert-score`, `transformers<5.0`, `tokenizers<0.22`
+- SSH: `ssh -i .ssh/jarvis_labs_key -p 11114 root@sshn.jarvislabs.ai`
 
 ---
 
-## Completed Phases (Benchmark Redesign)
+## Session 4 Progress
 
-- [x] **Phase 1**: Dataset cleanup (removed 62 ANN + 3 RCA bogus entries)
-- [x] **Phase 1.2**: Created 150-sample seeded dataset (seed=42)
-- [x] **Phase 1.5**: Refactored benchmark to use actual backend agents
-- [x] **Phase 2**: Fixed 7 scoring bugs in runner.py + reasoning_agent.py
-- [x] **Phase 2.1**: Removed 17 Chinese OpsEval cases, added 17 English replacements
-- [x] **Phase 2.2**: Updated documentation (BENCHMARK.md, CHANGELOG.md, SESSION_STATE.md, ISSUES.md)
-- [x] **Phase 2.3**: Fixed Qwen3 thinking mode (THINK-001 to THINK-006)
-- [x] **Phase 2.4**: Switched to qwen3:4b-instruct (THINK-007 to THINK-009)
-- [x] **Phase 3**: 1-sample verification test (raw + FastAnnotator + determinism)
-- [x] **Phase 4**: Full benchmark run (100 ann + 33 RCA = 133 tests)
-- [ ] **Phase 5**: Generate paper tables with precise %
-
-## Benchmark Results (2026-02-06)
-
-| Metric | Score | Target (Research_V6) | Status |
-|--------|-------|---------------------|--------|
-| Annotation Accuracy | **89.0%** (89/100) | 87-92% | IN TARGET |
-| RCA Accuracy | **87.9%** (29/33) | 85-90% | IN TARGET |
-| Overall | **88.7%** (118/133) | - | Excellent |
-| Annotation Latency (avg) | **2,496ms** | <100ms P95 | Remote overhead |
-| RCA Latency (avg) | **18,485ms** | 200-500ms P95 | Remote overhead |
-
-**Note**: Latency targets are for local deployment. Remote Jarvis Labs adds ~500ms RTT + Ollama overhead.
+### What Was Done
+- [x] **Modified `export_metrics.py`** - Added `export_all()` function, `generate_ablation_table_from_json()`, `generate_combined_results_md()`, `generate_results_index()`
+- [x] **Modified `test_5plus5.py`** - Auto-calls `export_all()` after `save_results()`
+- [x] **Modified `run_ablation.py`** - Auto-calls `export_all()` after ablation table generation
+- [x] **Cleared old results on Jarvis Labs** - Removed stale `benchmark/results/` from previous runs
+- [x] **Re-uploaded code to Jarvis Labs** - Created tarball excluding raw datasets, SCP'd to Jarvis
+- [x] **Ran 5+5 verification test** - 10/10 passed, auto-export working
+- [x] **Ran full 150-test benchmark** - 89/100 ann, 45/50 RCA, 134/150 = 89.3%
+- [x] **Ran full 4-config ablation study** - 100+50 per config, all 4 configs complete
+- [x] **Copied results back to local machine** - SCP'd `benchmark/results/` from Jarvis
+- [x] **Updated documentation** - SESSION_STATE, CHANGELOG, JARVIS_LABS_DEPLOYMENT, BENCHMARK, FINDINGS
 
 ---
 
-## Dataset Cleanup Summary
+## Full Benchmark Results (150 tests, Jarvis Labs localhost, FRESH RUN)
 
-| Dataset | Before | Phase 1 | Phase 2 (Chinese) | Final Sample |
-|---------|--------|---------|---------------------|-------------|
-| Annotation | 200 | 138 (removed 62 bogus BGL) | 138 (no Chinese) | 100 |
-| RCA | 183 | 180 (removed 3 mislabeled) | 180 (17 Chinese → 17 English) | 50 |
-| **Total** | 383 | 318 | 318 | **150** |
+| Metric | Annotation | RCA | Overall |
+|--------|-----------|-----|---------|
+| **Accuracy** | 89/100 = **89.0%** | 45/50 = **90.0%** | 134/150 = **89.3%** |
+| **BERTScore F1** | 0.516 | 0.337 | **0.456** |
+| **Cosine Similarity** | 0.266 | 0.358 | **0.297** |
+| **Term Overlap** | 0.178 | 0.649 | **0.364** |
+| **P50 Latency** | 2082ms | 17096ms | 3124ms |
+| **P95 Latency** | 4115ms | 29403ms | 23941ms |
+| **Network RTT** | - | - | **2.0ms** (localhost) |
+
+### Per-Source Breakdown
+| Source | N | Accuracy | BERTScore |
+|--------|---|----------|-----------|
+| Loghub HDFS | 72 | 95.8% | 0.521 |
+| Loghub BGL | 28 | 71.4% | 0.503 |
+| LEMMA RCA Cloud | 28 | 100.0% | 0.349 |
+| OpsEval Wired Network | 16 | 75.0% | 0.318 |
+| OpsEval Mobile Comms | 4 | 100.0% | 0.352 |
+| OpsEval 5G Comms | 2 | 50.0% | 0.294 |
+
+### Error Analysis (16/150 = 10.7% failure rate)
+| Failure Mode | Count | IDs |
+|-------------|-------|-----|
+| BGL False Positive | 8 | ANN_118, ANN_142, ANN_141, ANN_135, ANN_119 +3 more |
+| RCA Incorrect (Wired Network) | 4 | RCA_002, RCA_040, RCA_039, RCA_046 |
+| Annotation Incorrect (HDFS) | 3 | ANN_049, ANN_034, ANN_012 |
+| RCA Incorrect (5G) | 1 | RCA_067 |
+
+### Full Ablation Study Results (100+50 per config, 4 configs)
+| Configuration | Ann Acc | RCA Acc | Overall | BERT-F1 | Cos Sim | Term Ov. | Avg Latency |
+|--------------|---------|---------|---------|---------|---------|----------|-------------|
+| Full System (4B + 14B) | 89.0% | 88.0% | 88.7% | 0.458 | 0.302 | 0.371 | 7208ms |
+| Single 4B | 89.0% | 94.0% | 90.7% | 0.458 | 0.303 | 0.389 | 7250ms |
+| Single 14B | 89.0% | 92.0% | 90.0% | 0.457 | 0.302 | 0.392 | 7582ms |
+| No Structured | 89.0% | 92.0% | 90.0% | 0.458 | 0.303 | 0.385 | 7467ms |
 
 ---
 
-## Files Created/Modified
+## Auto-Export Pipeline (NEW in Session 4)
 
-| File | Status | Description |
+Both `test_5plus5.py` and `run_ablation.py` now auto-call `export_all()` from `export_metrics.py` after completing their runs. This generates:
+
+| File | Description |
+|------|-------------|
+| `all_tables.md` / `.tex` | Combined Tables 1-4 (comprehensive, per-source, error, ablation) |
+| `paper_tables.md` / `.tex` | Tables 1-3 for research paper |
+| `combined_results.md` | Rendered combined_results.json as markdown |
+| `results_index.md` | Index of all result files with descriptions |
+| `ablation_table.md` / `.tex` | Table 4 ablation comparison |
+
+---
+
+## Key Bug Fixes (All Sessions)
+
+### Session 4: Auto-Export + Format Normalization
+- **Format normalization**: `_normalize_for_comparison()` in evaluator.py converts JSON metadata to natural language before BERTScore/cosine comparison
+- **Auto-export pipeline**: `export_all()` generates all output files automatically
+- **Tarball deployment**: Proper code transfer workflow to Jarvis Labs
+
+### Session 3: Ablation Runner + ML Dependencies
+- **Ablation "Unknown Model" Bug**: MODELS dict is module-level; must reload `src.benchmark.runner` after `src.config`
+- **Jarvis Labs Localhost Detection**: Port 6006, path `/home/.ollama/models`
+- **BERTScore Tokenizer Overflow**: Pin `transformers>=4.40,<5.0` and `tokenizers>=0.19,<0.22`
+
+### Session 2: Benchmark Scoring
+- 7 scoring bugs fixed (category vocab, triplet key, severity order, KeyError, parser, threshold, Chinese)
+- Dataset cleaned: 17 Chinese cases removed, English replacements added
+- Qwen3 thinking mode: switched to `qwen3:4b-instruct` (11.2x speedup)
+
+---
+
+## Files Created/Modified (Session 4)
+
+| File | Action | Description |
 |------|--------|-------------|
-| `benchmark/scripts/clean_dataset.py` | CREATED | Phase 1: removes bogus entries, creates 150-sample |
-| `benchmark/scripts/remove_chinese.py` | CREATED | Phase 2: removes Chinese, adds English replacements |
-| `benchmark/datasets/processed/annotation_clean.json` | CREATED | 138 clean annotation cases |
-| `benchmark/datasets/processed/rca_clean.json` | CREATED | 180 clean RCA cases |
-| `benchmark/datasets/processed/benchmark_150_seed42.json` | MODIFIED | 100 ann + 50 RCA, all English (seed=42) |
-| `benchmark/datasets/processed/benchmark_150_seed42_with_chinese.json` | CREATED | Backup before Chinese removal |
-| `src/benchmark/runner.py` | MODIFIED | 5 bug fixes + uses actual FastAnnotator/ReasoningAgent |
-| `src/agents/reasoning_agent.py` | MODIFIED | Brace-matching JSON parser fallback |
-| `benchmark/scripts/demo_test.py` | MODIFIED | 15+15 with debug output |
-| `docs/BENCHMARK.md` | MODIFIED | v2.0 comprehensive update |
-| `docs/CHANGELOG.md` | MODIFIED | v0.8.0 entry |
-| `docs/SESSION_STATE.md` | MODIFIED | This file |
-| `docs/ISSUES.md` | MODIFIED | BENCH-001 through BENCH-007 |
+| `benchmark/scripts/export_metrics.py` | MODIFIED | Added `export_all()`, ablation table from JSON, combined results MD, results index |
+| `benchmark/scripts/test_5plus5.py` | MODIFIED | Auto-calls `export_all()` after save_results() |
+| `benchmark/scripts/run_ablation.py` | MODIFIED | Auto-calls `export_all()` after ablation table generation |
+| `benchmark/results/all_tables.md` | GENERATED | Combined Tables 1-4 |
+| `benchmark/results/paper_tables.md` | GENERATED | Paper-ready Tables 1-3 |
+| `benchmark/results/ablation_results.json` | GENERATED | Full 4-config ablation data |
+| `benchmark/results/combined_results.json` | GENERATED | Full 150-test benchmark summary |
+| `benchmark/results/FINDINGS.md` | CREATED | Overall Performance analysis |
+| `docs/SESSION_STATE.md` | UPDATED | This file - Session 4 results |
+| `docs/CHANGELOG.md` | UPDATED | v0.9.0 + v0.9.1 entries |
+| `docs/JARVIS_LABS_DEPLOYMENT.md` | UPDATED | Data transfer commands section |
+| `docs/BENCHMARK.md` | UPDATED | Latest results + ablation + auto-export |
 
 ---
 
-## Benchmark Runner Refactoring (Phase 1.5)
+## Next Steps
 
-**Key Changes to `src/benchmark/runner.py`**:
-1. Now imports `FastAnnotator` and `ReasoningAgent` from actual backend
-2. `_run_annotation_test()` uses `FastAnnotator.process()` instead of direct Ollama
-3. `_run_rca_test()` uses `ReasoningAgent.analyze_rca()` instead of direct Ollama
-4. Added `_check_annotation_correct_comprehensive()` - validates 6 aspects:
-   - Anomaly detection, severity, category, triplets, confidence, routing
-5. Added `_check_rca_correct_comprehensive()` - validates 5 aspects:
-   - Root cause match, causal chain, impact assessment, confidence, remediation steps
-6. Added `use_curated_150` flag to BenchmarkConfig (default: True)
-
-**Why This Matters**:
-- Old benchmark: 4-line prompts → 3 output fields (bogus test of generic NLP)
-- New benchmark: Full 40+ line prompts → 8+ output fields (tests ACTUAL architecture)
-- Validates triplet extraction, entity canonicalization, routing decisions, confidence scoring
+1. **Update Research_V6.tex**: Insert real metrics into paper tables (Tables 1-4)
+2. **Update KEY_METRICS.md**: Reflect final measured values
+3. **Git commit**: Stage all changes as v0.9.1
 
 ---
 
-## Previous Session (Graph Schema v0.6.0)
+## Previous Sessions Summary
 
-### Completed
-Graph schema redesign to fix "hairball" visualization issue in the Episodic Graph Explorer.
+### Session 3 (Benchmark v0.9.0 - Ablation + Jarvis Labs)
+- Fixed ablation runner module reload bug
+- Fixed localhost detection (port 6006, /home/.ollama/models)
+- Installed ML deps on Jarvis Labs (BERTScore, sentence-transformers)
+- Ran full 150-test benchmark: 88.0% overall (old run, before re-run)
+- Ran 5+5 ablation study (small sample size)
 
----
+### Session 2 (Benchmark v0.8.0-v0.8.1)
+- 7 scoring bugs fixed in runner.py
+- Qwen3 thinking mode diagnosed (THINK-001 to THINK-009)
+- Switched to qwen3:4b-instruct (2.5s avg vs 19s with thinking)
+- Full 133-test benchmark run: 89% ann, 87.9% RCA
 
-## Completed Phases
-
-- [x] **Phase 1**: Clean Neo4j data (cleanup_graph method, delete SIMILAR_TO, merge entities)
-- [x] **Phase 2**: Fix thresholds (SIMILAR_TO=0.75, entity canonicalization, confidence filtering)
-- [x] **Phase 3**: Add API filtering parameters (min_similarity, min_confidence, max_edges)
-- [x] **Phase 4**: Frontend physics improvements (charge=-800, center=0.2, variable link distance)
-- [x] **Phase 5**: Add visualization controls (edge toggles, DAG mode)
-- [x] **Phase 6**: Update documentation (CHANGELOG, ISSUES, KEY_METRICS, BACKEND, API, CLAUDE.md)
-- [x] **Phase 7**: Create SESSION_STATE.md (this file)
-- [ ] **Phase 8**: Comprehensive Playwright E2E testing for graph visualization
-
----
-
-## Key Constants Implemented
-
-| Constant | Value | File |
-|----------|-------|------|
-| `SIMILAR_TO_THRESHOLD` | 0.75 | `src/api/routes/graph.py` |
-| `MAX_SIMILAR_EDGES_PER_EPISODE` | 3 | `src/api/routes/graph.py` |
-| `MIN_TRIPLET_CONFIDENCE` | 0.70 | `src/memory/episode_store.py` |
-| `MAX_EDGES_PER_NODE` | 5 | `src/api/routes/graph.py` |
-| `CHARGE_STRENGTH` | -800 | `frontend/src/components/EpisodicGraphExplorer.tsx` |
-| `CENTER_STRENGTH` | 0.2 | `frontend/src/components/EpisodicGraphExplorer.tsx` |
-
----
-
-## Files Modified
-
-### Backend
-- `src/api/routes/graph.py` - Schema constants, cleanup endpoint, filtering params, _prune_edges()
-- `src/agents/fast_annotator.py` - ENTITY_CANONICALIZATION dict, canonicalize_entity()
-- `src/memory/episode_store.py` - MIN_TRIPLET_CONFIDENCE, confidence filtering in triplet storage
-- `src/memory/neo4j_client.py` - cleanup_graph(), get_graph_stats()
-
-### Frontend
-- `frontend/src/components/EpisodicGraphExplorer.tsx` - Physics, DAG mode, edge visibility toggles
-
-### Documentation
-- `docs/CHANGELOG.md` - v0.6.0 entry
-- `docs/ISSUES.md` - Resolved GRAPH-001 through GRAPH-006
-- `docs/KEY_METRICS.md` - Section 5.5 Graph Optimization
-- `docs/BACKEND.md` - Version 0.6.0, new methods
-- `docs/API.md` - New query parameters, POST /cleanup endpoint
-- `CLAUDE.md` - Graph Schema Redesign section
-
----
-
-## Expected Improvements
-
-| Metric | Before | After | Improvement |
-|--------|--------|-------|-------------|
-| SIMILAR_TO edges | 2,450 | ~150 | 94% reduction |
-| Entity nodes | 50+ | ~15 | 70% reduction |
-| Total edges | 3,000+ | ~300 | 90% reduction |
-| API response size | ~500KB | ~50KB | 90% reduction |
-
----
-
-## Next Steps (If Context Compacted)
-
-1. **Read this file first** to understand current progress
-2. Check `docs/CHANGELOG.md` for v0.6.0 entry
-3. Continue from unchecked phases above
-4. Key files to verify:
-   - `src/api/routes/graph.py` - Should have SIMILAR_TO_THRESHOLD=0.75
-   - `src/agents/fast_annotator.py` - Should have ENTITY_CANONICALIZATION dict
-   - `frontend/src/components/EpisodicGraphExplorer.tsx` - Should have charge strength -800
-
----
-
-## Commands for Verification
-
-```bash
-# Check graph schema constants
-grep -n "SIMILAR_TO_THRESHOLD\|MAX_EDGES\|MIN_TRIPLET" src/api/routes/graph.py src/memory/episode_store.py
-
-# Check entity canonicalization
-grep -n "ENTITY_CANONICALIZATION\|canonicalize_entity" src/agents/fast_annotator.py
-
-# Check frontend physics
-grep -n "chargeForce\|centerForce\|strength" frontend/src/components/EpisodicGraphExplorer.tsx
-
-# Verify graph API works
-curl -s "http://localhost:8000/api/v1/graph/episodes?limit=10" | jq '.stats'
-```
-
----
-
-## Rollback Plan (If Needed)
-
-If the changes cause issues, the key constants to revert:
-- `SIMILAR_TO_THRESHOLD`: 0.75 back to 0.5
-- `MAX_SIMILAR_EDGES_PER_EPISODE`: 3 back to unlimited
-- `CHARGE_STRENGTH`: -800 back to -300
-- `CENTER_STRENGTH`: 0.2 back to 0.05
+### Session 1 (Graph Schema v0.6.0)
+- Graph schema redesign for "hairball" fix
+- SIMILAR_TO_THRESHOLD=0.75, MAX_EDGES_PER_NODE=5
+- Frontend physics: charge=-800, center=0.2
