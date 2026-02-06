@@ -2,7 +2,7 @@
 
 > Autonomous Infrastructure Management with Constitutional AI Safety
 
-**Version**: 0.5.0 | **Status**: Production Ready | **Last Updated**: 2026-01-11
+**Version**: 0.7.0 | **Status**: Production Ready | **Last Updated**: 2026-01-29
 
 [![License](https://img.shields.io/badge/license-Proprietary-red.svg)]()
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)]()
@@ -145,11 +145,17 @@ constitutional-aiops/
 │   ├── constitutional/      # Constitutional AI framework
 │   ├── memory/              # Neo4j graph-episodic memory
 │   ├── telemetry/           # OTEL integration
+│   ├── benchmark/           # Benchmark runner and evaluator
 │   └── api/                 # FastAPI routes
+├── benchmark/               # Benchmarking system
+│   ├── datasets/            # OpsEval + Loghub datasets
+│   ├── scripts/             # Download, prepare, run, evaluate
+│   └── results/             # Benchmark outputs
 ├── frontend/                # React dashboard
 ├── docker/                  # Docker configurations
 ├── docs/                    # Documentation
 │   ├── INDEX.md             # Documentation index
+│   ├── BENCHMARK.md         # Benchmark documentation
 │   ├── ARCHITECTURE.md      # System design
 │   ├── DEPLOYMENT.md        # Deployment guide
 │   ├── CHECKLIST.md         # Development progress
@@ -204,6 +210,51 @@ C(a) = 0.4 · C_LLM + 0.35 · C_hist + 0.25 · C_sim
 ```
 
 See [KEY_METRICS.md](docs/KEY_METRICS.md) for complete metrics reference.
+
+## Benchmarking System
+
+Constitutional AIOps includes a comprehensive benchmarking system for evaluating LLM performance on AIOps tasks.
+
+### Datasets (Real Data Only)
+
+| Dataset | Source | Cases | Purpose |
+|---------|--------|-------|---------|
+| **Annotation Test** | Loghub HDFS + BGL | 200 | Log classification (normal vs anomaly) |
+| **RCA Test** | OpsEval | 100 | Root cause analysis questions |
+
+### Models Evaluated
+
+| Model | Type | VRAM |
+|-------|------|------|
+| Constitutional AIOps | Hybrid (Qwen3-4B + Qwen3-14B) | ~15GB |
+| llama3:70b | Single | ~40GB |
+| llama3:8b | Single | ~5GB |
+| qwen3:4b | Single | ~4GB |
+| qwen3:14b | Single | ~11GB |
+
+### Quick Benchmark Commands
+
+```bash
+# Download and prepare datasets
+python benchmark/scripts/download_datasets.py
+python benchmark/scripts/prepare_datasets.py
+
+# Run benchmarks (requires Ollama server)
+python benchmark/scripts/run_benchmark.py
+
+# Evaluate and export results
+python benchmark/scripts/evaluate_results.py
+python benchmark/scripts/export_metrics.py --format latex
+```
+
+### Evaluation Metrics
+
+- **Annotation Accuracy**: Exact match on log classification
+- **RCA Accuracy**: Partial match + BERTScore F1
+- **BERTScore**: Semantic similarity using DeBERTa-XLarge-MNLI
+- **Latency**: P50, P95, P99 with network compensation
+
+See [docs/BENCHMARK.md](docs/BENCHMARK.md) for detailed benchmark documentation.
 
 ## Research Gaps Addressed
 
@@ -280,12 +331,13 @@ CONFIDENCE_THRESHOLD_APPROVAL=0.70
 ## Documentation
 
 - **[CLAUDE.md](CLAUDE.md)**: Instructions for AI assistants (read first on every session)
-- **[docs/INDEX.md](docs/INDEX.md)**: Master documentation index (93+ files)
+- **[docs/INDEX.md](docs/INDEX.md)**: Master documentation index (100+ files)
 - **[docs/KEY_METRICS.md](docs/KEY_METRICS.md)**: Performance metrics reference
+- **[docs/BENCHMARK.md](docs/BENCHMARK.md)**: Benchmarking system documentation
 - **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**: System architecture
-- **[docs/BACKEND.md](docs/BACKEND.md)**: Python backend (43 files)
-- **[docs/API.md](docs/API.md)**: REST API reference (50+ endpoints)
-- **[docs/FRONTEND.md](docs/FRONTEND.md)**: React frontend (23 files)
+- **[docs/BACKEND.md](docs/BACKEND.md)**: Python backend (45+ files)
+- **[docs/API.md](docs/API.md)**: REST API reference (55+ endpoints)
+- **[docs/FRONTEND.md](docs/FRONTEND.md)**: React frontend (25+ files)
 - **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**: Deployment overview
 - **[docs/CHECKLIST.md](docs/CHECKLIST.md)**: Development progress tracker
 - **[docs/CHANGELOG.md](docs/CHANGELOG.md)**: Version history

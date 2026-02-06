@@ -5,6 +5,7 @@ import { Agents } from './pages/Agents'
 import { Incidents } from './pages/Incidents'
 import { Chat } from './pages/Chat'
 import { Metrics } from './pages/Metrics'
+import { Benchmark } from './pages/Benchmark'
 import { Settings } from './pages/Settings'
 
 function App() {
@@ -16,6 +17,7 @@ function App() {
         <Route path="/incidents" element={<Incidents />} />
         <Route path="/chat" element={<Chat />} />
         <Route path="/metrics" element={<Metrics />} />
+        <Route path="/benchmark" element={<Benchmark />} />
         <Route path="/settings" element={<Settings />} />
       </Routes>
     </Layout>

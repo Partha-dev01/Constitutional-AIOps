@@ -16,16 +16,17 @@ from typing import Optional
 class LLMConfig:
     """LLM endpoint configuration for simultaneous dual-model setup."""
     
-    # Fast Agent (Qwen3-4B) - Always loaded at port 8081
+    # Fast Agent (Qwen3-4B-Instruct) - Always loaded at port 8081
+    # Using instruct variant (no thinking mode) for lower latency (~5-8s vs ~28s)
     fast_agent_url: str = field(
         default_factory=lambda: os.getenv("FAST_AGENT_URL", "http://localhost:8081/v1")
     )
     fast_agent_model: str = field(
-        default_factory=lambda: os.getenv("FAST_AGENT_MODEL", "qwen3:4b")
+        default_factory=lambda: os.getenv("FAST_AGENT_MODEL", "qwen3:4b-instruct")
     )
     fast_agent_context: int = 8192  # 8K context window
     fast_agent_timeout: float = field(
-        default_factory=lambda: float(os.getenv("FAST_AGENT_TIMEOUT", "30"))
+        default_factory=lambda: float(os.getenv("FAST_AGENT_TIMEOUT", "120"))
     )
 
     # Reasoning Agent (Qwen3-14B) - Always loaded at port 8082
@@ -37,7 +38,7 @@ class LLMConfig:
     )
     reasoning_agent_context: int = 4096  # 4K context window
     reasoning_agent_timeout: float = field(
-        default_factory=lambda: float(os.getenv("REASONING_AGENT_TIMEOUT", "120"))
+        default_factory=lambda: float(os.getenv("REASONING_AGENT_TIMEOUT", "180"))
     )
 
 

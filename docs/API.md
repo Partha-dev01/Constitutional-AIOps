@@ -1,7 +1,7 @@
 # API Reference
 
-> **Version**: 0.6.1
-> **Last Updated**: 2026-01-27
+> **Version**: 0.7.0
+> **Last Updated**: 2026-01-29
 > **Base URL**: `/api/v1`
 
 ---
@@ -16,6 +16,7 @@ The Constitutional AIOps API provides REST endpoints for:
 - Telemetry queries (LGTM stack)
 - Graph memory exploration
 - Infrastructure monitoring
+- LLM benchmarking and evaluation (NEW v0.7.0)
 
 ---
 
@@ -908,6 +909,239 @@ Change target container.
 
 ---
 
+### Benchmark (`/benchmark`) - NEW v0.7.0
+
+Conference-level benchmarking system for evaluating LLM performance on AIOps tasks.
+
+#### GET /benchmark/models
+List available models for benchmarking.
+
+**Response** `200 OK`
+```json
+{
+  "models": [
+    {
+      "id": "constitutional_aiops",
+      "name": "Constitutional AIOps (Hybrid)",
+      "type": "hybrid",
+      "fast_model": "qwen3:4b",
+      "reasoning_model": "qwen3:14b",
+      "ports": [8081, 8082],
+      "vram_gb": 15
+    },
+    {
+      "id": "llama3_70b",
+      "name": "LLaMA 3 70B",
+      "type": "single",
+      "model": "llama3:70b",
+      "vram_gb": 40
+    },
+    {
+      "id": "qwen3_4b",
+      "name": "Qwen3 4B",
+      "type": "single",
+      "model": "qwen3:4b",
+      "vram_gb": 4
+    }
+  ]
+}
+```
+
+#### GET /benchmark/datasets
+List available benchmark datasets.
+
+**Response** `200 OK`
+```json
+{
+  "datasets": [
+    {
+      "name": "annotation_test",
+      "description": "Log classification (normal vs anomaly)",
+      "source": "Loghub HDFS + BGL",
+      "total_cases": 200,
+      "distribution": {
+        "normal": 100,
+        "anomaly": 100,
+        "hdfs": 100,
+        "bgl": 100
+      }
+    },
+    {
+      "name": "rca_test",
+      "description": "Root cause analysis questions",
+      "source": "OpsEval",
+      "total_cases": 100
+    }
+  ]
+}
+```
+
+#### GET /benchmark/datasets/{name}/preview
+Preview dataset contents.
+
+**Query Parameters**
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| limit | int | 5 | Number of cases to preview |
+
+**Response** `200 OK`
+```json
+{
+  "dataset": "annotation_test",
+  "total_cases": 200,
+  "preview": [
+    {
+      "id": "ANN_001",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081109 203518 148 INFO dfs.DataNode...",
+        "context": "HDFS DataNode log"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "classification": "normal"
+      }
+    }
+  ]
+}
+```
+
+#### GET /benchmark/status
+Get current benchmark run status.
+
+**Response** `200 OK`
+```json
+{
+  "status": "running",
+  "run_id": "bench_20260129_143052",
+  "current_model": "qwen3:4b",
+  "current_dataset": "annotation_test",
+  "progress": 45,
+  "cases_completed": 90,
+  "cases_total": 200,
+  "eta_seconds": 120,
+  "started_at": "2026-01-29T14:30:52Z"
+}
+```
+
+#### POST /benchmark/run
+Start a new benchmark run.
+
+**Request**
+```json
+{
+  "models": ["constitutional_aiops", "qwen3:4b", "qwen3:14b"],
+  "datasets": ["annotation_test", "rca_test"],
+  "samples_per_dataset": 100
+}
+```
+
+**Response** `200 OK`
+```json
+{
+  "run_id": "bench_20260129_143052",
+  "status": "started",
+  "models": ["constitutional_aiops", "qwen3:4b", "qwen3:14b"],
+  "datasets": ["annotation_test", "rca_test"],
+  "total_cases": 600,
+  "message": "Benchmark started successfully"
+}
+```
+
+#### GET /benchmark/results
+Get benchmark results.
+
+**Query Parameters**
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| run_id | string | latest | Specific run ID |
+
+**Response** `200 OK`
+```json
+{
+  "run_id": "bench_20260129_143052",
+  "completed_at": "2026-01-29T15:45:00Z",
+  "results": {
+    "constitutional_aiops": {
+      "annotation_accuracy": 0.92,
+      "rca_accuracy": 0.87,
+      "bertscore_f1": 0.85,
+      "latency_p50_ms": 85,
+      "latency_p95_ms": 142,
+      "latency_p99_ms": 198
+    },
+    "qwen3_4b": {
+      "annotation_accuracy": 0.88,
+      "rca_accuracy": 0.82,
+      "bertscore_f1": 0.81,
+      "latency_p50_ms": 45,
+      "latency_p95_ms": 78,
+      "latency_p99_ms": 95
+    }
+  }
+}
+```
+
+#### GET /benchmark/compare
+Compare results across all models.
+
+**Response** `200 OK`
+```json
+{
+  "comparison": {
+    "best_annotation_accuracy": {
+      "model": "constitutional_aiops",
+      "value": 0.92
+    },
+    "best_rca_accuracy": {
+      "model": "llama3_70b",
+      "value": 0.89
+    },
+    "best_latency": {
+      "model": "qwen3_4b",
+      "value": 45
+    },
+    "rankings": {
+      "overall": ["constitutional_aiops", "llama3_70b", "qwen3_14b", "qwen3_4b", "llama3_8b"]
+    }
+  }
+}
+```
+
+#### GET /benchmark/export
+Export results in specified format.
+
+**Query Parameters**
+| Parameter | Type | Options | Description |
+|-----------|------|---------|-------------|
+| format | string | json, csv, latex | Export format |
+| run_id | string | latest | Specific run ID |
+
+**Response** `200 OK`
+
+For `format=json`: Returns JSON object
+For `format=csv`: Returns CSV text
+For `format=latex`: Returns LaTeX table:
+
+```latex
+\begin{table}[h]
+\centering
+\caption{LLM Performance Comparison on AIOps Tasks}
+\begin{tabular}{lccccc}
+\toprule
+Model & Ann. Acc & RCA Acc & BERT F1 & P50 (ms) & P95 (ms) \\
+\midrule
+Constitutional AIOps & 92.0\% & 87.0\% & 0.850 & 85 & 142 \\
+Qwen3 4B & 88.0\% & 82.0\% & 0.810 & 45 & 78 \\
+\bottomrule
+\end{tabular}
+\label{tab:llm-comparison}
+\end{table}
+```
+
+---
+
 ## Error Responses
 
 All endpoints return consistent error format:
@@ -962,3 +1196,4 @@ Connect to `/ws` for real-time events.
 **See Also**:
 - [BACKEND.md](BACKEND.md) - Backend architecture
 - [FRONTEND.md](FRONTEND.md) - Frontend documentation
+- [BENCHMARK.md](BENCHMARK.md) - Benchmarking system documentation

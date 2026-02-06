@@ -95,6 +95,40 @@ class ModelRouter:
         logger.info(f"  Reasoning Agent: {self.reasoning_agent_url}")
         logger.info(f"  Determinism: temperature=0.0, seed=hash(prompt)")
     
+    @staticmethod
+    def _fix_thinking_response(result: dict[str, Any]) -> dict[str, Any]:
+        """
+        Fix Qwen3 thinking mode response for OpenAI-compatible endpoint.
+
+        Problem: Ollama's /v1/chat/completions puts Qwen3's thinking output
+        in message.reasoning and leaves message.content empty. The native
+        /api/chat endpoint handles think:false correctly, but /v1/ does not.
+
+        Fix: When content is empty but reasoning has data, move reasoning
+        to content so downstream agents can parse it normally.
+
+        See: https://github.com/ollama/ollama/issues/12917
+        """
+        try:
+            for choice in result.get("choices", []):
+                msg = choice.get("message", {})
+                content = msg.get("content", "")
+                reasoning = msg.get("reasoning", "")
+
+                if not content and reasoning:
+                    # Content is empty, reasoning has the actual output
+                    # Move reasoning to content for downstream parsing
+                    msg["content"] = reasoning
+                    msg["_thinking_mode_fixed"] = True
+                    logger.debug(
+                        "Fixed Qwen3 thinking mode: moved %d chars from reasoning to content",
+                        len(reasoning),
+                    )
+        except (KeyError, TypeError):
+            pass  # Malformed response, let downstream handle it
+
+        return result
+
     async def close(self):
         """Close HTTP clients."""
         await self._fast_client.aclose()
@@ -170,6 +204,9 @@ class ModelRouter:
             response.raise_for_status()
             result = response.json()
 
+            # Fix Qwen3 thinking mode: content empty, reasoning has data
+            result = self._fix_thinking_response(result)
+
             # Extract token count if available
             if "usage" in result:
                 tokens_generated = result["usage"].get("completion_tokens", 0)
@@ -196,7 +233,7 @@ class ModelRouter:
                 tokens_generated=tokens_generated,
                 success=success,
             )
-    
+
     async def reasoning_completion(
         self,
         prompt: str,
@@ -256,6 +293,9 @@ class ModelRouter:
             response = await self._reasoning_client.post("chat/completions", json=payload)
             response.raise_for_status()
             result = response.json()
+
+            # Fix Qwen3 thinking mode: content empty, reasoning has data
+            result = self._fix_thinking_response(result)
 
             # Extract token count if available
             if "usage" in result:
@@ -337,6 +377,9 @@ class ModelRouter:
             response = await self._reasoning_client.post("chat/completions", json=payload)
             response.raise_for_status()
             result = response.json()
+
+            # Fix Qwen3 thinking mode: content empty, reasoning has data
+            result = self._fix_thinking_response(result)
 
             # Extract token count if available
             if "usage" in result:
