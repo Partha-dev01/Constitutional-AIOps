@@ -78,6 +78,10 @@ def main():
     replacements = random.sample(replacement_pool, min(needed, len(replacement_pool)))
     print(f"Selected {len(replacements)} replacements")
 
+    # Ensure replacements have task_type (from rca_clean.json pool which may lack it)
+    for r in replacements:
+        r["task_type"] = "rca"
+
     # Build new test case list
     new_rca = english_rca + replacements
     new_tests = annotation_tests + new_rca

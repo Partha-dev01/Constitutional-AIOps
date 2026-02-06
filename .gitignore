@@ -89,3 +89,17 @@ temp/
 # SSH Keys (protect private key, allow public key)
 .ssh/jarvis_labs_key
 !.ssh/jarvis_labs_key.pub
+
+# Benchmark raw datasets (5.5GB+ - download via scripts)
+benchmark/datasets/raw/
+
+# Playwright test artifacts
+frontend/playwright-report/
+frontend/test-results/
+.playwright-mcp/
+
+# Nested project copy (tarball extraction artifact)
+constitutional-aiops/
+
+# Windows artifacts
+nul

@@ -55,6 +55,12 @@ class TestCaseResult:
     actual_output: str
     expected_output: str
     timestamp: str
+    rule_score: float = 0.0
+    rule_max_score: float = 3.0
+    bert_f1: float = 0.0
+    cosine_similarity: float = 0.0
+    term_overlap: float = 0.0
+    source: str = ""
 
 
 @dataclass
@@ -267,6 +273,9 @@ class BenchmarkRunner:
                 all_tests = self.load_dataset("benchmark_150")
                 annotation_tests = [t for t in all_tests if t.get("task_type") == "annotation"]
                 rca_tests = [t for t in all_tests if t.get("task_type") == "rca"]
+                # Apply max limits if specified (for quick demo runs)
+                annotation_tests = annotation_tests[:config.max_annotation_tests]
+                rca_tests = rca_tests[:config.max_rca_tests]
             else:
                 # Use full cleaned datasets for baseline comparisons
                 annotation_tests = self.load_dataset("annotation")[:config.max_annotation_tests]
@@ -393,7 +402,7 @@ class BenchmarkRunner:
             actual_data = agent_response.metadata
 
             # Check correctness (comprehensive validation)
-            correct = self._check_annotation_correct_comprehensive(
+            correct, rule_score = self._check_annotation_correct_comprehensive(
                 actual_data, expected, test_case.get("id", "")
             )
 
@@ -406,6 +415,8 @@ class BenchmarkRunner:
                 actual_output=agent_response.content[:500],
                 expected_output=json.dumps(expected),
                 timestamp=datetime.utcnow().isoformat(),
+                rule_score=round(rule_score, 2),
+                source=test_case.get("source", ""),
             )
 
         except Exception as e:
@@ -468,7 +479,7 @@ class BenchmarkRunner:
             actual_data = agent_response.metadata
 
             # Check correctness (comprehensive validation)
-            correct = self._check_rca_correct_comprehensive(
+            correct, rule_score = self._check_rca_correct_comprehensive(
                 actual_data, test_case, agent_response.content
             )
 
@@ -481,6 +492,8 @@ class BenchmarkRunner:
                 actual_output=agent_response.content[:500],
                 expected_output=test_case["expected_root_cause"],
                 timestamp=datetime.utcnow().isoformat(),
+                rule_score=round(rule_score, 2),
+                source=test_case.get("source", ""),
             )
 
         except Exception as e:
@@ -531,7 +544,7 @@ class BenchmarkRunner:
         actual_data: dict,
         expected: dict,
         test_id: str,
-    ) -> bool:
+    ) -> tuple[bool, float]:
         """
         Comprehensive annotation correctness check.
 
@@ -604,14 +617,14 @@ class BenchmarkRunner:
             score -= 0.25  # Penalty for invalid confidence
 
         # Pass threshold: need at least 1.5/3 on primary metrics
-        return score >= 1.5
+        return (score >= 1.5, score)
 
     def _check_rca_correct_comprehensive(
         self,
         actual_data: dict,
         test_case: dict,
         raw_content: str,
-    ) -> bool:
+    ) -> tuple[bool, float]:
         """
         Comprehensive RCA correctness check.
 
@@ -664,7 +677,7 @@ class BenchmarkRunner:
                 score += 0.25
 
         # Pass threshold: need at least 1.5/3 on overall
-        return score >= 1.5
+        return (score >= 1.5, score)
 
     def _severity_close(self, actual: str, expected: str) -> bool:
         """Check if severities are adjacent (partial credit)."""

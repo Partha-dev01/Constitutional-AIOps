@@ -21,8 +21,16 @@ from dataclasses import asdict
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-# Force environment variables for Jarvis Labs
-JARVIS_URL = "https://96c3f93672471.notebooks.jarvislabs.net"
+# Detect if running on Jarvis Labs (localhost) or remotely
+# Jarvis Labs Ollama template binds to port 6006, models in /home/.ollama/
+if os.path.exists("/home/.ollama/models"):
+    JARVIS_URL = "http://localhost:6006"
+    print("[INFO] Running on Jarvis Labs - using localhost:6006 Ollama")
+else:
+    JARVIS_URL = os.environ.get(
+        "JARVIS_OLLAMA_URL",
+        "https://96c3f93672471.notebooks.jarvislabs.net",
+    )
 os.environ["FAST_AGENT_URL"] = f"{JARVIS_URL}/v1"
 os.environ["REASONING_AGENT_URL"] = f"{JARVIS_URL}/v1"
 os.environ["FAST_AGENT_MODEL"] = "qwen3:4b-instruct"
@@ -36,14 +44,19 @@ import src.config
 importlib.reload(src.config)
 
 from src.benchmark.runner import BenchmarkRunner, BenchmarkConfig, BenchmarkStatus
+from src.benchmark.evaluator import BenchmarkEvaluator
 
 
 def save_results(result, ann_results, rca_results):
-    """Save benchmark results to benchmark/results/ as structured JSON."""
+    """Save benchmark results to benchmark/results/ as structured JSON.
+
+    Runs multi-metric evaluation (BERTScore, cosine similarity, term overlap)
+    as post-processing before saving.
+    """
     results_dir = PROJECT_ROOT / "benchmark" / "results" / result.model_name
     results_dir.mkdir(parents=True, exist_ok=True)
 
-    # Per-test detailed results
+    # Per-test detailed results (with rule_score and source from runner)
     test_results_data = []
     for tr in result.test_results:
         test_results_data.append({
@@ -51,21 +64,55 @@ def save_results(result, ann_results, rca_results):
             "model": os.environ.get("FAST_AGENT_MODEL") if tr.task_type == "annotation"
                      else os.environ.get("REASONING_AGENT_MODEL"),
             "task_type": tr.task_type,
+            "source": tr.source,
             "input_text": tr.expected_output[:500],
             "expected_output": tr.expected_output,
             "actual_output": tr.actual_output,
             "correct": tr.correct,
+            "rule_score": tr.rule_score,
+            "rule_max_score": tr.rule_max_score,
+            "bert_f1": 0.0,
+            "cosine_similarity": 0.0,
+            "term_overlap": 0.0,
             "inference_latency_ms": round(tr.inference_latency_ms, 2),
             "total_latency_ms": round(tr.total_latency_ms, 2),
             "network_rtt_ms": round(result.network_rtt_ms, 2),
             "timestamp": tr.timestamp,
         })
 
+    # Run multi-metric evaluation (BERTScore + cosine + term overlap)
+    print("\n[EVAL] Running multi-metric evaluation (post-processing)...")
+    try:
+        evaluator = BenchmarkEvaluator(use_bertscore=True, use_embeddings=True)
+        test_results_data = evaluator.compute_all_metrics(test_results_data)
+        print("[EVAL] Multi-metric evaluation complete")
+    except Exception as e:
+        print(f"[EVAL] Warning: Multi-metric evaluation failed: {e}")
+        print("[EVAL] Saving with rule-based scores only")
+
     # Save per-test results
     results_file = results_dir / "results.json"
     with open(results_file, "w", encoding="utf-8") as f:
         json.dump(test_results_data, f, indent=2, ensure_ascii=False, default=str)
     print(f"\n[SAVED] Per-test results -> {results_file}")
+
+    # Compute aggregate semantic metrics
+    ann_data = [r for r in test_results_data if r.get("task_type") == "annotation"]
+    rca_data = [r for r in test_results_data if r.get("task_type") == "rca"]
+
+    def safe_mean(values):
+        filtered = [v for v in values if v > 0]
+        return round(sum(filtered) / len(filtered), 4) if filtered else 0.0
+
+    ann_bert_f1 = safe_mean([r.get("bert_f1", 0) for r in ann_data])
+    rca_bert_f1 = safe_mean([r.get("bert_f1", 0) for r in rca_data])
+    ann_cosine = safe_mean([r.get("cosine_similarity", 0) for r in ann_data])
+    rca_cosine = safe_mean([r.get("cosine_similarity", 0) for r in rca_data])
+    ann_overlap = safe_mean([r.get("term_overlap", 0) for r in ann_data])
+    rca_overlap = safe_mean([r.get("term_overlap", 0) for r in rca_data])
+    all_bert_f1 = safe_mean([r.get("bert_f1", 0) for r in test_results_data])
+    all_cosine = safe_mean([r.get("cosine_similarity", 0) for r in test_results_data])
+    all_overlap = safe_mean([r.get("term_overlap", 0) for r in test_results_data])
 
     # Save summary
     ann_passed = sum(1 for r in ann_results if r.correct)
@@ -94,9 +141,24 @@ def save_results(result, ann_results, rca_results):
         "p99_latency_ms": result.p99_latency_ms,
         "network_rtt_ms": result.network_rtt_ms,
         "annotation_avg_latency_ms": round(sum(ann_latencies) / len(ann_latencies), 2) if ann_latencies else 0,
+        "annotation_min_latency_ms": round(min(ann_latencies), 2) if ann_latencies else 0,
+        "annotation_max_latency_ms": round(max(ann_latencies), 2) if ann_latencies else 0,
         "rca_avg_latency_ms": round(sum(rca_latencies) / len(rca_latencies), 2) if rca_latencies else 0,
+        "rca_min_latency_ms": round(min(rca_latencies), 2) if rca_latencies else 0,
+        "rca_max_latency_ms": round(max(rca_latencies), 2) if rca_latencies else 0,
+        "bert_f1": all_bert_f1,
+        "annotation_bert_f1": ann_bert_f1,
+        "rca_bert_f1": rca_bert_f1,
+        "cosine_similarity": all_cosine,
+        "annotation_cosine_sim": ann_cosine,
+        "rca_cosine_sim": rca_cosine,
+        "term_overlap": all_overlap,
+        "annotation_term_overlap": ann_overlap,
+        "rca_term_overlap": rca_overlap,
         "dataset": "curated_150 (seed=42, English only)",
         "temperature": 0.0,
+        "determinism": "temperature=0.0 + seed=hash(prompt) % 2^32",
+        "endpoint": JARVIS_URL,
         "timestamp": result.completed_at or datetime.utcnow().isoformat(),
     }
 
@@ -131,21 +193,31 @@ def save_results(result, ann_results, rca_results):
 
 
 async def run_5plus5():
-    """Run a 5+5 benchmark test with detailed debug output."""
+    """Run the full benchmark (or a subset via CLI args) with detailed debug output."""
+    # Parse CLI args for test counts
+    max_ann = int(os.environ.get("MAX_ANNOTATION_TESTS", "100"))
+    max_rca = int(os.environ.get("MAX_RCA_TESTS", "50"))
+    for arg in sys.argv[1:]:
+        if arg.startswith("--ann="):
+            max_ann = int(arg.split("=")[1])
+        elif arg.startswith("--rca="):
+            max_rca = int(arg.split("=")[1])
+
     print("=" * 70)
-    print("CONSTITUTIONAL AIOPS - 5+5 BENCHMARK TEST")
+    print("CONSTITUTIONAL AIOPS - BENCHMARK TEST")
     print("=" * 70)
     print(f"Timestamp: {datetime.utcnow().isoformat()}")
     print(f"Fast Model:      {os.environ['FAST_AGENT_MODEL']}")
     print(f"Reasoning Model: {os.environ['REASONING_AGENT_MODEL']}")
     print(f"Endpoint:        {JARVIS_URL}")
     print(f"Dataset:         curated 150-sample (seed=42, English only)")
+    print(f"Test counts:     {max_ann} annotation + {max_rca} RCA")
     print("=" * 70)
 
     config = BenchmarkConfig(
         model_name="constitutional_aiops",
-        max_annotation_tests=5,
-        max_rca_tests=5,
+        max_annotation_tests=max_ann,
+        max_rca_tests=max_rca,
         temperature=0.0,
         timeout_seconds=300,
         calibrate_network=True,
@@ -215,6 +287,14 @@ async def run_5plus5():
 
             # Save results to benchmark/results/ directory
             save_results(result, ann_results, rca_results)
+
+            # Auto-generate all output tables (all_tables.md, paper_tables, index, etc.)
+            try:
+                from benchmark.scripts.export_metrics import export_all
+                export_all("constitutional_aiops")
+            except Exception as e:
+                print(f"[EXPORT] Warning: Auto-export failed: {e}")
+                print("[EXPORT] Run manually: python benchmark/scripts/export_metrics.py")
 
             return 0
         else:

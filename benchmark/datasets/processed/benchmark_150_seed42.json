@@ -2570,7 +2570,8 @@
       "solution": "Ethernet has never used a ring or mesh topology. The first Ethernet networks used a physical layer implementation commonly known as Thick Ethernet or 10Base5. The network used coaxial cable in a bus topology. Later Ethernet standards use twisted-pair or fiber-optic cables in a star topology",
       "acceptable_answers": [
         "ring; mesh"
-      ]
+      ],
+      "task_type": "rca"
     },
     {
       "id": "RCA_089",
@@ -2595,7 +2596,8 @@
       "solution": "The Industrial, Scientific, and Medical (ISM) band of frequencies provides 11 channels for WLANs",
       "acceptable_answers": [
         "ism"
-      ]
+      ],
+      "task_type": "rca"
     },
     {
       "id": "RCA_046",
@@ -2618,7 +2620,8 @@
       "solution": "A virtual link is an OSPF mechanism that connects an ABR and another multi-area router to extend the backbone and enable proper LSA propagation",
       "acceptable_answers": [
         "false"
-      ]
+      ],
+      "task_type": "rca"
     },
     {
       "id": "RCA_130",
@@ -2641,7 +2644,8 @@
         "disk io issue",
         "emailservice disk io issue",
         "disk_io_issue"
-      ]
+      ],
+      "task_type": "rca"
     },
     {
       "id": "RCA_131",
@@ -2664,7 +2668,8 @@
         "pod crash",
         "recommendationservice pod crash",
         "pod_crash"
-      ]
+      ],
+      "task_type": "rca"
     },
     {
       "id": "RCA_037",
@@ -2689,7 +2694,8 @@
         "analyze disk usage each server",
         "analyze disk usage",
         "analyze the disk usage of each server and identify the files or directories occupying the most space"
-      ]
+      ],
+      "task_type": "rca"
     },
     {
       "id": "RCA_148",
@@ -2712,7 +2718,8 @@
         "config error",
         "chaos-controller config error",
         "config_error"
-      ]
+      ],
+      "task_type": "rca"
     },
     {
       "id": "RCA_117",
@@ -2735,7 +2742,8 @@
         "resource exhaustion",
         "web resource exhaustion",
         "resource_exhaustion"
-      ]
+      ],
+      "task_type": "rca"
     },
     {
       "id": "RCA_106",
@@ -2758,7 +2766,8 @@
         "pod crash",
         "mongodb pod crash",
         "pod_crash"
-      ]
+      ],
+      "task_type": "rca"
     },
     {
       "id": "RCA_166",
@@ -2781,7 +2790,8 @@
         "cpu spike",
         "shippingservice cpu spike",
         "cpu_spike"
-      ]
+      ],
+      "task_type": "rca"
     },
     {
       "id": "RCA_132",
@@ -2804,7 +2814,8 @@
         "dependency failure",
         "orders dependency failure",
         "dependency_failure"
-      ]
+      ],
+      "task_type": "rca"
     },
     {
       "id": "RCA_143",
@@ -2827,7 +2838,8 @@
         "network latency",
         "user network latency",
         "network_latency"
-      ]
+      ],
+      "task_type": "rca"
     },
     {
       "id": "RCA_053",
@@ -2852,7 +2864,8 @@
       "solution": "Normal (unsecured) websites are accessed on port 80, which is the port that Hypertext Transfer Protocol (HTTP) uses. Shut it down, and no one will be able to access websites, except secure sites that use HTTPS, which is on port 443",
       "acceptable_answers": [
         "80"
-      ]
+      ],
+      "task_type": "rca"
     },
     {
       "id": "RCA_142",
@@ -2875,7 +2888,8 @@
         "connection timeout",
         "user-db connection timeout",
         "connection_timeout"
-      ]
+      ],
+      "task_type": "rca"
     },
     {
       "id": "RCA_119",
@@ -2898,7 +2912,8 @@
         "service degradation",
         "adservice service degradation",
         "service_degradation"
-      ]
+      ],
+      "task_type": "rca"
     },
     {
       "id": "RCA_072",
@@ -2925,7 +2940,8 @@
         "the network is a class b network.; the number of host bits in the unsubnetted network is 16.",
         "network class network.; number host",
         "network class number"
-      ]
+      ],
+      "task_type": "rca"
     },
     {
       "id": "RCA_068",
@@ -2950,7 +2966,8 @@
       "solution": "Virtual LANs break up broadcast domains in layer 2 switched internetworks",
       "acceptable_answers": [
         "vlans"
-      ]
+      ],
+      "task_type": "rca"
     }
   ],
   "chinese_removed": {

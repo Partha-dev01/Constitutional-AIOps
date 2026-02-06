@@ -44,6 +44,16 @@ class EvaluationResult:
     p95_latency_ms: float = 0.0
     p99_latency_ms: float = 0.0
 
+    # Semantic similarity metrics
+    avg_cosine_similarity: float = 0.0
+    avg_term_overlap: float = 0.0
+    annotation_bert_f1: float = 0.0
+    rca_bert_f1: float = 0.0
+    annotation_cosine_sim: float = 0.0
+    rca_cosine_sim: float = 0.0
+    annotation_term_overlap: float = 0.0
+    rca_term_overlap: float = 0.0
+
     # Confidence metrics
     avg_confidence: float = 0.0
     confidence_calibration_error: float = 0.0
@@ -68,16 +78,19 @@ class BenchmarkEvaluator:
     - Confidence calibration
     """
 
-    def __init__(self, use_bertscore: bool = True):
+    def __init__(self, use_bertscore: bool = True, use_embeddings: bool = True):
         """
         Initialize the evaluator.
 
         Args:
             use_bertscore: Whether to use BERTScore (requires GPU for speed)
+            use_embeddings: Whether to use sentence-transformer cosine similarity
         """
         self.use_bertscore = use_bertscore
+        self.use_embeddings = use_embeddings
         self._bertscore_loaded = False
         self._bert_model = None
+        self._embedding_service = None
 
     def _load_bertscore(self):
         """Lazy load BERTScore to avoid import delays."""
@@ -340,6 +353,225 @@ class BenchmarkEvaluator:
                 }
 
         return breakdown
+
+    def _load_embedding_service(self):
+        """Lazy load the embedding service for cosine similarity."""
+        if self._embedding_service is not None:
+            return
+        try:
+            from src.memory.embedding_service import EmbeddingService
+            self._embedding_service = EmbeddingService()
+            logger.info("Embedding service loaded for cosine similarity")
+        except Exception as e:
+            logger.warning(f"Embedding service unavailable: {e}")
+            self._embedding_service = None
+            self.use_embeddings = False
+
+    def _calculate_term_overlap(self, candidate: str, reference: str) -> float:
+        """Calculate normalized term overlap between candidate and reference."""
+        if not reference.strip() or not candidate.strip():
+            return 0.0
+
+        stop_words = {
+            'the', 'a', 'an', 'is', 'was', 'were', 'be', 'been', 'being',
+            'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would',
+            'could', 'should', 'may', 'might', 'must', 'shall', 'can',
+            'to', 'of', 'in', 'for', 'on', 'with', 'at', 'by', 'from',
+            'and', 'or', 'but', 'not', 'no', 'if', 'then', 'else',
+            'this', 'that', 'it', 'its', 'as', 'so', 'up', 'out',
+        }
+
+        ref_normalized = re.sub(r'[^a-z0-9\s]', '', reference.lower())
+        cand_normalized = re.sub(r'[^a-z0-9\s]', '', candidate.lower())
+
+        ref_terms = set(ref_normalized.split()) - stop_words
+        cand_terms = set(cand_normalized.split()) - stop_words
+
+        if not ref_terms:
+            return 0.0
+
+        overlap = len(ref_terms & cand_terms) / len(ref_terms)
+        return round(overlap, 4)
+
+    def _calculate_cosine_similarity_batch(
+        self,
+        candidates: list[str],
+        references: list[str],
+    ) -> list[float]:
+        """Calculate cosine similarity for each (candidate, reference) pair."""
+        if not self.use_embeddings or self._embedding_service is None:
+            return [0.0] * len(candidates)
+
+        try:
+            all_texts = candidates + references
+            all_embeddings = self._embedding_service.encode_batch(all_texts)
+
+            n = len(candidates)
+            similarities = []
+            for i in range(n):
+                cand_emb = all_embeddings[i]
+                ref_emb = all_embeddings[n + i]
+                if cand_emb is not None and ref_emb is not None:
+                    sim = self._embedding_service.cosine_similarity(cand_emb, ref_emb)
+                    similarities.append(round(sim, 4))
+                else:
+                    similarities.append(0.0)
+            return similarities
+
+        except Exception as e:
+            logger.error(f"Cosine similarity batch failed: {e}")
+            return [0.0] * len(candidates)
+
+    def _calculate_bertscore_per_item(
+        self,
+        candidates: list[str],
+        references: list[str],
+    ) -> list[float]:
+        """Calculate per-item BERTScore F1 (not just mean)."""
+        if not self.use_bertscore or not self._bertscore_loaded:
+            return [0.0] * len(candidates)
+
+        try:
+            valid_indices = []
+            valid_cands = []
+            valid_refs = []
+            for i, (c, r) in enumerate(zip(candidates, references)):
+                if c.strip() and r.strip():
+                    valid_indices.append(i)
+                    valid_cands.append(c)
+                    valid_refs.append(r)
+
+            if not valid_cands:
+                return [0.0] * len(candidates)
+
+            P, R, F1 = self._bert_score_fn(
+                valid_cands,
+                valid_refs,
+                model_type=BERTSCORE_MODEL,
+                lang="en",
+                verbose=False,
+            )
+
+            results = [0.0] * len(candidates)
+            for i, idx in enumerate(valid_indices):
+                results[idx] = round(F1[i].item(), 4)
+            return results
+
+        except Exception as e:
+            logger.error(f"Per-item BERTScore failed: {e}")
+            return [0.0] * len(candidates)
+
+    def _normalize_for_comparison(self, text: str, task_type: str, role: str) -> str:
+        """
+        Normalize text for semantic comparison to fix format mismatch.
+
+        The raw expected/actual outputs have incompatible formats:
+        - Annotation expected: JSON metadata like {"anomaly_detected": true, "severity": "warning"}
+        - Annotation actual: natural language description
+        - RCA expected: short keyword/slug like "loadgenerator_cpu_spike"
+        - RCA actual: full JSON with root_cause, causal_chain, etc.
+
+        This normalizes both sides to natural language for fair comparison.
+        """
+        if not text or not text.strip():
+            return ""
+
+        if task_type == "annotation" and role == "expected":
+            # Convert annotation JSON metadata to natural language
+            try:
+                data = json.loads(text)
+                if isinstance(data, dict):
+                    parts = []
+                    if data.get("anomaly_detected"):
+                        parts.append("anomaly detected")
+                    else:
+                        parts.append("normal operation, no anomaly")
+                    if data.get("severity"):
+                        parts.append(f"severity {data['severity']}")
+                    if data.get("category"):
+                        parts.append(f"category {data['category']}")
+                    if data.get("classification"):
+                        parts.append(f"classified as {data['classification']}")
+                    return ", ".join(parts) if parts else text
+            except (json.JSONDecodeError, TypeError):
+                pass
+            return text
+
+        if task_type == "rca" and role == "expected":
+            # Convert underscore-separated slugs to natural language
+            # "loadgenerator_cpu_spike" -> "load generator cpu spike"
+            normalized = text.replace("_", " ").replace("-", " ")
+            return normalized
+
+        if task_type == "rca" and role == "actual":
+            # Extract root_cause from JSON response
+            try:
+                data = json.loads(text)
+                if isinstance(data, dict) and "root_cause" in data:
+                    return data["root_cause"]
+            except (json.JSONDecodeError, TypeError):
+                pass
+            return text
+
+        # annotation actual is already natural language, return as-is
+        return text
+
+    def compute_all_metrics(self, test_results: list[dict]) -> list[dict]:
+        """
+        Compute all semantic metrics for test results (post-processing).
+
+        Enriches each test result dict with:
+        - bert_f1: per-item BERTScore F1
+        - cosine_similarity: sentence embedding cosine similarity
+        - term_overlap: normalized term overlap
+
+        Before computing metrics, normalizes expected/actual outputs to comparable
+        natural language to avoid format mismatch (JSON vs text, slugs vs sentences).
+
+        Args:
+            test_results: List of test result dicts with actual_output and expected_output
+
+        Returns:
+            The same list, enriched with metric fields
+        """
+        if not test_results:
+            return test_results
+
+        # Normalize outputs for fair semantic comparison
+        candidates = []
+        references = []
+        for r in test_results:
+            task_type = r.get("task_type", "")
+            actual = r.get("actual_output", "")
+            expected = r.get("expected_output", "")
+            candidates.append(self._normalize_for_comparison(actual, task_type, "actual"))
+            references.append(self._normalize_for_comparison(expected, task_type, "expected"))
+
+        # Term overlap (always available, no model needed)
+        logger.info("Computing term overlap...")
+        for i, (c, r) in enumerate(zip(candidates, references)):
+            test_results[i]["term_overlap"] = self._calculate_term_overlap(c, r)
+
+        # Cosine similarity (sentence-transformers)
+        if self.use_embeddings:
+            logger.info("Loading embedding service for cosine similarity...")
+            self._load_embedding_service()
+            if self._embedding_service is not None:
+                logger.info(f"Computing cosine similarity for {len(candidates)} pairs...")
+                cosine_scores = self._calculate_cosine_similarity_batch(candidates, references)
+                for i, score in enumerate(cosine_scores):
+                    test_results[i]["cosine_similarity"] = score
+
+        # BERTScore (per-item F1)
+        if self.use_bertscore:
+            self._load_bertscore()
+            if self._bertscore_loaded:
+                logger.info(f"Computing BERTScore F1 for {len(candidates)} pairs...")
+                bert_scores = self._calculate_bertscore_per_item(candidates, references)
+                for i, score in enumerate(bert_scores):
+                    test_results[i]["bert_f1"] = score
+
+        return test_results
 
     def compare_models(
         self,

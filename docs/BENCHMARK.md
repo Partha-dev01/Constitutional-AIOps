@@ -1,26 +1,29 @@
 # BENCHMARK.md - Constitutional AIOps Benchmarking System
 
-> **Version**: 3.0
+> **Version**: 4.0
 > **Created**: 2026-01-29
 > **Updated**: 2026-02-06
-> **Status**: BENCHMARK COMPLETE - 88.7% Overall Accuracy (133 tests)
+> **Status**: BENCHMARK COMPLETE - 89.3% Overall Accuracy (150 tests) + Full Ablation Study
 
 ---
 
 ## Table of Contents
 
 1. [Overview](#overview)
-2. [Dataset Sources](#dataset-sources)
-3. [Data Preprocessing Pipeline](#data-preprocessing-pipeline)
-4. [Directory Structure](#directory-structure)
-5. [Python Scripts Reference](#python-scripts-reference)
-6. [API Endpoints](#api-endpoints)
-7. [Frontend Interface](#frontend-interface)
-8. [Running Benchmarks](#running-benchmarks)
-9. [Evaluation Metrics](#evaluation-metrics)
-10. [Export Formats](#export-formats)
-11. [Network Latency Compensation](#network-latency-compensation)
-12. [Troubleshooting](#troubleshooting)
+2. [Latest Results](#latest-results-2026-02-06)
+3. [Ablation Study](#ablation-study)
+4. [Auto-Export Pipeline](#auto-export-pipeline)
+5. [Dataset Sources](#dataset-sources)
+6. [Data Preprocessing Pipeline](#data-preprocessing-pipeline)
+7. [Directory Structure](#directory-structure)
+8. [Python Scripts Reference](#python-scripts-reference)
+9. [API Endpoints](#api-endpoints)
+10. [Frontend Interface](#frontend-interface)
+11. [Running Benchmarks](#running-benchmarks)
+12. [Evaluation Metrics](#evaluation-metrics)
+13. [Export Formats](#export-formats)
+14. [Network Latency Compensation](#network-latency-compensation)
+15. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -29,39 +32,86 @@
 ### Configuration
 - **Fast Agent**: `qwen3:4b-instruct` (Q4_K_M, 2.5GB) - non-thinking variant
 - **Reasoning Agent**: `qwen3:14b` (Q4_K_M, 9.3GB)
-- **Endpoint**: Jarvis Labs A5000 24GB
+- **Endpoint**: Jarvis Labs A5000 24GB (localhost, port 6006)
 - **Dataset**: 150 curated cases (100 annotation + 50 RCA), seed=42, English-only
-- **Determinism**: temperature=0.0, seed=hash(prompt)
+- **Determinism**: temperature=0.0, seed=hash(prompt) % 2^32
 
 ### Accuracy Results
 
 | Metric | Score | Target (Research_V6) | Status |
 |--------|-------|---------------------|--------|
 | **Annotation** | **89/100 = 89.0%** | 87-92% | IN TARGET |
-| **RCA** | **29/33 = 87.9%** | 85-90% | IN TARGET |
-| **Overall** | **118/133 = 88.7%** | - | Excellent |
+| **RCA** | **45/50 = 90.0%** | 85-90% | EXCEEDS TARGET |
+| **Overall** | **134/150 = 89.3%** | - | Excellent |
 
-### Latency Results
+### Semantic Similarity Metrics
 
-| Agent | Avg | Min | Max | Previous (qwen3:4b w/ thinking) |
-|-------|-----|-----|-----|--------------------------------|
-| Annotation | **2,496ms** | 1,200ms | 4,547ms | ~28,000ms |
-| RCA | 18,485ms | 8,350ms | 38,666ms | ~20,000ms |
+| Metric | Annotation | RCA | Overall |
+|--------|-----------|-----|---------|
+| **BERTScore F1** | 0.516 | 0.337 | **0.456** |
+| **Cosine Similarity** | 0.266 | 0.358 | **0.297** |
+| **Term Overlap** | 0.178 | 0.649 | **0.364** |
 
-**Note**: Latency includes Jarvis Labs network RTT (~500ms). Local deployment expected to be 5-10x faster.
+### Latency Results (localhost, zero network RTT)
 
-### Failure Analysis (15/133 = 11.3%)
+| Agent | P50 | P95 | Avg |
+|-------|-----|-----|-----|
+| Annotation (qwen3:4b-instruct) | 2,082ms | 4,115ms | ~2,400ms |
+| RCA (qwen3:14b) | 17,096ms | 29,403ms | ~17,900ms |
+| Overall | 3,124ms | 23,941ms | ~7,600ms |
 
-| Category | Count | Details |
-|----------|-------|---------|
-| Annotation false positives | 11 | BlueGene/L RAS logs with alarming keywords labeled "normal" |
-| RCA transient errors | 2 | Jarvis Labs 520 server errors |
-| RCA quiz format mismatch | 2 | OpsEval QA questions - model refused to answer directly |
-| **Crashes/Parser failures** | **0** | All parser and connection fixes working |
+### Per-Source Breakdown
 
-### Tests Run But Not Scored (17 RCA missing)
+| Task | Source | N | Accuracy | BERT-F1 | Cos Sim |
+|------|--------|---|----------|---------|---------|
+| Annotation | Loghub HDFS | 72 | 95.8% | 0.521 | 0.283 |
+| Annotation | Loghub BGL | 28 | 71.4% | 0.503 | 0.223 |
+| RCA | LEMMA-RCA Cloud | 28 | 100.0% | 0.349 | 0.463 |
+| RCA | OpsEval Wired Network | 16 | 75.0% | 0.318 | 0.222 |
+| RCA | OpsEval Mobile Comms | 4 | 100.0% | 0.352 | 0.243 |
+| RCA | OpsEval 5G Comms | 2 | 50.0% | 0.294 | 0.221 |
 
-The dataset has 50 RCA cases but only 33 were executed. The 17 missing cases may have been filtered during benchmark loading. Full 150-case run pending.
+### Error Analysis (16/150 = 10.7%)
+
+| Failure Mode | Count | Test IDs |
+|-------------|-------|----------|
+| BGL False Positive | 8 | ANN_118, ANN_142, ANN_141, ANN_135, ANN_119 +3 more |
+| RCA Incorrect (Wired Network) | 4 | RCA_002, RCA_040, RCA_039, RCA_046 |
+| Annotation Incorrect (HDFS) | 3 | ANN_049, ANN_034, ANN_012 |
+| RCA Incorrect (5G) | 1 | RCA_067 |
+| **Total** | **16** | **Zero crashes, zero parser failures** |
+
+---
+
+## Ablation Study
+
+Full 4-configuration ablation study with 150 tests per configuration (100 annotation + 50 RCA):
+
+| Configuration | Ann Acc | RCA Acc | Overall | BERT-F1 | Cos Sim | Term Ov. | Avg Latency | Delta |
+|--------------|---------|---------|---------|---------|---------|----------|-------------|-------|
+| Full System (4B + 14B) | 89.0% | 88.0% | 88.7% | 0.458 | 0.302 | 0.371 | 7208ms | - |
+| Single 4B | 89.0% | 94.0% | 90.7% | 0.458 | 0.303 | 0.389 | 7250ms | +2.0% |
+| Single 14B | 89.0% | 92.0% | 90.0% | 0.457 | 0.302 | 0.392 | 7582ms | +1.3% |
+| No Structured | 89.0% | 92.0% | 90.0% | 0.458 | 0.303 | 0.385 | 7467ms | +1.3% |
+
+**Key findings**: All configurations achieve comparable accuracy (88.7%-90.7%). The hybrid architecture's value is architectural (cost efficiency, specialization potential, scalability) rather than accuracy-based. See [FINDINGS.md](../benchmark/results/FINDINGS.md) for detailed analysis.
+
+---
+
+## Auto-Export Pipeline
+
+Both `test_5plus5.py` and `run_ablation.py` auto-call `export_all()` from `export_metrics.py` after completion. Generated files:
+
+| File | Description |
+|------|-------------|
+| `benchmark/results/all_tables.md` | Combined Tables 1-4 (comprehensive, per-source, error, ablation) |
+| `benchmark/results/all_tables.tex` | Same in LaTeX format |
+| `benchmark/results/paper_tables.md` | Tables 1-3 for research paper |
+| `benchmark/results/paper_tables.tex` | Same in LaTeX format |
+| `benchmark/results/ablation_table.md` | Table 4 ablation comparison |
+| `benchmark/results/ablation_table.tex` | Same in LaTeX format |
+| `benchmark/results/combined_results.md` | Rendered combined_results.json |
+| `benchmark/results/results_index.md` | Index of all result files |
 
 ---
 
@@ -1302,4 +1352,4 @@ print("[FAILED] Failed")
 
 ---
 
-**End of BENCHMARK.md** | Version 2.0 | 2026-02-06
+**End of BENCHMARK.md** | Version 4.0 | 2026-02-06

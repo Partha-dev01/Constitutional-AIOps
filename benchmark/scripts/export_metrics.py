@@ -2,543 +2,580 @@
 """
 Constitutional AIOps - Metrics Exporter
 
-Exports benchmark results in multiple formats:
-- JSON (for API/frontend)
-- CSV (for spreadsheets)
+Exports benchmark results in multiple formats from ACTUAL measured data.
+No fabricated or estimated values - only real benchmark results.
+
+Output formats:
 - LaTeX tables (for Research_V6.tex)
-- Markdown tables (for KEY_METRICS.md)
+- Markdown tables (for documentation)
+- JSON (for API/frontend)
 
 Usage:
     python benchmark/scripts/export_metrics.py
     python benchmark/scripts/export_metrics.py --format latex
-    python benchmark/scripts/export_metrics.py --update-docs
+    python benchmark/scripts/export_metrics.py --model constitutional_aiops
 """
 
 import os
 import sys
 import json
-import csv
 import argparse
 from pathlib import Path
 from datetime import datetime
 from typing import Any
 
-# Add project root to path
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-BENCHMARK_DIR = PROJECT_ROOT / "benchmark"
-RESULTS_DIR = BENCHMARK_DIR / "results"
-REPORTS_DIR = BENCHMARK_DIR / "reports"
-DOCS_DIR = PROJECT_ROOT / "docs"
+RESULTS_DIR = PROJECT_ROOT / "benchmark" / "results"
 
 
-def load_evaluation_summary() -> list[dict]:
-    """Load combined evaluation results."""
-    summary_path = RESULTS_DIR / "evaluation_summary.json"
+def load_model_results(model_name: str) -> tuple[dict, list[dict]]:
+    """Load summary and per-test results for a model.
+
+    Returns:
+        (summary_dict, per_test_results_list)
+    """
+    model_dir = RESULTS_DIR / model_name
+    summary_path = model_dir / "summary.json"
+    results_path = model_dir / "results.json"
 
     if not summary_path.exists():
-        # Try combined results
-        combined_path = RESULTS_DIR / "combined_results.json"
-        if combined_path.exists():
-            with open(combined_path, "r", encoding="utf-8") as f:
-                return json.load(f)
-        raise FileNotFoundError("No evaluation results found. Run evaluate_results.py first.")
+        raise FileNotFoundError(f"No summary found for model: {model_name}")
 
     with open(summary_path, "r", encoding="utf-8") as f:
-        return json.load(f)
+        summary = json.load(f)
+
+    per_test = []
+    if results_path.exists():
+        with open(results_path, "r", encoding="utf-8") as f:
+            per_test = json.load(f)
+
+    return summary, per_test
 
 
-def export_json(data: list[dict], output_path: Path) -> None:
-    """Export results as JSON."""
-    with open(output_path, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2)
-    print(f"[OK] JSON exported: {output_path}")
+def load_all_models() -> list[str]:
+    """Find all models with benchmark results."""
+    models = []
+    if RESULTS_DIR.exists():
+        for d in RESULTS_DIR.iterdir():
+            if d.is_dir() and (d / "summary.json").exists():
+                models.append(d.name)
+    return sorted(models)
 
 
-def export_csv(data: list[dict], output_path: Path) -> None:
-    """Export results as CSV."""
-    if not data:
-        return
-
-    fieldnames = data[0].keys()
-    with open(output_path, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
-        writer.writeheader()
-        writer.writerows(data)
-
-    print(f"[OK] CSV exported: {output_path}")
+def safe_mean(values: list[float]) -> float:
+    """Mean of non-zero values."""
+    filtered = [v for v in values if v > 0]
+    return round(sum(filtered) / len(filtered), 4) if filtered else 0.0
 
 
-def generate_latex_llm_comparison_table(data: list[dict]) -> str:
-    """Generate LaTeX table for LLM comparison."""
-    latex = r"""
-\begin{table}[h]
-\centering
-\caption{LLM Performance Comparison on Constitutional AIOps Benchmark}
-\label{tab:llm-comparison}
-\begin{tabular}{lccccc}
-\toprule
-\textbf{Model} & \textbf{Ann. Acc (\%)} & \textbf{RCA Acc (\%)} & \textbf{BERT-F1} & \textbf{P50 (ms)} & \textbf{VRAM (GB)} \\
-\midrule
-"""
+def generate_table1_comprehensive(summary: dict, per_test: list[dict]) -> tuple[str, str]:
+    """Table 1: Comprehensive Results (primary paper table).
 
-    for row in data:
-        model_name = row.get("model_name", "Unknown").replace("_", " ").title()
-        ann_acc = row.get("annotation_accuracy", 0)
-        rca_acc = row.get("rca_accuracy", 0)
-        bert_f1 = row.get("bert_f1", 0)
-        p50 = row.get("p50_latency_ms", row.get("avg_inference_latency_ms", 0))
-        vram = row.get("vram_gb", "N/A")
+    Uses only actual measured data from the benchmark run.
+    """
+    ann = [r for r in per_test if r.get("task_type") == "annotation"]
+    rca = [r for r in per_test if r.get("task_type") == "rca"]
 
-        latex += f"{model_name} & {ann_acc:.1f} & {rca_acc:.1f} & {bert_f1:.3f} & {p50:.0f} & {vram} \\\\\n"
+    ann_correct = sum(1 for r in ann if r.get("correct"))
+    rca_correct = sum(1 for r in rca if r.get("correct"))
+    total_correct = ann_correct + rca_correct
 
-    latex += r"""
-\bottomrule
-\end{tabular}
-\end{table}
-"""
-    return latex
+    ann_acc = round(ann_correct / len(ann) * 100, 1) if ann else 0
+    rca_acc = round(rca_correct / len(rca) * 100, 1) if rca else 0
+    total_acc = round(total_correct / len(per_test) * 100, 1) if per_test else 0
 
+    ann_bert = safe_mean([r.get("bert_f1", 0) for r in ann])
+    rca_bert = safe_mean([r.get("bert_f1", 0) for r in rca])
+    all_bert = safe_mean([r.get("bert_f1", 0) for r in per_test])
 
-def generate_latex_latency_table(data: list[dict]) -> str:
-    """Generate LaTeX table for latency metrics."""
-    latex = r"""
-\begin{table}[h]
-\centering
-\caption{Latency Performance (Network-Compensated)}
-\label{tab:latency}
-\begin{tabular}{lcccc}
-\toprule
-\textbf{Model} & \textbf{P50 (ms)} & \textbf{P95 (ms)} & \textbf{P99 (ms)} & \textbf{Target} \\
-\midrule
-"""
+    ann_cos = safe_mean([r.get("cosine_similarity", 0) for r in ann])
+    rca_cos = safe_mean([r.get("cosine_similarity", 0) for r in rca])
+    all_cos = safe_mean([r.get("cosine_similarity", 0) for r in per_test])
 
-    targets = {
-        "constitutional_aiops": "<100ms (fast), 200-500ms (reasoning)",
-        "qwen3_4b": "<100ms P95",
-        "qwen3_14b": "200-500ms P95",
-        "llama3_8b": "N/A",
-        "llama3_70b": "N/A",
-    }
+    ann_overlap = safe_mean([r.get("term_overlap", 0) for r in ann])
+    rca_overlap = safe_mean([r.get("term_overlap", 0) for r in rca])
+    all_overlap = safe_mean([r.get("term_overlap", 0) for r in per_test])
 
-    for row in data:
-        model_name = row.get("model_name", "Unknown").replace("_", " ").title()
-        p50 = row.get("p50_latency_ms", 0)
-        p95 = row.get("p95_latency_ms", 0)
-        p99 = row.get("p99_latency_ms", 0)
-        target = targets.get(row.get("model_name", ""), "N/A")
+    ann_latencies = [r.get("inference_latency_ms", 0) for r in ann if r.get("inference_latency_ms", 0) > 0]
+    rca_latencies = [r.get("inference_latency_ms", 0) for r in rca if r.get("inference_latency_ms", 0) > 0]
+    all_latencies = ann_latencies + rca_latencies
 
-        latex += f"{model_name} & {p50:.0f} & {p95:.0f} & {p99:.0f} & {target} \\\\\n"
-
-    latex += r"""
-\bottomrule
-\end{tabular}
-\end{table}
-"""
-    return latex
-
-
-def generate_latex_accuracy_table(data: list[dict]) -> str:
-    """Generate LaTeX table for accuracy metrics."""
-    latex = r"""
-\begin{table}[h]
-\centering
-\caption{Accuracy Metrics with Confidence Intervals}
-\label{tab:accuracy}
-\begin{tabular}{lcccc}
-\toprule
-\textbf{Model} & \textbf{Annotation Acc} & \textbf{RCA Acc} & \textbf{BERT-F1} & \textbf{Sample Size} \\
-\midrule
-"""
-
-    for row in data:
-        model_name = row.get("model_name", "Unknown").replace("_", " ").title()
-        ann_acc = row.get("annotation_accuracy", 0)
-        rca_acc = row.get("rca_accuracy", 0)
-        bert_f1 = row.get("bert_f1", 0)
-        samples = row.get("total_samples", 0)
-
-        latex += f"{model_name} & {ann_acc:.1f}\\% & {rca_acc:.1f}\\% & {bert_f1:.3f} & {samples} \\\\\n"
-
-    latex += r"""
-\bottomrule
-\end{tabular}
-\end{table}
-"""
-    return latex
-
-
-def generate_markdown_key_metrics(data: list[dict]) -> str:
-    """Generate markdown tables for KEY_METRICS.md."""
-    # Find Constitutional AIOps results
-    const_aiops = next((d for d in data if d.get("model_name") == "constitutional_aiops"), {})
-
-    md = f"""# KEY_METRICS.md - Constitutional AIOps Performance Metrics
-
-> **Version**: 0.7.0
-> **Last Updated**: {datetime.utcnow().strftime('%Y-%m-%d')}
-> **Status**: Benchmarked with actual results
-
----
-
-## Table 1: Latency Performance
-
-| Agent | P50 (ms) | P95 (ms) | P99 (ms) | Target | Status |
-|-------|----------|----------|----------|--------|--------|
-"""
-
-    for row in data:
-        model = row.get("model_name", "Unknown")
-        p50 = row.get("p50_latency_ms", 0)
-        p95 = row.get("p95_latency_ms", 0)
-        p99 = row.get("p99_latency_ms", 0)
-
-        if model == "constitutional_aiops":
-            target = "<100ms (fast), 200-500ms (reasoning)"
-            status = "Met" if p95 < 500 else "Review"
-        elif model == "qwen3_4b":
-            target = "<100ms P95"
-            status = "Met" if p95 < 100 else "Review"
-        elif model == "qwen3_14b":
-            target = "200-500ms P95"
-            status = "Met" if p95 < 500 else "Review"
-        else:
-            target = "N/A (baseline)"
-            status = "Baseline"
-
-        md += f"| {model.replace('_', ' ').title()} | {p50:.0f} | {p95:.0f} | {p99:.0f} | {target} | {status} |\n"
-
-    md += """
----
-
-## Table 2: Accuracy Metrics
-
-| Metric | Value | CI (95%) | Sample Size | Target |
-|--------|-------|----------|-------------|--------|
-"""
-
-    ann_acc = const_aiops.get("annotation_accuracy", 0)
-    rca_acc = const_aiops.get("rca_accuracy", 0)
-    bert_f1 = const_aiops.get("bert_f1", 0)
-    samples = const_aiops.get("total_samples", 0)
-
-    # Calculate approximate CI (Wilson score interval approximation)
-    import math
-    def wilson_ci(p, n, z=1.96):
-        if n == 0:
+    def p50(vals):
+        if not vals:
             return 0
-        denom = 1 + z**2 / n
-        centre = p + z**2 / (2 * n)
-        adj = math.sqrt((p * (1 - p) + z**2 / (4 * n)) / n)
-        return z * adj / denom * 100
+        s = sorted(vals)
+        k = (len(s) - 1) * 0.5
+        f = int(k)
+        c = min(f + 1, len(s) - 1)
+        return round(s[f] + (k - f) * (s[c] - s[f]), 0)
 
-    ann_ci = wilson_ci(ann_acc / 100, samples) if samples > 0 else 0
-    rca_ci = wilson_ci(rca_acc / 100, samples // 2) if samples > 0 else 0  # Approx half for RCA
+    def p95(vals):
+        if not vals:
+            return 0
+        s = sorted(vals)
+        k = (len(s) - 1) * 0.95
+        f = int(k)
+        c = min(f + 1, len(s) - 1)
+        return round(s[f] + (k - f) * (s[c] - s[f]), 0)
 
-    md += f"| Log Annotation Accuracy | {ann_acc:.1f}% | ±{ann_ci:.1f}% | {samples // 2} | >90% |\n"
-    md += f"| RCA Accuracy | {rca_acc:.1f}% | ±{rca_ci:.1f}% | {samples // 2} | >85% |\n"
-    md += f"| BERTScore F1 | {bert_f1:.3f} | - | {samples} | >0.80 |\n"
+    fast_model = summary.get("fast_model", "qwen3:4b-instruct")
+    reasoning_model = summary.get("reasoning_model", "qwen3:14b")
 
-    md += """
----
-
-## Table 3: MTTR Comparison
-
-| Stage | Traditional AIOps | Constitutional AIOps | Improvement |
-|-------|-------------------|---------------------|-------------|
-| Detection | 5-15 min | <1 sec | ~99% |
-| Classification | 10-30 min | <100ms | ~99% |
-| RCA | 1-4 hours | 5-10 min | ~95% |
-| Resolution | 2-8 hours | 30-60 min | ~85% |
-
-*Note: MTTR improvements estimated based on automation of manual processes.*
-
----
-
-## Table 4: LLM Comparison
-
-| Model | Annotation Acc | RCA Acc | BERTScore F1 | Avg Latency | VRAM |
-|-------|----------------|---------|--------------|-------------|------|
+    # LaTeX
+    latex = r"""\begin{table}[h]
+\centering
+\caption{Comprehensive Benchmark Results}
+\label{tab:comprehensive-results}
+\begin{tabular}{llccccccc}
+\toprule
+\textbf{Task} & \textbf{Agent} & \textbf{N} & \textbf{Accuracy} & \textbf{BERT-F1} & \textbf{Cos Sim} & \textbf{Term Ov.} & \textbf{P50 (ms)} & \textbf{P95 (ms)} \\
+\midrule
 """
-
-    for row in data:
-        model = row.get("model_name", "Unknown").replace("_", " ").title()
-        ann = row.get("annotation_accuracy", 0)
-        rca = row.get("rca_accuracy", 0)
-        bert = row.get("bert_f1", 0)
-        latency = row.get("avg_inference_latency_ms", row.get("p50_latency_ms", 0))
-        vram = row.get("vram_gb", "N/A")
-
-        md += f"| {model} | {ann:.1f}% | {rca:.1f}% | {bert:.3f} | {latency:.0f}ms | ~{vram}GB |\n"
-
-    md += """
----
-
-## Methodology
-
-### Evaluation Datasets
-- **Annotation**: 200 test cases from Loghub (HDFS + BGL)
-- **RCA**: 100 test cases from OpsEval + Custom scenarios
-
-### Metrics
-- **Exact Match**: Classification correctness
-- **BERTScore F1**: Semantic similarity (microsoft/deberta-xlarge-mnli)
-- **Latency**: Network-compensated inference time
-
-### Network Latency Compensation
-```
-inference_latency = total_latency - network_rtt
-```
-Network RTT calibrated using lightweight /api/tags endpoint.
-
----
-
-*Generated by benchmark/scripts/export_metrics.py*
-"""
-    return md
-
-
-def generate_unified_paper_tables(data: list[dict]) -> str:
-    """
-    Generate unified LaTeX file with all 4 research paper tables:
-    - Table 1: Annotation Accuracy by Type
-    - Table 2: RCA Performance
-    - Table 3: Ablation Study
-    - Table 4: Latency Performance
-    """
-    timestamp = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')
-
-    # Find Constitutional AIOps results
-    const_aiops = next((d for d in data if d.get("model_name") == "constitutional_aiops"), {})
-
-    latex = f"""% ============================================================================
-% CONSTITUTIONAL AIOPS - UNIFIED PAPER TABLES
-% Generated: {timestamp}
-% Total Models Benchmarked: {len(data)}
-% ============================================================================
-
-% Include in Research_V6.tex with: \\input{{benchmark/reports/paper_tables_unified.tex}}
-
-% ============================================================================
-% TABLE 1: ANNOTATION ACCURACY BY TELEMETRY TYPE
-% ============================================================================
-\\begin{{table}}[h]
-\\centering
-\\caption{{Annotation Accuracy Across Telemetry Types}}
-\\label{{tab:annotation-accuracy}}
-\\begin{{tabular}}{{lccccc}}
-\\toprule
-\\textbf{{System}} & \\textbf{{Logs}} & \\textbf{{Metrics}} & \\textbf{{Traces}} & \\textbf{{Average}} & \\textbf{{Target}} \\\\
-\\midrule
-"""
-
-    # Get annotation accuracy (using overall as proxy for logs, estimating others)
-    ann_acc = const_aiops.get("annotation_accuracy", 0)
-    # Estimate per-type accuracy (can be refined with actual per-type data)
-    log_acc = ann_acc  # Main dataset is logs
-    metric_acc = ann_acc * 0.95  # Slightly lower for metrics
-    trace_acc = ann_acc * 0.93  # Slightly lower for traces
-
-    latex += f"""Constitutional AIOps & {log_acc:.1f}\\% & {metric_acc:.1f}\\% & {trace_acc:.1f}\\% & {ann_acc:.1f}\\% & 87-92\\% \\\\
-Qwen3-14B (Standalone) & {ann_acc * 0.90:.1f}\\% & {metric_acc * 0.88:.1f}\\% & {trace_acc * 0.85:.1f}\\% & {ann_acc * 0.88:.1f}\\% & - \\\\
-Qwen3-4B (Standalone) & {ann_acc * 0.82:.1f}\\% & {metric_acc * 0.80:.1f}\\% & {trace_acc * 0.78:.1f}\\% & {ann_acc * 0.80:.1f}\\% & - \\\\
-"""
-
-    latex += r"""
-\bottomrule
+    latex += f"Annotation & {fast_model} & {len(ann)} & {ann_acc:.1f}\\% & {ann_bert:.3f} & {ann_cos:.3f} & {ann_overlap:.3f} & {p50(ann_latencies):.0f} & {p95(ann_latencies):.0f} \\\\\n"
+    latex += f"RCA & {reasoning_model} & {len(rca)} & {rca_acc:.1f}\\% & {rca_bert:.3f} & {rca_cos:.3f} & {rca_overlap:.3f} & {p50(rca_latencies):.0f} & {p95(rca_latencies):.0f} \\\\\n"
+    latex += r"\midrule" + "\n"
+    latex += f"\\textbf{{Overall}} & \\textbf{{Hybrid}} & \\textbf{{{len(per_test)}}} & \\textbf{{{total_acc:.1f}\\%}} & \\textbf{{{all_bert:.3f}}} & \\textbf{{{all_cos:.3f}}} & \\textbf{{{all_overlap:.3f}}} & \\textbf{{{p50(all_latencies):.0f}}} & \\textbf{{{p95(all_latencies):.0f}}} \\\\\n"
+    latex += r"""\bottomrule
 \end{tabular}
 \begin{tablenotes}
 \small
-\item Logs dataset: Loghub (HDFS + BGL). Metrics/Traces: Synthetic telemetry samples.
+\item Dataset: curated 150-sample (seed=42, English only). Temperature=0.0.
+\item BERT-F1: microsoft/deberta-xlarge-mnli. Cos Sim: all-MiniLM-L6-v2 (384-dim).
 \end{tablenotes}
 \end{table}
+"""
 
-% ============================================================================
-% TABLE 2: ROOT CAUSE ANALYSIS ACCURACY
-% ============================================================================
-\begin{table}[h]
+    # Markdown
+    md = "## Table 1: Comprehensive Benchmark Results\n\n"
+    md += "| Task | Agent | N | Accuracy | BERT-F1 | Cos Sim | Term Overlap | P50 (ms) | P95 (ms) |\n"
+    md += "|------|-------|---|----------|---------|---------|--------------|----------|----------|\n"
+    md += f"| Annotation | {fast_model} | {len(ann)} | {ann_acc:.1f}% | {ann_bert:.3f} | {ann_cos:.3f} | {ann_overlap:.3f} | {p50(ann_latencies):.0f} | {p95(ann_latencies):.0f} |\n"
+    md += f"| RCA | {reasoning_model} | {len(rca)} | {rca_acc:.1f}% | {rca_bert:.3f} | {rca_cos:.3f} | {rca_overlap:.3f} | {p50(rca_latencies):.0f} | {p95(rca_latencies):.0f} |\n"
+    md += f"| **Overall** | **Hybrid** | **{len(per_test)}** | **{total_acc:.1f}%** | **{all_bert:.3f}** | **{all_cos:.3f}** | **{all_overlap:.3f}** | **{p50(all_latencies):.0f}** | **{p95(all_latencies):.0f}** |\n"
+
+    return latex, md
+
+
+def generate_table2_per_source(per_test: list[dict]) -> tuple[str, str]:
+    """Table 2: Per-Source Breakdown.
+
+    Groups results by source dataset (hdfs, bgl, opseval, lemma-rca).
+    """
+    # Group by task_type + source
+    groups = {}
+    for r in per_test:
+        task = r.get("task_type", "unknown")
+        source = r.get("source", "unknown") or "unknown"
+        key = (task, source)
+        if key not in groups:
+            groups[key] = []
+        groups[key].append(r)
+
+    # LaTeX
+    latex = r"""\begin{table}[h]
 \centering
-\caption{Root Cause Analysis Performance}
-\label{tab:rca-accuracy}
-\begin{tabular}{lccccc}
+\caption{Per-Source Benchmark Breakdown}
+\label{tab:per-source}
+\begin{tabular}{llcccc}
 \toprule
-\textbf{System} & \textbf{Accuracy} & \textbf{BERT-F1} & \textbf{Avg Time} & \textbf{Incidents} & \textbf{Target} \\
+\textbf{Task} & \textbf{Source} & \textbf{N} & \textbf{Accuracy} & \textbf{BERT-F1} & \textbf{Cos Sim} \\
 \midrule
 """
 
-    rca_acc = const_aiops.get("rca_accuracy", 0)
-    bert_f1 = const_aiops.get("bert_f1", 0)
-    avg_latency = const_aiops.get("avg_inference_latency_ms", 0)
-    total_tests = const_aiops.get("total_tests", 0)
+    md = "## Table 2: Per-Source Breakdown\n\n"
+    md += "| Task | Source | N | Accuracy | BERT-F1 | Cos Sim |\n"
+    md += "|------|--------|---|----------|---------|--------|\n"
 
-    latex += f"""Constitutional AIOps & {rca_acc:.1f}\\% & {bert_f1:.3f} & {avg_latency / 1000:.1f}s & {total_tests // 2} & 85-90\\% \\\\
-Qwen3-14B (Standalone) & {rca_acc * 0.92:.1f}\\% & {bert_f1 * 0.95:.3f} & {avg_latency * 0.8 / 1000:.1f}s & {total_tests // 2} & - \\\\
-Qwen3-4B (Standalone) & {rca_acc * 0.78:.1f}\\% & {bert_f1 * 0.82:.3f} & {avg_latency * 0.4 / 1000:.1f}s & {total_tests // 2} & - \\\\
+    for (task, source), results in sorted(groups.items()):
+        n = len(results)
+        correct = sum(1 for r in results if r.get("correct"))
+        acc = round(correct / n * 100, 1) if n else 0
+        bert = safe_mean([r.get("bert_f1", 0) for r in results])
+        cos = safe_mean([r.get("cosine_similarity", 0) for r in results])
+
+        task_display = task.capitalize()
+        source_display = source.replace("_", " ").title()
+
+        latex += f"{task_display} & {source_display} & {n} & {acc:.1f}\\% & {bert:.3f} & {cos:.3f} \\\\\n"
+        md += f"| {task_display} | {source_display} | {n} | {acc:.1f}% | {bert:.3f} | {cos:.3f} |\n"
+
+    latex += r"""\bottomrule
+\end{tabular}
+\end{table}
 """
 
-    latex += r"""
-\bottomrule
-\end{tabular}
-\begin{tablenotes}
-\small
-\item Datasets: OpsEval Q\&A + LEMMA-RCA synthetic incidents.
-\end{tablenotes}
-\end{table}
+    return latex, md
 
-% ============================================================================
-% TABLE 3: ABLATION STUDY
-% ============================================================================
-\begin{table}[h]
+
+def generate_table3_error_analysis(summary: dict, per_test: list[dict]) -> tuple[str, str]:
+    """Table 3: Error Analysis.
+
+    Analyzes failure modes from actual test results.
+    """
+    failures = [r for r in per_test if not r.get("correct")]
+
+    # Categorize failures
+    failure_modes = {}
+    for f in failures:
+        test_id = f.get("test_id", "")
+        task_type = f.get("task_type", "")
+        actual = f.get("actual_output", "")
+        source = f.get("source", "unknown") or "unknown"
+
+        if actual.startswith("Error:"):
+            mode = "Server/Network Error"
+        elif task_type == "annotation" and "ANN_1" in test_id:
+            # BGL tests are ANN_100+
+            mode = "BGL False Positive"
+        elif task_type == "rca" and "choices" in f.get("expected_output", ""):
+            mode = "MCQ Format Mismatch"
+        else:
+            mode = f"{task_type.upper()} Incorrect ({source})"
+
+        if mode not in failure_modes:
+            failure_modes[mode] = {"count": 0, "test_ids": []}
+        failure_modes[mode]["count"] += 1
+        failure_modes[mode]["test_ids"].append(test_id)
+
+    # Also use failure analysis from summary if available
+    fa = summary.get("failure_analysis", {})
+
+    # LaTeX
+    latex = r"""\begin{table}[h]
+\centering
+\caption{Error Analysis}
+\label{tab:error-analysis}
+\begin{tabular}{lcp{8cm}}
+\toprule
+\textbf{Failure Mode} & \textbf{Count} & \textbf{Description} \\
+\midrule
+"""
+
+    md = "## Table 3: Error Analysis\n\n"
+    md += "| Failure Mode | Count | Description |\n"
+    md += "|-------------|-------|-------------|\n"
+
+    for mode, data in sorted(failure_modes.items(), key=lambda x: -x[1]["count"]):
+        count = data["count"]
+        ids_str = ", ".join(data["test_ids"][:5])
+        if len(data["test_ids"]) > 5:
+            ids_str += f" (+{len(data['test_ids']) - 5} more)"
+
+        latex += f"{mode} & {count} & {ids_str} \\\\\n"
+        md += f"| {mode} | {count} | {ids_str} |\n"
+
+    total_failures = len(failures)
+    total_tests = len(per_test)
+    latex += r"\midrule" + "\n"
+    latex += f"\\textbf{{Total Failures}} & \\textbf{{{total_failures}}} & \\textbf{{{total_failures}/{total_tests} = {round(total_failures/max(total_tests,1)*100,1)}\\% error rate}} \\\\\n"
+    md += f"| **Total Failures** | **{total_failures}** | **{total_failures}/{total_tests} = {round(total_failures/max(total_tests,1)*100,1)}% error rate** |\n"
+
+    latex += r"""\bottomrule
+\end{tabular}
+\end{table}
+"""
+
+    return latex, md
+
+
+def generate_ablation_table_from_json() -> tuple[str, str] | tuple[None, None]:
+    """Generate ablation table from ablation_results.json if it exists.
+
+    Returns (latex, markdown) or (None, None) if no ablation data.
+    """
+    ablation_file = RESULTS_DIR / "ablation_results.json"
+    if not ablation_file.exists():
+        return None, None
+
+    with open(ablation_file, "r", encoding="utf-8") as f:
+        results = json.load(f)
+
+    if not results:
+        return None, None
+
+    baseline = next((r for r in results if r.get("ablation_config") == "full"), None)
+    baseline_acc = baseline["overall_accuracy"] if baseline else 0
+
+    md = "## Table 4: Ablation Study - Component Contributions\n\n"
+    md += "| Configuration | Ann Acc | RCA Acc | Overall | BERT-F1 | Cos Sim | Term Ov. | Avg Latency | Delta vs Full |\n"
+    md += "|--------------|---------|---------|---------|---------|---------|----------|-------------|---------------|\n"
+
+    latex = r"""\begin{table}[h]
 \centering
 \caption{Ablation Study: Component Contributions}
 \label{tab:ablation}
-\begin{tabular}{lcccc}
+\begin{tabular}{lcccccccc}
 \toprule
-\textbf{Configuration} & \textbf{Ann. Acc} & \textbf{RCA Acc} & \textbf{Avg Latency} & \textbf{$\Delta$ vs Full} \\
+\textbf{Configuration} & \textbf{Ann Acc} & \textbf{RCA Acc} & \textbf{Overall} & \textbf{BERT-F1} & \textbf{Cos Sim} & \textbf{Term Ov.} & \textbf{Avg Lat.} & \textbf{$\Delta$} \\
 \midrule
 """
 
-    latex += f"""Full System & {ann_acc:.1f}\\% & {rca_acc:.1f}\\% & {avg_latency:.0f}ms & - \\\\
--- Graph Memory & {ann_acc * 0.95:.1f}\\% & {rca_acc * 0.85:.1f}\\% & {avg_latency * 0.9:.0f}ms & -12\\% RCA \\\\
--- Constitutional AI & {ann_acc:.1f}\\% & {rca_acc:.1f}\\% & {avg_latency * 0.95:.0f}ms & Unsafe actions \\\\
--- Dual-Agent & {ann_acc * 0.88:.1f}\\% & {rca_acc * 0.80:.1f}\\% & {avg_latency * 1.5:.0f}ms & -15\\% overall \\\\
-Single LLM Only & {ann_acc * 0.80:.1f}\\% & {rca_acc * 0.72:.1f}\\% & {avg_latency * 0.7:.0f}ms & -20\\% overall \\\\
-"""
+    for r in results:
+        delta = round(r["overall_accuracy"] - baseline_acc, 1) if baseline else 0
+        delta_str = f"{delta:+.1f}%" if r.get("ablation_config") != "full" else "-"
+        cos_sim = r.get("cosine_similarity", 0)
+        term_ov = r.get("term_overlap", 0)
 
-    latex += r"""
-\bottomrule
+        md += (
+            f"| {r['description']} | {r['annotation_accuracy']:.1f}% | {r['rca_accuracy']:.1f}% | "
+            f"{r['overall_accuracy']:.1f}% | {r.get('bert_f1', 0):.3f} | {cos_sim:.3f} | {term_ov:.3f} | "
+            f"{r['avg_inference_latency_ms']:.0f}ms | {delta_str} |\n"
+        )
+
+        delta_latex = f"{delta:+.1f}\\%" if r.get("ablation_config") != "full" else "-"
+        latex += (
+            f"{r['description']} & {r['annotation_accuracy']:.1f}\\% & {r['rca_accuracy']:.1f}\\% & "
+            f"{r['overall_accuracy']:.1f}\\% & {r.get('bert_f1', 0):.3f} & {cos_sim:.3f} & {term_ov:.3f} & "
+            f"{r['avg_inference_latency_ms']:.0f}ms & {delta_latex} \\\\\n"
+        )
+
+    n_tests = results[0].get("total_tests", "?") if results else "?"
+    md += f"\n> N={n_tests} per configuration. Dataset: curated_150 (seed=42). Temperature=0.0.\n"
+
+    latex += r"""\bottomrule
 \end{tabular}
-\begin{tablenotes}
-\small
-\item Ablation removes one component at a time. Constitutional AI removal measured by unsafe action rate.
-\end{tablenotes}
 \end{table}
-
-% ============================================================================
-% TABLE 4: LATENCY PERFORMANCE (NETWORK-COMPENSATED)
-% ============================================================================
-\begin{table}[h]
-\centering
-\caption{Latency Performance (Network-Compensated)}
-\label{tab:latency-performance}
-\begin{tabular}{lccccc}
-\toprule
-\textbf{Component} & \textbf{P50 (ms)} & \textbf{P95 (ms)} & \textbf{P99 (ms)} & \textbf{Target} & \textbf{Status} \\
-\midrule
 """
 
-    p50 = const_aiops.get("p50_latency_ms", 0)
-    p95 = const_aiops.get("p95_latency_ms", 0)
-    p99 = const_aiops.get("p99_latency_ms", 0)
+    return latex, md
 
-    status = "\\checkmark" if p95 < 30000 else "\\texttimes"
 
-    latex += f"""Fast Agent (Qwen3-4B) & {p50 * 0.3:.0f} & {p95 * 0.3:.0f} & {p99 * 0.3:.0f} & <100ms P95 & \\checkmark \\\\
-Reasoning Agent (Qwen3-14B) & {p50:.0f} & {p95:.0f} & {p99:.0f} & 200-500ms P95 & {status} \\\\
-Graph Query (Neo4j) & 15 & 45 & 120 & O(log n) & \\checkmark \\\\
-End-to-End Pipeline & {p50 * 1.2:.0f} & {p95 * 1.2:.0f} & {p99 * 1.2:.0f} & <5 min total & \\checkmark \\\\
+def generate_combined_results_md() -> str:
+    """Generate combined_results.md from combined_results.json."""
+    combined_file = RESULTS_DIR / "combined_results.json"
+    if not combined_file.exists():
+        return ""
+
+    with open(combined_file, "r", encoding="utf-8") as f:
+        results = json.load(f)
+
+    if not results:
+        return ""
+
+    md = "# Combined Benchmark Results\n\n"
+    md += f"> Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}\n\n"
+
+    for r in results:
+        name = r.get("model_name", "unknown")
+        md += f"## {name}\n\n"
+        md += f"| Metric | Value |\n|--------|-------|\n"
+        md += f"| Model Type | {r.get('model_type', '-')} |\n"
+        md += f"| Fast Model | {r.get('fast_model', '-')} |\n"
+        md += f"| Reasoning Model | {r.get('reasoning_model', '-')} |\n"
+        md += f"| Annotation Accuracy | {r.get('annotation_accuracy', 0):.1f}% ({r.get('annotation_passed', 0)}/{r.get('annotation_tests', 0)}) |\n"
+        md += f"| RCA Accuracy | {r.get('rca_accuracy', 0):.1f}% ({r.get('rca_passed', 0)}/{r.get('rca_tests', 0)}) |\n"
+        md += f"| Overall Accuracy | {r.get('overall_accuracy', 0):.1f}% ({r.get('total_correct', 0)}/{r.get('total_tests', 0)}) |\n"
+        md += f"| BERTScore F1 | {r.get('bert_f1', 0):.4f} |\n"
+        md += f"| Cosine Similarity | {r.get('cosine_similarity', 0):.4f} |\n"
+        md += f"| Term Overlap | {r.get('term_overlap', 0):.4f} |\n"
+        md += f"| P50 Latency | {r.get('p50_latency_ms', 0):.0f}ms |\n"
+        md += f"| P95 Latency | {r.get('p95_latency_ms', 0):.0f}ms |\n"
+        md += f"| Timestamp | {r.get('timestamp', '-')} |\n\n"
+
+    return md
+
+
+def generate_results_index() -> str:
+    """Generate results_index.md listing all result files."""
+    md = "# Benchmark Results Index\n\n"
+    md += f"> Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}\n\n"
+
+    md += "## Top-Level Files\n\n"
+    md += "| File | Description |\n|------|-------------|\n"
+    md += "| `all_tables.md` | All paper tables + ablation table combined |\n"
+    md += "| `all_tables.tex` | LaTeX version of all tables |\n"
+    md += "| `paper_tables.md` | Tables 1-3 (comprehensive, per-source, error analysis) |\n"
+    md += "| `paper_tables.tex` | LaTeX version of paper tables |\n"
+    md += "| `ablation_table.md` | Ablation study comparison table |\n"
+    md += "| `ablation_table.tex` | LaTeX version of ablation table |\n"
+    md += "| `combined_results.json` | JSON with all model summaries |\n"
+    md += "| `combined_results.md` | Markdown rendering of combined results |\n"
+    md += "| `ablation_results.json` | JSON with all ablation summaries |\n"
+    md += "| `results_index.md` | This file |\n\n"
+
+    md += "## Per-Model Directories\n\n"
+    models = load_all_models()
+    for model in models:
+        model_dir = RESULTS_DIR / model
+        files = sorted(f.name for f in model_dir.iterdir() if f.is_file())
+        md += f"### `{model}/`\n\n"
+        for fname in files:
+            md += f"- `{fname}`\n"
+        md += "\n"
+
+    return md
+
+
+def export_tables(model_name: str) -> None:
+    """Generate and save all paper tables for a model."""
+    summary, per_test = load_model_results(model_name)
+
+    timestamp = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')
+
+    # Generate tables
+    t1_latex, t1_md = generate_table1_comprehensive(summary, per_test)
+    t2_latex, t2_md = generate_table2_per_source(per_test)
+    t3_latex, t3_md = generate_table3_error_analysis(summary, per_test)
+
+    # Combined LaTeX
+    latex_content = f"""% Constitutional AIOps - Paper Tables
+% Generated: {timestamp}
+% Model: {model_name}
+% Data source: benchmark/results/{model_name}/results.json
+% WARNING: All values are from actual benchmark runs. No fabricated data.
+
+{t1_latex}
+
+{t2_latex}
+
+{t3_latex}
 """
 
-    latex += r"""
-\bottomrule
-\end{tabular}
-\begin{tablenotes}
-\small
-\item Latency measured with network RTT compensation. Remote deployment adds ~77ms RTT.
-\end{tablenotes}
-\end{table}
+    # Combined Markdown
+    md_content = f"""# Constitutional AIOps - Paper Tables
 
-% ============================================================================
-% END OF UNIFIED TABLES
-% ============================================================================
+> Generated: {timestamp}
+> Model: {model_name}
+> Source: `benchmark/results/{model_name}/results.json`
+
+{t1_md}
+
+{t2_md}
+
+{t3_md}
+
+---
+
+*All values from actual benchmark runs. No fabricated or estimated data.*
 """
-    return latex
 
-
-def export_latex(data: list[dict], output_dir: Path) -> None:
-    """Export all LaTeX tables."""
+    # Save to benchmark/results/
+    output_dir = RESULTS_DIR
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # LLM Comparison table
-    llm_table = generate_latex_llm_comparison_table(data)
-    with open(output_dir / "table_llm_comparison.tex", "w", encoding="utf-8") as f:
-        f.write(llm_table)
+    tex_path = output_dir / "paper_tables.tex"
+    md_path = output_dir / "paper_tables.md"
 
-    # Latency table
-    latency_table = generate_latex_latency_table(data)
-    with open(output_dir / "table_latency.tex", "w", encoding="utf-8") as f:
-        f.write(latency_table)
+    with open(tex_path, "w", encoding="utf-8") as f:
+        f.write(latex_content)
+    print(f"[SAVED] LaTeX tables -> {tex_path}")
 
-    # Accuracy table
-    accuracy_table = generate_latex_accuracy_table(data)
-    with open(output_dir / "table_accuracy.tex", "w", encoding="utf-8") as f:
-        f.write(accuracy_table)
+    with open(md_path, "w", encoding="utf-8") as f:
+        f.write(md_content)
+    print(f"[SAVED] Markdown tables -> {md_path}")
 
-    # Unified paper tables (all 4 tables in one file)
-    unified_tables = generate_unified_paper_tables(data)
-    with open(output_dir / "paper_tables_unified.tex", "w", encoding="utf-8") as f:
-        f.write(unified_tables)
-    print(f"[OK] Unified paper tables: {output_dir / 'paper_tables_unified.tex'}")
+    # Also save per-model
+    model_tex = RESULTS_DIR / model_name / "paper_tables.tex"
+    model_md = RESULTS_DIR / model_name / "paper_tables.md"
 
-    # Combined file (legacy format)
-    with open(output_dir / "all_tables.tex", "w", encoding="utf-8") as f:
-        f.write("% Constitutional AIOps Benchmark Tables\n")
-        f.write(f"% Generated: {datetime.utcnow().isoformat()}\n\n")
-        f.write(llm_table)
-        f.write("\n\n")
-        f.write(latency_table)
-        f.write("\n\n")
-        f.write(accuracy_table)
+    with open(model_tex, "w", encoding="utf-8") as f:
+        f.write(latex_content)
 
-    print(f"[OK] LaTeX tables exported to: {output_dir}")
-
-
-def update_key_metrics(data: list[dict]) -> None:
-    """Update KEY_METRICS.md with actual benchmark results."""
-    md_content = generate_markdown_key_metrics(data)
-
-    output_path = DOCS_DIR / "KEY_METRICS.md"
-    with open(output_path, "w", encoding="utf-8") as f:
+    with open(model_md, "w", encoding="utf-8") as f:
         f.write(md_content)
 
-    print(f"[OK] Updated: {output_path}")
+    print(f"[SAVED] Per-model tables -> {RESULTS_DIR / model_name}/")
+
+    return timestamp, t1_latex, t1_md, t2_latex, t2_md, t3_latex, t3_md
+
+
+def export_all(model_name: str = "constitutional_aiops") -> None:
+    """Generate ALL output files: paper tables, ablation table, all_tables, index, combined_results.
+
+    This is the main entry point called by benchmark scripts after completion.
+    """
+    print("\n[EXPORT] Generating all benchmark output files...")
+
+    # 1. Paper tables (Tables 1-3)
+    try:
+        result = export_tables(model_name)
+        timestamp, t1_latex, t1_md, t2_latex, t2_md, t3_latex, t3_md = result
+    except FileNotFoundError as e:
+        print(f"[EXPORT] Warning: {e} - skipping paper tables")
+        timestamp = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')
+        t1_latex = t1_md = t2_latex = t2_md = t3_latex = t3_md = ""
+
+    # 2. Ablation table (Table 4) - from ablation_results.json if exists
+    t4_latex, t4_md = generate_ablation_table_from_json()
+
+    # 3. all_tables.md / all_tables.tex - everything combined
+    all_md = f"""# Constitutional AIOps - All Benchmark Tables
+
+> Generated: {timestamp}
+> Model: {model_name}
+> Source: `benchmark/results/`
+
+{t1_md}
+
+{t2_md}
+
+{t3_md}
+"""
+    all_latex = f"""% Constitutional AIOps - All Benchmark Tables
+% Generated: {timestamp}
+% Model: {model_name}
+% WARNING: All values are from actual benchmark runs. No fabricated data.
+
+{t1_latex}
+
+{t2_latex}
+
+{t3_latex}
+"""
+
+    if t4_md:
+        all_md += f"\n{t4_md}\n"
+        all_latex += f"\n{t4_latex}\n"
+
+    all_md += "\n---\n\n*All values from actual benchmark runs. No fabricated or estimated data.*\n"
+
+    with open(RESULTS_DIR / "all_tables.md", "w", encoding="utf-8") as f:
+        f.write(all_md)
+    print(f"[SAVED] All tables (MD)    -> {RESULTS_DIR / 'all_tables.md'}")
+
+    with open(RESULTS_DIR / "all_tables.tex", "w", encoding="utf-8") as f:
+        f.write(all_latex)
+    print(f"[SAVED] All tables (LaTeX) -> {RESULTS_DIR / 'all_tables.tex'}")
+
+    # 4. combined_results.md
+    cr_md = generate_combined_results_md()
+    if cr_md:
+        with open(RESULTS_DIR / "combined_results.md", "w", encoding="utf-8") as f:
+            f.write(cr_md)
+        print(f"[SAVED] Combined results   -> {RESULTS_DIR / 'combined_results.md'}")
+
+    # 5. results_index.md
+    index_md = generate_results_index()
+    with open(RESULTS_DIR / "results_index.md", "w", encoding="utf-8") as f:
+        f.write(index_md)
+    print(f"[SAVED] Results index      -> {RESULTS_DIR / 'results_index.md'}")
+
+    print("[EXPORT] All output files generated successfully!")
 
 
 def main():
-    """Main entry point."""
-    parser = argparse.ArgumentParser(description="Export benchmark metrics")
-    parser.add_argument("--format", choices=["json", "csv", "latex", "markdown", "all"], default="all")
-    parser.add_argument("--update-docs", action="store_true", help="Update KEY_METRICS.md")
+    parser = argparse.ArgumentParser(description="Export benchmark metrics (actual data only)")
+    parser.add_argument("--model", default="constitutional_aiops", help="Model name to export")
+    parser.add_argument("--format", choices=["latex", "markdown", "all"], default="all")
+    parser.add_argument("--list-models", action="store_true", help="List available models")
     args = parser.parse_args()
 
-    REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+    if args.list_models:
+        models = load_all_models()
+        print(f"Available models: {models}")
+        return 0
 
     try:
-        data = load_evaluation_summary()
-    except FileNotFoundError as e:
+        export_all(args.model)
+    except Exception as e:
         print(f"[ERROR] {e}")
+        import traceback
+        traceback.print_exc()
         return 1
 
-    if args.format in ["json", "all"]:
-        export_json(data, REPORTS_DIR / "benchmark_results.json")
-
-    if args.format in ["csv", "all"]:
-        export_csv(data, REPORTS_DIR / "benchmark_results.csv")
-
-    if args.format in ["latex", "all"]:
-        export_latex(data, REPORTS_DIR)
-
-    if args.format in ["markdown", "all"]:
-        md_path = REPORTS_DIR / "paper_tables.md"
-        with open(md_path, "w", encoding="utf-8") as f:
-            f.write(generate_markdown_key_metrics(data))
-        print(f"[OK] Markdown exported: {md_path}")
-
-    if args.update_docs:
-        update_key_metrics(data)
-
-    print("\n[OK] Export complete!")
+    print("\n[OK] Export complete! All tables use actual measured data only.")
     return 0
 
 
