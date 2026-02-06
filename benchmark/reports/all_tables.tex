@@ -1,0 +1,49 @@
+% Constitutional AIOps Benchmark Tables
+% Generated: 2026-02-05T06:22:41.369350
+
+
+\begin{table}[h]
+\centering
+\caption{LLM Performance Comparison on Constitutional AIOps Benchmark}
+\label{tab:llm-comparison}
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Model} & \textbf{Ann. Acc (\%)} & \textbf{RCA Acc (\%)} & \textbf{BERT-F1} & \textbf{P50 (ms)} & \textbf{VRAM (GB)} \\
+\midrule
+Constitutional Aiops & 60.0 & 80.0 & 0.000 & 14237 & 15 \\
+
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+
+\begin{table}[h]
+\centering
+\caption{Latency Performance (Network-Compensated)}
+\label{tab:latency}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Model} & \textbf{P50 (ms)} & \textbf{P95 (ms)} & \textbf{P99 (ms)} & \textbf{Target} \\
+\midrule
+Constitutional Aiops & 14237 & 48319 & 63942 & <100ms (fast), 200-500ms (reasoning) \\
+
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+
+\begin{table}[h]
+\centering
+\caption{Accuracy Metrics with Confidence Intervals}
+\label{tab:accuracy}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Model} & \textbf{Annotation Acc} & \textbf{RCA Acc} & \textbf{BERT-F1} & \textbf{Sample Size} \\
+\midrule
+Constitutional Aiops & 60.0\% & 80.0\% & 0.000 & 0 \\
+
+\bottomrule
+\end{tabular}
+\end{table}

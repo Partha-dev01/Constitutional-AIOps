@@ -1,0 +1,3 @@
+# Manual Review
+
+In the manual review step, we asked Ops experts from the industry to inspect the results of the previous three automated steps, including confirming duplicate and invalid questions and examining the classification results of GPT-4. Experts were also asked to drop the questions unrelated to the Ops field. We split the dataset by n-folds and ensure each fold has at least two experts to review. By involving experts' consensus, we ensure the reliability and authority of the dataset after automated processing. The annotation guideline we used for the expert labelers are at [Annotation Guideline](../docs/Annotation%20Guideline%20for%20OpsEval%20Categorization.md).

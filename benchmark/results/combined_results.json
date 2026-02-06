@@ -1,0 +1,32 @@
+[
+  {
+    "model_name": "constitutional_aiops",
+    "model_type": "hybrid",
+    "fast_model": "qwen3:4b-instruct",
+    "reasoning_model": "qwen3:14b",
+    "vram_gb": 15,
+    "annotation_accuracy": 89.0,
+    "rca_accuracy": 87.88,
+    "overall_accuracy": 88.72,
+    "annotation_tests": 100,
+    "annotation_passed": 89,
+    "rca_tests": 33,
+    "rca_passed": 29,
+    "total_tests": 133,
+    "total_correct": 118,
+    "avg_inference_latency_ms": 6463.10,
+    "p50_latency_ms": 2815.59,
+    "p95_latency_ms": 22729.35,
+    "p99_latency_ms": 0,
+    "network_rtt_ms": 423.29,
+    "annotation_avg_latency_ms": 2496,
+    "annotation_min_latency_ms": 1200,
+    "annotation_max_latency_ms": 4547,
+    "rca_avg_latency_ms": 18485,
+    "rca_min_latency_ms": 8350,
+    "rca_max_latency_ms": 38666,
+    "dataset": "curated_150 (seed=42, English only)",
+    "temperature": 0.0,
+    "timestamp": "2026-02-06T09:37:06.196739"
+  }
+]
