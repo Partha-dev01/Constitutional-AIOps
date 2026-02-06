@@ -2,6 +2,119 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.1] - 2026-02-06
+
+### Auto-Export Pipeline + Fresh Full Benchmark
+
+**Milestone**: Auto-export pipeline, fresh full 150-test benchmark, and full 4-config ablation study with all metrics populated.
+
+#### Auto-Export Pipeline
+
+`test_5plus5.py` and `run_ablation.py` now auto-call `export_all()` from `export_metrics.py` after completing their runs. This generates all output files (Tables 1-4 in MD/LaTeX, combined results, results index) without manual intervention.
+
+#### New Functions in `export_metrics.py`
+
+| Function | Description |
+|----------|-------------|
+| `export_all(model_name)` | Main entry point - generates ALL output files |
+| `generate_ablation_table_from_json()` | Reads `ablation_results.json` → Table 4 |
+| `generate_combined_results_md()` | Renders `combined_results.json` as markdown |
+| `generate_results_index()` | Lists all result files with descriptions |
+
+#### Fresh Benchmark Results (150 tests, Jarvis Labs localhost)
+
+| Metric | Annotation | RCA | Overall |
+|--------|-----------|-----|---------|
+| **Accuracy** | 89/100 = 89.0% | 45/50 = 90.0% | **134/150 = 89.3%** |
+| **BERTScore F1** | 0.516 | 0.337 | **0.456** |
+| **Cosine Similarity** | 0.266 | 0.358 | **0.297** |
+| **Term Overlap** | 0.178 | 0.649 | **0.364** |
+
+#### Full Ablation Study Results (150 tests per config)
+
+| Configuration | Overall | BERT-F1 | Avg Latency |
+|--------------|---------|---------|-------------|
+| Full System (4B + 14B) | 88.7% | 0.458 | 7208ms |
+| Single 4B | 90.7% | 0.458 | 7250ms |
+| Single 14B | 90.0% | 0.457 | 7582ms |
+| No Structured | 90.0% | 0.458 | 7467ms |
+
+#### Files Modified
+
+| File | Changes |
+|------|---------|
+| `benchmark/scripts/export_metrics.py` | Added `export_all()`, ablation table from JSON, combined results MD, results index |
+| `benchmark/scripts/test_5plus5.py` | Auto-calls `export_all()` after `save_results()` |
+| `benchmark/scripts/run_ablation.py` | Auto-calls `export_all()` after ablation table generation |
+| `benchmark/results/FINDINGS.md` | NEW - Overall Performance analysis |
+| `docs/SESSION_STATE.md` | Updated with Session 4 fresh results |
+| `docs/CHANGELOG.md` | This entry |
+| `docs/JARVIS_LABS_DEPLOYMENT.md` | Added data transfer commands section |
+| `docs/BENCHMARK.md` | Updated with latest 150-test results + ablation |
+
+---
+
+## [0.9.0] - 2026-02-06
+
+### Multi-Metric Evaluation + Ablation Study Framework
+
+**Milestone**: Complete multi-metric evaluation pipeline (BERTScore, cosine similarity, term overlap), ablation study runner, and Jarvis Labs ML dependency setup.
+
+#### Multi-Metric Evaluation Pipeline
+
+Added 3 semantic similarity metrics alongside the existing rule-based scoring:
+
+| Metric | Library | Model | Purpose |
+|--------|---------|-------|---------|
+| BERTScore F1 | `bert-score` | `microsoft/deberta-xlarge-mnli` | Semantic similarity between expected and actual |
+| Cosine Similarity | `sentence-transformers` | `all-MiniLM-L6-v2` (384-dim) | Embedding-based similarity |
+| Term Overlap | Custom | N/A | Intersection-over-union of key terms |
+
+#### Format Normalization Fix
+
+Added `_normalize_for_comparison()` in `evaluator.py` to convert JSON metadata to natural language before semantic comparison. Without this, BERTScore was comparing raw JSON against plain text labels, producing meaningless scores.
+
+#### Ablation Study Runner
+
+Created `run_ablation.py` with 4 configurations:
+
+| Config | Fast Agent | Reasoning Agent | Purpose |
+|--------|-----------|----------------|---------|
+| `full` | qwen3:4b-instruct | qwen3:14b | Baseline hybrid system |
+| `single-4b` | qwen3:4b-instruct | qwen3:4b-instruct | Single small agent |
+| `single-14b` | qwen3:14b | qwen3:14b | Single large agent |
+| `no-structured` | qwen3:4b-instruct | qwen3:14b | No JSON metadata extraction |
+
+#### Key Bug Fixes
+
+| Bug | Root Cause | Fix |
+|-----|-----------|-----|
+| Ablation "Unknown model" | MODELS dict in runner.py is module-level, evaluated once at import | Reload `src.benchmark.runner` after `src.config` |
+| Jarvis localhost detection | Scripts checked wrong path/port | Fixed to `/home/.ollama/models` and port 6006 |
+| BERTScore tokenizer overflow | `tokenizers>=0.22` causes OverflowError | Pin `transformers>=4.40,<5.0`, `tokenizers>=0.19,<0.22` |
+| max_tests limit | Runner loaded full dataset ignoring max limits | Added slicing at runner.py lines 277-278 |
+
+#### Jarvis Labs Benchmark Setup
+
+Created `scripts/setup-jarvis-benchmark.sh` to install ML dependencies on Jarvis Labs:
+- `sentence-transformers` with all-MiniLM-L6-v2 model
+- `bert-score` with deberta-xlarge-mnli model
+- Pinned `transformers<5.0` and `tokenizers<0.22` for compatibility
+
+#### Files Created/Modified
+
+| File | Action | Description |
+|------|--------|-------------|
+| `benchmark/scripts/run_ablation.py` | CREATED | Ablation study runner (module reload fix) |
+| `benchmark/scripts/export_metrics.py` | REWRITTEN | Honest tables from actual data |
+| `scripts/setup-jarvis-benchmark.sh` | CREATED | ML dependency installer for Jarvis |
+| `src/benchmark/evaluator.py` | MODIFIED | Multi-metric pipeline + format normalization |
+| `src/benchmark/runner.py` | MODIFIED | TestCaseResult fields, max_tests slicing |
+| `docs/SCORING_METHODOLOGY.md` | CREATED | Scoring rubrics documentation |
+| `docs/DATASET_PIPELINE.md` | CREATED | Data processing flow |
+
+---
+
 ## [0.8.1] - 2026-02-06
 
 ### Fast Agent Model Switch: qwen3:4b → qwen3:4b-instruct
@@ -1495,4 +1608,4 @@ This project uses [Semantic Versioning](https://semver.org/):
 - MINOR: Backward-compatible functionality
 - PATCH: Backward-compatible bug fixes
 
-Current: **0.4.5** (Environment & container fixes)
+Current: **0.9.1** (Auto-Export Pipeline + Fresh Full Benchmark)

@@ -124,7 +124,7 @@ ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAUpDdcM1oSEwI9o+dsVbA9TDiTSoc5VvWd9hRuL7wp9
 
 ### Important: Copy These Values
 After launch, from the dashboard:
-- **SSH Command**: For terminal access (e.g., `ssh -p 11114 root@ssho.jarvislabs.ai`)
+- **SSH Command**: For terminal access (e.g., `ssh -p 11114 root@sshn.jarvislabs.ai`)
 - **API Endpoint**: For API access (e.g., `https://62d7ad3655361.notebooks.jarvislabs.net`)
 
 ---
@@ -135,10 +135,10 @@ SSH into the instance and run the setup script:
 
 ```bash
 # SSH into the instance (use the port from dashboard - currently 11114)
-ssh -i .ssh/jarvis_labs_key -p 11114 root@ssho.jarvislabs.ai
+ssh -i .ssh/jarvis_labs_key -p 11114 root@sshn.jarvislabs.ai
 
 # Or run the setup script directly
-ssh -i .ssh/jarvis_labs_key -p 11114 root@ssho.jarvislabs.ai 'bash -s' < scripts/setup-jarvis-ollama.sh
+ssh -i .ssh/jarvis_labs_key -p 11114 root@sshn.jarvislabs.ai 'bash -s' < scripts/setup-jarvis-ollama.sh
 ```
 
 ### Manual Setup (if not using script)
@@ -165,6 +165,159 @@ OLLAMA_MODELS=/home/ollama-models ollama list
 
 # 6. Verify persistence
 ls -la /home/ollama-models/
+```
+
+---
+
+## Step 4b: Setup Benchmark Dependencies (Optional)
+
+If you plan to run the benchmark evaluation on Jarvis Labs (recommended for GPU-accelerated BERTScore and cosine similarity metrics):
+
+```bash
+# Run the benchmark setup script
+ssh -i .ssh/jarvis_labs_key -p 11114 root@sshn.jarvislabs.ai 'bash -s' < scripts/setup-jarvis-benchmark.sh
+```
+
+This installs:
+- `sentence-transformers` (all-MiniLM-L6-v2 for 384-dim cosine similarity)
+- `bert-score` (microsoft/deberta-xlarge-mnli for BERTScore F1)
+- Pre-downloads model weights (~2GB total)
+
+### Running Benchmark on Jarvis Labs
+
+Running the benchmark ON Jarvis Labs is recommended because:
+1. **Zero network latency** - Ollama calls are localhost instead of HTTPS
+2. **GPU-accelerated metrics** - BERTScore and sentence-transformers use A5000 GPU
+3. **All 4 metrics populate** - rule_score, BERTScore F1, cosine similarity, term overlap
+
+```bash
+# SSH into instance
+ssh -i .ssh/jarvis_labs_key -p 11114 root@sshn.jarvislabs.ai
+
+# Clone/update repo in /home (persists on pause/resume)
+cd /home && git clone <repo-url> constitutional-aiops
+cd constitutional-aiops
+
+# Install Python project dependencies
+pip install -r requirements.txt
+
+# Quick test (5 annotation + 5 RCA)
+python benchmark/scripts/test_5plus5.py --ann=5 --rca=5
+
+# Full benchmark (100 annotation + 50 RCA, ~20 min)
+python benchmark/scripts/test_5plus5.py
+
+# Ablation study (all 4 configs, quick test)
+python benchmark/scripts/run_ablation.py --config all --ann 5 --rca 5
+
+# Full ablation study (~1.5 hours)
+python benchmark/scripts/run_ablation.py --config all
+
+# Export paper tables
+python benchmark/scripts/export_metrics.py
+```
+
+The scripts auto-detect Jarvis Labs (via `/home/.ollama/models`) and switch to `localhost:6006` (Ollama template binds to port 6006).
+
+---
+
+## Data Transfer: Local Machine ↔ Jarvis Labs
+
+### Uploading Code to Jarvis Labs
+
+Since only `/home` persists on Jarvis Labs, and you need the benchmark scripts and source code to run benchmarks directly on the instance:
+
+#### Step 1: Create a tarball (excluding large raw datasets and old results)
+
+```bash
+# From the project root on your local machine (Git Bash)
+cd /c/Users/you/Downloads/"files AIOPS NEW"/constitutional-aiops
+
+# Create tarball excluding raw datasets, node_modules, and results
+tar czf /tmp/aiops_code.tar.gz \
+  --exclude='benchmark/datasets/raw' \
+  --exclude='benchmark/results' \
+  --exclude='frontend/node_modules' \
+  --exclude='frontend/dist' \
+  --exclude='.git' \
+  --exclude='__pycache__' \
+  --exclude='*.pyc' \
+  -C .. constitutional-aiops
+```
+
+**Size**: ~60MB (includes processed datasets, source code, scripts)
+
+#### Step 2: Upload to Jarvis Labs via SCP
+
+```bash
+# SCP the tarball to Jarvis Labs
+scp -i .ssh/jarvis_labs_key -P 11114 \
+  /tmp/aiops_code.tar.gz \
+  root@sshn.jarvislabs.ai:/home/
+```
+
+#### Step 3: Extract on Jarvis Labs
+
+```bash
+# SSH into Jarvis Labs
+ssh -i .ssh/jarvis_labs_key -p 11114 root@sshn.jarvislabs.ai
+
+# Extract (overwrites existing code)
+cd /home && tar xzf aiops_code.tar.gz && rm aiops_code.tar.gz
+
+# Install Python dependencies
+cd /home/constitutional-aiops
+pip install -r requirements.txt
+```
+
+#### Step 4: Run Benchmarks on Jarvis Labs
+
+```bash
+# Quick 5+5 verification test
+python benchmark/scripts/test_5plus5.py --ann=5 --rca=5
+
+# Full 150-test benchmark (~20 min)
+python benchmark/scripts/test_5plus5.py
+
+# Full ablation study, all 4 configs (~1.5 hours)
+python benchmark/scripts/run_ablation.py --config all
+```
+
+### Copying Results Back to Local Machine
+
+After benchmarks complete, copy the results directory back to your local machine:
+
+```bash
+# From your local machine (Git Bash), copy results back
+scp -r -i .ssh/jarvis_labs_key -P 11114 \
+  root@sshn.jarvislabs.ai:/home/constitutional-aiops/benchmark/results/ \
+  benchmark/results/
+```
+
+This copies:
+- `combined_results.json` - Full benchmark summary
+- `ablation_results.json` - All ablation config results
+- `all_tables.md` / `paper_tables.md` - Auto-generated paper tables
+- `constitutional_aiops/results.json` - Per-test detailed results
+- `ablation_*/summary.json` - Per-config ablation summaries
+
+### Quick Reference: Full Transfer Cycle
+
+```bash
+# 1. Create tarball (local)
+tar czf /tmp/aiops_code.tar.gz --exclude='benchmark/datasets/raw' --exclude='benchmark/results' --exclude='frontend/node_modules' --exclude='.git' --exclude='__pycache__' -C .. constitutional-aiops
+
+# 2. Upload to Jarvis (local → remote)
+scp -i .ssh/jarvis_labs_key -P 11114 /tmp/aiops_code.tar.gz root@sshn.jarvislabs.ai:/home/
+
+# 3. Extract + install (on Jarvis)
+ssh -i .ssh/jarvis_labs_key -p 11114 root@sshn.jarvislabs.ai 'cd /home && tar xzf aiops_code.tar.gz && rm aiops_code.tar.gz && cd constitutional-aiops && pip install -r requirements.txt'
+
+# 4. Run benchmark (on Jarvis)
+ssh -i .ssh/jarvis_labs_key -p 11114 root@sshn.jarvislabs.ai 'cd /home/constitutional-aiops && python benchmark/scripts/test_5plus5.py'
+
+# 5. Copy results back (remote → local)
+scp -r -i .ssh/jarvis_labs_key -P 11114 root@sshn.jarvislabs.ai:/home/constitutional-aiops/benchmark/results/ benchmark/results/
 ```
 
 ---
@@ -388,7 +541,7 @@ Invoke-RestMethod -Uri "https://..." -Method POST -ContentType "application/json
 
 ### SSH Command
 ```bash
-ssh -i .ssh/jarvis_labs_key -p 11114 root@ssho.jarvislabs.ai
+ssh -i .ssh/jarvis_labs_key -p 11114 root@sshn.jarvislabs.ai
 ```
 
 ### Start Local Services
