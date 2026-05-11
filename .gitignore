@@ -79,7 +79,11 @@ frontend/dist/
 
 # Neo4j data
 neo4j_data/
-data/
+# Top-level data/ excluded by default (catches downloaded/generated stuff)
+# but benchmark/data/ holds the manifest.json which IS tracked.
+/data/
+!benchmark/data/
+!benchmark/data/manifest.json
 
 # Temporary
 tmp/

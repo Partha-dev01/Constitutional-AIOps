@@ -7,8 +7,12 @@ Wraps the benchmark scripts for use in FastAPI routes.
 
 import json
 import time
+import os
 import asyncio
+import hashlib
+import platform
 import statistics
+import subprocess
 from pathlib import Path
 from datetime import datetime
 from dataclasses import dataclass, asdict, field
@@ -133,6 +137,109 @@ MODELS = {
 }
 
 
+# ---------------------------------------------------------------------------
+# Run-directory tracking: append-only JSONL with fsync + resume.
+#
+# Rationale: a 7-config ablation runs ~3,500 inferences across many hours.
+# A crash, OOM, spot-instance termination, or even a kernel update can
+# annihilate the run. We persist each completed case to results.jsonl with
+# os.fsync(), so re-launching the run resumes from the last completed case.
+# ---------------------------------------------------------------------------
+
+def _capture_env() -> dict:
+    """Snapshot the execution environment for reproducibility receipts."""
+    env: dict[str, Any] = {
+        "python": platform.python_version(),
+        "platform": platform.platform(),
+        "started_at": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+    }
+    try:
+        env["git_sha"] = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], stderr=subprocess.DEVNULL
+        ).decode().strip()
+    except Exception:
+        env["git_sha"] = "unknown"
+    try:
+        dirty = subprocess.check_output(
+            ["git", "status", "--porcelain"], stderr=subprocess.DEVNULL
+        ).decode().strip()
+        env["git_dirty"] = bool(dirty)
+    except Exception:
+        env["git_dirty"] = None
+    try:
+        freeze = subprocess.check_output(
+            ["pip", "freeze"], stderr=subprocess.DEVNULL
+        )
+        env["pip_freeze_sha256"] = hashlib.sha256(freeze).hexdigest()
+    except Exception:
+        env["pip_freeze_sha256"] = "unknown"
+    return env
+
+
+def init_run_dir(label: str, base: Optional[Path] = None) -> Path:
+    """Create a timestamped run directory with config.json + env.json receipts.
+
+    Layout:
+        runs/2026-05-11T14-22-03_<label>/
+          config.json   # written by caller after this returns
+          env.json      # written here
+          results.jsonl # append-only, one record per case
+          summary.json  # written at end
+          stdout.log    # optional, caller-managed
+
+    Returns the Path to the new directory. If the directory already exists
+    (resume scenario), it is reused without overwriting.
+    """
+    ts = datetime.utcnow().strftime("%Y-%m-%dT%H-%M-%S")
+    base = base or (Path(__file__).resolve().parents[2] / "runs")
+    run_dir = base / f"{ts}_{label}"
+    run_dir.mkdir(parents=True, exist_ok=True)
+
+    env_path = run_dir / "env.json"
+    if not env_path.exists():
+        env_path.write_text(json.dumps(_capture_env(), indent=2))
+    return run_dir
+
+
+def load_completed_ids(jsonl_path: Path) -> set[str]:
+    """Read an existing results.jsonl and return the set of case_ids already done.
+
+    Tolerates a torn final write (partial JSON line) by ignoring parse errors
+    on the last line only.
+    """
+    if not jsonl_path.exists():
+        return set()
+    ids: set[str] = set()
+    with jsonl_path.open("r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                rec = json.loads(line)
+            except json.JSONDecodeError:
+                # Torn write on last line is the expected case. Stop here.
+                break
+            cid = rec.get("case_id") or rec.get("test_id")
+            if cid:
+                ids.add(cid)
+    return ids
+
+
+def append_result(jsonl_path: Path, rec: dict) -> None:
+    """Append a single result record to JSONL, flushed and fsync'd.
+
+    The fsync is non-negotiable: without it, a power loss or kernel panic
+    can corrupt the last several hundred KB of buffered writes, breaking
+    the resume mechanism on next launch.
+    """
+    jsonl_path.parent.mkdir(parents=True, exist_ok=True)
+    with jsonl_path.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(rec) + "\n")
+        f.flush()
+        os.fsync(f.fileno())
+
+
 class BenchmarkRunner:
     """
     Benchmark runner for Constitutional AIOps evaluation.
@@ -246,6 +353,8 @@ class BenchmarkRunner:
         self,
         config: BenchmarkConfig,
         progress_callback: Optional[callable] = None,
+        run_dir: Optional[Path] = None,
+        run_label: Optional[str] = None,
     ) -> BenchmarkResult:
         """
         Run a complete benchmark for a model.
@@ -253,12 +362,33 @@ class BenchmarkRunner:
         Args:
             config: Benchmark configuration
             progress_callback: Optional callback for progress updates
+            run_dir: Optional explicit run directory. If None, one is created at
+                runs/<UTC-timestamp>_<run_label>/. If the dir exists with a
+                non-empty results.jsonl, the benchmark RESUMES from the last
+                completed case_id rather than starting fresh.
+            run_label: Label for the auto-created run dir. Defaults to model_name.
 
         Returns:
             BenchmarkResult with all metrics
         """
         if self.is_running:
             raise RuntimeError("Another benchmark is already running")
+
+        # Resolve run directory + receipt files
+        if run_dir is None:
+            label = run_label or f"bench_{config.model_name}"
+            run_dir = init_run_dir(label)
+        else:
+            run_dir = Path(run_dir)
+            run_dir.mkdir(parents=True, exist_ok=True)
+            if not (run_dir / "env.json").exists():
+                (run_dir / "env.json").write_text(json.dumps(_capture_env(), indent=2))
+        # Persist config (overwrite-on-resume is fine — same config expected)
+        (run_dir / "config.json").write_text(json.dumps(asdict(config), indent=2))
+        results_jsonl = run_dir / "results.jsonl"
+        completed_ids = load_completed_ids(results_jsonl)
+        if completed_ids:
+            print(f"[runner] resuming from {run_dir.name}: {len(completed_ids)} cases already done")
 
         self.is_running = True
         result = BenchmarkResult(
@@ -311,11 +441,51 @@ class BenchmarkRunner:
                 annotation_tests = self.load_dataset("annotation")[:config.max_annotation_tests]
                 rca_tests = self.load_dataset("rca")[:config.max_rca_tests]
 
-            test_results = []
-            latencies = []
+            test_results: list[TestCaseResult] = []
+            latencies: list[float] = []
+
+            # Hydrate test_results / latencies from any prior JSONL (resume)
+            if completed_ids:
+                with results_jsonl.open("r", encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        if not line:
+                            continue
+                        try:
+                            rec = json.loads(line)
+                        except json.JSONDecodeError:
+                            break  # torn final line
+                        # Reconstruct TestCaseResult so summary aggregates correctly
+                        try:
+                            tr = TestCaseResult(
+                                test_id=rec["test_id"],
+                                task_type=rec["task_type"],
+                                correct=rec["correct"],
+                                inference_latency_ms=rec.get("inference_latency_ms", 0.0),
+                                total_latency_ms=rec.get("total_latency_ms", 0.0),
+                                actual_output=rec.get("actual_output", ""),
+                                expected_output=rec.get("expected_output", ""),
+                                timestamp=rec.get("timestamp", ""),
+                                rule_score=rec.get("rule_score", 0.0),
+                                rule_max_score=rec.get("rule_max_score", 3.0),
+                                bert_f1=rec.get("bert_f1", 0.0),
+                                cosine_similarity=rec.get("cosine_similarity", 0.0),
+                                term_overlap=rec.get("term_overlap", 0.0),
+                                source=rec.get("source", ""),
+                            )
+                            test_results.append(tr)
+                            if tr.inference_latency_ms > 0:
+                                latencies.append(tr.inference_latency_ms)
+                        except KeyError:
+                            continue
 
             # Run annotation tests
             for i, test_case in enumerate(annotation_tests):
+                test_id = test_case.get("id", f"ann_{i}")
+                if test_id in completed_ids:
+                    if progress_callback:
+                        progress_callback(f"annotation", i + 1, len(annotation_tests))
+                    continue
                 if progress_callback:
                     progress_callback(f"annotation", i + 1, len(annotation_tests))
 
@@ -323,12 +493,9 @@ class BenchmarkRunner:
                     test_result = await self._run_annotation_test(
                         test_case, model_config, config.temperature
                     )
-                    test_results.append(test_result)
-                    if test_result.inference_latency_ms > 0:
-                        latencies.append(test_result.inference_latency_ms)
                 except Exception as e:
-                    test_results.append(TestCaseResult(
-                        test_id=test_case.get("id", f"ann_{i}"),
+                    test_result = TestCaseResult(
+                        test_id=test_id,
                         task_type="annotation",
                         correct=False,
                         inference_latency_ms=0,
@@ -336,10 +503,22 @@ class BenchmarkRunner:
                         actual_output=f"Error: {e}",
                         expected_output=str(test_case.get("expected", "")),
                         timestamp=datetime.utcnow().isoformat(),
-                    ))
+                    )
+                test_results.append(test_result)
+                if test_result.inference_latency_ms > 0:
+                    latencies.append(test_result.inference_latency_ms)
+                # Persist immediately (fsync) — survives crash mid-loop
+                rec = asdict(test_result)
+                rec["case_id"] = test_result.test_id  # alias for resume scanner
+                append_result(results_jsonl, rec)
 
             # Run RCA tests
             for i, test_case in enumerate(rca_tests):
+                test_id = test_case.get("id", f"rca_{i}")
+                if test_id in completed_ids:
+                    if progress_callback:
+                        progress_callback(f"rca", i + 1, len(rca_tests))
+                    continue
                 if progress_callback:
                     progress_callback(f"rca", i + 1, len(rca_tests))
 
@@ -348,12 +527,9 @@ class BenchmarkRunner:
                         test_case, model_config, config.temperature,
                         inject_graph_context=config.inject_graph_context,
                     )
-                    test_results.append(test_result)
-                    if test_result.inference_latency_ms > 0:
-                        latencies.append(test_result.inference_latency_ms)
                 except Exception as e:
-                    test_results.append(TestCaseResult(
-                        test_id=test_case.get("id", f"rca_{i}"),
+                    test_result = TestCaseResult(
+                        test_id=test_id,
                         task_type="rca",
                         correct=False,
                         inference_latency_ms=0,
@@ -361,7 +537,13 @@ class BenchmarkRunner:
                         actual_output=f"Error: {e}",
                         expected_output=str(test_case.get("expected_root_cause", "")),
                         timestamp=datetime.utcnow().isoformat(),
-                    ))
+                    )
+                test_results.append(test_result)
+                if test_result.inference_latency_ms > 0:
+                    latencies.append(test_result.inference_latency_ms)
+                rec = asdict(test_result)
+                rec["case_id"] = test_result.test_id
+                append_result(results_jsonl, rec)
 
             # Calculate metrics
             annotation_results = [r for r in test_results if r.task_type == "annotation"]
@@ -398,6 +580,13 @@ class BenchmarkRunner:
             result.completed_at = datetime.utcnow().isoformat()
 
         finally:
+            # Always write summary.json (partial state if failed — that's useful)
+            try:
+                (run_dir / "summary.json").write_text(
+                    json.dumps(result.to_dict(), indent=2, default=str)
+                )
+            except Exception as summary_err:  # never fail the run on summary write
+                print(f"[runner] WARNING: could not write summary.json: {summary_err}")
             self.is_running = False
             await self.close()
 

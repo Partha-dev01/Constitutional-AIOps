@@ -42,6 +42,10 @@ python-dateutil>=2.8.2
 numpy>=1.26.0
 pandas>=2.1.0
 
+# Statistical analysis (bootstrap CIs + paired tests for paper Table 6, Section 5.1.1)
+# Required by src/benchmark/evaluator.py: bootstrap_ci, stratified_bootstrap_ci, mcnemar_test
+scipy>=1.10.0
+
 # Docker SDK (for container discovery and demo mode)
 docker>=7.0.0
 
