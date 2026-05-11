@@ -3,18 +3,220 @@ Constitutional AIOps - Benchmark Evaluator Module
 
 Provides evaluation metrics for LLM benchmark results.
 Uses BERTScore for semantic similarity and exact/partial match for accuracy.
+
+Also exposes module-level statistical utilities for paper Table 6 and the
+new Section 5.1.1 "Statistical Methodology":
+  - bootstrap_ci             — BCa percentile interval for a single accuracy
+  - stratified_bootstrap_ci  — resamples within each source dataset
+  - mcnemar_test             — paired test for ablation row vs baseline
+  - cohens_h                 — effect size for paired proportion deltas
+
+Per Miller et al. 2025 (arXiv:2503.01747), CLT/Wilson intervals are NOT safe
+for LLM evals with N<300. We use percentile/BCa bootstrap throughout.
 """
 
 import json
 import logging
+import math
 import re
 from dataclasses import dataclass, asdict, field
 from typing import Any, Optional
+
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
 # BERTScore model - using deberta for high accuracy
 BERTSCORE_MODEL = "microsoft/deberta-xlarge-mnli"
+
+
+# ---------------------------------------------------------------------------
+# Statistical utilities (module-level, importable by analysis scripts).
+# ---------------------------------------------------------------------------
+
+def bootstrap_ci(
+    correct_flags: list,
+    n_resamples: int = 10_000,
+    ci: float = 0.95,
+    method: str = "BCa",
+    seed: int = 42,
+) -> tuple[float, float]:
+    """Bootstrap confidence interval for accuracy on per-case correct/incorrect flags.
+
+    Args:
+        correct_flags: per-case booleans (True = correct).
+        n_resamples: 10k standard for paper-final tables.
+        ci: confidence level (0.95 → 95% CI).
+        method: 'BCa' (default, bias-corrected) or 'percentile' (degenerate-safe).
+        seed: RNG seed for reproducibility.
+
+    Returns:
+        (low, high) interval endpoints for the accuracy.
+
+    Notes:
+        - When all flags are identical (all correct / all wrong), BCa is
+          undefined; falls back to point estimate.
+        - Uses scipy.stats.bootstrap when available, else a numpy fallback.
+    """
+    arr = np.asarray(correct_flags, dtype=np.float64)
+    if arr.size == 0:
+        return (float("nan"), float("nan"))
+    if arr.min() == arr.max():
+        return (float(arr.mean()), float(arr.mean()))
+
+    try:
+        from scipy.stats import bootstrap as _bootstrap  # type: ignore
+        res = _bootstrap(
+            (arr,),
+            statistic=np.mean,
+            n_resamples=n_resamples,
+            confidence_level=ci,
+            method=method,
+            random_state=np.random.default_rng(seed),
+            vectorized=True,
+        )
+        return (float(res.confidence_interval.low),
+                float(res.confidence_interval.high))
+    except ImportError:
+        # Numpy-only percentile bootstrap (no BCa correction)
+        rng = np.random.default_rng(seed)
+        means = np.empty(n_resamples)
+        for i in range(n_resamples):
+            sample = rng.choice(arr, size=arr.size, replace=True)
+            means[i] = sample.mean()
+        alpha = (1.0 - ci) / 2.0
+        return (float(np.quantile(means, alpha)),
+                float(np.quantile(means, 1.0 - alpha)))
+
+
+def stratified_bootstrap_ci(
+    correct_flags: list,
+    sources: list,
+    n_resamples: int = 10_000,
+    ci: float = 0.95,
+    seed: int = 42,
+) -> tuple[float, float]:
+    """Stratified bootstrap that resamples WITHIN each source dataset.
+
+    Preserves the per-source mixture proportions (138 HDFS, 80 LEMMA-RCA, etc.)
+    that motivated the curated benchmark in the first place. Use for the
+    headline "overall accuracy [CI]" cell on heterogeneous mixed-source benches.
+
+    Args:
+        correct_flags: per-case booleans.
+        sources: per-case source label (parallel to correct_flags).
+        n_resamples: 10k standard.
+        ci: confidence level.
+        seed: RNG seed.
+
+    Returns:
+        (low, high) interval endpoints (percentile method).
+    """
+    if len(correct_flags) != len(sources):
+        raise ValueError("correct_flags and sources must have same length")
+    if len(correct_flags) == 0:
+        return (float("nan"), float("nan"))
+
+    rng = np.random.default_rng(seed)
+    flags = np.asarray(correct_flags, dtype=np.float64)
+    src = np.asarray(sources)
+    idx_by_src = {s: np.where(src == s)[0] for s in np.unique(src)}
+
+    means = np.empty(n_resamples, dtype=np.float64)
+    for b in range(n_resamples):
+        picked = np.concatenate([
+            rng.choice(idx, size=len(idx), replace=True)
+            for idx in idx_by_src.values()
+        ])
+        means[b] = flags[picked].mean()
+
+    alpha = (1.0 - ci) / 2.0
+    return (float(np.quantile(means, alpha)),
+            float(np.quantile(means, 1.0 - alpha)))
+
+
+def cohens_h(p1: float, p2: float) -> float:
+    """Cohen's h effect size for paired proportion difference.
+
+    Standard interpretation:
+        |h| < 0.2  : negligible
+        0.2-0.5    : small
+        0.5-0.8    : medium
+        > 0.8      : large
+
+    Use alongside p-values from mcnemar_test() to distinguish
+    "statistically significant but tiny" effects (our graph row,
+    expected h ~ 0.09) from genuinely meaningful drops
+    (the no-system-prompt row, expected h ~ 1.0).
+    """
+    p1 = max(0.0, min(1.0, float(p1)))
+    p2 = max(0.0, min(1.0, float(p2)))
+    return 2.0 * math.asin(math.sqrt(p1)) - 2.0 * math.asin(math.sqrt(p2))
+
+
+def mcnemar_test(baseline_flags: list, variant_flags: list) -> dict:
+    """Paired McNemar test: did the variant differ from the baseline?
+
+    For each test case, compute the agreement table:
+        b = baseline_correct AND variant_wrong  (variant lost)
+        c = baseline_wrong   AND variant_correct (variant won)
+    McNemar's exact p-value comes from a binomial test on (b+c) trials with
+    success probability 0.5. Reports two-sided p.
+
+    Use this for every ablation-row vs Full-Hybrid comparison. The CRITICAL
+    expected result is the graph ablation row producing p > 0.05 — that lets
+    us say "graph drop is not statistically distinguishable from noise at
+    this sample size."
+
+    Returns:
+        dict with keys: n, b, c, p_value, baseline_acc, variant_acc,
+                       delta, cohens_h.
+    """
+    if len(baseline_flags) != len(variant_flags):
+        raise ValueError("baseline and variant must have same length")
+    n = len(baseline_flags)
+    if n == 0:
+        return {"n": 0, "b": 0, "c": 0, "p_value": float("nan"),
+                "baseline_acc": float("nan"), "variant_acc": float("nan"),
+                "delta": 0.0, "cohens_h": 0.0}
+
+    bf = np.asarray(baseline_flags, dtype=bool)
+    vf = np.asarray(variant_flags, dtype=bool)
+    b = int(np.sum(bf & ~vf))   # baseline correct, variant wrong
+    c = int(np.sum(~bf & vf))   # baseline wrong, variant correct
+
+    # Exact binomial two-sided p-value on discordant pairs
+    if b + c == 0:
+        p_value = 1.0
+    else:
+        try:
+            from scipy.stats import binomtest  # type: ignore
+            p_value = float(binomtest(min(b, c), n=b + c, p=0.5,
+                                       alternative="two-sided").pvalue)
+        except ImportError:
+            # Fallback: chi-square continuity-corrected approximation
+            try:
+                from scipy.stats import chi2  # type: ignore
+                stat = (abs(b - c) - 1) ** 2 / (b + c)
+                p_value = float(1.0 - chi2.cdf(stat, df=1))
+            except ImportError:
+                p_value = float("nan")
+
+    base_acc = float(bf.mean())
+    var_acc = float(vf.mean())
+    return {
+        "n": n,
+        "b": b,
+        "c": c,
+        "p_value": p_value,
+        "baseline_acc": base_acc,
+        "variant_acc": var_acc,
+        "delta": var_acc - base_acc,
+        "cohens_h": cohens_h(var_acc, base_acc),
+    }
+
+
+# ---------------------------------------------------------------------------
 
 
 @dataclass
