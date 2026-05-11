@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-05-11T18:37:54Z",
+  "generated_at": "2026-05-11T19:22:33Z",
   "generator": {
-    "git_sha": "4a199d676da8d00b149d4195b7ec67249e8c4b54",
+    "git_sha": "5c9d01132a4240bb3298a14fd9242a489e25f35e",
     "script": "scripts/build_manifest.py"
   },
   "sources": [
@@ -51,8 +51,8 @@
     },
     {
       "path": "benchmark/scripts/prepare_datasets.py",
-      "sha256": "8793be5188096467f5869117ae367f077678a5b88a762a4536bcb681bf2beefb",
-      "size_bytes": 55251,
+      "sha256": "1cace8dd1c543de68fb0df91816dcf083861ff9d3466891e6bb033cb5961e352",
+      "size_bytes": 59040,
       "kind": "script"
     },
     {
