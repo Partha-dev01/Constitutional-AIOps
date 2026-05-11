@@ -2,12 +2,16 @@
 """
 Constitutional AIOps - Full Benchmark Test
 
-Runs the curated 150-sample benchmark (100 annotation + 33 RCA) with
-detailed debug output. Saves structured JSON results to benchmark/results/.
+Runs a curated benchmark with detailed debug output.
+Saves structured JSON results to benchmark/results/.
 
 Uses qwen3:4b-instruct for annotation and qwen3:14b for RCA.
 
-Usage: python benchmark/scripts/test_5plus5.py
+Usage:
+    python benchmark/scripts/test_5plus5.py                       # Default curated_150
+    python benchmark/scripts/test_5plus5.py --dataset benchmark_500_seed42.json
+    python benchmark/scripts/test_5plus5.py --dataset latest      # Auto-detect latest
+    python benchmark/scripts/test_5plus5.py --ann=5 --rca=5       # Quick smoke test
 """
 
 import os
@@ -47,7 +51,7 @@ from src.benchmark.runner import BenchmarkRunner, BenchmarkConfig, BenchmarkStat
 from src.benchmark.evaluator import BenchmarkEvaluator
 
 
-def save_results(result, ann_results, rca_results):
+def save_results(result, ann_results, rca_results, dataset_label="curated_150 (seed=42, English only)"):
     """Save benchmark results to benchmark/results/ as structured JSON.
 
     Runs multi-metric evaluation (BERTScore, cosine similarity, term overlap)
@@ -155,7 +159,7 @@ def save_results(result, ann_results, rca_results):
         "term_overlap": all_overlap,
         "annotation_term_overlap": ann_overlap,
         "rca_term_overlap": rca_overlap,
-        "dataset": "curated_150 (seed=42, English only)",
+        "dataset": dataset_label,
         "temperature": 0.0,
         "determinism": "temperature=0.0 + seed=hash(prompt) % 2^32",
         "endpoint": JARVIS_URL,
@@ -194,14 +198,26 @@ def save_results(result, ann_results, rca_results):
 
 async def run_5plus5():
     """Run the full benchmark (or a subset via CLI args) with detailed debug output."""
-    # Parse CLI args for test counts
+    # Parse CLI args
     max_ann = int(os.environ.get("MAX_ANNOTATION_TESTS", "100"))
     max_rca = int(os.environ.get("MAX_RCA_TESTS", "50"))
+    dataset_file = ""
     for arg in sys.argv[1:]:
         if arg.startswith("--ann="):
             max_ann = int(arg.split("=")[1])
         elif arg.startswith("--rca="):
             max_rca = int(arg.split("=")[1])
+        elif arg.startswith("--dataset="):
+            dataset_file = arg.split("=")[1]
+
+    # Resolve dataset
+    if dataset_file == "latest":
+        dataset_file = "benchmark_latest"
+        dataset_label = "latest available benchmark"
+    elif dataset_file:
+        dataset_label = dataset_file
+    else:
+        dataset_label = "curated_150 (seed=42, English only)"
 
     print("=" * 70)
     print("CONSTITUTIONAL AIOPS - BENCHMARK TEST")
@@ -210,7 +226,7 @@ async def run_5plus5():
     print(f"Fast Model:      {os.environ['FAST_AGENT_MODEL']}")
     print(f"Reasoning Model: {os.environ['REASONING_AGENT_MODEL']}")
     print(f"Endpoint:        {JARVIS_URL}")
-    print(f"Dataset:         curated 150-sample (seed=42, English only)")
+    print(f"Dataset:         {dataset_label}")
     print(f"Test counts:     {max_ann} annotation + {max_rca} RCA")
     print("=" * 70)
 
@@ -221,7 +237,8 @@ async def run_5plus5():
         temperature=0.0,
         timeout_seconds=300,
         calibrate_network=True,
-        use_curated_150=True,
+        use_curated_150=not bool(dataset_file),
+        curated_dataset=dataset_file,
     )
 
     runner = BenchmarkRunner()
@@ -286,7 +303,7 @@ async def run_5plus5():
             print("=" * 70)
 
             # Save results to benchmark/results/ directory
-            save_results(result, ann_results, rca_results)
+            save_results(result, ann_results, rca_results, dataset_label=dataset_label)
 
             # Auto-generate all output tables (all_tables.md, paper_tables, index, etc.)
             try:

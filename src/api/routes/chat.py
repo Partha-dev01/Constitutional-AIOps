@@ -254,30 +254,39 @@ async def _build_runtime_context(request: Request) -> str:
                 container_list = []
                 for container in all_containers:
                     if container.name in _monitored_containers:
-                        status_icon = "🟢" if container.status == "running" else "🔴"
-                        container_list.append(f"  - {container.name}: {status_icon} {container.status}")
+                        status_str = "RUNNING" if container.status == "running" else container.status.upper()
+                        container_list.append(f"  - {container.name}: {status_str}")
 
                 if container_list:
                     context_parts.append("## Current Container Status\n" + "\n".join(container_list))
-                docker_client.close()
+                else:
+                    context_parts.append("## Current Container Status\nNo monitored containers found. Docker is running but no AIOps containers are active.")
             except Exception as e:
-                logger.debug(f"Failed to get container status: {e}")
+                logger.warning(f"Failed to get container status: {e}")
+                context_parts.append(f"## Current Container Status\nFailed to query containers: {e}")
+            finally:
                 docker_client.close()
+        else:
+            context_parts.append("## Current Container Status\nDocker is not available. Cannot query container status.")
     except Exception as e:
-        logger.debug(f"Container context unavailable: {e}")
+        logger.warning(f"Container context unavailable: {e}")
+        context_parts.append("## Current Container Status\nDocker connection unavailable.")
 
     # 2. LLM Agent Health
     model_router = getattr(request.app.state, "model_router", None)
     if model_router:
         try:
             health = await model_router.health_check()
-            fast_status = "🟢 Online" if health.get("fast_agent") else "🔴 Offline"
-            reasoning_status = "🟢 Online" if health.get("reasoning_agent") else "🔴 Offline"
+            fast_status = "ONLINE" if health.get("fast_agent") else "OFFLINE"
+            reasoning_status = "ONLINE" if health.get("reasoning_agent") else "OFFLINE"
             context_parts.append(
                 f"## LLM Agent Status\n  - Fast Agent (Qwen3-4B): {fast_status}\n  - Reasoning Agent (Qwen3-14B): {reasoning_status}"
             )
         except Exception as e:
-            logger.debug(f"Agent health context unavailable: {e}")
+            logger.warning(f"Agent health context unavailable: {e}")
+            context_parts.append("## LLM Agent Status\n  - Health check failed. Agents may be unavailable.")
+    else:
+        context_parts.append("## LLM Agent Status\n  - Model router not initialized.")
 
     # 3. Demo Mode Status
     try:

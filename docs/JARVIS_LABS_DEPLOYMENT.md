@@ -4,7 +4,8 @@
 > **GPU**: A5000 (24GB VRAM) - $0.49/hr
 > **Storage**: 100GB recommended
 > **Setup Time**: ~15 minutes
-> **Models**: Qwen3-4B + Qwen3-14B (simultaneous)
+> **Models**: Qwen3-4B-Instruct + Qwen3-14B (simultaneous)
+> **Last Updated**: 2026-03-01
 
 This guide explains how to run Constitutional AIOps with LLMs on Jarvis Labs while keeping all other services (frontend, backend, Neo4j, monitoring) running locally for easy debugging.
 
@@ -50,7 +51,7 @@ This guide explains how to run Constitutional AIOps with LLMs on Jarvis Labs whi
 │  ┌─────────────────────────────────────────────────────────┐    │
 │  │                     Ollama Server                       │    │
 │  │  ┌─────────────────┐  ┌─────────────────────┐          │    │
-│  │  │ qwen3:4b        │  │ qwen3:14b           │          │    │
+│  │  │ qwen3:4b-instruct        │  │ qwen3:14b           │          │    │
 │  │  │ (Fast Agent)    │  │ (Reasoning Agent)   │          │    │
 │  │  │ ~3GB VRAM       │  │ ~9GB VRAM           │          │    │
 │  │  └─────────────────┘  └─────────────────────┘          │    │
@@ -69,7 +70,7 @@ This guide explains how to run Constitutional AIOps with LLMs on Jarvis Labs whi
 
 | Role | Model | VRAM | Download Size |
 |------|-------|------|---------------|
-| Fast Agent | qwen3:4b | ~3 GB | ~2.5 GB |
+| Fast Agent | qwen3:4b-instruct | ~3 GB | ~2.5 GB (instruct variant, no thinking mode overhead) |
 | Reasoning Agent | qwen3:14b | ~9 GB | ~9.3 GB |
 
 **Why Qwen3?** Research shows Qwen3-4B outperforms Qwen2.5-7B on reasoning benchmarks:
@@ -155,7 +156,7 @@ OLLAMA_MODELS=/home/ollama-models ollama serve &
 sleep 5
 
 # 3. Pull Fast Agent model (~2.5GB, ~1-2 min)
-OLLAMA_MODELS=/home/ollama-models ollama pull qwen3:4b
+OLLAMA_MODELS=/home/ollama-models ollama pull qwen3:4b-instruct
 
 # 4. Pull Reasoning Agent model (~9.3GB, ~5-8 min)
 OLLAMA_MODELS=/home/ollama-models ollama pull qwen3:14b
@@ -335,7 +336,7 @@ $response.models | Format-Table name, size
 
 # Test Fast Agent
 $body = @{
-    model = "qwen3:4b"
+    model = "qwen3:4b-instruct"
     messages = @(@{role = "user"; content = "Say hello"})
 } | ConvertTo-Json -Depth 3
 
@@ -371,7 +372,7 @@ curl https://[YOUR-ENDPOINT].notebooks.jarvislabs.net/api/tags
 # Test Fast Agent
 curl -X POST https://[YOUR-ENDPOINT].notebooks.jarvislabs.net/v1/chat/completions \
   -H "Content-Type: application/json" \
-  -d '{"model": "qwen3:4b", "messages": [{"role": "user", "content": "Say hello"}]}'
+  -d '{"model": "qwen3:4b-instruct", "messages": [{"role": "user", "content": "Say hello"}]}'
 
 # Test Reasoning Agent
 curl -X POST https://[YOUR-ENDPOINT].notebooks.jarvislabs.net/v1/chat/completions \
@@ -505,7 +506,7 @@ ls -la /home/ollama-models/                      # Check storage
 Models were not stored in /home. Re-run the setup:
 ```bash
 export OLLAMA_MODELS=/home/ollama-models
-OLLAMA_MODELS=/home/ollama-models ollama pull qwen3:4b
+OLLAMA_MODELS=/home/ollama-models ollama pull qwen3:4b-instruct
 OLLAMA_MODELS=/home/ollama-models ollama pull qwen3:14b
 ```
 
@@ -564,6 +565,114 @@ docker compose logs -f backend
 OLLAMA_MODELS=/home/ollama-models ollama list
 OLLAMA_MODELS=/home/ollama-models ollama ps
 ```
+
+---
+
+## Archiving & Restoring the Instance
+
+### Why Archive?
+
+When you're done with an instance and plan to **delete** it (not just pause), archive everything first. This preserves:
+- Full project source code, benchmark results, and datasets
+- Command history and environment configuration
+- Exact Python package versions (`pip freeze`)
+- Ollama model metadata (names, sizes, hashes — NOT the ~14GB weight files)
+- System info (OS, GPU, CUDA versions) for reproducibility
+
+### Archive Contents
+
+```
+jarvis_archive.zip (~74MB)
+├── archive_meta/
+│   ├── pip_freeze.txt          ← Exact Python package versions
+│   ├── python_version.txt      ← Python version
+│   ├── system_info.txt         ← OS, kernel, GPU, CUDA versions
+│   ├── ollama_models.txt       ← Model names, sizes, hashes
+│   ├── ollama_show_4b.txt      ← Qwen3-4B model config/parameters
+│   ├── ollama_show_14b.txt     ← Qwen3-14B model config/parameters
+│   ├── bash_history.txt        ← Full command history
+│   ├── env_vars.txt            ← Environment variables
+│   ├── bashrc_backup           ← .bashrc with custom exports
+│   ├── disk_usage.txt          ← Storage summary
+│   ├── file_tree.txt           ← Directory structure snapshot
+│   └── apt_packages.txt        ← Installed system packages
+├── constitutional-aiops/       ← Full project
+│   ├── src/                    ← Backend source code
+│   ├── benchmark/              ← Scripts, datasets, results
+│   ├── docs/                   ← Documentation
+│   ├── frontend/               ← React frontend
+│   └── ...
+├── *.log                       ← Benchmark/ablation logs
+├── *.tar                       ← Previous result snapshots
+└── .ollama/                    ← Ollama config (keys, history — NOT model weights)
+```
+
+**Excluded** (re-downloadable):
+- Ollama model blobs (~14GB) — `ollama pull qwen3:4b-instruct && ollama pull qwen3:14b`
+- HuggingFace model cache (~5.8GB) — re-downloaded on first benchmark run
+- Python `__pycache__` directories
+
+### Creating an Archive (Before Deletion)
+
+```bash
+# 1. SSH into the instance
+ssh -i .ssh/jarvis_labs_key -p <PORT> root@<HOST>
+
+# 2. Capture environment metadata
+mkdir -p /home/archive_meta
+pip freeze > /home/archive_meta/pip_freeze.txt
+python3 --version > /home/archive_meta/python_version.txt 2>&1
+uname -a > /home/archive_meta/system_info.txt
+cat /etc/os-release >> /home/archive_meta/system_info.txt 2>/dev/null
+nvidia-smi >> /home/archive_meta/system_info.txt 2>/dev/null
+ollama list > /home/archive_meta/ollama_models.txt 2>/dev/null
+ollama show qwen3:4b-instruct > /home/archive_meta/ollama_show_4b.txt 2>/dev/null
+ollama show qwen3:14b > /home/archive_meta/ollama_show_14b.txt 2>/dev/null
+cp ~/.bash_history /home/archive_meta/bash_history.txt 2>/dev/null
+env | sort > /home/archive_meta/env_vars.txt
+cp ~/.bashrc /home/archive_meta/bashrc_backup 2>/dev/null
+df -h > /home/archive_meta/disk_usage.txt
+du -sh /home/*/ >> /home/archive_meta/disk_usage.txt 2>/dev/null
+dpkg --get-selections > /home/archive_meta/apt_packages.txt 2>/dev/null
+
+# 3. Create zip (excluding model weights)
+cd /home && zip -r /home/jarvis_archive.zip \
+  archive_meta/ constitutional-aiops/ \
+  .ollama/history .ollama/id_ed25519 .ollama/id_ed25519.pub \
+  .config/ .jupyter/ .local/ \
+  *.log *.tar *.ipynb \
+  -x "*ollama*/blobs/*" -x "*ollama*/manifests/*" \
+  -x "*__pycache__/*" -x "*.pyc" -x "*/.git/*" -x "*/node_modules/*"
+
+# 4. Download to local machine (from local Git Bash)
+scp -i .ssh/jarvis_labs_key -P <PORT> \
+  root@<HOST>:/home/jarvis_archive.zip \
+  "c:/Users/partha/Downloads/files AIOPS NEW/jarvis_archive.zip"
+```
+
+### Restoring from Archive (On a New Instance)
+
+```bash
+# 1. Upload archive to new instance (from local Git Bash)
+scp -i .ssh/jarvis_labs_key -P <PORT> \
+  "c:/Users/partha/Downloads/files AIOPS NEW/jarvis_archive.zip" \
+  root@<HOST>:/home/
+
+# 2. SSH into the new instance
+ssh -i .ssh/jarvis_labs_key -p <PORT> root@<HOST>
+
+# 3. Extract and restore
+cd /home && unzip jarvis_archive.zip
+bash constitutional-aiops/scripts/restore-jarvis-from-archive.sh
+```
+
+The restore script (`scripts/restore-jarvis-from-archive.sh`) automatically:
+1. Verifies archive extraction
+2. Restores `.bashrc` environment variables
+3. Pulls Ollama models (qwen3:4b-instruct + qwen3:14b)
+4. Installs Python dependencies from `requirements.txt`
+5. Installs benchmark ML packages (sentence-transformers, bert-score)
+6. Runs verification checks
 
 ---
 

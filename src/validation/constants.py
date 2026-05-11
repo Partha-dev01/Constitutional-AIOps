@@ -1,7 +1,7 @@
 """
 Constitutional AIOps - Validation Constants
 
-Source of Truth: docs/KEY_METRICS.md, Research_V6.tex
+Source of Truth: docs/KEY_METRICS.md, Research_V7.tex
 These values must match the documentation exactly.
 
 This module centralizes all performance targets, accuracy metrics, and
@@ -12,7 +12,7 @@ __version__ = "0.4.0"
 
 
 class PerformanceTargets:
-    """Performance targets from Research_V6.tex Section 5."""
+    """Performance targets from Research_V7.tex Section 5."""
 
     # Latency targets (P95)
     FAST_AGENT_LATENCY_P95_MS = 100  # <100ms
@@ -24,7 +24,7 @@ class PerformanceTargets:
 
 
 class AccuracyTargets:
-    """Accuracy targets from Research_V6.tex Section 5.2."""
+    """Accuracy targets from Research_V7.tex Section 5.2."""
 
     # Annotation accuracy by telemetry type
     LOG_ANNOTATION_MIN = 0.90
@@ -44,7 +44,7 @@ class AccuracyTargets:
 
 
 class CompressionMetrics:
-    """Token compression metrics from Research_V6.tex Section 4.3."""
+    """Token compression metrics from Research_V7.tex Section 4.3."""
 
     # Compression rate
     TOKEN_COMPRESSION_RATE = 0.92  # 92%
@@ -57,7 +57,7 @@ class CompressionMetrics:
 
 
 class MemorySystemConfig:
-    """Memory system configuration from Research_V6.tex Section 4.2."""
+    """Memory system configuration from Research_V7.tex Section 4.2."""
 
     # Embedding configuration
     EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
@@ -76,7 +76,7 @@ class MemorySystemConfig:
 
 
 class ConstitutionalAIConfig:
-    """Constitutional AI configuration from Research_V6.tex Section 4.1."""
+    """Constitutional AI configuration from Research_V7.tex Section 4.1."""
 
     # Confidence thresholds for authorization matrix
     AUTO_THRESHOLD = 0.90  # >0.90: AUTOMATIC (audit only)
@@ -97,7 +97,7 @@ class ConstitutionalAIConfig:
 
 
 class VRAMConfig:
-    """VRAM allocation from Research_V6.tex Section 3.2."""
+    """VRAM allocation from Research_V7.tex Section 3.2."""
 
     # Fast Agent (Qwen3-4B Q4_K_M)
     FAST_AGENT_MODEL_GB = 2.5
@@ -135,7 +135,7 @@ class ObservabilityVersions:
 
 
 class ResearchGaps:
-    """Research gaps addressed from Research_V6.tex Section 2."""
+    """Research gaps addressed from Research_V7.tex Section 2."""
 
     RG1 = "Automated Knowledge Extraction"
     RG2 = "Graph-Based Operational Knowledge"

@@ -1,23 +1,27 @@
 #!/usr/bin/env python3
 """
-Constitutional AIOps - Ablation Study Runner
+Constitutional AIOps - Ablation Study Runner (v2.0)
 
-Runs the full 150-test benchmark under different configurations to measure
+Runs the benchmark under different configurations to measure
 the contribution of each architectural component.
 
-Configurations:
-  full        - Baseline: Qwen3-4B-instruct (ann) + Qwen3-14B (rca)
-  single-4b   - Single agent: Qwen3-4B-instruct for BOTH tasks
-  single-14b  - Single agent: Qwen3-14B for BOTH tasks
-  no-structured - Skip JSON parsing, raw text scoring only
+Configurations (8 total):
+  full             - Baseline: Qwen3-4B-instruct (ann) + Qwen3-14B (rca)
+  single-4b        - Single agent: Qwen3-4B-instruct for BOTH tasks
+  single-14b       - Single agent: Qwen3-14B for BOTH tasks
+  no-structured    - Skip JSON parsing, raw text scoring only
+  no-system-prompt - Skip system prompts (empty system message)
+  with-graph       - Inject historical episode context (simulated RAG)
+  no-constitutional - Skip constitutional validation (baseline comparison)
+  with-orchestrator - LangGraph orchestrated pipeline (annotate->reason->validate->plan)
 
 Usage:
     python benchmark/scripts/run_ablation.py --config full
-    python benchmark/scripts/run_ablation.py --config single-4b
-    python benchmark/scripts/run_ablation.py --config all       # Run all 4 sequentially
-    python benchmark/scripts/run_ablation.py --config all --ann 5 --rca 5  # Quick test
+    python benchmark/scripts/run_ablation.py --config all          # All 7 configs
+    python benchmark/scripts/run_ablation.py --config all --ann 5 --rca 5
+    python benchmark/scripts/run_ablation.py --dataset benchmark_500_seed42.json
 
-Time estimate: ~20 min per config on Jarvis Labs, ~1.5 hours for all 4.
+Time estimate: ~20 min per config on Jarvis Labs, ~2.5 hours for all 7.
 """
 
 import os
@@ -68,6 +72,34 @@ ABLATION_CONFIGS = {
         "model_name": "ablation_no_structured",
         "no_structured": True,
     },
+    "no-system-prompt": {
+        "description": "No System Prompt - empty system message, raw user query only",
+        "fast_model": "qwen3:4b-instruct",
+        "reasoning_model": "qwen3:14b",
+        "model_name": "ablation_no_system_prompt",
+        "skip_system_prompt": True,
+    },
+    "with-graph": {
+        "description": "With Graph Context - historical episode context injected (RAG)",
+        "fast_model": "qwen3:4b-instruct",
+        "reasoning_model": "qwen3:14b",
+        "model_name": "ablation_with_graph",
+        "inject_graph_context": True,
+    },
+    "no-constitutional": {
+        "description": "No Constitutional AI - skip validation (overhead measurement)",
+        "fast_model": "qwen3:4b-instruct",
+        "reasoning_model": "qwen3:14b",
+        "model_name": "ablation_no_constitutional",
+        "skip_constitutional": True,
+    },
+    "with-orchestrator": {
+        "description": "LangGraph Orchestrator - full pipeline (annotate->reason->validate->plan)",
+        "fast_model": "qwen3:4b-instruct",
+        "reasoning_model": "qwen3:14b",
+        "model_name": "ablation_with_orchestrator",
+        "use_orchestrator": True,
+    },
 }
 
 
@@ -89,7 +121,10 @@ def setup_env(config: dict):
     importlib.reload(src.benchmark.runner)
 
 
-async def run_single_ablation(config_name: str, config: dict, max_ann: int, max_rca: int):
+async def run_single_ablation(
+    config_name: str, config: dict, max_ann: int, max_rca: int,
+    dataset_file: str = "",
+):
     """Run a single ablation configuration."""
     # MUST set env and reload modules BEFORE importing runner
     # (MODELS dict is built at import time from config values)
@@ -104,12 +139,15 @@ async def run_single_ablation(config_name: str, config: dict, max_ann: int, max_
     print(f"Config:          {config_name}")
     print(f"Fast Model:      {config['fast_model']}")
     print(f"Reasoning Model: {config['reasoning_model']}")
+    print(f"Flags:           sys_prompt={'OFF' if config.get('skip_system_prompt') else 'ON'}, "
+          f"graph={'ON' if config.get('inject_graph_context') else 'OFF'}, "
+          f"constitutional={'OFF' if config.get('skip_constitutional') else 'ON'}, "
+          f"orchestrator={'ON' if config.get('use_orchestrator') else 'OFF'}")
+    print(f"Dataset:         {dataset_file or 'curated_150'}")
     print(f"Test counts:     {max_ann} annotation + {max_rca} RCA")
     print(f"Timestamp:       {datetime.utcnow().isoformat()}")
     print("=" * 70)
 
-    # Use "constitutional_aiops" which is in the MODELS dict and reads
-    # from config.llm.* (now refreshed by setup_env -> importlib.reload)
     bench_config = BenchmarkConfig(
         model_name="constitutional_aiops",
         max_annotation_tests=max_ann,
@@ -117,7 +155,11 @@ async def run_single_ablation(config_name: str, config: dict, max_ann: int, max_
         temperature=0.0,
         timeout_seconds=300,
         calibrate_network=True,
-        use_curated_150=True,
+        use_curated_150=not bool(dataset_file),
+        curated_dataset=dataset_file,
+        skip_system_prompt=config.get("skip_system_prompt", False),
+        inject_graph_context=config.get("inject_graph_context", False),
+        use_orchestrator=config.get("use_orchestrator", False),
     )
 
     runner = BenchmarkRunner()
@@ -239,9 +281,10 @@ def generate_ablation_table(results: list[dict]) -> None:
 
     # Markdown
     md = "# Ablation Study Results\n\n"
-    md += f"> Generated: {datetime.utcnow().isoformat()}\n\n"
-    md += "| Configuration | Ann Acc | RCA Acc | Overall | BERT-F1 | Avg Latency | Delta vs Full |\n"
-    md += "|--------------|---------|---------|---------|---------|-------------|---------------|\n"
+    md += f"> Generated: {datetime.utcnow().isoformat()}\n"
+    md += f"> N={results[0].get('total_tests', '?')} per configuration\n\n"
+    md += "| Configuration | Ann Acc | RCA Acc | Overall | BERT-F1 | Cos Sim | Term Ov. | Avg Latency | Delta vs Full |\n"
+    md += "|--------------|---------|---------|---------|---------|---------|----------|-------------|---------------|\n"
 
     for r in results:
         delta = round(r["overall_accuracy"] - baseline_acc, 1) if baseline else 0
@@ -249,6 +292,7 @@ def generate_ablation_table(results: list[dict]) -> None:
         md += (
             f"| {r['description']} | {r['annotation_accuracy']:.1f}% | {r['rca_accuracy']:.1f}% | "
             f"{r['overall_accuracy']:.1f}% | {r.get('bert_f1', 0):.3f} | "
+            f"{r.get('cosine_similarity', 0):.3f} | {r.get('term_overlap', 0):.3f} | "
             f"{r['avg_inference_latency_ms']:.0f}ms | {delta_str} |\n"
         )
 
@@ -301,6 +345,10 @@ async def main():
     )
     parser.add_argument("--ann", type=int, default=100, help="Max annotation tests")
     parser.add_argument("--rca", type=int, default=50, help="Max RCA tests")
+    parser.add_argument(
+        "--dataset", type=str, default="",
+        help="Custom dataset file (e.g., benchmark_500_seed42.json)",
+    )
     args = parser.parse_args()
 
     configs_to_run = (
@@ -309,10 +357,11 @@ async def main():
     )
 
     print("=" * 70)
-    print("CONSTITUTIONAL AIOPS - ABLATION STUDY")
+    print("CONSTITUTIONAL AIOPS - ABLATION STUDY v2.0")
     print("=" * 70)
     print(f"Configs to run: {configs_to_run}")
     print(f"Test counts:    {args.ann} annotation + {args.rca} RCA per config")
+    print(f"Dataset:        {args.dataset or 'curated_150 (seed=42)'}")
     print(f"Endpoint:       {JARVIS_URL}")
     print(f"Started:        {datetime.utcnow().isoformat()}")
     print("=" * 70)
@@ -320,7 +369,10 @@ async def main():
     all_results = []
     for config_name in configs_to_run:
         config = ABLATION_CONFIGS[config_name]
-        result = await run_single_ablation(config_name, config, args.ann, args.rca)
+        result = await run_single_ablation(
+            config_name, config, args.ann, args.rca,
+            dataset_file=args.dataset,
+        )
         if result:
             all_results.append(result)
 

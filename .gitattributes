@@ -1,0 +1,16 @@
+# Git LFS: large binary artifacts only
+# Curated benchmark JSONs (~1.5MB total) stay in plain git for diffability.
+# Raw datasets (5.5GB LEMMA-RCA) stay OUTSIDE the repo entirely.
+# This file only marks files that ARE binary and may exceed plain-git friendly size.
+
+*.dump filter=lfs diff=lfs merge=lfs -text
+*.neo4j-dump filter=lfs diff=lfs merge=lfs -text
+graph-snapshots/*.dump filter=lfs diff=lfs merge=lfs -text
+benchmark/results/**/raw_traces.jsonl filter=lfs diff=lfs merge=lfs -text
+
+# Line-endings hygiene (single team, mixed OS - Windows + Linux on AWS VM)
+* text=auto eol=lf
+*.sh text eol=lf
+*.py text eol=lf
+*.bat text eol=crlf
+*.ps1 text eol=crlf

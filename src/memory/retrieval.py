@@ -4,7 +4,7 @@ Constitutional AIOps - Context Retrieval
 Retrieves relevant context from episodic memory for LLM prompts.
 Implements RAG (Retrieval Augmented Generation) patterns for better RCA.
 
-Hybrid Retrieval Formula (from Research_V6.tex):
+Hybrid Retrieval Formula (from Research_V7.tex):
     score(e) = α · vector_sim(e) + (1-α) · graph_sim(e)
 
 Where:
@@ -21,7 +21,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any, Optional
 
-# Hybrid Retrieval Configuration (from Research_V6.tex)
+# Hybrid Retrieval Configuration (from Research_V7.tex)
 RETRIEVAL_ALPHA = 0.6  # Weight for vector_sim in: α·vector_sim + (1-α)·graph_sim
 
 from src.memory.episode_store import Episode, EpisodeStore

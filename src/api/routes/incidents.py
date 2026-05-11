@@ -416,57 +416,76 @@ async def _trigger_analysis(
     incident: Incident,
     enable_thinking: bool = True,
 ) -> None:
-    """Trigger RCA analysis for an incident."""
-    reasoning_agent = getattr(request.app.state, "reasoning_agent", None)
+    """Trigger RCA analysis for an incident using the LangGraph orchestration pipeline.
 
-    if reasoning_agent is None:
-        logger.warning("Reasoning agent not available, skipping analysis")
-        return
-
-    try:
-        # Build incident data for analysis
-        incident_data = {
-            "id": incident.id,
-            "title": incident.title,
-            "description": incident.description,
-            "severity": incident.severity.value,
-            "category": incident.category.value,
-            "affected_services": [s.model_dump() for s in incident.affected_services],
-            "telemetry": incident.telemetry.model_dump() if incident.telemetry else None,
-            "detected_at": incident.detected_at.isoformat() if incident.detected_at else None,
-        }
-
-        agent_response = await reasoning_agent.analyze_rca(
-            incident_data=incident_data,
-            enable_thinking=enable_thinking,
+    Raises:
+        HTTPException(503): If the orchestration pipeline is not initialized.
+    """
+    # Verify orchestration pipeline is available (MANDATORY)
+    incident_graph = getattr(request.app.state, "incident_graph", None)
+    if incident_graph is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Orchestration pipeline not initialized. Cannot analyze incidents.",
         )
 
-        # Update incident with RCA results
-        if agent_response.metadata:
+    # Build incident data for analysis
+    incident_data = {
+        "id": incident.id,
+        "title": incident.title,
+        "description": incident.description,
+        "severity": incident.severity.value,
+        "category": incident.category.value,
+        "affected_services": [s.model_dump() for s in incident.affected_services],
+        "telemetry": incident.telemetry.model_dump() if incident.telemetry else None,
+        "detected_at": incident.detected_at.isoformat() if incident.detected_at else None,
+    }
+
+    # ── LangGraph Orchestrated Pipeline (MANDATORY) ────────────────
+    try:
+        graph_result = await incident_graph.ainvoke({
+            "telemetry_data": incident_data,
+            "correlation_id": incident.id,
+            "steps_completed": [],
+            "latency_ms": {},
+        })
+
+        # Extract RCA from graph state
+        rca_data = graph_result.get("rca_result")
+        if rca_data and rca_data.get("metadata"):
             from src.api.schemas.incident import RCAResult
 
             incident.rca = RCAResult(
-                root_cause=agent_response.metadata.get("root_cause", "Unknown"),
-                causal_chain=agent_response.metadata.get("causal_chain", []),
-                confidence=agent_response.confidence,
-                reasoning=agent_response.metadata.get("reasoning"),
-                similar_incidents=agent_response.metadata.get("similar_incidents"),
+                root_cause=rca_data["metadata"].get("root_cause", "Unknown"),
+                causal_chain=rca_data["metadata"].get("causal_chain", []),
+                confidence=graph_result.get("confidence", 0.0),
+                reasoning=rca_data["metadata"].get("reasoning"),
+                similar_incidents=rca_data["metadata"].get("similar_incidents"),
             )
 
-        # Update status based on confidence
-        if agent_response.confidence >= 0.9:
+        # Use authorization level from constitutional validation
+        auth_level = graph_result.get("authorization_level", "alert")
+        if auth_level == "automatic":
             incident.status = IncidentStatus.REMEDIATING
-        elif agent_response.confidence >= 0.7:
+        elif auth_level == "approval":
             incident.status = IncidentStatus.PENDING_APPROVAL
         else:
-            incident.status = IncidentStatus.ANALYZING  # Needs more analysis
+            incident.status = IncidentStatus.ANALYZING
 
         incident.updated_at = datetime.utcnow()
-        logger.info(f"Completed RCA for {incident.id} (confidence: {agent_response.confidence})")
+        steps = graph_result.get("steps_completed", [])
+        logger.info(
+            f"LangGraph RCA for {incident.id}: auth={auth_level}, steps={steps}"
+        )
 
+    except HTTPException:
+        raise  # Re-raise HTTP exceptions as-is
     except Exception as e:
-        logger.error(f"RCA failed for {incident.id}: {e}")
-        # Don't fail the request, just log the error
+        logger.error(f"LangGraph pipeline failed for {incident.id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Orchestration pipeline failed: {str(e)}",
+        )
 
 
 __all__ = ["router"]

@@ -38,7 +38,7 @@ cat docs/KEY_METRICS.md | head -100
 ### System Status
 - **Implementation**: 100% core complete
 - **Deployment**: Jarvis Labs A5000 24GB (primary)
-- **Research Paper**: `docs/research/# IMP Current Research Documentation/Research_V6.tex`
+- **Research Paper**: `docs/research/# IMP Current Research Documentation/Research_V7.tex`
 
 ### Key Files Inventory
 | Category | Count | Location |
@@ -119,7 +119,7 @@ cat docs/KEY_METRICS.md | head -100
 
 ---
 
-## 📊 Performance Targets (From Research_V6.tex)
+## 📊 Performance Targets (From Research_V7.tex)
 
 ### Latency Targets
 | Component | Target |
@@ -275,7 +275,7 @@ constitutional-aiops/
 │   ├── AWS_DEPLOYMENT.md        # AWS guide
 │   └── research/                # Academic materials
 │       ├── # IMP Current Research Documentation/
-│       │   └── Research_V6.tex  # Main research paper (22 pages)
+│       │   └── Research_V7.tex  # Main research paper (22 pages)
 │       └── references.bib       # BibTeX citations
 ```
 
@@ -431,7 +431,7 @@ reasoning_response = await router.reasoning_completion(prompt)
 
 ## 📎 Quick Links
 
-- **Research Paper**: `docs/research/# IMP Current Research Documentation/Research_V6.tex`
+- **Research Paper**: `docs/research/# IMP Current Research Documentation/Research_V7.tex`
 - **Key Metrics**: `docs/KEY_METRICS.md`
 - **API Reference**: `docs/API.md`
 - **Backend Reference**: `docs/BACKEND.md`

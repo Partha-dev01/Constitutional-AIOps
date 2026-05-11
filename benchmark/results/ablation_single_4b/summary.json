@@ -13,15 +13,15 @@
   "rca_passed": 47,
   "total_tests": 150,
   "total_correct": 136,
-  "avg_inference_latency_ms": 7249.74,
-  "p50_latency_ms": 3053.19,
-  "p95_latency_ms": 20779.03,
-  "bert_f1": 0.4584,
-  "cosine_similarity": 0.303,
-  "term_overlap": 0.3894,
+  "avg_inference_latency_ms": 6032.86,
+  "p50_latency_ms": 2068.36,
+  "p95_latency_ms": 16855.28,
+  "bert_f1": 0.4572,
+  "cosine_similarity": 0.3089,
+  "term_overlap": 0.4009,
   "annotation_bert_f1": 0.5158,
-  "rca_bert_f1": 0.3436,
+  "rca_bert_f1": 0.34,
   "dataset": "curated_150 (seed=42, English only)",
   "temperature": 0.0,
-  "timestamp": "2026-02-06T14:15:53.873638"
+  "timestamp": "2026-02-10T12:41:39.396172"
 }

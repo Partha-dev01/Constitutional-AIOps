@@ -7,7 +7,7 @@ Provides unified interface for accessing logs, metrics, and traces.
 
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
 import httpx
@@ -251,10 +251,16 @@ class TelemetryCollector:
             else:
                 query = '{job="containerlogs"}'
 
+        # Ensure naive datetimes are treated as UTC (not local time)
+        # datetime.utcnow() returns naive datetimes; .timestamp() wrongly
+        # assumes local timezone on naive datetimes, causing offset errors.
+        start_utc = start_time.replace(tzinfo=timezone.utc) if start_time.tzinfo is None else start_time
+        end_utc = end_time.replace(tzinfo=timezone.utc) if end_time.tzinfo is None else end_time
+
         params = {
             "query": query,
-            "start": str(int(start_time.timestamp() * 1e9)),  # Nanoseconds
-            "end": str(int(end_time.timestamp() * 1e9)),
+            "start": str(int(start_utc.timestamp() * 1e9)),  # Nanoseconds
+            "end": str(int(end_utc.timestamp() * 1e9)),
             "limit": limit,
         }
 
@@ -373,10 +379,14 @@ class TelemetryCollector:
         Returns:
             List of trace spans
         """
+        # Ensure naive datetimes are treated as UTC
+        start_utc = start_time.replace(tzinfo=timezone.utc) if start_time.tzinfo is None else start_time
+        end_utc = end_time.replace(tzinfo=timezone.utc) if end_time.tzinfo is None else end_time
+
         params = {
             "tags": f"service.name={service}",
-            "start": str(int(start_time.timestamp() * 1e9)),
-            "end": str(int(end_time.timestamp() * 1e9)),
+            "start": str(int(start_utc.timestamp() * 1e9)),
+            "end": str(int(end_utc.timestamp() * 1e9)),
             "limit": limit,
         }
 

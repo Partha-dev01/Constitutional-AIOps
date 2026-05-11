@@ -41,7 +41,11 @@ class BenchmarkConfig:
     temperature: float = 0.0
     timeout_seconds: int = 300
     calibrate_network: bool = True
-    use_curated_150: bool = True  # Use 150-sample benchmark (seed=42)
+    use_curated_150: bool = True  # Use curated benchmark (seed=42)
+    curated_dataset: str = ""  # Custom curated file (e.g., "benchmark_500_seed42.json")
+    skip_system_prompt: bool = False  # Ablation: skip system prompts
+    inject_graph_context: bool = False  # Ablation: inject historical episode context
+    use_orchestrator: bool = False  # Ablation: use LangGraph orchestrated pipeline
 
 
 @dataclass
@@ -197,7 +201,12 @@ class BenchmarkRunner:
         return self._network_rtt_ms
 
     def load_dataset(self, dataset_type: str) -> list[dict]:
-        """Load test dataset from benchmark/datasets/processed/."""
+        """Load test dataset from benchmark/datasets/processed/.
+
+        Args:
+            dataset_type: "annotation", "rca", "benchmark_150", or a filename
+                like "benchmark_500_seed42.json"
+        """
         base_path = Path(__file__).parent.parent.parent / "benchmark" / "datasets" / "processed"
 
         if dataset_type == "annotation":
@@ -213,6 +222,15 @@ class BenchmarkRunner:
         elif dataset_type == "benchmark_150":
             # Use curated 150-sample benchmark (seed=42)
             path = base_path / "benchmark_150_seed42.json"
+        elif dataset_type.endswith(".json"):
+            # Custom dataset file (e.g., "benchmark_500_seed42.json")
+            path = base_path / dataset_type
+        elif dataset_type == "benchmark_latest":
+            # Auto-detect the latest/largest benchmark_*_seed*.json
+            candidates = sorted(base_path.glob("benchmark_*_seed*.json"), reverse=True)
+            if not candidates:
+                raise FileNotFoundError("No curated benchmark files found")
+            path = candidates[0]
         else:
             raise ValueError(f"Unknown dataset type: {dataset_type}")
 
@@ -257,6 +275,12 @@ class BenchmarkRunner:
             if not model_config:
                 raise ValueError(f"Unknown model: {config.model_name}")
 
+            # Apply ablation flags
+            if config.skip_system_prompt:
+                # Override system prompts with empty strings
+                self.fast_annotator.get_system_prompt = lambda: ""
+                self.reasoning_agent.get_system_prompt = lambda mode="chat": ""
+
             # Calibrate network if requested
             if config.calibrate_network:
                 if model_config["type"] == "hybrid":
@@ -265,15 +289,21 @@ class BenchmarkRunner:
                     base_url = config.ollama_url if hasattr(config, "ollama_url") else "http://localhost:11434"
                 result.network_rtt_ms = await self.calibrate_network(base_url)
 
-            # Load datasets - use curated 150-sample or full cleaned datasets
-            if config.use_curated_150:
+            # Load datasets - use curated benchmark or full cleaned datasets
+            if config.curated_dataset:
+                # Use a custom curated benchmark file
+                all_tests = self.load_dataset(config.curated_dataset)
+                annotation_tests = [t for t in all_tests if t.get("task_type") == "annotation"]
+                rca_tests = [t for t in all_tests if t.get("task_type") == "rca"]
+                annotation_tests = annotation_tests[:config.max_annotation_tests]
+                rca_tests = rca_tests[:config.max_rca_tests]
+            elif config.use_curated_150:
                 # Use the curated 150-sample benchmark (100 annotation + 50 RCA)
                 # Selected with random.seed(42) from cleaned datasets
                 # Cleaned: 62 bogus BGL entries + 3 mislabeled RCA removed
                 all_tests = self.load_dataset("benchmark_150")
                 annotation_tests = [t for t in all_tests if t.get("task_type") == "annotation"]
                 rca_tests = [t for t in all_tests if t.get("task_type") == "rca"]
-                # Apply max limits if specified (for quick demo runs)
                 annotation_tests = annotation_tests[:config.max_annotation_tests]
                 rca_tests = rca_tests[:config.max_rca_tests]
             else:
@@ -315,7 +345,8 @@ class BenchmarkRunner:
 
                 try:
                     test_result = await self._run_rca_test(
-                        test_case, model_config, config.temperature
+                        test_case, model_config, config.temperature,
+                        inject_graph_context=config.inject_graph_context,
                     )
                     test_results.append(test_result)
                     if test_result.inference_latency_ms > 0:
@@ -437,6 +468,7 @@ class BenchmarkRunner:
         test_case: dict,
         model_config: dict,
         temperature: float,
+        inject_graph_context: bool = False,
     ) -> TestCaseResult:
         """
         Run a single RCA test using the actual ReasoningAgent.
@@ -467,9 +499,14 @@ class BenchmarkRunner:
         # Use actual ReasoningAgent (same as production backend)
         start_ns = time.perf_counter_ns()
         try:
+            # Build historical context (simulates graph-episodic memory retrieval)
+            historical_context = ""
+            if inject_graph_context:
+                historical_context = self._build_sample_graph_context(incident_data)
+
             agent_response = await self.reasoning_agent.analyze_rca(
                 incident_data=incident_data,
-                historical_context="",  # No historical context for benchmark
+                historical_context=historical_context,
                 enable_thinking=False,  # Disable thinking mode for consistent benchmarking
             )
             total_ms = (time.perf_counter_ns() - start_ns) / 1_000_000
@@ -508,6 +545,39 @@ class BenchmarkRunner:
                 expected_output=test_case["expected_root_cause"],
                 timestamp=datetime.utcnow().isoformat(),
             )
+
+    def _build_sample_graph_context(self, incident_data: dict) -> str:
+        """Build simulated graph-episodic memory context for ablation testing.
+
+        In production, this would come from Neo4j graph queries finding similar
+        past incidents. For benchmark ablation, we provide a representative
+        historical context to measure the impact of RAG augmentation on RCA accuracy.
+        """
+        title = incident_data.get("title", "")
+        service_hint = ""
+        if "cloud" in title.lower() or "service" in title.lower():
+            service_hint = "cloud microservice"
+        elif "network" in title.lower():
+            service_hint = "network infrastructure"
+        elif "database" in title.lower():
+            service_hint = "database system"
+        else:
+            service_hint = "infrastructure"
+
+        return (
+            f"## Similar Past Incidents (from Graph-Episodic Memory)\n\n"
+            f"### Incident EP-2024-087 (Similarity: 0.82)\n"
+            f"- Service: {service_hint}\n"
+            f"- Root Cause: Resource exhaustion due to connection pool saturation\n"
+            f"- Resolution: Increased pool size + added circuit breaker\n"
+            f"- Time to Resolve: 12 minutes\n\n"
+            f"### Incident EP-2024-134 (Similarity: 0.76)\n"
+            f"- Service: {service_hint}\n"
+            f"- Root Cause: Configuration drift after deployment\n"
+            f"- Resolution: Rolled back config + added validation gate\n"
+            f"- Time to Resolve: 8 minutes\n\n"
+            f"Note: Consider these past incidents when analyzing the current fault."
+        )
 
     async def _call_model(
         self,

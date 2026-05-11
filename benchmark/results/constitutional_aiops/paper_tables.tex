@@ -1,5 +1,5 @@
 % Constitutional AIOps - Paper Tables
-% Generated: 2026-02-06 14:53:49 UTC
+% Generated: 2026-02-10 14:11:30 UTC
 % Model: constitutional_aiops
 % Data source: benchmark/results/constitutional_aiops/results.json
 % WARNING: All values are from actual benchmark runs. No fabricated data.
@@ -12,10 +12,10 @@
 \toprule
 \textbf{Task} & \textbf{Agent} & \textbf{N} & \textbf{Accuracy} & \textbf{BERT-F1} & \textbf{Cos Sim} & \textbf{Term Ov.} & \textbf{P50 (ms)} & \textbf{P95 (ms)} \\
 \midrule
-Annotation & qwen3:4b-instruct & 100 & 89.0\% & 0.516 & 0.266 & 0.178 & 2082 & 4115 \\
-RCA & qwen3:14b & 50 & 90.0\% & 0.337 & 0.358 & 0.649 & 17096 & 29403 \\
+Annotation & qwen3:4b-instruct & 100 & 89.0\% & 0.516 & 0.265 & 0.178 & 1872 & 2284 \\
+RCA & qwen3:14b & 50 & 94.0\% & 0.341 & 0.387 & 0.733 & 14075 & 22718 \\
 \midrule
-\textbf{Overall} & \textbf{Hybrid} & \textbf{150} & \textbf{89.3\%} & \textbf{0.456} & \textbf{0.297} & \textbf{0.364} & \textbf{3124} & \textbf{23941} \\
+\textbf{Overall} & \textbf{Hybrid} & \textbf{150} & \textbf{90.7\%} & \textbf{0.458} & \textbf{0.305} & \textbf{0.411} & \textbf{2100} & \textbf{17374} \\
 \bottomrule
 \end{tabular}
 \begin{tablenotes}
@@ -35,11 +35,11 @@ RCA & qwen3:14b & 50 & 90.0\% & 0.337 & 0.358 & 0.649 & 17096 & 29403 \\
 \textbf{Task} & \textbf{Source} & \textbf{N} & \textbf{Accuracy} & \textbf{BERT-F1} & \textbf{Cos Sim} \\
 \midrule
 Annotation & Loghub Bgl & 28 & 71.4\% & 0.503 & 0.223 \\
-Annotation & Loghub Hdfs & 72 & 95.8\% & 0.521 & 0.283 \\
-Rca & Lemma Rca Cloud & 28 & 100.0\% & 0.349 & 0.463 \\
-Rca & Opseval 5G Communication & 2 & 50.0\% & 0.294 & 0.221 \\
-Rca & Opseval Mobile Communication Network & 4 & 100.0\% & 0.352 & 0.243 \\
-Rca & Opseval Wired Network & 16 & 75.0\% & 0.318 & 0.222 \\
+Annotation & Loghub Hdfs & 72 & 95.8\% & 0.521 & 0.282 \\
+Rca & Lemma Rca Cloud & 28 & 100.0\% & 0.353 & 0.480 \\
+Rca & Opseval 5G Communication & 2 & 100.0\% & 0.302 & 0.282 \\
+Rca & Opseval Mobile Communication Network & 4 & 100.0\% & 0.353 & 0.334 \\
+Rca & Opseval Wired Network & 16 & 81.2\% & 0.323 & 0.249 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -54,11 +54,10 @@ Rca & Opseval Wired Network & 16 & 75.0\% & 0.318 & 0.222 \\
 \textbf{Failure Mode} & \textbf{Count} & \textbf{Description} \\
 \midrule
 BGL False Positive & 8 & ANN_118, ANN_142, ANN_141, ANN_135, ANN_119 (+3 more) \\
-RCA Incorrect (opseval_Wired Network) & 4 & RCA_002, RCA_040, RCA_039, RCA_046 \\
 ANNOTATION Incorrect (loghub_hdfs) & 3 & ANN_049, ANN_034, ANN_012 \\
-RCA Incorrect (opseval_5G Communication) & 1 & RCA_067 \\
+RCA Incorrect (opseval_Wired Network) & 3 & RCA_060, RCA_040, RCA_039 \\
 \midrule
-\textbf{Total Failures} & \textbf{16} & \textbf{16/150 = 10.7\% error rate} \\
+\textbf{Total Failures} & \textbf{14} & \textbf{14/150 = 9.3\% error rate} \\
 \bottomrule
 \end{tabular}
 \end{table}

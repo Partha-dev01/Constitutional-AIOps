@@ -6,7 +6,7 @@ Exports benchmark results in multiple formats from ACTUAL measured data.
 No fabricated or estimated values - only real benchmark results.
 
 Output formats:
-- LaTeX tables (for Research_V6.tex)
+- LaTeX tables (for Research_V7.tex)
 - Markdown tables (for documentation)
 - JSON (for API/frontend)
 

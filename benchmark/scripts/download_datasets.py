@@ -1,19 +1,23 @@
 #!/usr/bin/env python3
 """
-Constitutional AIOps - Dataset Downloader
+Constitutional AIOps - Dataset Downloader (v2.0)
 
-Downloads REAL datasets from OpsEval, Loghub, and LEMMA-RCA for benchmarking.
+Downloads REAL datasets from multiple sources for benchmarking.
 NO synthetic data - only real logs and QA questions.
 
 Datasets:
 - OpsEval: QA dataset from NetManAIOps (~10MB)
 - HDFS: Real labeled log data from Loghub (~2MB labels + samples)
 - BGL: Real supercomputer logs from Loghub (~2000 lines sample)
+- Apache/Linux/OpenSSH: Additional Loghub log datasets (~2MB each)
 - LEMMA-RCA: Cloud Computing RCA dataset from HuggingFace (~4.74GB)
+- LogEval: Log analysis benchmark from GitHub (~50MB)
+- AnoMod: Multimodal microservice anomaly dataset from Zenodo
 
 Usage:
-    python benchmark/scripts/download_datasets.py
-    python benchmark/scripts/download_datasets.py --skip-lemma  # Skip large LEMMA-RCA download
+    python benchmark/scripts/download_datasets.py              # Core datasets only
+    python benchmark/scripts/download_datasets.py --all        # ALL datasets
+    python benchmark/scripts/download_datasets.py --skip-lemma # Skip large LEMMA-RCA
 """
 
 import os
@@ -183,29 +187,82 @@ def download_bgl_real() -> bool:
     return success
 
 
-def download_lemma_rca() -> bool:
-    """Download LEMMA-RCA Cloud Computing dataset from HuggingFace (~4.74GB).
+def download_additional_loghub() -> bool:
+    """Download additional Loghub datasets: Apache, Linux, OpenSSH.
+
+    Each dataset contains 2,000 real log lines with structured CSV labels.
+    URL pattern: https://raw.githubusercontent.com/logpai/loghub/master/{Dataset}/{Dataset}_2k.log
+    """
+    print("\n" + "=" * 50)
+    print("Additional Loghub Datasets (Apache, Linux, OpenSSH)")
+    print("=" * 50)
+
+    datasets = {
+        "apache": {
+            "name": "Apache",
+            "files": [
+                "Apache_2k.log",
+                "Apache_2k.log_structured.csv",
+                "Apache_2k.log_templates.csv",
+            ],
+        },
+        "linux": {
+            "name": "Linux",
+            "files": [
+                "Linux_2k.log",
+                "Linux_2k.log_structured.csv",
+                "Linux_2k.log_templates.csv",
+            ],
+        },
+        "openssh": {
+            "name": "OpenSSH",
+            "files": [
+                "OpenSSH_2k.log",
+                "OpenSSH_2k.log_structured.csv",
+                "OpenSSH_2k.log_templates.csv",
+            ],
+        },
+    }
+
+    all_success = True
+    for key, info in datasets.items():
+        dest_dir = RAW_DIR / "loghub" / key
+        dest_dir.mkdir(parents=True, exist_ok=True)
+
+        print(f"\n  --- {info['name']} ---")
+        for filename in info["files"]:
+            url = f"https://raw.githubusercontent.com/logpai/loghub/master/{info['name']}/{filename}"
+            if not download_raw_content(url, dest_dir / filename, filename):
+                # Only fail if the primary log file fails
+                if filename.endswith("_2k.log"):
+                    all_success = False
+
+    return all_success
+
+
+def download_lemma_rca(full: bool = False) -> bool:
+    """Download LEMMA-RCA Cloud Computing dataset from HuggingFace.
 
     Source: https://lemma-rca.github.io/
     HuggingFace: Lemma-RCA-NEC/Cloud_Computing_Preprocessed
     License: CC-BY-NC-4.0 (Non-Commercial)
 
-    Note: This dataset is stored as zip files, not standard HuggingFace format.
-    We download the first log data zip and extract sample cases.
+    Args:
+        full: If True, download ALL zip files (~4.74GB). If False, just the first one.
     """
     print("\n" + "=" * 50)
     print("LEMMA-RCA Cloud Computing (REAL DATA)")
     print("=" * 50)
     print("  Source: HuggingFace Lemma-RCA-NEC/Cloud_Computing_Preprocessed")
-    print("  Size: ~4.74 GB total (downloading sample subset)")
+    print(f"  Mode: {'FULL (all zip files)' if full else 'SAMPLE (first zip only)'}")
     print("  License: CC-BY-NC-4.0 (Non-Commercial)")
 
     dest_dir = RAW_DIR / "lemma_rca"
     dest_dir.mkdir(parents=True, exist_ok=True)
 
-    # Check if already downloaded
+    # Check if already downloaded (skip if sample exists and not requesting full)
     info_file = dest_dir / "dataset_info.json"
-    if info_file.exists():
+    if info_file.exists() and not full:
         print("\n  LEMMA-RCA already downloaded. Skipping...")
         print("  (Delete benchmark/datasets/raw/lemma_rca/ to re-download)")
         return True
@@ -222,27 +279,45 @@ def download_lemma_rca() -> bool:
 
         print(f"  Found {len(log_files)} log files, {len(metrics_files)} metrics files")
 
-        # Download just one log file (smallest/first) for sample cases
-        # Full download would be 4.74 GB which is excessive for benchmarking
-        if log_files:
-            log_file = log_files[0]  # First log file
-            print(f"\n  Downloading sample: {log_file}")
+        # Determine which files to download
+        files_to_download = log_files if full else log_files[:1]
 
-            downloaded_path = hf_hub_download(
-                repo_id="Lemma-RCA-NEC/Cloud_Computing_Preprocessed",
-                filename=log_file,
-                repo_type="dataset",
-                local_dir=str(dest_dir),
-            )
-            print(f"  Downloaded to: {downloaded_path}")
+        downloaded = 0
+        for log_file in files_to_download:
+            zip_name = Path(log_file).name
+            extract_marker = dest_dir / "extracted" / f".{zip_name}.done"
 
-            # Extract the zip
-            zip_path = dest_dir / log_file
-            if zip_path.exists():
-                print("  Extracting zip file...")
-                with zipfile.ZipFile(zip_path, 'r') as zf:
-                    zf.extractall(dest_dir / "extracted")
-                print("  Extraction complete")
+            # Skip if already extracted
+            if extract_marker.exists():
+                print(f"  Already extracted: {zip_name}")
+                downloaded += 1
+                continue
+
+            print(f"\n  Downloading: {log_file}")
+            try:
+                downloaded_path = hf_hub_download(
+                    repo_id="Lemma-RCA-NEC/Cloud_Computing_Preprocessed",
+                    filename=log_file,
+                    repo_type="dataset",
+                    local_dir=str(dest_dir),
+                )
+                print(f"  Downloaded to: {downloaded_path}")
+
+                # Extract the zip
+                zip_path = dest_dir / log_file
+                if zip_path.exists():
+                    print("  Extracting zip file...")
+                    with zipfile.ZipFile(zip_path, 'r') as zf:
+                        zf.extractall(dest_dir / "extracted")
+                    # Mark as extracted
+                    extract_marker.parent.mkdir(parents=True, exist_ok=True)
+                    extract_marker.touch()
+                    print("  Extraction complete")
+                    downloaded += 1
+
+            except Exception as e:
+                print(f"  Failed to download {zip_name}: {e}")
+                continue
 
         # Save dataset info
         info = {
@@ -252,14 +327,16 @@ def download_lemma_rca() -> bool:
             "downloaded": datetime.utcnow().isoformat(),
             "log_files": log_files,
             "metrics_files": metrics_files,
-            "downloaded_sample": log_files[0] if log_files else None,
-            "note": "Sample subset downloaded - full dataset is 4.74 GB",
+            "downloaded_count": downloaded,
+            "total_count": len(log_files),
+            "full_download": full and downloaded == len(log_files),
+            "note": f"{'Full' if full else 'Sample'} download - {downloaded}/{len(files_to_download)} zip files",
         }
         with open(info_file, "w") as f:
             json.dump(info, f, indent=2)
 
-        print("\n  LEMMA-RCA sample downloaded successfully!")
-        return True
+        print(f"\n  LEMMA-RCA: {downloaded}/{len(files_to_download)} zip files downloaded")
+        return downloaded > 0
 
     except ImportError:
         print("\n  ERROR: 'huggingface-hub' library not installed.")
@@ -272,7 +349,158 @@ def download_lemma_rca() -> bool:
         return False
 
 
-def verify_downloads(include_lemma: bool = True) -> dict:
+def download_logeval() -> bool:
+    """Download LogEval dataset from GitHub.
+
+    Source: github.com/LinDuoming/LogEval
+    Contains: 4,000 log entries across 4 tasks:
+      - Log parsing, anomaly detection, fault diagnosis, log summarization
+    """
+    print("\n" + "=" * 50)
+    print("LogEval Dataset (REAL DATA)")
+    print("=" * 50)
+
+    dest_dir = RAW_DIR / "logeval"
+    dest_dir.mkdir(parents=True, exist_ok=True)
+
+    # Check if already downloaded
+    if (dest_dir / "data").exists() or (dest_dir / "LogEval-main").exists():
+        print("  LogEval already downloaded. Skipping...")
+        return True
+
+    archive_path = RAW_DIR / "logeval.zip"
+    url = "https://github.com/LinDuoming/LogEval/archive/refs/heads/main.zip"
+
+    if not download_file(url, archive_path, "LogEval Dataset"):
+        return False
+
+    # Extract
+    print("  Extracting...")
+    try:
+        with zipfile.ZipFile(archive_path, "r") as zf:
+            zf.extractall(dest_dir)
+
+        # Move contents from nested directory
+        nested = dest_dir / "LogEval-main"
+        if nested.exists():
+            for item in nested.iterdir():
+                target = dest_dir / item.name
+                if target.exists():
+                    if target.is_dir():
+                        shutil.rmtree(target)
+                    else:
+                        target.unlink()
+                shutil.move(str(item), str(target))
+            nested.rmdir()
+
+        archive_path.unlink()
+        print("  LogEval ready")
+        return True
+
+    except Exception as e:
+        print(f"  Extraction failed: {e}")
+        return False
+
+
+def download_anomod() -> bool:
+    """Download AnoMod dataset from Zenodo.
+
+    Source: DOI 10.5281/zenodo.18342898
+    Contains: Multimodal microservice anomaly data (logs, metrics, traces,
+              API responses, code coverage) from SocialNetwork + TrainTicket.
+    4 anomaly categories: performance, service, database, code-level.
+    """
+    print("\n" + "=" * 50)
+    print("AnoMod Dataset (REAL DATA)")
+    print("=" * 50)
+
+    dest_dir = RAW_DIR / "anomod"
+    dest_dir.mkdir(parents=True, exist_ok=True)
+
+    # Check if already downloaded
+    if (dest_dir / "dataset_info.json").exists():
+        print("  AnoMod already downloaded. Skipping...")
+        return True
+
+    try:
+        # Fetch metadata from Zenodo API
+        record_id = "18342898"
+        api_url = f"https://zenodo.org/api/records/{record_id}"
+        print(f"  Fetching metadata from Zenodo record {record_id}...")
+
+        response = urlopen(api_url, timeout=60)
+        metadata = json.loads(response.read().decode("utf-8"))
+
+        files = metadata.get("files", [])
+        if not files:
+            print("  WARNING: No files found in Zenodo record")
+            # Save info even on failure so we know we tried
+            with open(dest_dir / "dataset_info.json", "w") as f:
+                json.dump({"error": "no_files", "record_id": record_id}, f)
+            return False
+
+        print(f"  Found {len(files)} files in Zenodo record:")
+        for fi in files:
+            size_mb = fi.get("size", 0) / 1024 / 1024
+            print(f"    - {fi.get('key', '?')} ({size_mb:.1f} MB)")
+
+        # Download files (skip anything > 2GB)
+        downloaded = []
+        max_size = 2 * 1024 * 1024 * 1024  # 2GB limit
+
+        for file_info in files:
+            filename = file_info.get("key", "")
+            size = file_info.get("size", 0)
+            download_url = file_info.get("links", {}).get("self", "")
+
+            if size > max_size:
+                print(f"  Skipping {filename} ({size / 1024 / 1024 / 1024:.1f} GB - too large)")
+                continue
+
+            if download_url:
+                dest_path = dest_dir / filename
+                size_str = f"{size / 1024 / 1024:.1f} MB"
+                if download_file(download_url, dest_path, f"{filename} ({size_str})"):
+                    downloaded.append(filename)
+
+                    # Extract if zip
+                    if filename.endswith(".zip"):
+                        try:
+                            extract_to = dest_dir / filename.replace(".zip", "")
+                            with zipfile.ZipFile(dest_path, 'r') as zf:
+                                zf.extractall(extract_to)
+                            print(f"  Extracted: {filename}")
+                        except Exception as e:
+                            print(f"  Extract warning: {e}")
+
+        # Save dataset info
+        info = {
+            "source": f"zenodo:{record_id}",
+            "doi": "10.5281/zenodo.18342898",
+            "downloaded": datetime.utcnow().isoformat(),
+            "all_files": [f.get("key", "") for f in files],
+            "downloaded_files": downloaded,
+            "total_files": len(files),
+        }
+        with open(dest_dir / "dataset_info.json", "w") as f:
+            json.dump(info, f, indent=2)
+
+        print(f"\n  AnoMod: {len(downloaded)}/{len(files)} files downloaded")
+        return len(downloaded) > 0
+
+    except Exception as e:
+        print(f"  Download failed: {e}")
+        print("  AnoMod may not be available or DOI may have changed")
+        # Save failure info
+        try:
+            with open(dest_dir / "dataset_info.json", "w") as f:
+                json.dump({"error": str(e), "doi": "10.5281/zenodo.18342898"}, f)
+        except Exception:
+            pass
+        return False
+
+
+def verify_downloads(include_lemma: bool = True, include_extended: bool = False) -> dict:
     """Verify all downloaded files and report status."""
     print("\n" + "=" * 50)
     print("Verifying Downloads")
@@ -284,6 +512,15 @@ def verify_downloads(include_lemma: bool = True) -> dict:
         "bgl": False,
         "lemma_rca": False,
     }
+
+    if include_extended:
+        status.update({
+            "apache": False,
+            "linux": False,
+            "openssh": False,
+            "logeval": False,
+            "anomod": False,
+        })
 
     # Check OpsEval
     opseval_dir = RAW_DIR / "opseval"
@@ -297,10 +534,9 @@ def verify_downloads(include_lemma: bool = True) -> dict:
     # Check HDFS
     hdfs_dir = RAW_DIR / "loghub" / "hdfs"
     hdfs_log = hdfs_dir / "HDFS_2k.log"
-    hdfs_labels = hdfs_dir / "anomaly_label.csv"
     if hdfs_log.exists() or (hdfs_dir / "HDFS_2k.log_structured.csv").exists():
         status["hdfs"] = True
-        print(f"   HDFS: Real log file found")
+        print("   HDFS: Real log file found")
     else:
         print("   HDFS: MISSING log file")
 
@@ -309,7 +545,7 @@ def verify_downloads(include_lemma: bool = True) -> dict:
     bgl_log = bgl_dir / "BGL_2k.log"
     if bgl_log.exists():
         status["bgl"] = True
-        print(f"   BGL: Real log file found")
+        print("   BGL: Real log file found")
     else:
         print("   BGL: MISSING log file")
 
@@ -321,12 +557,62 @@ def verify_downloads(include_lemma: bool = True) -> dict:
             with open(lemma_info, "r") as f:
                 info = json.load(f)
             status["lemma_rca"] = True
-            print(f"   LEMMA-RCA: Downloaded ({info.get('downloaded', 'unknown')})")
+            dl_count = info.get("downloaded_count", "?")
+            total = info.get("total_count", "?")
+            print(f"   LEMMA-RCA: Downloaded ({dl_count}/{total} zips)")
         else:
-            print("   LEMMA-RCA: NOT DOWNLOADED (use --skip-lemma to skip)")
+            print("   LEMMA-RCA: NOT DOWNLOADED")
     else:
-        status["lemma_rca"] = True  # Mark as OK if skipping
+        status["lemma_rca"] = True
         print("   LEMMA-RCA: SKIPPED")
+
+    # Check extended datasets
+    if include_extended:
+        # Apache
+        apache_log = RAW_DIR / "loghub" / "apache" / "Apache_2k.log"
+        if apache_log.exists():
+            status["apache"] = True
+            print("   Apache: Real log file found")
+        else:
+            print("   Apache: MISSING")
+
+        # Linux
+        linux_log = RAW_DIR / "loghub" / "linux" / "Linux_2k.log"
+        if linux_log.exists():
+            status["linux"] = True
+            print("   Linux: Real log file found")
+        else:
+            print("   Linux: MISSING")
+
+        # OpenSSH
+        openssh_log = RAW_DIR / "loghub" / "openssh" / "OpenSSH_2k.log"
+        if openssh_log.exists():
+            status["openssh"] = True
+            print("   OpenSSH: Real log file found")
+        else:
+            print("   OpenSSH: MISSING")
+
+        # LogEval
+        logeval_dir = RAW_DIR / "logeval"
+        if logeval_dir.exists() and any(logeval_dir.iterdir()):
+            status["logeval"] = True
+            print("   LogEval: Dataset found")
+        else:
+            print("   LogEval: MISSING")
+
+        # AnoMod
+        anomod_info = RAW_DIR / "anomod" / "dataset_info.json"
+        if anomod_info.exists():
+            with open(anomod_info, "r") as f:
+                info = json.load(f)
+            if "error" not in info or info.get("downloaded_files"):
+                status["anomod"] = True
+                dl = len(info.get("downloaded_files", []))
+                print(f"   AnoMod: {dl} files downloaded")
+            else:
+                print(f"   AnoMod: DOWNLOAD FAILED ({info.get('error', '?')})")
+        else:
+            print("   AnoMod: MISSING")
 
     return status
 
@@ -342,21 +628,41 @@ def main():
     parser.add_argument(
         "--lemma-only",
         action="store_true",
-        help="Only download LEMMA-RCA (skip OpsEval, HDFS, BGL)",
+        help="Only download LEMMA-RCA (skip other datasets)",
+    )
+    parser.add_argument(
+        "--all",
+        action="store_true",
+        help="Download ALL datasets (core + extended: Apache, Linux, OpenSSH, LogEval, AnoMod, full LEMMA-RCA)",
+    )
+    parser.add_argument(
+        "--full-lemma",
+        action="store_true",
+        help="Download ALL LEMMA-RCA zip files (not just first sample)",
     )
     args = parser.parse_args()
 
     print("=" * 60)
-    print("Constitutional AIOps - Dataset Downloader")
+    print("Constitutional AIOps - Dataset Downloader v2.0")
     print("=" * 60)
     print("\nDownloading REAL datasets (no synthetic data):")
-    print("  - OpsEval: QA dataset from NetManAIOps (~10MB)")
-    print("  - HDFS: Real labeled log data from Loghub (~2MB)")
-    print("  - BGL: Real supercomputer logs from Loghub (~2MB)")
+    print("  Core:")
+    print("    - OpsEval: QA dataset from NetManAIOps (~10MB)")
+    print("    - HDFS: Real labeled log data from Loghub (~2MB)")
+    print("    - BGL: Real supercomputer logs from Loghub (~2MB)")
     if not args.skip_lemma:
-        print("  - LEMMA-RCA: Cloud Computing RCA dataset (~4.74GB)")
+        lemma_mode = "FULL" if (args.full_lemma or args.all) else "SAMPLE"
+        print(f"    - LEMMA-RCA: Cloud Computing RCA dataset ({lemma_mode})")
     else:
-        print("  - LEMMA-RCA: SKIPPED (use without --skip-lemma to download)")
+        print("    - LEMMA-RCA: SKIPPED")
+
+    if args.all:
+        print("  Extended:")
+        print("    - Apache: Web server logs from Loghub (~2MB)")
+        print("    - Linux: System logs from Loghub (~2MB)")
+        print("    - OpenSSH: SSH server logs from Loghub (~2MB)")
+        print("    - LogEval: Log analysis benchmark (~50MB)")
+        print("    - AnoMod: Multimodal microservice anomalies (Zenodo)")
     print("")
 
     # Create directories
@@ -366,21 +672,30 @@ def main():
 
     if args.lemma_only:
         # Only download LEMMA-RCA
-        results["lemma_rca"] = download_lemma_rca()
+        results["lemma_rca"] = download_lemma_rca(full=args.full_lemma or args.all)
     else:
-        # Download all datasets
+        # Download core datasets
         results["opseval"] = download_opseval()
         results["hdfs"] = download_hdfs_real()
         results["bgl"] = download_bgl_real()
 
         # Download LEMMA-RCA unless skipped
         if not args.skip_lemma:
-            results["lemma_rca"] = download_lemma_rca()
+            results["lemma_rca"] = download_lemma_rca(full=args.full_lemma or args.all)
         else:
             results["lemma_rca"] = True  # Mark as OK if skipping
 
+        # Download extended datasets if --all
+        if args.all:
+            results["additional_loghub"] = download_additional_loghub()
+            results["logeval"] = download_logeval()
+            results["anomod"] = download_anomod()
+
     # Verify downloads
-    status = verify_downloads(include_lemma=not args.skip_lemma)
+    status = verify_downloads(
+        include_lemma=not args.skip_lemma,
+        include_extended=args.all,
+    )
 
     print("\n" + "=" * 60)
     print("Download Summary")
@@ -410,6 +725,7 @@ def main():
                 "datasets": list(results.keys()),
                 "status": status,
                 "lemma_rca_downloaded": results.get("lemma_rca", False) and not args.skip_lemma,
+                "extended_downloaded": args.all,
             }, f, indent=2)
 
         print("\n[OK] Datasets downloaded successfully!")

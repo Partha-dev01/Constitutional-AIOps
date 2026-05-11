@@ -45,7 +45,7 @@ pandas>=2.1.0
 # Docker SDK (for container discovery and demo mode)
 docker>=7.0.0
 
-# Embedding & Vector Similarity (Research_V6.tex Section 3.2)
+# Embedding & Vector Similarity (Research_V7.tex Section 3.2)
 # NOTE: torch with CUDA support requires separate install:
 #   pip install torch --index-url https://download.pytorch.org/whl/cu118
 # For NVIDIA GTX 1650, use CUDA 11.8 or higher
@@ -59,3 +59,6 @@ transformers>=4.30.0
 # HuggingFace Datasets (for LEMMA-RCA benchmark download)
 datasets>=2.14.0
 huggingface-hub>=0.17.0
+
+# Agent Orchestration (LangGraph state machine for dual-agent pipeline)
+langgraph>=0.2.0
