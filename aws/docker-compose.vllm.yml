@@ -1,0 +1,127 @@
+# aws/docker-compose.vllm.yml — dual-model vLLM serving on AWS g6.xlarge (L4 24GB)
+#
+# Mirrors the simultaneous-dual-model architecture from the Jarvis Labs Ollama
+# deployment, but on vLLM (faster, continuous batching, PagedAttention).
+#
+# CRITICAL: vLLM ≤ 0.8.5 silently ignores enable_thinking=False for Qwen3
+# (analogous to the Ollama /v1/ endpoint bug we patched). MUST use vLLM ≥ 0.9.0
+# AND clients must pass chat_template_kwargs={"enable_thinking": false} per request.
+#
+# VRAM math on 24 GB L4:
+#   Qwen3-4B-Instruct  (bfloat16): ~8 GB  → gpu-memory-utilization=0.32
+#   Qwen3-14B-FP8                : ~14 GB → gpu-memory-utilization=0.62
+#   KV cache + overhead          : ~2 GB
+#   Total ~24 GB (tight) → if OOM, drop 4B to FP8 too OR move to g6e.xlarge (L40S 48GB)
+#
+# Open risk: Qwen/Qwen3-14B-FP8 HF repo presence unconfirmed. If 404, fallback to
+# Qwen/Qwen3-14B-AWQ with --quantization awq.
+#
+# Reference: misty-knitting-pine.md Phase 3.6.
+
+services:
+  qwen3-4b:
+    image: vllm/vllm-openai:v0.9.2
+    container_name: aiops-qwen3-4b
+    runtime: nvidia
+    ipc: host  # required by vLLM for shared memory
+    ports:
+      - "8000:8000"
+    volumes:
+      - /mnt/models:/models
+      - /mnt/hf-cache:/root/.cache/huggingface
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=0
+      - VLLM_LOGGING_LEVEL=INFO
+      - HF_HOME=/root/.cache/huggingface
+      # Deterministic-ish mode (vLLM doesn't guarantee bit-identical across runs,
+      # only batch-invariance; we report run-to-run variance per Phase 5.4)
+      - VLLM_ENABLE_V1_MULTIPROCESSING=0
+    command: >
+      --model Qwen/Qwen3-4B-Instruct-2507
+      --port 8000
+      --host 0.0.0.0
+      --gpu-memory-utilization 0.32
+      --max-model-len 16384
+      --dtype bfloat16
+      --seed 42
+      --reasoning-parser qwen3
+      --served-model-name qwen3-4b
+      --enforce-eager
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+
+  qwen3-14b:
+    image: vllm/vllm-openai:v0.9.2
+    container_name: aiops-qwen3-14b
+    runtime: nvidia
+    ipc: host
+    ports:
+      - "8001:8001"
+    volumes:
+      - /mnt/models:/models
+      - /mnt/hf-cache:/root/.cache/huggingface
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=0
+      - VLLM_LOGGING_LEVEL=INFO
+      - HF_HOME=/root/.cache/huggingface
+      - VLLM_ENABLE_V1_MULTIPROCESSING=0
+    # PRIMARY: try Qwen3-14B-FP8. If HF returns 404, change `--model` to
+    # `Qwen/Qwen3-14B-AWQ` and `--quantization fp8` to `--quantization awq`.
+    command: >
+      --model Qwen/Qwen3-14B-FP8
+      --port 8001
+      --host 0.0.0.0
+      --gpu-memory-utilization 0.62
+      --max-model-len 16384
+      --quantization fp8
+      --kv-cache-dtype fp8
+      --seed 42
+      --reasoning-parser qwen3
+      --served-model-name qwen3-14b
+      --enforce-eager
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8001/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 180s  # 14B takes longer to warm up
+    depends_on:
+      # NOT service_healthy — both load in parallel from disk, fine to race
+      qwen3-4b:
+        condition: service_started
+
+# Notes for clients (FastAnnotator + ReasoningAgent):
+#
+# Both endpoints expose OpenAI-compatible /v1/chat/completions. To avoid
+# Qwen3 thinking-mode bleed-through, every chat request MUST include:
+#
+#   "chat_template_kwargs": {"enable_thinking": false}
+#
+# Existing ModelRouter._fix_thinking_response() workaround stays as belt-and-
+# suspenders — handles the rare case where reasoning text still leaks into
+# message.content despite the flag.
+#
+# Deterministic inference per request:
+#   "temperature": 0.0,
+#   "top_p": 1.0,
+#   "seed": <hash(prompt) % 2^32>,
