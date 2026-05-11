@@ -1,7 +1,7 @@
 # Backend Architecture
 
-> **Version**: 0.6.1
-> **Last Updated**: 2026-01-27
+> **Version**: 0.10.1
+> **Last Updated**: 2026-03-01
 > **Framework**: FastAPI (Python 3.11+)
 > **Source of Truth**: [KEY_METRICS.md](KEY_METRICS.md)
 
@@ -92,6 +92,40 @@ class ConfidenceLevel(Enum):
 
 ---
 
+### Orchestration (src/orchestration/) — MANDATORY
+
+| File | Purpose | Key Exports |
+|------|---------|-------------|
+| `__init__.py` | Package exports | `IncidentState`, `build_incident_graph`, `IncidentStateMachine` |
+| `graph.py` | LangGraph incident pipeline | `build_incident_graph()`, `IncidentState`, `ESCALATION_SEVERITY_THRESHOLD` |
+| `state_machine.py` | Incident lifecycle transitions | `IncidentStateMachine` |
+
+#### graph.py — LangGraph Pipeline
+- **Framework**: LangGraph StateGraph (Talker-Reasoner architecture, arXiv:2410.08328)
+- **Nodes**: `annotate` (System 1), `evaluate_escalation`, `reasoning` (System 2), `validate`, `plan`
+- **Conditional Edges**: `route_escalation` (severity >= 8), `route_authorization` (confidence >= 0.90)
+- **State**: `IncidentState` (TypedDict) flows through all nodes carrying telemetry, annotations, RCA, validation
+- **CoT Context**: Prior context from System 1 annotation is passed to System 2 for Chain-of-Thought reasoning
+- **MANDATORY**: System raises `RuntimeError` at startup if orchestrator cannot be built
+
+```
+Pipeline: START -> annotate -> evaluate_escalation -> [reasoning -> validate -> [plan]] -> END
+```
+
+#### state_machine.py — Lifecycle
+- **States**: detecting -> analyzing -> remediating -> resolved (+ escalated)
+- **Transitions**: Enforces legal state changes, rejects invalid ones (e.g., detecting -> resolved)
+- **Authorization mapping**: Maps LangGraph `authorization_level` to incident state
+
+#### Mandatory Enforcement
+| Component | Error Type | Condition |
+|-----------|-----------|-----------|
+| `main.py` startup | `RuntimeError` | If `build_incident_graph()` returns None |
+| `BackgroundTelemetryProcessor.__init__()` | `ValueError` | If `incident_graph` not provided |
+| `incidents.py` `_trigger_analysis()` | `HTTP 503` | If `incident_graph` not on app.state |
+
+---
+
 ### API Routes (src/api/routes/)
 
 | File | Prefix | Purpose |
@@ -169,7 +203,7 @@ class AuthorizationLevel(Enum): automatic, approval_required, alert_only
 | `calculator.py` | Composite confidence calculation | `ConfidenceCalculator`, `ConfidenceBreakdown` |
 | `__init__.py` | Module exports | All above |
 
-#### Confidence Formula (Research_V6.tex)
+#### Confidence Formula (Research_V7.tex)
 ```
 C(a) = α·C_LLM + β·C_hist + γ·C_sim
 

@@ -11,6 +11,9 @@ import os
 from dataclasses import dataclass, field
 from typing import Optional
 
+from dotenv import load_dotenv
+load_dotenv()  # Load .env before any os.getenv() calls in dataclass defaults
+
 
 @dataclass
 class LLMConfig:
@@ -80,7 +83,7 @@ class ObservabilityConfig:
 
 @dataclass
 class MemoryConfig:
-    """Memory system configuration (from Research_V6.tex)."""
+    """Memory system configuration (from Research_V7.tex)."""
 
     # Embedding configuration
     embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
@@ -93,7 +96,7 @@ class MemoryConfig:
 
 @dataclass
 class PerformanceConfig:
-    """Performance targets configuration (from Research_V6.tex)."""
+    """Performance targets configuration (from Research_V7.tex)."""
 
     # Latency targets (P95)
     fast_agent_latency_target_ms: int = 100  # <100ms P95
@@ -117,7 +120,7 @@ class PerformanceConfig:
 class ConstitutionalConfig:
     """Constitutional AI framework configuration."""
 
-    # Confidence thresholds for authorization matrix (from Research_V6.tex)
+    # Confidence thresholds for authorization matrix (from Research_V7.tex)
     # C(a) = 0.4 · C_LLM + 0.35 · C_hist + 0.25 · C_sim
     confidence_threshold_auto: float = field(
         default_factory=lambda: float(os.getenv("CONFIDENCE_THRESHOLD_AUTO", "0.90"))

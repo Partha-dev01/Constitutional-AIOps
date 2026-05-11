@@ -52,6 +52,9 @@ from src.telemetry.compressor import TokenCompressor
 from src.telemetry.aggregator import TelemetryAggregator
 from src.telemetry.background_processor import BackgroundTelemetryProcessor
 
+# Import orchestration (LangGraph pipeline)
+from src.orchestration.graph import build_incident_graph
+
 # Import MCP components
 from src.mcp.server import MCPActionServer
 
@@ -153,6 +156,21 @@ async def lifespan(app: FastAPI):
             episode_store=app.state.episode_store,
         )
 
+    # Initialize LangGraph orchestration pipeline (MANDATORY)
+    # Implements Talker-Reasoner architecture (arXiv:2410.08328)
+    app.state.incident_graph = build_incident_graph(
+        fast_annotator=app.state.fast_annotator,
+        reasoning_agent=app.state.reasoning_agent,
+        validator=app.state.validator,
+        confidence_calculator=app.state.confidence_calculator,
+    )
+    if app.state.incident_graph is None:
+        raise RuntimeError(
+            "Failed to build LangGraph incident orchestration pipeline. "
+            "The orchestrator is mandatory — system cannot start without it."
+        )
+    logger.info("LangGraph incident orchestration pipeline initialized (MANDATORY)")
+
     # Initialize telemetry components
     app.state.telemetry_collector = TelemetryCollector()
     app.state.token_compressor = TokenCompressor()
@@ -187,13 +205,14 @@ async def lifespan(app: FastAPI):
         logger.warning(f"Telemetry health check failed: {e}")
 
     # Initialize and start Background Telemetry Processor
-    # This implements the "System 1" continuous scanning from Research_V6.tex
+    # This implements the "System 1" continuous scanning from Research_V7.tex
     app.state.background_processor = BackgroundTelemetryProcessor(
         fast_annotator=app.state.fast_annotator,
         reasoning_agent=app.state.reasoning_agent,
         telemetry_collector=app.state.telemetry_collector,
         episode_store=app.state.episode_store,
         neo4j_client=app.state.neo4j_client,
+        incident_graph=app.state.incident_graph,
         processing_interval=30,  # Process every 30 seconds
     )
     await app.state.background_processor.start()

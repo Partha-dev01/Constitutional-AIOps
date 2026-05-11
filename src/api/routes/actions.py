@@ -4,7 +4,7 @@ Constitutional AIOps - Actions API Routes
 Action management endpoints with Constitutional AI validation.
 All actions are validated against 12 constitutional principles before execution.
 
-Confidence Formula (from Research_V6.tex):
+Confidence Formula (from Research_V7.tex):
   C(a) = 0.4·C_LLM + 0.35·C_hist + 0.25·C_sim
 
 Authorization levels based on composite confidence:
@@ -74,7 +74,7 @@ async def create_action(
     2. Tier 2 (Operational) - Violations require approval
     3. Tier 3 (Learning) - Soft warnings logged
 
-    Confidence Formula (Research_V6.tex):
+    Confidence Formula (Research_V7.tex):
       C(a) = 0.4·C_LLM + 0.35·C_hist + 0.25·C_sim
 
     Authorization levels based on composite confidence:
@@ -96,7 +96,7 @@ async def create_action(
         request.app.state, "confidence_calculator", None
     )
 
-    # Calculate composite confidence using the formula from Research_V6.tex
+    # Calculate composite confidence using the formula from Research_V7.tex
     llm_confidence = action_create.confidence
     composite_confidence = llm_confidence
     confidence_breakdown: Optional[ConfidenceBreakdown] = None
@@ -311,14 +311,14 @@ async def get_pending_approvals() -> PendingApprovals:
 @router.get(
     "/confidence/formula",
     summary="Get Confidence Formula",
-    description="Get the composite confidence formula from Research_V6.tex",
+    description="Get the composite confidence formula from Research_V7.tex",
     tags=["confidence"],
 )
 async def get_confidence_formula():
     """
     Get the confidence formula used for action authorization.
 
-    Returns the formula and current weights from Research_V6.tex:
+    Returns the formula and current weights from Research_V7.tex:
     C(a) = α·C_LLM + β·C_hist + γ·C_sim
 
     Returns:

@@ -2,7 +2,7 @@
 Constitutional AIOps - Embedding Service
 
 Provides semantic embeddings for episodes using sentence-transformers.
-Implements the vector similarity component from Research_V6.tex.
+Implements the vector similarity component from Research_V7.tex.
 
 Model: all-MiniLM-L6-v2 (384 dimensions)
 - Optimized for semantic similarity
@@ -20,7 +20,7 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
-# Constants from Research_V6.tex
+# Constants from Research_V7.tex
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 EMBEDDING_DIMENSIONS = 384
 SIMILARITY_THRESHOLD = 0.70  # Minimum cosine similarity for matching

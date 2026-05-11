@@ -4,13 +4,13 @@ Constitutional AIOps - Episode Store
 Manages episodic memory for incidents, storing complete incident lifecycles
 as "episodes" that can be retrieved for similar situation analysis.
 
-Memory System Constants (from Research_V6.tex):
+Memory System Constants (from Research_V7.tex):
 - Embedding Model: sentence-transformers/all-MiniLM-L6-v2
 - Embedding Dimensions: 384
 - Similarity Threshold: ≥0.70 cosine
 - Retrieval Complexity: O(log n)
 
-Hybrid Retrieval Formula (from Research_V6.tex):
+Hybrid Retrieval Formula (from Research_V7.tex):
   score(e) = α·vector_sim(e) + (1-α)·graph_sim(e)
   where α = 0.6
 """
@@ -27,12 +27,12 @@ from src.memory.neo4j_client import Neo4jClient, NEO4J_AVAILABLE
 if TYPE_CHECKING:
     from src.memory.embedding_service import EmbeddingService
 
-# Memory System Constants (from Research_V6.tex)
+# Memory System Constants (from Research_V7.tex)
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 EMBEDDING_DIMENSIONS = 384
 SIMILARITY_THRESHOLD = 0.70  # Minimum cosine similarity for matching
 
-# Hybrid retrieval weight (from Research_V6.tex)
+# Hybrid retrieval weight (from Research_V7.tex)
 RETRIEVAL_ALPHA = 0.6  # Weight for vector similarity vs graph similarity
 
 # =============================================================================
@@ -668,7 +668,7 @@ class EpisodeStore:
         """
         Calculate hybrid similarity score between two episodes.
 
-        Uses the formula from Research_V6.tex:
+        Uses the formula from Research_V7.tex:
         score(e) = α·vector_sim(e) + (1-α)·graph_sim(e)
         where α = 0.6 (RETRIEVAL_ALPHA)
 

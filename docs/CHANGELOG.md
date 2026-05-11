@@ -2,6 +2,67 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.10.1] - 2026-03-01
+
+### Dashboard Integration & Chat Runtime Context Fix
+
+**Milestone**: Full local dashboard working with Jarvis Labs backend. Fixed chat giving generic answers, added runtime context resilience, and verified all systems end-to-end.
+
+#### Bug Fixes
+- `src/config.py` — Added `load_dotenv()` before dataclass defaults so `.env` values are loaded regardless of entry point
+- `src/api/routes/chat.py` — Fixed `_build_runtime_context()` silently returning empty when Docker/services unavailable; now always reports status (including explicit failure messages)
+- `src/api/routes/chat.py` — Replaced emoji characters (green/red circles) with plain text (RUNNING/OFFLINE/ONLINE) to avoid token encoding issues
+- `src/api/routes/chat.py` — Added `finally` block for `docker_client.close()` to prevent resource leaks
+- `src/agents/reasoning_agent.py` — Fixed `_build_prompt()` to show "No runtime data currently available" instead of blank when runtime context is empty
+- `src/telemetry/collector.py` — **Fixed timezone bug**: `datetime.utcnow()` returns naive datetimes; `.timestamp()` wrongly treated them as local time (IST = UTC+5:30), causing Loki/Tempo queries to miss all data by 5.5 hours. Fixed by making naive datetimes timezone-aware before conversion to nanoseconds.
+
+#### Infrastructure
+- Docker infrastructure services (Neo4j, Loki, Prometheus, Tempo, Grafana, OTel Collector) running via docker-compose
+- Backend runs locally with `.env` pointing to Jarvis Labs Ollama (HTTPS endpoints)
+- Frontend (Vite) runs locally, proxying `/api` to local backend
+- Updated `.env` to current Jarvis Labs instance (`5d97b43810591`)
+
+#### Verification
+- Both agents healthy via Jarvis Labs HTTPS (Qwen3-4B + Qwen3-14B)
+- Neo4j connected (72 nodes, 97 edges, 9 episodes)
+- LGTM stack all healthy (Loki, Prometheus, Tempo)
+- Chat correctly returns actual container status instead of generic advice
+- BackgroundTelemetryProcessor producing annotations every ~60s
+- Playwright screenshots captured for Dashboard, Agents Hub, Graph, Chat
+
+## [0.10.0] - 2026-03-01
+
+### LangGraph Orchestration Pipeline (MANDATORY)
+
+**Milestone**: Added LangGraph-based agent orchestration implementing the Talker-Reasoner architecture (arXiv:2410.08328). The orchestrator is now **mandatory** — the system will not start without it.
+
+#### New Files
+- `src/orchestration/graph.py` — LangGraph StateGraph pipeline (5 nodes, 2 conditional edges)
+- `src/orchestration/state_machine.py` — Incident lifecycle state machine
+- `src/orchestration/__init__.py` — Package exports
+- `docs/archive/pre_orchestrator_fallback.py` — Archived pre-orchestrator fallback code
+
+#### Modified Files
+- `src/main.py` — Initializes LangGraph pipeline at startup, raises `RuntimeError` if build fails
+- `src/agents/reasoning_agent.py` — Added `prior_context` parameter for Chain-of-Thought across agents
+- `src/telemetry/background_processor.py` — Uses LangGraph pipeline (mandatory, no fallback)
+- `src/api/routes/incidents.py` — Uses LangGraph pipeline (mandatory, raises HTTP 503 if unavailable)
+- `src/benchmark/runner.py` — Added `use_orchestrator` flag to `BenchmarkConfig`
+- `benchmark/scripts/run_ablation.py` — Added `with-orchestrator` ablation configuration
+- `requirements.txt` — Added `langgraph>=0.2.0`
+
+#### Key Features
+- **Severity-based escalation**: severity >= 8 triggers Reasoning Agent (System 2)
+- **Chain-of-Thought**: System 1 annotation passed as prior_context to System 2
+- **Constitutional validation**: Integrated as pipeline node after reasoning
+- **Confidence-gated authorization**: >= 0.90 auto, 0.70-0.90 approval, < 0.70 alert
+- **Mandatory enforcement**: ValueError, RuntimeError, HTTP 503 if orchestrator unavailable
+
+#### Documentation Updates
+- `docs/BACKEND.md` — Added Orchestration section with mandatory enforcement table
+- `docs/ARCHITECTURE.md` — Added Section 3.5 with LangGraph pipeline diagram
+- `docs/CHANGELOG.md` — This entry
+
 ## [0.9.1] - 2026-02-06
 
 ### Auto-Export Pipeline + Fresh Full Benchmark
@@ -147,7 +208,7 @@ Qwen3-4B has thinking mode enabled by default, causing ~28s latency per annotati
 
 #### Benchmark Results (133 tests - 100 annotation + 33 RCA)
 
-| Metric | Score | Target (Research_V6) | Status |
+| Metric | Score | Target (Research_V7) | Status |
 |--------|-------|---------------------|--------|
 | **Annotation** | **89/100 = 89.0%** | 87-92% | **IN TARGET** |
 | **RCA** | **29/33 = 87.9%** | 85-90% | **IN TARGET** |
@@ -604,7 +665,7 @@ docker ps --format "table {{.Names}}\t{{.Status}}" | grep neo4j
 
 ### Confidence Formula & Embeddings Implementation
 
-**Session**: Implemented the composite confidence formula and vector embeddings from Research_V6.tex.
+**Session**: Implemented the composite confidence formula and vector embeddings from Research_V7.tex.
 
 #### New Features
 
@@ -775,13 +836,13 @@ pip install sentence-transformers
 
 ## [0.4.8] - 2026-01-09
 
-### Architecture Fix: TelemetryCollector Compliance with Research_V6.tex
+### Architecture Fix: TelemetryCollector Compliance with Research_V7.tex
 
 **Session**: Fixed architecture violation where BackgroundProcessor bypassed TelemetryCollector
 
 #### Critical Fix
 
-The previous implementation incorrectly bypassed the `TelemetryCollector` with direct HTTP queries to Loki/Prometheus/Tempo. This violated the Research_V6.tex architecture:
+The previous implementation incorrectly bypassed the `TelemetryCollector` with direct HTTP queries to Loki/Prometheus/Tempo. This violated the Research_V7.tex architecture:
 
 ```
 LGTM Stack → TelemetryCollector → BackgroundProcessor → Fast Agent
@@ -805,7 +866,7 @@ LGTM Stack → TelemetryCollector → BackgroundProcessor → Fast Agent
 
 #### Architecture Compliance
 
-Now properly follows Research_V6.tex Section 4.1:
+Now properly follows Research_V7.tex Section 4.1:
 - TelemetryCollector is the **single interface** to LGTM stack
 - BackgroundProcessor delegates to TelemetryCollector
 - No direct HTTP calls to observability backends
@@ -822,7 +883,7 @@ curl http://localhost:8000/api/v1/telemetry/processor/status
 
 ### Background Telemetry Processor - Continuous Fast Agent Scanning
 
-**Session**: Implementing continuous telemetry processing as described in Research_V6.tex
+**Session**: Implementing continuous telemetry processing as described in Research_V7.tex
 
 #### Major Changes
 
@@ -849,7 +910,7 @@ curl http://localhost:8000/api/v1/telemetry/processor/status
 - `aiops-neo4j`
 
 #### Research Paper Reference
-From Research_V6.tex:
+From Research_V7.tex:
 > "Fast Annotation Agent (System 1): A 4B parameter model optimized for sub-100ms pattern recognition. It continuously scans OpenTelemetry streams to tag anomalies."
 
 ---
@@ -980,7 +1041,7 @@ From Research_V6.tex:
 
 ### Full Codebase Compliance Verification
 
-**Verification Scope**: Research_V6.tex → docs/ → src/ → frontend/src/
+**Verification Scope**: Research_V7.tex → docs/ → src/ → frontend/src/
 
 #### Files Modified (Backend)
 - **src/agents/fast_annotator.py**:
@@ -1001,7 +1062,7 @@ From Research_V6.tex:
 #### Verification Results
 | Area | Files Checked | Status |
 |------|---------------|--------|
-| Research_V6.tex | 1 (22 pages) | ✅ No changes needed |
+| Research_V7.tex | 1 (22 pages) | ✅ No changes needed |
 | docs/ | 13+ files | ✅ Already compliant |
 | frontend/src/ | 23+ files | ✅ Already compliant |
 | src/ | 48 files | ✅ Fixed (17 changes in 9 files) |
@@ -1013,7 +1074,7 @@ From Research_V6.tex:
 ## [0.4.2] - 2026-01-03
 
 ### Research Paper V6 Complete
-- **Research_V6.tex**: Final research paper version (22 pages)
+- **Research_V7.tex**: Final research paper version (22 pages)
   - Added Determinism Analysis section with mathematical proofs
   - Enhanced Confidence-Based Authorization with justifications
   - Fixed Kubernetes→Docker Compose references (current deployment)
@@ -1050,7 +1111,7 @@ From Research_V6.tex:
 ## [0.4.1] - 2025-12-30
 
 ### Changed
-- **Codebase Synchronization**: All codebase files now match Research_V6.tex and documentation
+- **Codebase Synchronization**: All codebase files now match Research_V7.tex and documentation
 - **Latency Targets**: Updated all files to use correct values
   - fast_annotator.py: <50ms P99 → <100ms P95
   - reasoning_agent.py: <200ms P99 → 200-500ms P95

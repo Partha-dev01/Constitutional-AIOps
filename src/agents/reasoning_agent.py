@@ -10,7 +10,7 @@ Responsibilities:
 - Human chat interaction for operator communication
 - Multi-service dependency analysis
 
-Performance Targets (from Research_V6.tex):
+Performance Targets (from Research_V7.tex):
 - Latency: 200-500ms P95
 - Context: 4K tokens
 - Accuracy: Prioritized over speed
@@ -253,8 +253,8 @@ class ReasoningAgent(BaseAgent):
         runtime_context = input_data.get("runtime_context")
         enable_thinking = input_data.get("enable_thinking", False)
 
-        # Build prompt with runtime context
-        prompt = self._build_prompt(mode, query, context, runtime_context)
+        # Build prompt with runtime context (returns user_prompt, system_prompt)
+        user_prompt, system_prompt = self._build_prompt(mode, query, context, runtime_context)
 
         # Track timing for activity logging
         start_time = time.perf_counter()
@@ -264,10 +264,11 @@ class ReasoningAgent(BaseAgent):
             # Temperature: 0.0 for deterministic RCA/planning, 0.5 for natural chat
             temp = 0.0 if mode in ("rca", "planning") else 0.5
             response = await self.model_router.reasoning_completion(
-                prompt=prompt,
+                prompt=user_prompt,
                 max_tokens=2048,
                 temperature=temp,
                 enable_thinking=enable_thinking,
+                system_prompt=system_prompt,
             )
 
             content = response["choices"][0]["message"]["content"]
@@ -332,6 +333,7 @@ class ReasoningAgent(BaseAgent):
         self,
         incident_data: dict[str, Any],
         historical_context: str = "",
+        prior_context: str = "",
         enable_thinking: bool = True,
     ) -> AgentResponse:
         """
@@ -340,15 +342,19 @@ class ReasoningAgent(BaseAgent):
         Args:
             incident_data: Incident information and telemetry
             historical_context: Context from episodic memory (similar past incidents)
+            prior_context: Chain-of-Thought context from Fast Agent (System 1)
+                annotation, passed by the LangGraph orchestration pipeline
             enable_thinking: Enable extended thinking mode
 
         Returns:
             AgentResponse with RCA results
         """
-        # Build context with historical information if available
+        # Build context with prior annotation and historical information
         context = json.dumps(incident_data, indent=2)
+        if prior_context:
+            context = f"## Fast Agent Assessment (System 1)\n{prior_context}\n\n## Current Incident\n{context}"
         if historical_context:
-            context = f"## Historical Context (Similar Past Incidents)\n{historical_context}\n\n## Current Incident\n{context}"
+            context = f"## Historical Context (Similar Past Incidents)\n{historical_context}\n\n{context}"
 
         return await self.process({
             "mode": "rca",
@@ -417,25 +423,28 @@ class ReasoningAgent(BaseAgent):
         query: str,
         context: str,
         runtime_context: Optional[str] = None,
-    ) -> str:
-        """Build prompt with system context and runtime information."""
+    ) -> tuple[str, str]:
+        """Build user prompt and system prompt separately.
+
+        Returns:
+            Tuple of (user_prompt, system_prompt) for proper message role separation.
+        """
         system_prompt = self.get_system_prompt(mode)
 
         # Inject runtime context into system prompt (for chat mode)
         if mode == "chat" and runtime_context:
-            system_prompt = system_prompt.replace("{runtime_context}", runtime_context)
+            system_prompt = system_prompt.replace("{runtime_context}", f"## Current System State\n{runtime_context}")
         else:
-            # Remove the placeholder if no runtime context
-            system_prompt = system_prompt.replace("{runtime_context}", "")
+            system_prompt = system_prompt.replace(
+                "{runtime_context}",
+                "## Current System State\nNo runtime data currently available. Answer based on your knowledge of the system architecture.",
+            )
 
-        prompt = f"""{system_prompt}
-
-User Query: {query}
-"""
+        user_prompt = f"User Query: {query}"
         if context:
-            prompt += f"\nConversation Context:\n{context}"
+            user_prompt += f"\n\nContext:\n{context}"
 
-        return prompt
+        return user_prompt, system_prompt
     
     def _parse_json_response(self, content: str) -> dict[str, Any]:
         """Parse JSON from model response with robust brace-matching fallback."""

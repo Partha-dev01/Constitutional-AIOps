@@ -1,7 +1,7 @@
 """
 Constitutional AIOps - Confidence Calculator Module
 
-Implements the composite confidence formula from Research_V6.tex:
+Implements the composite confidence formula from Research_V7.tex:
 C(a) = α·C_LLM + β·C_hist + γ·C_sim
 
 Where:

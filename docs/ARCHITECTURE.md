@@ -1,7 +1,7 @@
 # Constitutional AIOps - System Architecture
 
-> **Version**: 0.6.1
-> **Last Updated**: 2026-01-28
+> **Version**: 0.10.1
+> **Last Updated**: 2026-03-01
 > **Status**: Production Ready
 > **Source of Truth**: [KEY_METRICS.md](KEY_METRICS.md)
 
@@ -196,9 +196,85 @@ class ModelRouter:
 
 ---
 
+## 3.5 Agent Orchestration (LangGraph — MANDATORY)
+
+The dual-agent pipeline is orchestrated using **LangGraph StateGraph**, implementing the
+Talker-Reasoner architecture (Christakopoulou et al., Google DeepMind, arXiv:2410.08328).
+
+The orchestrator is **mandatory** — the system will not start without it.
+
+### Pipeline
+
+```
+                    ┌──────────────────────────────────────────┐
+                    │        LangGraph StateGraph               │
+                    │     (IncidentOrchestrationGraph)           │
+                    ├──────────────────────────────────────────┤
+                    │                                          │
+  Telemetry ──►  [START]                                       │
+                    │                                          │
+                    ▼                                          │
+              ┌──────────┐                                     │
+              │ annotate  │  ◄── FastAnnotator (System 1)      │
+              │ (Qwen3-4B)│                                    │
+              └────┬──────┘                                    │
+                   │                                           │
+              ┌────▼──────┐                                    │
+              │ evaluate   │  ◄── severity >= 8?               │
+              │ escalation │                                   │
+              └────┬──────┘                                    │
+                   │                                           │
+            ┌──────┴──────┐  (conditional edge)                │
+            │             │                                    │
+       severity < 8   severity >= 8                            │
+            │          OR needs_reasoning                       │
+            │             │                                    │
+            ▼             ▼                                    │
+         [END]     ┌───────────┐                               │
+        (fast      │ reasoning  │ ◄── ReasoningAgent (System 2)│
+         path)     │(Qwen3-14B) │     + prior_context (CoT)    │
+                   └─────┬─────┘                               │
+                         │                                     │
+                    ┌────▼─────┐                               │
+                    │ validate  │ ◄── Constitutional Validator  │
+                    └────┬─────┘                               │
+                         │                                     │
+                  ┌──────┴──────┐  (conditional)               │
+                  │             │                               │
+             confidence    confidence                           │
+             >= 0.90       < 0.90                               │
+                  │             │                               │
+                  ▼             ▼                               │
+             ┌────────┐     [END]                              │
+             │  plan   │   (approval/alert)                    │
+             └────┬───┘                                        │
+                  ▼                                            │
+               [END]                                           │
+                    └──────────────────────────────────────────┘
+```
+
+### Key Design Decisions
+
+| Decision | Rationale |
+|----------|-----------|
+| LangGraph wraps existing agents | No new LLM code — nodes call `FastAnnotator.process()`, `ReasoningAgent.analyze_rca()` |
+| MANDATORY (no fallback) | System raises errors if orchestrator unavailable |
+| Chain-of-Thought across agents | System 1 annotation passed as `prior_context` to System 2 |
+| Conditional edges | Severity-based escalation (>= 8) + confidence-gated authorization |
+
+### Source Files
+
+| File | Lines | Purpose |
+|------|-------|---------|
+| `src/orchestration/graph.py` | ~480 | LangGraph pipeline definition |
+| `src/orchestration/state_machine.py` | ~100 | Incident lifecycle enforcement |
+| `src/orchestration/__init__.py` | ~18 | Package exports |
+
+---
+
 ## 4. Data Flow
 
-### 4.1 Telemetry Flow
+### 4.1 Telemetry Flow (via LangGraph Orchestrator)
 
 ```
 Container Logs ──► Promtail ──► Loki ──► Backend API
@@ -211,27 +287,29 @@ Traces ──────────► Tempo ───────────
                                     Telemetry Aggregator
                                               │
                                               ▼
-                                    Fast Agent (Qwen3-4B)
-                                      Classification
-                                              │
-                            ┌─────────────────┴─────────────────┐
-                            ▼                                   ▼
-                    HIGH CONFIDENCE                     LOW CONFIDENCE
-                    (≥70%, simple)                     (<70% or complex)
-                            │                                   │
-                            │                    ┌──────────────┴──────────────┐
-                            │                    ▼                             │
-                            │           Reasoning Agent (Qwen3-14B)            │
-                            │                    │                             │
-                            └────────────────────┴─────────────────────────────┘
-                                                 │
-                                                 ▼
-                                    Constitutional Validator
-                                                 │
-                            ┌────────────────────┼────────────────────┐
-                            ▼                    ▼                    ▼
-                        APPROVED           NEEDS APPROVAL         REJECTED
-                        (≥90%)              (70-90%)              (<70%)
+                              ┌────────────────────────────────┐
+                              │    LangGraph Orchestrator       │
+                              │    (MANDATORY)                  │
+                              ├────────────────────────────────┤
+                              │                                │
+                              │    Fast Agent (Qwen3-4B)       │
+                              │      Annotation (System 1)     │
+                              │              │                 │
+                              │     ┌────────┴────────┐        │
+                              │     ▼                 ▼        │
+                              │  severity < 8    severity >= 8 │
+                              │     │                 │        │
+                              │   [END]    Reasoning Agent     │
+                              │            (Qwen3-14B, RCA)    │
+                              │                   │            │
+                              │         Constitutional         │
+                              │           Validator            │
+                              │                   │            │
+                              │     ┌─────────────┼────────┐   │
+                              │     ▼             ▼        ▼   │
+                              │  APPROVED    APPROVAL   ALERT  │
+                              │  (>=90%)     (70-90%)   (<70%) │
+                              └────────────────────────────────┘
                             │                    │                    │
                             ▼                    ▼                    ▼
                         Execute            Queue for              Log &
