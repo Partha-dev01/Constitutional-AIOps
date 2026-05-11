@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-05-11T18:37:54Z",
+  "generator": {
+    "git_sha": "4a199d676da8d00b149d4195b7ec67249e8c4b54",
+    "script": "scripts/build_manifest.py"
+  },
+  "sources": [
+    {
+      "path": "benchmark/datasets/raw/loghub/hdfs/HDFS_2k.log",
+      "sha256": "7c967000980c086ed55fa6544ba4f05fe66d44622795e890c68caf8bbb635035",
+      "size_bytes": 287848,
+      "kind": "source",
+      "origin": "https://github.com/logpai/loghub"
+    },
+    {
+      "path": "benchmark/datasets/raw/loghub/bgl/BGL_2k.log_structured.csv",
+      "sha256": "3fe74103c0b02a28514534e2a47257a3f770135ca61afd425bbd3b9d6a31fe26",
+      "size_bytes": 425129,
+      "kind": "source",
+      "origin": "https://github.com/logpai/loghub"
+    },
+    {
+      "path": "benchmark/datasets/raw/opseval/data/en/test/Wired Network.json",
+      "sha256": "ecaa1a4475593f69f6d8684cc8dd87826f30fd5a2e50f3e699bd35e5987f1030",
+      "size_bytes": 1295123,
+      "kind": "source",
+      "origin": "https://github.com/netmanaiops/opseval-datasets"
+    },
+    {
+      "path": "benchmark/datasets/raw/opseval/data/en/test/5G Communication.json",
+      "sha256": "d0afb07bb55435d5d87bb876e088168e251eb9011ec1f00a95f285425f5d09ec",
+      "size_bytes": 134486,
+      "kind": "source",
+      "origin": "https://github.com/netmanaiops/opseval-datasets"
+    },
+    {
+      "path": "benchmark/datasets/raw/opseval/data/en/test/Mobile Communication Network.json",
+      "sha256": "f804c875854eae7d329d708060e5a6517c6d947761b0d14b9dc4920931ca83f4",
+      "size_bytes": 53614,
+      "kind": "source",
+      "origin": "https://github.com/netmanaiops/opseval-datasets"
+    }
+  ],
+  "scripts": [
+    {
+      "path": "benchmark/scripts/clean_dataset.py",
+      "sha256": "76e99adaf3ba1b3ff89a520e2881df5d9b8eff770108a0ac253247e255561f12",
+      "size_bytes": 8997,
+      "kind": "script"
+    },
+    {
+      "path": "benchmark/scripts/prepare_datasets.py",
+      "sha256": "8793be5188096467f5869117ae367f077678a5b88a762a4536bcb681bf2beefb",
+      "size_bytes": 55251,
+      "kind": "script"
+    },
+    {
+      "path": "benchmark/scripts/remove_chinese.py",
+      "sha256": "b6058aaa9f155b05519db98e0997fa03b400c28b333ae01b66b0774638f85bf6",
+      "size_bytes": 4938,
+      "kind": "script"
+    },
+    {
+      "path": "benchmark/scripts/fix_benchmark_dataset.py",
+      "sha256": "04aeea268dfdc2e258437cc26f79f3d07385fddf96e082972fa8603f255590b2",
+      "size_bytes": 2323,
+      "kind": "script"
+    }
+  ],
+  "outputs": [
+    {
+      "path": "benchmark/datasets/processed/annotation_clean.json",
+      "sha256": "45e41f117d4334a4e228d456ed0129bc30ea143e11097f60c8ad486aff0f2e32",
+      "size_bytes": 80287,
+      "kind": "output",
+      "case_count": 138
+    },
+    {
+      "path": "benchmark/datasets/processed/rca_clean.json",
+      "sha256": "62a3ae0a6f29ba01fd2c496403649e3261328b6c1c66891def61f76a5f837c03",
+      "size_bytes": 198223,
+      "kind": "output",
+      "case_count": 180
+    },
+    {
+      "path": "benchmark/datasets/processed/benchmark_150_seed42.json",
+      "sha256": "d2cb5be2414be5aa6c7d24a3fb812590f0ac1a0a1b259f2c5233784c4cea0170",
+      "size_bytes": 111560,
+      "kind": "output",
+      "case_count": 150
+    }
+  ]
+}

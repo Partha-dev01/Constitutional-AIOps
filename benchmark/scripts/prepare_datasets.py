@@ -28,6 +28,88 @@ import random
 import argparse
 from pathlib import Path
 from datetime import datetime
+
+
+# ---------------------------------------------------------------------------
+# Validation guards (added 2026-05-12, Phase 1.5 hardening)
+#
+# These prevent two known-historical bugs from recurring:
+#  1. Missing `task_type` field → runner silently skips the case (17 orphaned
+#     RCA cases bug, fix_benchmark_dataset.py was created to patch this).
+#  2. RCA case missing both `logs` and `question` → runner.py:_run_rca_test
+#     crashes with KeyError on incident["logs"] (64% crash rate bug).
+#
+# We assert at curation time, NOT at runtime, so the failure surfaces at
+# dataset-build instead of mid-benchmark hour 2.
+# ---------------------------------------------------------------------------
+
+VALID_TASK_TYPES = {"annotation", "rca"}
+VALID_SEVERITIES = {"info", "low", "warning", "medium", "high", "critical"}
+
+
+def validate_cases(cases: list, context: str = "") -> None:
+    """Validate a list of benchmark cases. Raises AssertionError on first failure.
+
+    Args:
+        cases: list of case dicts
+        context: short label for error messages (e.g. 'annotation_test.json')
+    """
+    if not isinstance(cases, list):
+        raise AssertionError(f"{context}: expected list of cases, got {type(cases)}")
+
+    seen_ids: set[str] = set()
+    for i, case in enumerate(cases):
+        case_id = case.get("id", f"<idx={i}>")
+
+        # Required: stable unique id
+        if "id" not in case:
+            raise AssertionError(
+                f"{context}: case at index {i} missing required field 'id'"
+            )
+        if case_id in seen_ids:
+            raise AssertionError(
+                f"{context}: duplicate case id {case_id!r} "
+                f"(would cause silent JSONL collisions on resume)"
+            )
+        seen_ids.add(case_id)
+
+        # Required: task_type — runner filters on this; missing == silent skip
+        tt = case.get("task_type")
+        if tt is None:
+            raise AssertionError(
+                f"{context}: case {case_id} missing 'task_type' field "
+                f"(would be silently skipped by runner.py — see 17-orphaned-cases bug)"
+            )
+        if tt not in VALID_TASK_TYPES:
+            raise AssertionError(
+                f"{context}: case {case_id} has invalid task_type={tt!r} "
+                f"(must be one of {VALID_TASK_TYPES})"
+            )
+
+        # RCA cases need either logs or question — runner.py:_run_rca_test
+        # accesses incident['logs'] or incident['question'] depending on source
+        if tt == "rca":
+            incident = case.get("incident") or case.get("input") or {}
+            has_logs = bool(incident.get("logs"))
+            has_question = bool(incident.get("question"))
+            if not (has_logs or has_question):
+                raise AssertionError(
+                    f"{context}: RCA case {case_id} missing BOTH 'logs' and "
+                    f"'question' fields in incident/input "
+                    f"(would crash _run_rca_test with KeyError — see 64% crash bug)"
+                )
+
+        # Severity hygiene (if present)
+        expected = case.get("expected") or {}
+        sev = expected.get("severity") or case.get("severity")
+        if sev is not None and str(sev).lower() not in VALID_SEVERITIES:
+            # Warning, not error — model output not curator-controlled
+            # but flag in case curator typo'd the gold label
+            print(
+                f"  WARN {context}: case {case_id} has severity={sev!r} "
+                f"not in {VALID_SEVERITIES}",
+                file=sys.stderr,
+            )
 from typing import Any, Optional
 
 # Add project root to path
@@ -1303,6 +1385,10 @@ def create_curated_benchmark(
         "total_cases": total,
         "test_cases": all_cases,
     }
+
+    # Phase 1.5 hardening: assert no case can silently break the runner
+    # (task_type missing → silent skip; RCA without logs/question → crash)
+    validate_cases(all_cases, context=f"curated_benchmark(seed={seed})")
 
     return dataset
 
