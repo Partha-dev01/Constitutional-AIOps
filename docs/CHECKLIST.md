@@ -1,14 +1,34 @@
 # Constitutional AIOps - Development Checklist
 
-> **Version**: 0.7.1
-> **Last Updated**: 2026-01-30
+> **Version**: 0.10.1
+> **Last Updated**: 2026-03-01
 > **Status**: 100% Core Complete
 > **Architecture**: Simultaneous Dual-Model (Qwen3-4B + Qwen3-14B on 24GB VRAM)
-> **Deployment**: Hybrid (Jarvis Labs A5000 GPU + Local Services)
+> **Deployment**: Hybrid (Jarvis Labs A5000 GPU + Local Docker Services)
 
 ---
 
-## Recent Updates (2026-01-30) ✅
+## Recent Updates (2026-03-01) ✅
+
+### v0.10.1 - Dashboard Integration & Chat Fix
+- [x] Added `load_dotenv()` to `src/config.py` for proper `.env` loading
+- [x] Fixed chat `_build_runtime_context()` — always reports status even when Docker unavailable
+- [x] Removed emoji from runtime context (token encoding issues)
+- [x] Added fallback system prompt text when no runtime data available
+- [x] LangGraph orchestration deployed to Jarvis Labs (v0.10.0)
+- [x] Local dashboard verified end-to-end with Playwright screenshots
+- [x] Neo4j graph populated (72 nodes, 97 edges, 9 episodes)
+- [x] Both agents healthy via Jarvis Labs HTTPS
+
+### v0.10.0 - LangGraph Orchestration Pipeline
+- [x] Added mandatory LangGraph StateGraph pipeline (5 nodes, 2 conditional edges)
+- [x] Talker-Reasoner architecture (System 1 → System 2 escalation)
+- [x] Deployed to Jarvis Labs with both Qwen3 models
+- [x] Benchmark: 100% annotation, 80% RCA on 5+5 smoke test
+
+---
+
+## Previous Updates (2026-01-30) ✅
 
 ### v0.7.1 - LEMMA-RCA Cloud Computing Integration
 - [x] Added LEMMA-RCA Cloud Computing dataset from HuggingFace (~4.74GB)
@@ -105,7 +125,7 @@
 - [x] Fixed `TelemetryCollector.query_logs()` to use correct Loki label `{job="containerlogs"}`
 - [x] Fixed `TelemetryCollector.query_metrics()` to query generic Prometheus metrics
 - [x] Removed HTTP bypass from `BackgroundTelemetryProcessor` - now uses TelemetryCollector
-- [x] Architecture compliant with Research_V6.tex: `LGTM → TelemetryCollector → BackgroundProcessor → Fast Agent`
+- [x] Architecture compliant with Research_V7.tex: `LGTM → TelemetryCollector → BackgroundProcessor → Fast Agent`
 
 ### v0.4.7 - Background Telemetry Processor
 - [x] Created `src/telemetry/background_processor.py` - Continuous Fast Agent scanning (System 1)
@@ -124,7 +144,7 @@
 
 ## Codebase Synchronization (2025-12-30) ✅
 
-All codebase files now match documentation (Research_V6.tex, KEY_METRICS.md).
+All codebase files now match documentation (Research_V7.tex, KEY_METRICS.md).
 
 ### Backend Updates ✅
 - [x] `src/agents/fast_annotator.py` - Latency: <50ms P99 → <100ms P95
@@ -296,13 +316,13 @@ Created `src/validation/constants.py` with:
 - [x] `AWS_DEPLOYMENT.md` - AWS guide
 
 #### Research
-- [x] `docs/research/# IMP Current Research Documentation/Research_V6.tex` - Main paper (22 pages)
+- [x] `docs/research/# IMP Current Research Documentation/Research_V7.tex` - Main paper (22 pages)
 - [x] `docs/research/references.bib` - BibTeX citations
 - [x] `docs/research/Whitepaper_Combined.md` - Combined whitepaper
 
 ---
 
-## Performance Targets (From Research_V6.tex)
+## Performance Targets (From Research_V7.tex)
 
 | Metric | Target | Status |
 |--------|--------|--------|

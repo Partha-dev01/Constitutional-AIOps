@@ -8,7 +8,7 @@ Provides endpoints for Neo4j graph queries including:
 - Service impact analysis
 - Episode generation via Reasoning Agent
 
-Graph Model (from Research_V6.tex):
+Graph Model (from Research_V7.tex):
 - Episodes → CAUSED_BY → RootCauseType
 - Episodes → RESOLVED_BY → Action
 - Episodes → AFFECTS → Service
@@ -854,7 +854,7 @@ async def get_embedding_status(request: Request) -> dict:
     - Embedding dimensions
     - Similarity threshold
 
-    This implements the semantic similarity from Research_V6.tex:
+    This implements the semantic similarity from Research_V7.tex:
     - Model: sentence-transformers/all-MiniLM-L6-v2
     - Dimensions: 384
     - Threshold: 0.70 cosine similarity

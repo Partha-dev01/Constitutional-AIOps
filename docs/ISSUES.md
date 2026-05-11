@@ -1,7 +1,7 @@
 # Constitutional AIOps - Issue Tracker
 
-> **Version**: 0.8.1
-> **Last Updated**: 2026-02-06
+> **Version**: 0.10.1
+> **Last Updated**: 2026-03-01
 > **Open Issues**: 0
 > **Blockers**: 0
 
@@ -35,6 +35,18 @@ None - All core functionality implemented and tested.
 ---
 
 ## ✅ Resolved Issues
+
+### 2026-03-01 (v0.10.1 - Dashboard Integration & Telemetry Fixes)
+
+| ID | Issue | Resolution |
+|----|-------|------------|
+| BUG-055 | `.env` not loaded — `os.getenv()` in dataclass `default_factory` evaluated before `load_dotenv()` | Added `from dotenv import load_dotenv; load_dotenv()` at top of `src/config.py` |
+| BUG-056 | Chat gives generic "use docker ps" answers instead of querying system state | Fixed `_build_runtime_context()` in `chat.py` to always report status, even when Docker unavailable |
+| BUG-057 | Emoji characters in runtime context cause token encoding issues | Replaced emoji (green/red circles) with plain text (RUNNING/OFFLINE/ONLINE) |
+| BUG-058 | Docker client resource leak in `_build_runtime_context()` | Added `finally` block for `docker_client.close()` |
+| BUG-059 | Empty runtime context passed to LLM when `runtime_context` is empty string | Fixed `_build_prompt()` in `reasoning_agent.py` to show fallback text |
+| BUG-060 | Loki/Tempo queries return 0 results — timezone bug | `datetime.utcnow()` returns naive datetimes; `.timestamp()` treated as local time (IST=UTC+5:30), causing 5.5h offset. Fixed with `replace(tzinfo=timezone.utc)` in `collector.py` |
+| BUG-061 | Docker backend container cached old Jarvis Labs endpoint | Stopped Docker backend/frontend, run locally with correct `.env` |
 
 ### 2026-02-06 (Qwen3 Thinking Mode & Connection Fixes)
 

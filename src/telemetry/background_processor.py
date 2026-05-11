@@ -10,12 +10,12 @@ Key responsibilities:
 - Escalate to Reasoning Agent if needs_reasoning=true
 - Store annotations and episodes in Neo4j graph
 
-From Research_V6.tex:
+From Research_V7.tex:
 "Fast Annotation Agent (System 1): A 4B parameter model optimized for
 sub-100ms pattern recognition. It continuously scans OpenTelemetry streams
 to tag anomalies."
 
-Architecture (Research_V6.tex Section 4.1):
+Architecture (Research_V7.tex Section 4.1):
     LGTM Stack → TelemetryCollector → BackgroundProcessor → Fast Agent
 """
 
@@ -53,6 +53,7 @@ class BackgroundTelemetryProcessor:
         telemetry_collector: Any,
         episode_store: Any,
         neo4j_client: Any = None,
+        incident_graph: Any = None,
         processing_interval: int = PROCESSING_INTERVAL_SECONDS,
     ):
         """
@@ -64,13 +65,24 @@ class BackgroundTelemetryProcessor:
             telemetry_collector: TelemetryCollector for LGTM data (required)
             episode_store: EpisodeStore for storing episodes
             neo4j_client: Neo4jClient for graph updates (optional)
+            incident_graph: Compiled LangGraph pipeline (REQUIRED)
             processing_interval: Seconds between processing cycles
+
+        Raises:
+            ValueError: If incident_graph is not provided
         """
+        if incident_graph is None:
+            raise ValueError(
+                "incident_graph is required. Build it with "
+                "build_incident_graph() from src.orchestration.graph"
+            )
+
         self.fast_annotator = fast_annotator
         self.reasoning_agent = reasoning_agent
         self.telemetry_collector = telemetry_collector
         self.episode_store = episode_store
         self.neo4j_client = neo4j_client
+        self.incident_graph = incident_graph
         self.processing_interval = processing_interval
 
         self._running = False
@@ -164,34 +176,45 @@ class BackgroundTelemetryProcessor:
         # Build telemetry summary from TelemetryWindow
         telemetry_summary = self._build_window_summary(window)
 
-        # Process through Fast Agent
+        # ── LangGraph Orchestrated Pipeline (MANDATORY) ────────────────
+        # Full pipeline: annotate -> evaluate -> reasoning -> validate -> plan
         try:
-            annotation = await self.fast_annotator.process({
-                "telemetry_type": "combined",
-                "content": telemetry_summary,
-                "context": f"Telemetry window: {TELEMETRY_WINDOW_MINUTES}min, Logs: {window.log_count}, Metrics: {len(window.metrics)}, Traces: {len(window.traces)}",
+            correlation_id = str(uuid4())[:12]
+            graph_result = await self.incident_graph.ainvoke({
+                "telemetry_data": {
+                    "telemetry_type": "combined",
+                    "content": telemetry_summary,
+                    "context": f"Telemetry window: {TELEMETRY_WINDOW_MINUTES}min, "
+                               f"Logs: {window.log_count}, Metrics: {len(window.metrics)}, "
+                               f"Traces: {len(window.traces)}",
+                },
+                "correlation_id": correlation_id,
+                "steps_completed": [],
+                "latency_ms": {},
             })
 
-            # Check for anomaly
-            metadata = annotation.metadata or {}
-            anomaly_detected = metadata.get("anomaly_detected", False)
-            needs_reasoning = metadata.get("needs_reasoning", False)
-            severity = metadata.get("severity", "info")
+            # Extract results from graph state
+            steps = graph_result.get("steps_completed", [])
+            severity = graph_result.get("severity", 0)
 
-            if anomaly_detected:
+            if severity > 0:
                 self.stats["anomalies_detected"] += 1
-                logger.info(f"Anomaly detected: {annotation.content} (severity: {severity})")
 
-                # Store annotation in graph
-                await self._store_annotation(annotation, window)
+            if "reasoning" in steps:
+                self.stats["escalations_to_reasoning"] += 1
 
-                # Escalate to Reasoning Agent if needed
-                if needs_reasoning:
-                    self.stats["escalations_to_reasoning"] += 1
-                    await self._escalate_to_reasoning(annotation, window)
+            # Store episode if annotation detected an anomaly
+            annotation_data = graph_result.get("annotation")
+            if annotation_data and severity > 0:
+                await self._store_graph_result_as_episode(graph_result, window)
+
+            logger.debug(
+                f"LangGraph pipeline complete: correlation={correlation_id}, "
+                f"steps={steps}, severity={severity}"
+            )
 
         except Exception as e:
-            logger.warning(f"Fast Agent annotation failed: {e}")
+            logger.error(f"LangGraph pipeline failed: {e}")
             self.stats["errors"] += 1
 
         # Phase 5: Periodic routine reasoning (every REASONING_INTERVAL_CYCLES)
@@ -361,6 +384,61 @@ Provide a brief summary of system health and any concerning patterns."""
             services = {'backend', 'frontend', 'neo4j', 'grafana', 'prometheus', 'loki'}
 
         return list(services) if services else ['unknown']
+
+    async def _store_graph_result_as_episode(self, graph_result: dict, window: Any) -> None:
+        """Store a LangGraph pipeline result as an episode in Neo4j."""
+        try:
+            annotation_data = graph_result.get("annotation", {})
+            rca_data = graph_result.get("rca_result")
+            correlation_id = graph_result.get("correlation_id", str(uuid4()))
+            affected_services = self._extract_services_from_window(window)
+
+            # Determine title and description from the best available data
+            if rca_data:
+                title = f"RCA: {rca_data.get('content', 'Analysis')[:80]}"
+                description = rca_data.get("content", "")
+                category = "rca"
+                outcome = "analyzed"
+            else:
+                title = annotation_data.get("content", "Anomaly Detected")[:100]
+                description = annotation_data.get("content", "")
+                category = (annotation_data.get("metadata") or {}).get("category", "unknown")
+                outcome = "open"
+
+            episode = Episode(
+                episode_id=correlation_id,
+                incident_id=correlation_id,
+                title=title,
+                description=description,
+                severity=str(graph_result.get("severity", "info")),
+                category=category,
+                detected_at=datetime.utcnow(),
+                affected_services=affected_services,
+                root_cause=rca_data.get("content", "unknown")[:200] if rca_data else "unknown",
+                causal_chain=graph_result.get("steps_completed", []),
+                confidence=graph_result.get("confidence", 0.5),
+                outcome=outcome,
+            )
+
+            if self.episode_store:
+                # Episode compaction
+                similar = await self.episode_store.find_similar_episodes(
+                    episode, limit=1, min_similarity=0.7
+                )
+                if similar:
+                    existing, similarity = similar[0]
+                    logger.info(f"Compacting: similar episode {existing.episode_id[:8]}... (sim={similarity:.2f})")
+                    await self.episode_store.update_episode(
+                        existing.episode_id,
+                        {"confidence": max(existing.confidence, episode.confidence)},
+                    )
+                else:
+                    await self.episode_store.store_episode(episode)
+                    self.stats["episodes_created"] += 1
+                    logger.info(f"Stored episode from LangGraph pipeline: {correlation_id[:8]}...")
+
+        except Exception as e:
+            logger.warning(f"Failed to store graph result as episode: {e}")
 
     async def _store_annotation(self, annotation: Any, window: Any) -> None:
         """Store annotation in Neo4j graph with episode compaction."""

@@ -1,7 +1,7 @@
 """
 Constitutional AIOps - Confidence Calculator
 
-Implements the composite confidence formula from Research_V6.tex:
+Implements the composite confidence formula from Research_V7.tex:
 C(a) = α·C_LLM + β·C_hist + γ·C_sim
 
 This module computes a weighted confidence score combining:
@@ -62,7 +62,7 @@ class ConfidenceCalculator:
     """
     Calculates composite confidence for action authorization.
 
-    Formula from Research_V6.tex:
+    Formula from Research_V7.tex:
     C(a) = α·C_LLM + β·C_hist + γ·C_sim
 
     Where:
@@ -76,7 +76,7 @@ class ConfidenceCalculator:
     - Similar incident context provides additional validation
     """
 
-    # Weights from Research_V6.tex
+    # Weights from Research_V7.tex
     ALPHA = 0.40  # LLM confidence weight
     BETA = 0.35   # Historical success rate weight
     GAMMA = 0.25  # Similarity score weight

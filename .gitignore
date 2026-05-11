@@ -103,3 +103,25 @@ constitutional-aiops/
 
 # Windows artifacts
 nul
+
+# LaTeX build intermediates (keep .tex and .pdf, exclude rebuildable artifacts)
+*.aux
+*.bbl
+*.blg
+*.out
+*.toc
+*.lof
+*.lot
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+
+# Runs directory (per-experiment outputs created during benchmarks)
+runs/
+
+# Distribution archives (built by scripts/archive.sh)
+dist/
+
+# Graph snapshots (LFS-tracked, but exclude from accidental plain-git stage)
+# Note: actual *.dump files use LFS via .gitattributes; this just keeps a clean tree
+
