@@ -6,6 +6,7 @@ Wraps the benchmark scripts for use in FastAPI routes.
 """
 
 import json
+import logging
 import time
 import os
 import asyncio
@@ -18,6 +19,8 @@ from datetime import datetime
 from dataclasses import dataclass, asdict, field
 from typing import Any, Optional
 from enum import Enum
+
+logger = logging.getLogger(__name__)
 
 import httpx
 
@@ -691,10 +694,10 @@ class BenchmarkRunner:
         # Use actual ReasoningAgent (same as production backend)
         start_ns = time.perf_counter_ns()
         try:
-            # Build historical context (simulates graph-episodic memory retrieval)
+            # Retrieve real similar episodes from Neo4j graph memory
             historical_context = ""
             if inject_graph_context:
-                historical_context = self._build_sample_graph_context(incident_data)
+                historical_context = await self._build_real_graph_context(incident_data)
 
             agent_response = await self.reasoning_agent.analyze_rca(
                 incident_data=incident_data,
@@ -756,38 +759,85 @@ class BenchmarkRunner:
                 timestamp=datetime.utcnow().isoformat(),
             )
 
-    def _build_sample_graph_context(self, incident_data: dict) -> str:
-        """Build simulated graph-episodic memory context for ablation testing.
+    async def _build_real_graph_context(self, incident_data: dict) -> str:
+        """Query Neo4j for real similar episodes and return RAG context string.
 
-        In production, this would come from Neo4j graph queries finding similar
-        past incidents. For benchmark ablation, we provide a representative
-        historical context to measure the impact of RAG augmentation on RCA accuracy.
+        Returns "" if Neo4j is unavailable, sentence-transformers not installed,
+        or no episodes meet the similarity threshold — correct graceful
+        degradation (identical to running without graph context, NOT injecting
+        fake data that would confuse the model as the old stub did).
+
+        Lazy-inits one Neo4j connection per BenchmarkRunner instance so the
+        connection is reused across all RCA cases in a run.
         """
-        title = incident_data.get("title", "")
-        service_hint = ""
-        if "cloud" in title.lower() or "service" in title.lower():
-            service_hint = "cloud microservice"
-        elif "network" in title.lower():
-            service_hint = "network infrastructure"
-        elif "database" in title.lower():
-            service_hint = "database system"
-        else:
-            service_hint = "infrastructure"
+        try:
+            from src.memory.neo4j_client import Neo4jClient, NEO4J_AVAILABLE
+            from src.memory.embedding_service import get_embedding_service
+        except ImportError:
+            return ""
 
-        return (
-            f"## Similar Past Incidents (from Graph-Episodic Memory)\n\n"
-            f"### Incident EP-2024-087 (Similarity: 0.82)\n"
-            f"- Service: {service_hint}\n"
-            f"- Root Cause: Resource exhaustion due to connection pool saturation\n"
-            f"- Resolution: Increased pool size + added circuit breaker\n"
-            f"- Time to Resolve: 12 minutes\n\n"
-            f"### Incident EP-2024-134 (Similarity: 0.76)\n"
-            f"- Service: {service_hint}\n"
-            f"- Root Cause: Configuration drift after deployment\n"
-            f"- Resolution: Rolled back config + added validation gate\n"
-            f"- Time to Resolve: 8 minutes\n\n"
-            f"Note: Consider these past incidents when analyzing the current fault."
-        )
+        if not NEO4J_AVAILABLE:
+            return ""
+
+        # Lazy-init: one connection shared across the full benchmark run
+        if not hasattr(self, "_neo4j_client"):
+            self._neo4j_client: Optional[Any] = None
+            try:
+                _client = Neo4jClient()
+                connected = await _client.connect()
+                self._neo4j_client = _client if connected else None
+            except Exception as exc:
+                logger.warning(f"[runner] Neo4j connection failed, running without graph: {exc}")
+                self._neo4j_client = None
+
+        if self._neo4j_client is None:
+            return ""
+
+        try:
+            # Build query text: title + first 5 log lines
+            title = incident_data.get("title", "")
+            logs = incident_data.get("logs", [])
+            log_text = " ".join(str(l) for l in logs[:5])
+            query_text = f"{title} {log_text}".strip()
+            if not query_text:
+                return ""
+
+            # Generate 384-dim embedding for the query
+            emb_svc = get_embedding_service()
+            if not emb_svc or not emb_svc.is_available:
+                return ""
+            query_embedding = emb_svc.encode(query_text)
+            if not query_embedding:
+                return ""
+
+            # Retrieve top-3 similar episodes from Neo4j by cosine similarity
+            similar = await self._neo4j_client.find_similar_episodes_by_embedding(
+                query_embedding=query_embedding,
+                top_k=3,
+                min_similarity=0.60,
+            )
+
+            if not similar:
+                return ""
+
+            # Format as context block for the ReasoningAgent prompt
+            lines = ["## Similar Past Incidents (from Graph-Episodic Memory)\n"]
+            for ep in similar:
+                sim_pct = ep.get("similarity", 0.0)
+                lines.append(
+                    f"### {ep.get('title', 'Unknown Incident')} (Similarity: {sim_pct:.2f})"
+                )
+                if ep.get("root_cause"):
+                    lines.append(f"- Root Cause: {ep['root_cause']}")
+                if ep.get("outcome"):
+                    lines.append(f"- Outcome: {ep['outcome']}")
+                lines.append("")
+            lines.append("Note: Consider these past incidents when analyzing the current fault.")
+            return "\n".join(lines)
+
+        except Exception as exc:
+            logger.warning(f"[runner] graph context retrieval failed: {exc}")
+            return ""
 
     async def _call_model(
         self,
