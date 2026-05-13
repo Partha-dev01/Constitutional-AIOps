@@ -115,6 +115,12 @@ class ModelRouter:
                 content = msg.get("content", "")
                 reasoning = msg.get("reasoning", "")
 
+                # Audit-log: preserve the original reasoning ALWAYS (Phase 4.0a, 2026-05-12)
+                # Ollama 0.23.2 emits chain-of-thought in `reasoning` regardless of
+                # enable_thinking=False. We capture it for trace reproducibility / RG3.
+                if reasoning:
+                    msg["_original_reasoning"] = reasoning
+
                 if not content and reasoning:
                     # Content is empty, reasoning has the actual output
                     # Move reasoning to content for downstream parsing
@@ -194,6 +200,11 @@ class ModelRouter:
             "seed": seed,  # For deterministic outputs
             **kwargs,
         }
+        # vLLM + Qwen3 has thinking ON by default when --reasoning-parser qwen3 is set.
+        # Annotation (4B) must NOT think — Ollama's qwen3:4b-instruct suppresses it via
+        # instruct tuning; vLLM AWQ does not. Detect vLLM by model name (no colon).
+        if ":" not in config.llm.fast_agent_model:
+            payload["chat_template_kwargs"] = {"enable_thinking": False}
 
         start_time = time.perf_counter()
         success = True

@@ -11,13 +11,15 @@ Usage:
     python benchmark/scripts/test_5plus5.py                       # Default curated_150
     python benchmark/scripts/test_5plus5.py --dataset benchmark_500_seed42.json
     python benchmark/scripts/test_5plus5.py --dataset latest      # Auto-detect latest
-    python benchmark/scripts/test_5plus5.py --ann=5 --rca=5       # Quick smoke test
+    python benchmark/scripts/test_5plus5.py --ann=5 --rca=5       # Quick smoke (equals form)
+    python benchmark/scripts/test_5plus5.py --ann 5 --rca 5       # Quick smoke (space form)
 """
 
 import os
 import sys
 import json
 import asyncio
+import argparse
 from pathlib import Path
 from datetime import datetime
 from dataclasses import asdict
@@ -27,20 +29,28 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 # Detect if running on Jarvis Labs (localhost) or remotely
 # Jarvis Labs Ollama template binds to port 6006, models in /home/.ollama/
+# Phase 4.0d (2026-05-12): also support Stack B (vLLM separate ports) via
+# explicit FAST_AGENT_URL/REASONING_AGENT_URL env vars set by caller.
 if os.path.exists("/home/.ollama/models"):
     JARVIS_URL = "http://localhost:6006"
     print("[INFO] Running on Jarvis Labs - using localhost:6006 Ollama")
+elif os.environ.get("FAST_AGENT_URL") and os.environ.get("REASONING_AGENT_URL"):
+    # Caller pre-set both URLs (e.g., Stack B vLLM 8000/8001) — honor them.
+    print(f"[INFO] Using pre-set FAST_AGENT_URL={os.environ['FAST_AGENT_URL']}")
+    print(f"[INFO] Using pre-set REASONING_AGENT_URL={os.environ['REASONING_AGENT_URL']}")
+    JARVIS_URL = None  # skip the override below
 else:
     JARVIS_URL = os.environ.get(
         "JARVIS_OLLAMA_URL",
         "https://96c3f93672471.notebooks.jarvislabs.net",
     )
-os.environ["FAST_AGENT_URL"] = f"{JARVIS_URL}/v1"
-os.environ["REASONING_AGENT_URL"] = f"{JARVIS_URL}/v1"
-os.environ["FAST_AGENT_MODEL"] = "qwen3:4b-instruct"
-os.environ["REASONING_AGENT_MODEL"] = "qwen3:14b"
-os.environ["FAST_AGENT_TIMEOUT"] = "120"
-os.environ["REASONING_AGENT_TIMEOUT"] = "180"
+if JARVIS_URL is not None:
+    os.environ["FAST_AGENT_URL"] = f"{JARVIS_URL}/v1"
+    os.environ["REASONING_AGENT_URL"] = f"{JARVIS_URL}/v1"
+os.environ.setdefault("FAST_AGENT_MODEL", "qwen3:4b-instruct")
+os.environ.setdefault("REASONING_AGENT_MODEL", "qwen3:14b")
+os.environ.setdefault("FAST_AGENT_TIMEOUT", "120")
+os.environ.setdefault("REASONING_AGENT_TIMEOUT", "180")
 
 # Reload config after env vars set
 import importlib
@@ -198,17 +208,20 @@ def save_results(result, ann_results, rca_results, dataset_label="curated_150 (s
 
 async def run_5plus5():
     """Run the full benchmark (or a subset via CLI args) with detailed debug output."""
-    # Parse CLI args
-    max_ann = int(os.environ.get("MAX_ANNOTATION_TESTS", "100"))
-    max_rca = int(os.environ.get("MAX_RCA_TESTS", "50"))
-    dataset_file = ""
-    for arg in sys.argv[1:]:
-        if arg.startswith("--ann="):
-            max_ann = int(arg.split("=")[1])
-        elif arg.startswith("--rca="):
-            max_rca = int(arg.split("=")[1])
-        elif arg.startswith("--dataset="):
-            dataset_file = arg.split("=")[1]
+    # Parse CLI args — argparse handles both --ann=5 and --ann 5 forms
+    parser = argparse.ArgumentParser(description="Constitutional AIOps Benchmark Test")
+    parser.add_argument("--ann", type=int,
+                        default=int(os.environ.get("MAX_ANNOTATION_TESTS", "100")),
+                        help="Max annotation test cases to run")
+    parser.add_argument("--rca", type=int,
+                        default=int(os.environ.get("MAX_RCA_TESTS", "50")),
+                        help="Max RCA test cases to run")
+    parser.add_argument("--dataset", type=str, default="",
+                        help="Dataset file path or 'latest'")
+    args = parser.parse_args()
+    max_ann = args.ann
+    max_rca = args.rca
+    dataset_file = args.dataset
 
     # Resolve dataset
     if dataset_file == "latest":

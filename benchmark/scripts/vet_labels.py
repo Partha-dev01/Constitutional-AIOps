@@ -135,19 +135,122 @@ def judge_anthropic(case_text: str) -> Optional[dict]:
         return None
 
 
+# --- Bedrock judges (preferred per 2026-05-12 lock-in: consolidates billing on AWS) ---
+
+_BEDROCK_CLIENT = None
+
+
+def _get_bedrock_client():
+    global _BEDROCK_CLIENT
+    if _BEDROCK_CLIENT is None:
+        try:
+            import boto3  # type: ignore
+            _BEDROCK_CLIENT = boto3.client(
+                "bedrock-runtime",
+                region_name=os.environ.get("AWS_REGION", "us-east-1"),
+            )
+        except Exception as e:
+            print(f"  WARN bedrock client init failed: {e}", file=sys.stderr)
+            _BEDROCK_CLIENT = False
+    return _BEDROCK_CLIENT or None
+
+
+def _extract_first_json(text: str) -> Optional[dict]:
+    start = text.find("{")
+    end = text.rfind("}")
+    if start >= 0 and end > start:
+        try:
+            return json.loads(text[start:end + 1])
+        except json.JSONDecodeError:
+            return None
+    return None
+
+
+def judge_bedrock_haiku(case_text: str) -> Optional[dict]:
+    """Haiku 4.5 via inference profile (anthropic native format)."""
+    client = _get_bedrock_client()
+    if client is None:
+        return None
+    try:
+        body = json.dumps({
+            "anthropic_version": "bedrock-2023-05-31",
+            "max_tokens": 200,
+            "temperature": 0.0,
+            "system": VETTING_SYSTEM_PROMPT,
+            "messages": [{"role": "user", "content": case_text}],
+        })
+        resp = client.invoke_model(
+            modelId="us.anthropic.claude-haiku-4-5-20251001-v1:0",
+            body=body,
+            contentType="application/json",
+            accept="application/json",
+        )
+        out = json.loads(resp["body"].read())
+        text = out["content"][0]["text"] if out.get("content") else ""
+        return _extract_first_json(text)
+    except Exception as e:
+        print(f"  WARN bedrock haiku judge failed: {e}", file=sys.stderr)
+        return None
+
+
+def judge_bedrock_deepseek(case_text: str) -> Optional[dict]:
+    """DeepSeek V3.2 direct (OpenAI-compatible format)."""
+    client = _get_bedrock_client()
+    if client is None:
+        return None
+    try:
+        body = json.dumps({
+            "messages": [
+                {"role": "system", "content": VETTING_SYSTEM_PROMPT},
+                {"role": "user", "content": case_text},
+            ],
+            "max_tokens": 200,
+            "temperature": 0.0,
+        })
+        resp = client.invoke_model(
+            modelId="deepseek.v3.2",
+            body=body,
+            contentType="application/json",
+            accept="application/json",
+        )
+        out = json.loads(resp["body"].read())
+        text = out["choices"][0]["message"]["content"] if out.get("choices") else ""
+        return _extract_first_json(text)
+    except Exception as e:
+        print(f"  WARN bedrock deepseek judge failed: {e}", file=sys.stderr)
+        return None
+
+
 def vet_one(case: dict) -> dict:
-    """Run both judges and decide the tier. Returns case enriched with vetting metadata."""
+    """Run both judges and decide the tier. Returns case enriched with vetting metadata.
+
+    Backend preference: Bedrock (Haiku 4.5 + DeepSeek V3.2) when AWS creds present;
+    falls back to OpenAI + Anthropic direct SDKs when only API keys are present.
+    Lockdown 2026-05-12: Bedrock is the production path; direct SDKs kept for offline dev only.
+    """
     case_text = case_summary_for_judge(case)
 
-    j_openai = judge_openai(case_text)
-    j_anthropic = judge_anthropic(case_text)
+    use_bedrock = bool(
+        os.environ.get("AWS_PROFILE")
+        or os.environ.get("AWS_ACCESS_KEY_ID")
+        or os.environ.get("AWS_DEFAULT_PROFILE")
+    )
 
-    # Build verdict
-    verdicts = [j for j in (j_openai, j_anthropic) if j is not None]
+    if use_bedrock:
+        j_a = judge_bedrock_haiku(case_text)
+        j_b = judge_bedrock_deepseek(case_text)
+        backend = "bedrock"
+    else:
+        j_a = judge_openai(case_text)
+        j_b = judge_anthropic(case_text)
+        backend = "direct_sdk"
+
+    verdicts = [j for j in (j_a, j_b) if j is not None]
     case["_vetting"] = {
-        "openai": j_openai,
-        "anthropic": j_anthropic,
+        "judge_a": j_a,
+        "judge_b": j_b,
         "n_judges": len(verdicts),
+        "backend": backend,
     }
 
     if not verdicts:

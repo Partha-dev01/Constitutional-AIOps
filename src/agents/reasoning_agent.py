@@ -272,6 +272,10 @@ class ReasoningAgent(BaseAgent):
             )
 
             content = response["choices"][0]["message"]["content"]
+            # Capture raw chain-of-thought for audit logging (Phase 4.0a, 2026-05-12).
+            # Ollama 0.23.2 emits CoT in message.reasoning regardless of enable_thinking=False.
+            # _original_reasoning is set by ModelRouter._fix_thinking_response.
+            reasoning_trace = response["choices"][0]["message"].get("_original_reasoning") or ""
             latency_ms = (time.perf_counter() - start_time) * 1000
 
             # Parse based on mode
@@ -283,6 +287,7 @@ class ReasoningAgent(BaseAgent):
                     confidence=confidence,
                     confidence_level=self.calculate_confidence_level(confidence),
                     reasoning=parsed.get("reasoning", ""),
+                    reasoning_trace=reasoning_trace,
                     suggested_action=self._extract_action(parsed, mode),
                     metadata=parsed,
                 )
@@ -293,6 +298,7 @@ class ReasoningAgent(BaseAgent):
                     confidence=0.8,  # Default confidence for chat
                     confidence_level=self.calculate_confidence_level(0.8),
                     reasoning=None,
+                    reasoning_trace=reasoning_trace,
                     suggested_action=None,
                     metadata={"mode": "chat"},
                 )

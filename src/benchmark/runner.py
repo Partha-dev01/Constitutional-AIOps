@@ -386,6 +386,9 @@ class BenchmarkRunner:
         # Persist config (overwrite-on-resume is fine — same config expected)
         (run_dir / "config.json").write_text(json.dumps(asdict(config), indent=2))
         results_jsonl = run_dir / "results.jsonl"
+        # Audit-log: reasoning_trace.jsonl sits alongside results.jsonl (Phase 4.0a, 2026-05-12)
+        # Captures Qwen3-14B chain-of-thought per RCA case for trace reproducibility + RG3.
+        self._reasoning_trace_jsonl = run_dir / "reasoning_trace.jsonl"
         completed_ids = load_completed_ids(results_jsonl)
         if completed_ids:
             print(f"[runner] resuming from {run_dir.name}: {len(completed_ids)} cases already done")
@@ -700,6 +703,24 @@ class BenchmarkRunner:
             )
             total_ms = (time.perf_counter_ns() - start_ns) / 1_000_000
             inference_ms = max(total_ms - self._network_rtt_ms, 0)
+
+            # Phase 4.0a (2026-05-12): persist chain-of-thought trace for audit / RG3.
+            # Ollama 0.23.2 emits CoT in message.reasoning regardless of enable_thinking=False.
+            # Captured via ModelRouter._fix_thinking_response into AgentResponse.reasoning_trace.
+            trace_path = getattr(self, "_reasoning_trace_jsonl", None)
+            if trace_path is not None and getattr(agent_response, "reasoning_trace", None):
+                try:
+                    append_result(trace_path, {
+                        "case_id": test_case["id"],
+                        "task_type": "rca",
+                        "reasoning_trace": agent_response.reasoning_trace,
+                        "reasoning_trace_len": len(agent_response.reasoning_trace),
+                        "inference_ms": round(inference_ms, 2),
+                        "timestamp": datetime.utcnow().isoformat(),
+                    })
+                except Exception as e:
+                    # Trace logging is best-effort, never fail the benchmark for it
+                    print(f"[runner] WARN reasoning_trace write failed for {test_case['id']}: {e}")
 
             # Parse actual output
             actual_data = agent_response.metadata
