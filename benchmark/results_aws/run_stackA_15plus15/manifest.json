@@ -1,0 +1,10 @@
+{
+  "run_name": "run_stackA_15plus15",
+  "stack": "A",
+  "backend": "Ollama-0.23.2-Q4_K_M",
+  "timestamp": "2026-05-13T06:54:09Z",
+  "git_sha": "unknown",
+  "args": "--ann=15 --rca=15",
+  "fast_model": "qwen3:4b-instruct",
+  "reasoning_model": "qwen3:14b"
+}

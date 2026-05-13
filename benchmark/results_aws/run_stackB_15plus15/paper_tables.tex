@@ -1,0 +1,61 @@
+% Constitutional AIOps - Paper Tables
+% Generated: 2026-05-13 06:33:38 UTC
+% Model: constitutional_aiops
+% Data source: benchmark/results/constitutional_aiops/results.json
+% WARNING: All values are from actual benchmark runs. No fabricated data.
+
+\begin{table}[h]
+\centering
+\caption{Comprehensive Benchmark Results}
+\label{tab:comprehensive-results}
+\begin{tabular}{llccccccc}
+\toprule
+\textbf{Task} & \textbf{Agent} & \textbf{N} & \textbf{Accuracy} & \textbf{BERT-F1} & \textbf{Cos Sim} & \textbf{Term Ov.} & \textbf{P50 (ms)} & \textbf{P95 (ms)} \\
+\midrule
+Annotation & qwen3-4b & 15 & 100.0\% & 0.000 & 0.000 & 0.000 & 3160 & 4071 \\
+RCA & qwen3-14b & 15 & 100.0\% & 0.000 & 0.000 & 0.875 & 27897 & 58654 \\
+\midrule
+\textbf{Overall} & \textbf{Hybrid} & \textbf{30} & \textbf{100.0\%} & \textbf{0.000} & \textbf{0.000} & \textbf{0.875} & \textbf{12075} & \textbf{43712} \\
+\bottomrule
+\end{tabular}
+\begin{tablenotes}
+\small
+\item Dataset: curated 150-sample (seed=42, English only). Temperature=0.0.
+\item BERT-F1: microsoft/deberta-xlarge-mnli. Cos Sim: all-MiniLM-L6-v2 (384-dim).
+\end{tablenotes}
+\end{table}
+
+
+\begin{table}[h]
+\centering
+\caption{Per-Source Benchmark Breakdown}
+\label{tab:per-source}
+\begin{tabular}{llcccc}
+\toprule
+\textbf{Task} & \textbf{Source} & \textbf{N} & \textbf{Accuracy} & \textbf{BERT-F1} & \textbf{Cos Sim} \\
+\midrule
+Annotation & Loghub Bgl & 3 & 100.0\% & 0.000 & 0.000 \\
+Annotation & Loghub Hdfs & 12 & 100.0\% & 0.000 & 0.000 \\
+Rca & Lemma Rca Cloud & 7 & 100.0\% & 0.000 & 0.000 \\
+Rca & Opseval 5G Communication & 1 & 100.0\% & 0.000 & 0.000 \\
+Rca & Opseval Mobile Communication Network & 2 & 100.0\% & 0.000 & 0.000 \\
+Rca & Opseval Wired Network & 5 & 100.0\% & 0.000 & 0.000 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+\begin{table}[h]
+\centering
+\caption{Error Analysis}
+\label{tab:error-analysis}
+\begin{tabular}{lcp{8cm}}
+\toprule
+\textbf{Failure Mode} & \textbf{Count} & \textbf{Description} \\
+\midrule
+\midrule
+\textbf{Total Failures} & \textbf{0} & \textbf{0/30 = 0.0\% error rate} \\
+\bottomrule
+\end{tabular}
+\end{table}
+

@@ -1,10 +1,42 @@
 # Constitutional AIOps - Development Checklist
 
-> **Version**: 0.10.1
-> **Last Updated**: 2026-03-01
-> **Status**: 100% Core Complete
+> **Version**: 0.11.0
+> **Last Updated**: 2026-05-13
+> **Status**: Phase 4.2 complete — 431-case benchmark 88.6% accuracy. Phases 4.3/4.4/4.5/4.7 pending.
 > **Architecture**: Simultaneous Dual-Model (Qwen3-4B + Qwen3-14B on 24GB VRAM)
-> **Deployment**: Hybrid (Jarvis Labs A5000 GPU + Local Docker Services)
+> **Deployment**: AWS g6.xlarge L4 24GB (Stack A Ollama Q4_K_M)
+
+---
+
+## Recent Updates (2026-05-13) ✅
+
+### v0.11.0 - Phase 4.2 Benchmark Complete + Graph Memory Fixed
+
+#### Completed This Session
+- [x] **Phase 4.2**: Main benchmark 431 cases — **88.6% overall** (382/431), annotation 82.6%, RCA 94.8%
+- [x] **Graph memory fake context fixed**: `_build_sample_graph_context()` was injecting hardcoded fake incidents (EP-2024-087/134). Replaced with real async Neo4j cosine retrieval via `_build_real_graph_context()`
+- [x] **OpsEval-remine 33 cases fixed**: severity KeyError patched + all 33 enriched with A/B/C/D option text recovered from raw OpsEval data — 0% → 100% accuracy
+- [x] **`mine_opseval.py` fixed**: now embeds answer choices in question text and converts letter answers to option text for semantic matching
+- [x] **`scripts/populate_neo4j.py`**: new Phase 4.4 population script (reads benchmark JSON, creates real Episode objects with 384-dim embeddings, idempotent MERGE)
+- [x] **Gate §15**: Stack A P95 65.96s / Stack B P95 43.71s = 1.51× speedup → PASS
+- [x] **CI golden smoke**: 22/22 tests passing (schema-only, no LLM required)
+- [x] **Merged results**: `benchmark/results_aws/run_stackA_main431/results_merged.json` — authoritative 431-case results
+
+#### OpenSSH 50% — Confirmed Not a Bug
+All 20 failures are false positives: model flags isolated auth events; Loghub labels only brute-force campaigns as anomaly. 0 false negatives. Report as precision/recall tradeoff in paper Table 4.
+
+#### Pending (in priority order)
+- [ ] Phase 4.7: SOTA baselines (Llama 3.3 70B + DeepSeek R1 via Bedrock, ~110 min total from laptop)
+- [ ] Phase 4.3: 7-config ablation on 400 cases (Stack A, overnight ~15 hrs on instance)
+- [ ] Phase 4.4: Populate Neo4j — `python3 scripts/populate_neo4j.py` on instance
+- [ ] Phase 4.5: Graph memory sub-experiments (4.5a heterogeneous, 4.5b LEMMA 5-fold, 4.5c cold-start)
+- [ ] Phase 5: Bootstrap BCa CIs (10k resamples), McNemar tests, Cohen's h
+- [ ] Phase 6: Paper update — Tables 1-9, Figure 4/5, 3 paragraph reframes, 12 new references
+
+#### AWS State (2026-05-13)
+- Instance: `i-091c4de0e95d63154` RUNNING, EIP 44.195.172.165
+- Stack A (Ollama) active, Stack B (vLLM) stopped
+- Budget: ~$12 / $120 ceiling (~10% used)
 
 ---
 

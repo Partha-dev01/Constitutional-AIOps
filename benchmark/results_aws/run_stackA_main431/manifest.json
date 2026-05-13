@@ -1,0 +1,10 @@
+{
+  "run_name": "run_stackA_main431",
+  "stack": "A",
+  "backend": "Ollama-0.23.2-Q4_K_M",
+  "timestamp": "2026-05-13T09:09:39Z",
+  "git_sha": "unknown",
+  "args": "--ann=218 --rca=213 --dataset=benchmark_431_seed42.json",
+  "fast_model": "qwen3:4b-instruct",
+  "reasoning_model": "qwen3:14b"
+}

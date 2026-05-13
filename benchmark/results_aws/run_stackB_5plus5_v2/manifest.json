@@ -1,0 +1,19 @@
+{
+  "run_name": "run_stackB_5plus5_v2",
+  "stack": "B",
+  "backend": "vLLM 0.9.2",
+  "quantization": "awq_marlin",
+  "models": {"fast": "Qwen/Qwen3-4B-AWQ", "reasoning": "Qwen/Qwen3-14B-AWQ"},
+  "thinking_fix": true,
+  "ann_count": 5,
+  "rca_count": 5,
+  "timestamp": "2026-05-13T06:21:46Z",
+  "accuracy_overall": "10/10 = 100%",
+  "ann_accuracy": "5/5 = 100%",
+  "rca_accuracy": "5/5 = 100%",
+  "ann_avg_latency_ms": 3419,
+  "rca_avg_latency_ms": 26368,
+  "p95_latency_ms": 31978,
+  "gpu_memory_util_pct": 85,
+  "notes": "thinking fix applied: chat_template_kwargs enable_thinking=false for 4B annotation"
+}

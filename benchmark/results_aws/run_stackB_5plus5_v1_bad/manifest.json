@@ -1,0 +1,10 @@
+{
+  "run_name": "run_stackB_5plus5_v1_bad",
+  "stack": "B",
+  "backend": "vLLM-0.9.2-awq_marlin",
+  "timestamp": "2026-05-13T06:14:00Z",
+  "notes": "INVALID RUN — thinking mode ON for annotation (bug). Ann latency 30s avg. Do not use for paper. Fixed in run_stackB_5plus5_v2.",
+  "accuracy_overall": "9/10 = 90.0%",
+  "ann_avg_latency_ms": 30211,
+  "rca_avg_latency_ms": 27456
+}

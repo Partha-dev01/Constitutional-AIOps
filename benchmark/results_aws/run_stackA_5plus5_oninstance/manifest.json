@@ -1,0 +1,16 @@
+{
+  "run_name": "run_stackA_5plus5_oninstance",
+  "stack": "A",
+  "backend": "Ollama-0.23.2-Q4_K_M",
+  "timestamp": "2026-05-12T07:00:00Z",
+  "git_sha": "8d6cba1",
+  "args": "--ann=5 --rca=5",
+  "fast_model": "qwen3:4b-instruct",
+  "reasoning_model": "qwen3:14b",
+  "accuracy_overall": "10/10 = 100.0%",
+  "ann_accuracy": "5/5 = 100.0%",
+  "rca_accuracy": "5/5 = 100.0%",
+  "ann_avg_latency_ms": 3300,
+  "rca_avg_latency_ms": 31000,
+  "notes": "on-instance loopback run, 2026-05-12. Jar-parity Stack A baseline. Results not auto-saved to file (pre-wrapper script era)."
+}
