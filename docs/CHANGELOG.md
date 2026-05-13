@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.11.1] - 2026-05-13
+
+### Session 4 — BERTScore, Neo4j Population, Llama SOTA, Instance Freeze
+
+#### Completed
+- **BERTScore + Cosine Similarity**: Post-processed all 431 Phase 4.2 results on AWS GPU (`benchmark/scripts/compute_semantic_metrics.py`, roberta-large + all-MiniLM-L6-v2). All result markdown files regenerated.
+- **Phase 4.4 Neo4j populated**: 431 episodes inserted (28s) via `scripts/populate_neo4j.py`. Graph: {Episode:431, Service:49, RootCauseType:8}, edges: {INVOLVES:531, CAUSED_BY:431}.
+- **Phase 4.7 Llama 3.3 70B**: 400/400 via Bedrock. Ann 92.1%, RCA **58.6%**, Overall 75.5%. Our RCA 94.8% beats Llama by **+36pp** — primary novelty argument for the paper.
+- **Phase 4.5 runner**: `benchmark/scripts/run_graph_experiments.py` — 4.5b LEMMA 5-fold CV + 4.5c cold-start curve.
+- **DeepSeek V3.2 support**: Added model config to `run_sota_baselines.py` (model ID `deepseek.v3.2`).
+- **Cleanup**: Deleted `benchmark_499_seed42.json` (unvetted, loghub_linux included).
+- **AWS instance frozen**: Stopped to save ~$0.39/hr (~$1.56/4 days EBS+EIP).
+
+#### Phase 4.7 Llama 3.3 70B SOTA Results
+| Metric | Llama 3.3 70B | Our Hybrid | Delta |
+|--------|--------------|-----------|-------|
+| Overall | 75.5% | 88.6% | +13.1pp |
+| Annotation | 92.1% | 82.6% | −9.5pp |
+| RCA | 58.6% | 94.8% | **+36.2pp** |
+
+Note: Llama better at annotation (larger model = better at structured JSON output). We dominate on RCA — the hard task that requires multi-hop reasoning across logs.
+
+---
+
 ## [0.11.0] - 2026-05-13
 
 ### Phase 4.2 Benchmark Complete + Graph Memory Fixed + Dataset Enrichment

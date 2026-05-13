@@ -1,5 +1,5 @@
 # Constitutional AIOps — Agent Handoff Document
-**Written**: 2026-05-13 (updated after Phase 4.2 completion)  
+**Written**: 2026-05-13 (updated after session 4 — Llama SOTA complete, instance frozen)  
 **For**: Next AI agent (Claude Code, Codex, etc.) to resume this work  
 **Working directory**: `c:\Users\you\Downloads\files AIOPS NEW\constitutional-aiops\`  
 
@@ -43,7 +43,7 @@
 | Resource | Value |
 |----------|-------|
 | Instance ID | `i-0123456789abcdef0` |
-| State | **STOPPED** (auto-stopped, CloudWatch idle trigger) |
+| State | **STOPPED** (manually stopped 2026-05-13 to freeze — ~$1.56/4 days) |
 | Type | g6.xlarge (NVIDIA L4 24GB, $0.805/hr on-demand) |
 | EIP | `203.0.113.10` (do NOT release) |
 | SSH key | `~/.ssh/aiops-key.pem` |
@@ -51,7 +51,7 @@
 | Region | `us-east-1` |
 | EBS | `vol-0123456789abcdef0` (100GB gp3, mounted at `/mnt`) |
 | AMI snapshot | `ami-0123456789abcdef0` (rollback point, safe) |
-| Budget used | ~$9 / $120 ceiling (~7.5%) |
+| Budget used | ~$15 / $120 ceiling (~12.5%) |
 
 ### Start instance
 ```bash
@@ -95,17 +95,20 @@ curl http://localhost:8001/health  # 14B AWQ/FP8
 **Repository**: `c:\Users\you\Downloads\files AIOPS NEW\constitutional-aiops\`  
 **Remote**: `https://github.com/Partha-dev01/Aiops_Final.git`  
 **Branch**: main  
-**Latest pushed commit**: `b0cf8f6`  
+**Latest pushed commit**: `98181c0`  
 
 ### Recent commits (newest first)
 ```
-b0cf8f6  fix(runner): incident.get('severity','medium') — OpsEval-remine KeyError fix
-b6441b7  fix(Phase4.4-4.5): replace fake graph context with real Neo4j cosine retrieval
-52a99c7  chore: remove stale manifest.json
-3e76366  feat(Phase4.7): SOTA baseline runner — DeepSeek R1 + Llama 3.3 70B via Bedrock
-a990fca  feat: benchmark_400_seed42.json — stratified 400-case sample
-25214cd  feat(Phase2-4): OpsEval LLM filter, benchmark_431_seed42.json
-3df9361  Phase 4.0a-d: audit logging, Stack B vLLM AWQ, Bedrock adapter
+98181c0  feat(sota): complete Llama 3.3 70B SOTA baseline (400/400)
+6fc2011  feat(sota): Llama 3.3 70B partial SOTA results (374/400, resume-safe)
+522245b  fix(aws): add scp fallback for sync_results.sh on Windows
+06262e8  feat(phase45): add graph memory sub-experiment runner
+ba282fa  feat(sota): add DeepSeek V3.2 model support to SOTA baseline runner
+842c1e0  docs(results): regenerate all three result markdown files with correct numbers
+3809a52  docs(metrics): add BERTScore + cosine to KEY_METRICS.md Table 0
+8d4fc9f  feat(results): add BERTScore + cosine similarity to Phase 4.2 results
+3a1dd19  chore(results): archive smoke tests, add semantic metrics post-processor
+399b230  chore(checkpoint): Phase 4.2 complete — 88.6% accuracy, docs + results synced
 ```
 
 **IMPORTANT**: Instance has NO git. Always SCP files to instance, never `git pull` on instance.
@@ -120,8 +123,11 @@ scp -i ~/.ssh/aiops-key.pem <local-file> ubuntu@203.0.113.10:/mnt/aiops-repo/<pa
 
 ### Uncommitted local changes (do NOT commit — these are result artifacts)
 - `benchmark/results/` directory — v1 results, frozen, not for commit
-- `benchmark/datasets/processed/benchmark_499_seed42.json` — **DELETE THIS**, unvetted artifact
+- `benchmark/datasets/processed/annotation_test.json` + `rca_test.json` — dirty (expanded to 249/250 cases by old benchmark_499 pipeline) — do NOT commit
 - `benchmark/results_aws/` — AWS benchmark run results (committed separately after analysis)
+
+### Deleted artifacts (already gone)
+- `benchmark/datasets/processed/benchmark_499_seed42.json` — deleted (contained loghub_linux + unvetted cases)
 
 ---
 
@@ -131,7 +137,6 @@ scp -i ~/.ssh/aiops-key.pem <local-file> ubuntu@203.0.113.10:/mnt/aiops-repo/<pa
 |------|----------|-------|---------|--------|
 | `benchmark_431_seed42.json` | `benchmark/datasets/processed/` | 431 | **Main benchmark** | ✅ Ready |
 | `benchmark_400_seed42.json` | `benchmark/datasets/processed/` | 400 | Ablation + SOTA (stratified) | ✅ Ready |
-| `benchmark_499_seed42.json` | `benchmark/datasets/processed/` | 499 | **DELETE — unvetted** | ❌ Delete |
 
 ### Dataset structure
 ```json
@@ -168,7 +173,7 @@ scp -i ~/.ssh/aiops-key.pem <local-file> ubuntu@203.0.113.10:/mnt/aiops-repo/<pa
 | OpsEval Wired Network | 79 | 89% |
 | BGL | 38 | 68% |
 | OpenSSH | 40 | 50% |
-| **OpsEval-remine** | **33** | **0% (BUG — needs re-run)** |
+| OpsEval-remine Wired/Mobile | 33 | 100% (fixed session 3) |
 
 ---
 
@@ -180,11 +185,11 @@ scp -i ~/.ssh/aiops-key.pem <local-file> ubuntu@203.0.113.10:/mnt/aiops-repo/<pa
 **Stack**: Stack A (Ollama Q4_K_M, qwen3:4b-instruct + qwen3:14b)  
 **Cases**: 431 total (398 original run + 33 remine re-run merged)
 
-| Metric | Value |
-|--------|-------|
-| **Overall accuracy** | **88.6% (382/431)** |
-| Annotation | 82.6% (180/218) |
-| RCA | 94.8% (202/213) |
+| Metric | Value | BERTScore F1 | Cosine Sim |
+|--------|-------|-------------|------------|
+| **Overall** | **88.6% (382/431)** | **0.7975** | **0.2756** |
+| Annotation | 82.6% (180/218) | 0.8220 | 0.2041 |
+| RCA | 94.8% (202/213) | 0.7726 | 0.3512 |
 
 **Per-source:**
 
@@ -217,79 +222,104 @@ scp -i ~/.ssh/aiops-key.pem <local-file> ubuntu@203.0.113.10:/mnt/aiops-repo/<pa
 
 ---
 
+### Phase 4.7 SOTA Baselines — Status
+
+| Baseline | Status | Result file | Key numbers |
+|----------|--------|-------------|-------------|
+| Llama 3.3 70B | ✅ **COMPLETE** (commit `98181c0`) | `benchmark/results_aws/sota_llama_3_3_70b/results.jsonl` | Ann 92.1%, RCA **58.6%**, Overall 75.5% |
+| DeepSeek V3.2 | ⏳ **PENDING** | `benchmark/results_aws/sota_deepseek_v3/results.jsonl` | — |
+
+**Key finding from Llama**: Our RCA 94.8% vs Llama RCA 58.6% = **+36pp gap**. Headline novelty argument. Llama is a 70B frontier model; our 14B+4B hybrid beats it by 36 points on RCA.
+
+### Phase 4.4 Neo4j — ✅ COMPLETE
+431 episodes inserted. Graph: {Episode:431, Service:49, RootCauseType:8}. Neo4j Docker on instance at port 7687.
+
+### Partial Ablation State
+- Ablation was started but killed after 228/400 cases of "full" config (session 4)
+- Partial JSONL preserved on EBS: `/mnt/aiops-repo/runs/2026-05-13T11-01-48_bench_constitutional_aiops/results.jsonl`
+- Must restart from scratch (no cross-config resume logic in run_ablation.py)
+
+---
+
 ## 7. Next Actions (Priority Order)
 
-Completed 2026-05-13. Results at `benchmark/results_aws/rerun_remine33_enriched/results.json`. 33/33 = 100%. Merged into `benchmark/results_aws/run_stackA_main431/results_merged.json`.
-
-### Action 1 — Phase 4.7 SOTA Baselines (run from LAPTOP, no instance needed)
-
-These run via AWS Bedrock from your local machine — no instance required. Start in parallel with Action 1.
+### Action 1 — Phase 4.7 DeepSeek V3.2 (LAPTOP, no instance, ~30 min)
 
 ```bash
-# From laptop, in constitutional-aiops repo root:
 cd "c:\Users\you\Downloads\files AIOPS NEW\constitutional-aiops"
-
-# Llama 3.3 70B (~ 30 min):
 python3 benchmark/scripts/run_sota_baselines.py \
-    --model llama-3.3-70b \
+    --model deepseek-v3 \
     --dataset benchmark/datasets/processed/benchmark_400_seed42.json \
-    --out benchmark/results_aws/sota_llama_3_3_70b/results.jsonl
-
-# DeepSeek R1 (~ 80 min, MANDATORY 12s delay between requests):
-python3 benchmark/scripts/run_sota_baselines.py \
-    --model deepseek-r1 \
-    --dataset benchmark/datasets/processed/benchmark_400_seed42.json \
-    --out benchmark/results_aws/sota_deepseek_r1/results.jsonl
+    --out benchmark/results_aws/sota_deepseek_v3/results.jsonl
+# Commit when done:
+git add benchmark/results_aws/sota_deepseek_v3/
+git commit -m "feat(sota): DeepSeek V3.2 SOTA baseline (400 cases)"
+git push
 ```
 
-**Critical DeepSeek R1 constraints** (do NOT modify):
-- Rate limit ~5 RPM → `inter_request_delay_s=12` hardcoded — do not reduce
-- `max_tokens=2048` needed (thinking trace eats tokens)
-- Plain text format: `System: ...\n\nUser: ...\n\nAssistant:`
-- Bedrock model ID: `us.deepseek.r1-v1:0`
+**DeepSeek V3.2 parameters**: model ID `deepseek.v3.2`, `inter_request_delay_s=2` (NOT 12s — that was R1), format `deepseek-v3`.  
+**AWS credentials**: `aiops-operator` profile, us-east-1 region.
 
-**AWS credentials**: `aiops-operator` profile, us-east-1 region  
-**Note**: Anthropic models via Bedrock are BLOCKED (3D Secure OTP issue with Indian card). Llama 3.3 70B + DeepSeek R1 both WORK.
+### Action 2 — Phase 4.3 Ablation (INSTANCE, overnight ~26 hrs)
 
-### Action 3 — Phase 4.3 Ablation (on instance, overnight ~15 hrs)
-
-After re-run in Action 1 completes, launch the full ablation:
-
+Start instance first:
 ```bash
-# On instance:
+aws ec2 start-instances --profile aiops-operator --region us-east-1 --instance-ids i-0123456789abcdef0
+aws ec2 wait instance-running --profile aiops-operator --region us-east-1 --instance-ids i-0123456789abcdef0
+ssh -i ~/.ssh/aiops-key.pem ubuntu@203.0.113.10
+```
+
+Then on instance:
+```bash
 cd /mnt/aiops-repo
 export FAST_AGENT_URL=http://localhost:11434/v1
 export REASONING_AGENT_URL=http://localhost:11434/v1
-
-# Copy run_ablation.py if changed locally:
-# scp -i ~/.ssh/aiops-key.pem benchmark/scripts/run_ablation.py ubuntu@203.0.113.10:/mnt/aiops-repo/benchmark/scripts/run_ablation.py
-
-nohup bash /mnt/run_benchmark.sh run_ablation_all A --config all \
-    --dataset benchmark/datasets/processed/benchmark_400_seed42.json \
+PYTHONUNBUFFERED=1 nohup python3 -u /mnt/aiops-repo/benchmark/scripts/run_ablation.py \
+    --config all --ann 202 --rca 198 \
+    --dataset /mnt/aiops-repo/benchmark/datasets/processed/benchmark_400_seed42.json \
     > /tmp/ablation.log 2>&1 &
-
-# Monitor:
 tail -f /tmp/ablation.log
 ```
 
-7 ablation configs × 400 cases = 2,800 inferences, ~15 hours. The runner is append-only JSONL so interruptions can be resumed.
+8 ablation configs × 400 cases = 3,200 inferences, ~26 hours total. Append-only JSONL — crash-safe.
 
-### Action 4 — Phase 4.4 Populate Neo4j (on instance, ~5-10 min)
+### Action 3 — Phase 4.5 Graph Experiments (INSTANCE, after ablation)
 
-Run AFTER ablation starts (or in parallel — different process, no conflict):
+Neo4j already populated. Script already committed: `benchmark/scripts/run_graph_experiments.py`.
 
+SCP to instance first (script was added after last push to instance):
+```bash
+scp -i ~/.ssh/aiops-key.pem benchmark/scripts/run_graph_experiments.py \
+    ubuntu@203.0.113.10:/mnt/aiops-repo/benchmark/scripts/
+```
+
+Then run:
 ```bash
 # On instance:
 cd /mnt/aiops-repo
 export NEO4J_URI=bolt://localhost:7687
 export NEO4J_PASSWORD=changeme_neo4j_password
-
-python3 scripts/populate_neo4j.py \
-    --dataset benchmark/datasets/processed/benchmark_431_seed42.json
-# Expected: ~431 episodes inserted, takes ~5-10 min (embedding generation)
+python3 benchmark/scripts/run_graph_experiments.py --exp all \
+    --dataset benchmark/datasets/processed/benchmark_431_seed42.json \
+    --out /mnt/runs/run_phase45_graph
 ```
 
-This populates Neo4j with real benchmark episodes so Phase 4.5 graph experiments actually retrieve real similar incidents (instead of empty results from an unpopulated graph).
+4.5b LEMMA 5-fold (~8 hrs) + 4.5c cold-start curve (~4 hrs).
+
+### Action 4 — Phase 5 Statistics (LAPTOP, after all experiments)
+
+All functions implemented in `src/benchmark/evaluator.py`:
+```python
+from src.benchmark.evaluator import bootstrap_ci, stratified_bootstrap_ci, mcnemar_test, cohens_h
+low, high = stratified_bootstrap_ci(correct_flags, sources, n_resamples=10_000)
+result = mcnemar_test(baseline_flags, variant_flags)  # returns p_value, cohens_h, delta
+```
+
+### Action 5 — Phase 6 Paper Update (after Phase 5)
+
+Files:
+- **Paper**: `c:\Users\you\Downloads\files AIOPS NEW\AiOps Research Paper Stuff\Final Submission Paper (Accepted v.1)\Aiops_Compsys\sn-article-template\sn-article.tex`
+- **Bibliography**: `...sn-article-template\sn-bibliography.bib`
 
 ### Action 5 — Phase 4.5 Graph Memory Sub-experiments (after Phase 4.4)
 
@@ -376,7 +406,7 @@ Files to update:
 
 ### Budget
 - Ceiling: $120 (raised from $75 on 2026-05-12)
-- Used so far: ~$9 (~7.5%)
+- Used so far: ~$15 (~12.5%) — frozen at ~$1.56/4 days while stopped
 - Projected total: ~$25 if no surprises
 
 ### SOTA Baselines
