@@ -52,6 +52,14 @@ MODELS = {
         # Strict rate limit on Bedrock — 1 RPM observed in practice.
         "inter_request_delay_s": 12,
     },
+    "deepseek-v3": {
+        "bedrock_id": "deepseek.v3.2",
+        "display": "DeepSeek-V3.2",
+        "format": "deepseek-v3",
+        "max_tokens_ann": 512,
+        "max_tokens_rca": 1024,
+        "inter_request_delay_s": 2,
+    },
     "llama-3.3-70b": {
         "bedrock_id": "us.meta.llama3-3-70b-instruct-v1:0",
         "display": "Llama-3.3-70B",
@@ -85,6 +93,10 @@ def _build_prompt(fmt: str, system: str, user: str) -> str:
         # Plain text System/User format — special tokens like <|System|> are not
         # part of R1's vocabulary and produce empty completions.
         return f"<|begin_of_sentence|>System: {system}\n\nUser: {user}\n\nAssistant:"
+    if fmt == "deepseek-v3":
+        # DeepSeek V3.2 on Bedrock uses converse-style messages API
+        # We pass the prompt as a plain combined string (system + user)
+        return f"System: {system}\n\nUser: {user}\n\nAssistant:"
     if fmt == "llama3":
         return (
             f"<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n{system}\n"
@@ -100,6 +112,9 @@ def _call_bedrock(client, model_cfg: dict, prompt: str, max_tokens: int) -> tupl
     """Returns (text, latency_ms). Retries on throttling with exponential backoff."""
     fmt = model_cfg["format"]
     if fmt == "deepseek":
+        body = json.dumps({"prompt": prompt, "max_tokens": max_tokens, "temperature": 0.0})
+    elif fmt == "deepseek-v3":
+        # DeepSeek V3.2 on Bedrock uses the converse API
         body = json.dumps({"prompt": prompt, "max_tokens": max_tokens, "temperature": 0.0})
     elif fmt == "llama3":
         body = json.dumps({"prompt": prompt, "max_gen_len": max_tokens, "temperature": 0.0})
@@ -132,6 +147,10 @@ def _call_bedrock(client, model_cfg: dict, prompt: str, max_tokens: int) -> tupl
         # Keep only the part after the thinking trace / EOS token.
         text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL)
         text = text.replace("<|end_of_sentence|>", "").strip()
+    elif fmt == "deepseek-v3":
+        # V3.2 response format: choices[0].text or generation
+        text = raw.get("choices", [{}])[0].get("text", "") or raw.get("generation", "")
+        text = text.strip()
     elif fmt == "llama3":
         text = raw.get("generation", "").strip()
 
