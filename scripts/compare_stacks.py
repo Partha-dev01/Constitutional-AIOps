@@ -23,10 +23,19 @@ from typing import Iterable
 
 def _load(path: Path) -> list[dict]:
     if path.is_dir():
-        path = path / "results.jsonl"
+        for name in ("results.jsonl", "results.json"):
+            candidate = path / name
+            if candidate.exists():
+                path = candidate
+                break
+        else:
+            raise SystemExit(f"results not found in {path} (tried results.jsonl, results.json)")
     if not path.exists():
         raise SystemExit(f"results not found: {path}")
-    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    text = path.read_text(encoding="utf-8").strip()
+    if text.startswith("["):
+        return json.loads(text)
+    return [json.loads(line) for line in text.splitlines() if line.strip()]
 
 
 def _stats(results: list[dict]) -> dict:
