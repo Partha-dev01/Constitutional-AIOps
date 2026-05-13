@@ -679,8 +679,8 @@ class BenchmarkRunner:
 
         # Build incident data structure (same as production backend)
         incident_data = {
-            "title": incident["title"],
-            "severity": incident["severity"],
+            "title": incident.get("title", "Untitled Incident"),
+            "severity": incident.get("severity", "medium"),
             "logs": incident.get("logs", []),
             "timestamp": datetime.utcnow().isoformat(),
         }
