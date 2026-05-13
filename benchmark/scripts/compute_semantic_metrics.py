@@ -20,7 +20,9 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 logger = logging.getLogger(__name__)
 
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
-BERTSCORE_MODEL = "microsoft/deberta-xlarge-mnli"
+# Default to roberta-large (standard, ~1.3 GB) instead of deberta-xlarge-mnli (~2.5 GB)
+# Override with --bert-model microsoft/deberta-xlarge-mnli for maximum accuracy
+BERTSCORE_MODEL_DEFAULT = "roberta-large"
 
 
 def load_results(path: str) -> list[dict]:
@@ -71,18 +73,18 @@ def compute_cosine(candidates: list[str], references: list[str]) -> list[float]:
     return [round(float(s), 4) for s in sims]
 
 
-def compute_bert(candidates: list[str], references: list[str]) -> list[float]:
+def compute_bert(candidates: list[str], references: list[str], model_name: str = BERTSCORE_MODEL_DEFAULT) -> list[float]:
     from bert_score import score as bert_score_fn
     import torch
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    logger.info(f"Computing BERTScore on {device} for {len(candidates)} pairs...")
+    logger.info(f"Computing BERTScore ({model_name}) on {device} for {len(candidates)} pairs...")
     valid_pairs = [(c, r) for c, r in zip(candidates, references) if c.strip() and r.strip()]
     if not valid_pairs:
         return [0.0] * len(candidates)
     valid_c = [p[0] for p in valid_pairs]
     valid_r = [p[1] for p in valid_pairs]
-    P, R, F1 = bert_score_fn(valid_c, valid_r, model_type=BERTSCORE_MODEL,
+    P, R, F1 = bert_score_fn(valid_c, valid_r, model_type=model_name,
                               lang="en", verbose=True,
                               device=device, batch_size=16)
     scores = [round(float(f), 4) for f in F1.tolist()]
@@ -130,6 +132,8 @@ def main():
     parser.add_argument("--input", required=True)
     parser.add_argument("--output", required=True)
     parser.add_argument("--skip-bert", action="store_true", help="Skip BERTScore (faster)")
+    parser.add_argument("--bert-model", default=BERTSCORE_MODEL_DEFAULT,
+                        help="BERTScore model (default: roberta-large)")
     args = parser.parse_args()
 
     results = load_results(args.input)
@@ -156,7 +160,7 @@ def main():
     # BERTScore
     if not args.skip_bert:
         try:
-            bert_scores = compute_bert(candidates, references)
+            bert_scores = compute_bert(candidates, references, model_name=args.bert_model)
             for i, score in enumerate(bert_scores):
                 results[i]["bert_f1"] = score
             logger.info(f"BERTScore computed. Mean={sum(bert_scores)/len(bert_scores):.4f}")
