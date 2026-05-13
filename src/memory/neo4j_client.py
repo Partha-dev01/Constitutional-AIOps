@@ -744,6 +744,84 @@ class Neo4jClient:
             records = await result.data()
             return records
 
+    async def find_similar_episodes_by_embedding(
+        self,
+        query_embedding: list[float],
+        exclude_id: Optional[str] = None,
+        top_k: int = 3,
+        min_similarity: float = 0.60,
+    ) -> list[dict[str, Any]]:
+        """
+        Retrieve top-K episodes from Neo4j by cosine similarity to query_embedding.
+
+        Neo4j Community Edition has no vector index, so we fetch all episode
+        embeddings and compute cosine similarity in Python (numpy).
+        Fine for up to ~500 episodes x 384 dims — sub-millisecond.
+
+        Returns list of dicts: episode_id, title, root_cause, outcome,
+        confidence, similarity. embedding field is NOT returned.
+        """
+        if not self._connected:
+            return []
+
+        cypher = """
+        MATCH (ep:Episode)
+        WHERE ep.has_embedding = true AND ep.embedding IS NOT NULL
+        AND ($exclude_id IS NULL OR ep.episode_id <> $exclude_id)
+        RETURN ep.episode_id AS episode_id,
+               ep.title      AS title,
+               ep.root_cause AS root_cause,
+               ep.outcome    AS outcome,
+               ep.confidence AS confidence,
+               ep.embedding  AS embedding
+        """
+
+        try:
+            async with self.session() as session:
+                result = await session.run(cypher, exclude_id=exclude_id)
+                records = await result.data()
+
+            if not records:
+                return []
+
+            import json as _json
+            import numpy as _np
+
+            q = _np.array(query_embedding, dtype=_np.float32)
+            q_norm = _np.linalg.norm(q)
+            if q_norm == 0:
+                return []
+            q_unit = q / q_norm
+
+            scored: list[dict[str, Any]] = []
+            for rec in records:
+                try:
+                    raw_emb = rec["embedding"]
+                    emb_list = _json.loads(raw_emb) if isinstance(raw_emb, str) else raw_emb
+                    e = _np.array(emb_list, dtype=_np.float32)
+                    e_norm = _np.linalg.norm(e)
+                    if e_norm == 0:
+                        continue
+                    sim = float(_np.dot(q_unit, e / e_norm))
+                    if sim >= min_similarity:
+                        scored.append({
+                            "episode_id": rec["episode_id"],
+                            "title":      rec["title"],
+                            "root_cause": rec["root_cause"],
+                            "outcome":    rec["outcome"],
+                            "confidence": rec["confidence"],
+                            "similarity": sim,
+                        })
+                except Exception:
+                    continue
+
+            scored.sort(key=lambda x: x["similarity"], reverse=True)
+            return scored[:top_k]
+
+        except Exception as exc:
+            logger.warning(f"find_similar_episodes_by_embedding failed: {exc}")
+            return []
+
     async def fulltext_search_incidents(
         self,
         query_text: str,
