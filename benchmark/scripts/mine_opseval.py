@@ -35,7 +35,8 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-OPSEVAL_EN = REPO_ROOT / "benchmark/datasets/raw/opseval/data/en"
+OPSEVAL_EN = Path(os.environ.get("OPSEVAL_EN_DIR",
+                                  str(REPO_ROOT / "benchmark/datasets/raw/opseval/data/en")))
 
 # Stage 1: regex patterns
 
@@ -115,55 +116,112 @@ def stage1_regex_filter(pool: list[dict]) -> list[dict]:
     return out
 
 
-def stage2_llm_filter(survivors: list[dict], provider: str = "openai") -> list[dict]:
-    """Optional LLM classifier — calls API, requires key in env.
+_SYS_MSG = (
+    "Classify this IT-Ops question as DIAGNOSTIC (engineer is given a "
+    "symptom/incident and must identify cause/fix) or KNOWLEDGE "
+    "(factual recall about protocols/standards/syntax). "
+    "Answer ONE WORD: DIAGNOSTIC or KNOWLEDGE."
+)
+
+
+def _classify_openai(q: str, client: "OpenAI") -> str:  # type: ignore[name-defined]
+    resp = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "system", "content": _SYS_MSG}, {"role": "user", "content": q[:2000]}],
+        temperature=0.0,
+        max_tokens=8,
+    )
+    return (resp.choices[0].message.content or "").strip().upper()
+
+
+def _classify_bedrock(q: str, client) -> str:
+    import json as _json
+    body = _json.dumps({
+        "anthropic_version": "bedrock-2023-05-31",
+        "max_tokens": 8,
+        "temperature": 0.0,
+        "system": _SYS_MSG,
+        "messages": [{"role": "user", "content": q[:2000]}],
+    })
+    resp = client.invoke_model(
+        modelId="us.anthropic.claude-haiku-4-5-20251001-v1:0",
+        body=body,
+        contentType="application/json",
+        accept="application/json",
+    )
+    result = _json.loads(resp["body"].read())
+    return (result.get("content", [{}])[0].get("text", "")).strip().upper()
+
+
+def stage2_llm_filter(survivors: list[dict], provider: str = "bedrock") -> list[dict]:
+    """Optional LLM classifier — calls API.
 
     Returns a NEW list of items predicted DIAGNOSTIC. Items predicted
     KNOWLEDGE are filtered out. On API/network failure, returns the input
     unfiltered (graceful degradation — better to keep noise than lose data).
+
+    Providers:
+      bedrock  — Claude Haiku 4.5 via AWS Bedrock (profile aiops-operator, preferred)
+      openai   — GPT-4o-mini (requires OPENAI_API_KEY)
     """
-    if provider == "openai":
-        key = os.environ.get("OPENAI_API_KEY")
-        if not key:
+    classify_fn = None
+
+    if provider == "bedrock":
+        try:
+            import boto3  # type: ignore
+            profile = os.environ.get("AWS_PROFILE", "aiops-operator")
+            session = boto3.Session(profile_name=profile, region_name="us-east-1")
+            client = session.client("bedrock-runtime")
+            classify_fn = lambda q: _classify_bedrock(q, client)
+            print(f"[mine_opseval] Stage 2: using Bedrock Haiku 4.5 (profile: {profile})")
+        except Exception as e:
+            print(f"WARN: Bedrock init failed ({e}) — skipping LLM filter", file=sys.stderr)
+            return survivors
+
+    elif provider in ("openai", "ollama"):
+        base_url = os.environ.get("LLM_JUDGE_URL", None)
+        api_key = "ollama" if provider == "ollama" else os.environ.get("OPENAI_API_KEY", "")
+        model = "qwen3:4b-instruct" if provider == "ollama" else "gpt-4o-mini"
+        if provider == "openai" and not api_key:
             print("WARN: OPENAI_API_KEY not set — skipping Stage 2 LLM filter", file=sys.stderr)
             return survivors
-        # Lazy import to avoid hard dependency
+        if provider == "ollama" and not base_url:
+            base_url = os.environ.get("FAST_AGENT_URL", "http://localhost:11434/v1")
         try:
             from openai import OpenAI  # type: ignore
-        except ImportError:
-            print("WARN: openai package not installed — pip install openai", file=sys.stderr)
-            return survivors
-        client = OpenAI(api_key=key)
-        kept = []
-        sys_msg = ("Classify this IT-Ops question as DIAGNOSTIC (engineer is given a "
-                   "symptom/incident and must identify cause/fix) or KNOWLEDGE "
-                   "(factual recall about protocols/standards/syntax). "
-                   "Answer ONE WORD: DIAGNOSTIC or KNOWLEDGE.")
-        for i, item in enumerate(survivors):
-            q = item.get("question") or item.get("query") or ""
-            try:
-                resp = client.chat.completions.create(
-                    model="gpt-4o-mini",
-                    messages=[
-                        {"role": "system", "content": sys_msg},
-                        {"role": "user", "content": q[:2000]},
-                    ],
+            client_oa = OpenAI(api_key=api_key, base_url=base_url) if base_url else OpenAI(api_key=api_key)
+            # Override _classify_openai to use the configured model
+            def _classify_for_provider(q: str) -> str:
+                resp = client_oa.chat.completions.create(
+                    model=model,
+                    messages=[{"role": "system", "content": _SYS_MSG}, {"role": "user", "content": q[:2000]}],
                     temperature=0.0,
                     max_tokens=8,
                 )
-                verdict = (resp.choices[0].message.content or "").strip().upper()
-                if "DIAGNOSTIC" in verdict:
-                    kept.append(item)
-            except Exception as e:
-                print(f"WARN: classifier failed on item {i}: {e}", file=sys.stderr)
-                kept.append(item)  # keep on failure
-            if (i + 1) % 50 == 0:
-                print(f"  classified {i+1}/{len(survivors)}, kept {len(kept)}")
-        return kept
-    else:
-        # TODO: anthropic provider
-        print(f"WARN: provider {provider} not implemented yet", file=sys.stderr)
+                return (resp.choices[0].message.content or "").strip().upper()
+            classify_fn = _classify_for_provider
+            print(f"[mine_opseval] Stage 2: using {provider} ({model})")
+        except ImportError:
+            print("WARN: openai package not installed — pip install openai", file=sys.stderr)
+            return survivors
+
+    if classify_fn is None:
+        print(f"WARN: provider '{provider}' not available — skipping Stage 2", file=sys.stderr)
         return survivors
+
+    kept = []
+    for i, item in enumerate(survivors):
+        q = item.get("question") or item.get("query") or ""
+        try:
+            verdict = classify_fn(q)
+            if "DIAGNOSTIC" in verdict:
+                kept.append(item)
+        except Exception as e:
+            print(f"WARN: classifier failed on item {i}: {e}", file=sys.stderr)
+            kept.append(item)  # keep on failure (graceful degradation)
+        if (i + 1) % 50 == 0:
+            print(f"  classified {i+1}/{len(survivors)}, kept {len(kept)}")
+    return kept
 
 
 def to_case(item: dict, idx: int) -> dict:
@@ -199,8 +257,8 @@ def main() -> int:
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--llm-filter", action="store_true",
-                    help="Run Stage 2 LLM classifier (requires OPENAI_API_KEY, ~$1)")
-    ap.add_argument("--judge-provider", default="openai", choices=["openai", "anthropic"])
+                    help="Run Stage 2 LLM classifier (bedrock=Haiku 4.5, ollama=qwen3:4b-instruct)")
+    ap.add_argument("--judge-provider", default="bedrock", choices=["bedrock", "openai", "ollama"])
     args = ap.parse_args()
 
     pool = load_opseval_pool()
