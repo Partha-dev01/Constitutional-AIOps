@@ -9,27 +9,28 @@
 ## ⭐ Table 0: Phase 4.2 Final Results (v3.0 — 431 cases, 2026-05-13)
 
 > Stack A: Ollama 0.23.2, qwen3:4b-instruct + qwen3:14b Q4_K_M, AWS g6.xlarge L4 24GB
+> BERTScore: roberta-large | Cosine: sentence-transformers/all-MiniLM-L6-v2
 
-| Metric | Value | Sample Size | Notes |
-|--------|-------|-------------|-------|
-| **Overall Accuracy** | **88.6%** (382/431) | 431 | True final after remine fix |
-| **Annotation Accuracy** | **82.6%** (180/218) | 218 | HDFS/BGL/Apache/OpenSSH |
-| **RCA Accuracy** | **94.8%** (202/213) | 213 | LEMMA/OpsEval/remine |
-| v1 baseline (150 cases) | 90.7% (136/150) | 150 | Within run-to-run variance |
+| Metric | Value | BERTScore F1 | Cosine Sim | Notes |
+|--------|-------|-------------|------------|-------|
+| **Overall Accuracy** | **88.6%** (382/431) | **0.7975** | **0.2756** | True final after remine fix |
+| **Annotation Accuracy** | **82.6%** (180/218) | 0.8220 | 0.2041 | HDFS/BGL/Apache/OpenSSH |
+| **RCA Accuracy** | **94.8%** (202/213) | 0.7726 | 0.3512 | LEMMA/OpsEval/remine |
+| v1 baseline (150 cases) | 90.7% (136/150) | — | — | Within run-to-run variance |
 
 ### Per-Source Breakdown (v3.0)
 
-| Source | Task | N | Accuracy |
-|--------|------|---|----------|
-| LEMMA-RCA cloud | RCA | 80 | **100%** |
-| Apache (Loghub) | Annotation | 40 | **100%** |
-| OpsEval-remine Wired Network | RCA | 32 | **100%** (was 0% — bug) |
-| OpsEval Mobile / Log / remine-Mobile | RCA | 16 | **100%** |
-| HDFS (Loghub) | Annotation | 100 | **94%** |
-| OpsEval Wired Network | RCA | 79 | **89%** |
-| BGL (Loghub) | Annotation | 38 | **68%** |
-| OpsEval 5G | RCA | 6 | **67%** |
-| OpenSSH (Loghub) | Annotation | 40 | **50%** — model precision/recall tradeoff |
+| Source | Task | N | Accuracy | BERTScore F1 | Cosine Sim |
+|--------|------|---|----------|-------------|------------|
+| LEMMA-RCA cloud | RCA | 80 | **100%** | 0.7842 | 0.4469 |
+| Apache (Loghub) | Annotation | 40 | **100%** | 0.8110 | 0.1365 |
+| OpsEval-remine Wired Network | RCA | 32 | **100%** | 0.7923 | 0.3745 |
+| OpsEval Mobile / Log / remine-Mobile | RCA | 16 | **100%** | 0.7796 | 0.3586 |
+| HDFS (Loghub) | Annotation | 100 | **94%** | 0.8292 | 0.2115 |
+| OpsEval Wired Network | RCA | 79 | **89%** | 0.7552 | 0.2666 |
+| BGL (Loghub) | Annotation | 38 | **68%** | 0.8203 | 0.2430 |
+| OpsEval 5G | RCA | 6 | **67%** | 0.7825 | 0.2520 |
+| OpenSSH (Loghub) | Annotation | 40 | **50%** | 0.8163 | 0.2163 |
 
 ### OpenSSH 50% — Not a Bug
 
