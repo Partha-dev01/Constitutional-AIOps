@@ -38,6 +38,19 @@ def _load(path: Path) -> list[dict]:
     return [json.loads(line) for line in text.splitlines() if line.strip()]
 
 
+def _p95(lats: list[float]) -> float:
+    """Numpy-style linear interpolation P95 — matches test_5plus5.py benchmark output."""
+    if not lats:
+        return 0.0
+    s = sorted(lats)
+    n = len(s)
+    if n == 1:
+        return s[0]
+    pos = 0.95 * (n - 1)
+    low, high = int(pos), min(int(pos) + 1, n - 1)
+    return s[low] + (pos - low) * (s[high] - s[low])
+
+
 def _stats(results: list[dict]) -> dict:
     by_task: dict[str, list[dict]] = {"annotation": [], "rca": []}
     for r in results:
@@ -55,7 +68,7 @@ def _stats(results: list[dict]) -> dict:
             "correct": correct,
             "accuracy": correct / len(rows),
             "lat_avg_ms": statistics.mean(lats),
-            "lat_p95_ms": statistics.quantiles(lats, n=20)[-1] if len(lats) >= 2 else max(lats, default=0),
+            "lat_p95_ms": _p95(lats),
             "lat_max_ms": max(lats, default=0),
         }
     # Overall
@@ -64,7 +77,7 @@ def _stats(results: list[dict]) -> dict:
     out["overall"] = {
         "accuracy": correct / max(1, len(results)),
         "lat_avg_ms": statistics.mean(lats) if lats else 0,
-        "lat_p95_ms": statistics.quantiles(lats, n=20)[-1] if len(lats) >= 2 else max(lats, default=0),
+        "lat_p95_ms": _p95(lats),
     }
     return out
 
