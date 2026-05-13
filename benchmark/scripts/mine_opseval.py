@@ -224,14 +224,40 @@ def stage2_llm_filter(survivors: list[dict], provider: str = "bedrock") -> list[
     return kept
 
 
+_LETTERS = list("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+
 def to_case(item: dict, idx: int) -> dict:
     """Convert an OpsEval QA item into a runner-compatible RCA case."""
+    import re as _re
     q = item.get("question") or item.get("query") or ""
-    answer = item.get("answer") or item.get("solution") or item.get("std_ans") or ""
-    if isinstance(answer, list):
-        answer = "; ".join(str(a) for a in answer)
+    answer_raw = item.get("answer") or item.get("solution") or item.get("std_ans") or ""
+    if isinstance(answer_raw, list):
+        answer_raw = "; ".join(str(a) for a in answer_raw)
+    answer_raw = str(answer_raw)
     category = item.get("_category", "unknown")
-    return {
+
+    # Embed multiple-choice options into the question text so the model can
+    # reference them.  OpsEval stores choices as a list; answer is letter(s).
+    choices: list[str] = item.get("choices", [])
+    acceptable_answers: list[str] = []
+    if choices:
+        opts_text = "\n".join(f"{_LETTERS[i]}. {ch}" for i, ch in enumerate(choices))
+        q = q.rstrip() + "\n\n" + opts_text
+        # Convert letter answer(s) to option text for semantic evaluation
+        correct_letters = [l.strip() for l in _re.split(r"[,;]", answer_raw) if l.strip()]
+        correct_texts = []
+        for letter in correct_letters:
+            letter_up = letter.upper()
+            if letter_up in _LETTERS:
+                idx_c = _LETTERS.index(letter_up)
+                if 0 <= idx_c < len(choices):
+                    correct_texts.append(choices[idx_c])
+        if correct_texts:
+            answer_raw = "; ".join(correct_texts)
+            acceptable_answers = correct_texts + correct_letters
+
+    case: dict = {
         "id": f"RCA_OPSEVAL_RM_{idx:03d}",
         "source": f"opseval_remine_{category}",
         "task_type": "rca",
@@ -242,13 +268,16 @@ def to_case(item: dict, idx: int) -> dict:
             "title": f"OpsEval re-mined ({category})",
             "logs": [],
         },
-        "expected_root_cause": str(answer),
+        "expected_root_cause": answer_raw,
         "_provenance": {
             "opseval_category": category,
             "opseval_split": item.get("_split", "unknown"),
             "filter_stage": "regex+llm" if item.get("_llm_kept") else "regex",
         },
     }
+    if acceptable_answers:
+        case["acceptable_answers"] = acceptable_answers
+    return case
 
 
 def main() -> int:
