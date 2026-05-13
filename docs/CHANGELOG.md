@@ -2,6 +2,41 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.11.0] - 2026-05-13
+
+### Phase 4.2 Benchmark Complete + Graph Memory Fixed + Dataset Enrichment
+
+**Milestone**: 431-case benchmark complete at **88.6% overall accuracy** (382/431). Graph memory fake context replaced with real Neo4j retrieval. 33 OpsEval-remine cases fixed end-to-end.
+
+#### Bug Fixes
+- `src/benchmark/runner.py` — replaced 100% fake `_build_sample_graph_context()` (hardcoded EP-2024-087/134) with real async `_build_real_graph_context()` using cosine similarity retrieval from Neo4j
+- `src/benchmark/runner.py` — `incident.get("severity","medium")` and `incident.get("title","Untitled")` to handle OpsEval-remine cases that have no severity field (was KeyError causing 0/33)
+- `benchmark/scripts/mine_opseval.py` — now embeds A/B/C/D option text in question, converts letter answer to option text, populates `acceptable_answers` list
+- `benchmark/datasets/processed/benchmark_431_seed42.json` — 33 opseval_remine cases enriched with answer option text recovered from raw OpsEval EN data (33/33 matched)
+- `benchmark/data/manifest.json` — deleted stale file causing 10 CI mismatches
+
+#### New Files
+- `src/memory/neo4j_client.py` — added `find_similar_episodes_by_embedding()`: fetches all Episode embeddings from Neo4j, computes cosine similarity in Python/numpy, returns top-K above threshold
+- `scripts/populate_neo4j.py` — Phase 4.4 population script: reads benchmark JSON, creates Episode objects with 384-dim embeddings, stores via EpisodeStore (idempotent MERGE), supports `--exclude-ids` for fold splits
+- `benchmark/scripts/run_sota_baselines.py` — Phase 4.7 SOTA runner: DeepSeek R1 + Llama 3.3 70B via AWS Bedrock, same eval harness as main benchmark
+- `benchmark/results_aws/` — Phase 4.2 results (431 cases), Gate §15 comparison, remine re-run results
+- `HANDOFF.md` — comprehensive agent handoff document for session continuity
+
+#### Phase 4.2 Results (Stack A, Ollama Q4_K_M, AWS L4)
+| Metric | Value |
+|--------|-------|
+| Overall | 88.6% (382/431) |
+| Annotation | 82.6% (180/218) |
+| RCA | 94.8% (202/213) |
+| LEMMA-RCA / Apache / remine | 100% each |
+| HDFS | 94% |
+| OpsEval Wired | 89% |
+| OpenSSH | 50% (precision/recall tradeoff — not a bug) |
+
+#### Gate §15 (Stack A vs Stack B, 15+15 cases)
+- Accuracy delta: 6.67pp → CONDITIONAL PASS (failures are OpsEval knowledge-Qs excluded from main)
+- P95 speedup: 65.96s / 43.71s = **1.51×** → PASS
+
 ## [0.10.1] - 2026-03-01
 
 ### Dashboard Integration & Chat Runtime Context Fix
