@@ -36,13 +36,19 @@ services:
       # Deterministic-ish mode (vLLM doesn't guarantee bit-identical across runs,
       # only batch-invariance; we report run-to-run variance per Phase 5.4)
       - VLLM_ENABLE_V1_MULTIPROCESSING=0
+    # Stack B (vLLM, latency-only): 4B AWQ to fit alongside 14B FP8 on 24GB L4.
+    # Stack A (Ollama Q4_K_M) feeds all accuracy tables; Stack B feeds Table 5 only.
+    # See REVIEWER_RESPONSE.md §15 for dual-stack rationale.
+    # VRAM math: 4B AWQ ~3GB + 14B FP8 ~15GB + KV cache ~2GB = ~20GB on 22GB usable.
+    # 14B needs 0.68+ to leave room for KV cache (crashed at 0.55 / 0.62).
     command: >
-      --model Qwen/Qwen3-4B-Instruct-2507
+      --model Qwen/Qwen3-4B-AWQ
       --port 8000
       --host 0.0.0.0
-      --gpu-memory-utilization 0.32
-      --max-model-len 16384
-      --dtype bfloat16
+      --gpu-memory-utilization 0.30
+      --max-model-len 4096
+      --quantization awq_marlin
+      --max-num-seqs 4
       --seed 42
       --reasoning-parser qwen3
       --served-model-name qwen3-4b
@@ -80,13 +86,12 @@ services:
     # PRIMARY: try Qwen3-14B-FP8. If HF returns 404, change `--model` to
     # `Qwen/Qwen3-14B-AWQ` and `--quantization fp8` to `--quantization awq`.
     command: >
-      --model Qwen/Qwen3-14B-FP8
+      --model Qwen/Qwen3-14B-AWQ
       --port 8001
       --host 0.0.0.0
-      --gpu-memory-utilization 0.62
-      --max-model-len 16384
-      --quantization fp8
-      --kv-cache-dtype fp8
+      --gpu-memory-utilization 0.55
+      --max-model-len 8192
+      --quantization awq_marlin
       --seed 42
       --reasoning-parser qwen3
       --served-model-name qwen3-14b
