@@ -34,7 +34,8 @@ class AgentResponse:
     content: str
     confidence: float
     confidence_level: ConfidenceLevel
-    reasoning: Optional[str] = None
+    reasoning: Optional[str] = None  # JSON-parsed self-reported reasoning from model output
+    reasoning_trace: Optional[str] = None  # Raw chain-of-thought from message.reasoning (Phase 4.0a, 2026-05-12)
     suggested_action: Optional[str] = None
     metadata: Optional[dict[str, Any]] = None
     
