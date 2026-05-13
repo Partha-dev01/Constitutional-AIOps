@@ -1,44 +1,30 @@
-# Benchmark Runs Index — Constitutional AIOps v3.0
+# Benchmark Results — AWS Runs Index
 
-All runs stored in `/mnt/runs/<run-name>/`. Each dir contains:
-- `manifest.json` — metadata, accuracy, latency
-- `benchmark.log` — full stdout
-- `results.json` — per-case results
-- `summary.json` — aggregated metrics
-- `paper_tables.tex/md` — drop-in LaTeX/markdown for paper
+## Active Results (source of truth for paper)
 
-## Runs
+| Dir | What | Cases | Accuracy | Use for |
+|-----|------|-------|----------|---------|
+| `run_stackA_main431/results_merged.json` | **Phase 4.2 main benchmark** | 431 | **88.6%** | Tables 2/3/4/6 |
+| `rerun_remine33_enriched/results.json` | Remine 33 re-run | 33 | 100% | Merged into above |
 
-### run_stackA_5plus5_oninstance (2026-05-12)
-- **Stack A** | Ollama 0.23.2 | Q4_K_M
-- 10/10 = 100% | ann avg 3.3s | RCA avg 31s
-- ✅ Jarvis-parity baseline confirmed on AWS L4
+> **Note on BERTScore/Cosine = 0.0**: `sentence-transformers` and `bert-score` not installed on AWS instance. Accuracy numbers are correct; semantic similarity metrics need local post-processing with `pip install sentence-transformers bert-score`.
 
-### run_stackB_5plus5_v1_bad (2026-05-13) — INVALID
-- **Stack B** | vLLM 0.9.2 | awq_marlin
-- 9/10 = 90% | ann avg 30s (thinking mode bug) | RCA avg 27s
-- ❌ Do NOT use — thinking mode ON for annotation (bug)
+> **Note on combined_results.md in run_stackA_main431/**: Shows pre-merge numbers (81.0% / 169/213 RCA). Use `results_merged.json` for all paper numbers.
 
-### run_stackB_5plus5_v2 (2026-05-13) ← CURRENT BASELINE
-- **Stack B** | vLLM 0.9.2 | awq_marlin + thinking fix
-- 10/10 = 100% | ann avg 3.4s | RCA avg 26.4s | P95 32s
-- ✅ Gate 1 (accuracy delta): PASS (0pp vs Stack A)
-- ⏳ Gate 2 (P95 speedup ≥1.5×): pending 15+15 confirmation
+## Pending (to be created)
 
-### run_stackB_15plus15 (2026-05-13) — IN PROGRESS
-- **Stack B** | vLLM 0.9.2 | awq_marlin + thinking fix
-- 30 cases (15 ann + 15 RCA) for gate §15 P95 comparison
+| Dir | What | Cases | Status |
+|-----|------|-------|--------|
+| `sota_llama_3_3_70b/` | Phase 4.7 Llama 3.3 70B | 400 | Run from laptop via Bedrock ~30 min |
+| `sota_deepseek_r1/` | Phase 4.7 DeepSeek R1 | 400 | Run from laptop via Bedrock ~80 min |
+| `run_ablation_all/` | Phase 4.3 ablation (7 configs) | 400×7 | Run on instance overnight ~15 hrs |
+| `run_phase45_graph/` | Phase 4.5 graph experiments | varies | Blocked on Phase 4.4 Neo4j population |
 
----
+## Archive (`archive/`)
 
-## Next planned runs
-- `run_stackA_15plus15` — Stack A 15+15 for P95 baseline (gate §15)
-- `run_stackB_full_150` — Stack B full 150-case benchmark (Table 5 latency)
-- `run_stackA_full_500` — Stack A full 500-case main benchmark (Tables 2-4,6)
+All intermediate verification runs. Not paper numbers.
 
-### run_stackB_15plus15 (2026-05-13) ← GATE §15 CANDIDATE
-- **Stack B** | vLLM 0.9.2 | awq_marlin + thinking fix (enable_thinking=false for 4B)
-- 30/30 = 100% | ann avg 3.3s (min 2.5s, max 4.2s) | RCA avg 31.4s | P95 43.7s
-- ✅ Gate 1 (accuracy delta <2pp): PASS — both 100%
-- ⏳ Gate 2 (P95 speedup ≥1.5×): PENDING Stack A 15+15 for P95 baseline
-- Note: RCA max 76.6s outlier (one case); typical RCA range 20-35s
+| Location | What |
+|----------|------|
+| `archive/gate15_comparison.md` | Stack A vs B: A=93.3%/65.96s P95, B=100%/43.71s P95. Gate 2 PASS 1.51× |
+| `archive/smoke_tests/` | All 5+5 and 15+15 smoke runs for both stacks |

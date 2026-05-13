@@ -1,0 +1,288 @@
+[INFO] Using pre-set FAST_AGENT_URL=http://localhost:8000/v1
+[INFO] Using pre-set REASONING_AGENT_URL=http://localhost:8001/v1
+======================================================================
+CONSTITUTIONAL AIOPS - BENCHMARK TEST
+======================================================================
+Timestamp: 2026-05-13T06:24:56.088817
+Fast Model:      qwen3-4b
+Reasoning Model: qwen3-14b
+Endpoint:        None
+Dataset:         curated_150 (seed=42, English only)
+Test counts:     15 annotation + 15 RCA
+======================================================================
+
+[STARTING] 5+5 benchmark...
+   [ANNOTATION] 1/15
+   [ANNOTATION] 2/15
+   [ANNOTATION] 3/15
+   [ANNOTATION] 4/15
+   [ANNOTATION] 5/15
+   [ANNOTATION] 6/15
+   [ANNOTATION] 7/15
+   [ANNOTATION] 8/15
+   [ANNOTATION] 9/15
+   [ANNOTATION] 10/15
+   [ANNOTATION] 11/15
+   [ANNOTATION] 12/15
+   [ANNOTATION] 13/15
+   [ANNOTATION] 14/15
+   [ANNOTATION] 15/15
+   [RCA] 1/15
+   [RCA] 2/15
+   [RCA] 3/15
+   [RCA] 4/15
+   [RCA] 5/15
+   [RCA] 6/15
+   [RCA] 7/15
+   [RCA] 8/15
+   [RCA] 9/15
+   [RCA] 10/15
+   [RCA] 11/15
+   [RCA] 12/15
+   [RCA] 13/15
+   [RCA] 14/15
+   [RCA] 15/15
+
+======================================================================
+RESULTS SUMMARY
+======================================================================
+Status:              completed
+Total Tests:         30
+Passed:              30
+Annotation Accuracy: 100.00%
+RCA Accuracy:        100.00%
+Avg Latency:         17383.82ms
+P50 Latency:         12074.76ms
+P95 Latency:         43712.25ms
+Network RTT:         1.53ms
+======================================================================
+
+--- ANNOTATION TESTS (15/15 passed) ---
+
+   [PASS] ANN_083 (3131ms)
+         Expected: {"anomaly_detected": true, "severity": "warning", "category": "error", "classification": "warn"}
+         Actual:   HDFS DataNode encountered an exception while serving a block, indicating a potential data transfer issue.
+
+   [PASS] ANN_023 (4035ms)
+         Expected: {"anomaly_detected": false, "severity": "info", "category": "normal", "classification": "info"}
+         Actual:   HDFS DataNode is adding a block to the invalid set, indicating potential data corruption or network issues.
+
+   [PASS] ANN_007 (2496ms)
+         Expected: {"anomaly_detected": false, "severity": "info", "category": "normal", "classification": "info"}
+         Actual:   Informational log about block allocation in HDFS
+
+   [PASS] ANN_028 (3641ms)
+         Expected: {"anomaly_detected": false, "severity": "info", "category": "normal", "classification": "info"}
+         Actual:   DataNode is receiving a block from a source node to a destination node
+
+   [PASS] ANN_037 (3775ms)
+         Expected: {"anomaly_detected": false, "severity": "info", "category": "normal", "classification": "info"}
+         Actual:   HDFS DataNode log indicating a block was added to the invalid set
+
+   [PASS] ANN_168 (4156ms)
+         Expected: {"anomaly_detected": true, "severity": "critical", "category": "error", "classification": "alert"}
+         Actual:   Received unexpected packet type 57 instead of expected type 3 on tree network, indicating potential communication failure or data corruption.
+
+   [PASS] ANN_067 (3129ms)
+         Expected: {"anomaly_detected": true, "severity": "warning", "category": "error", "classification": "warn"}
+         Actual:   HDFS DataNode encountered an exception while serving a block, indicating a potential data transfer issue.
+
+   [PASS] ANN_054 (3144ms)
+         Expected: {"anomaly_detected": true, "severity": "warning", "category": "error", "classification": "warn"}
+         Actual:   HDFS DataNode encountered an exception while serving a block, indicating a potential data transfer issue.
+
+   [PASS] ANN_059 (3130ms)
+         Expected: {"anomaly_detected": true, "severity": "warning", "category": "error", "classification": "warn"}
+         Actual:   HDFS DataNode encountered an exception while serving a block, indicating a potential data transfer issue.
+
+   [PASS] ANN_077 (3128ms)
+         Expected: {"anomaly_detected": true, "severity": "warning", "category": "error", "classification": "warn"}
+         Actual:   HDFS DataNode encountered an exception while serving a block, indicating a potential data transfer issue.
+
+   [PASS] ANN_090 (3160ms)
+         Expected: {"anomaly_detected": true, "severity": "warning", "category": "error", "classification": "warn"}
+         Actual:   HDFS DataNode encountered an exception while serving a block, indicating a potential data transfer issue.
+
+   [PASS] ANN_100 (3167ms)
+         Expected: {"anomaly_detected": true, "severity": "warning", "category": "error", "classification": "warn"}
+         Actual:   HDFS DataNode encountered an exception while serving a block, indicating a potential data transfer issue.
+
+   [PASS] ANN_086 (3171ms)
+         Expected: {"anomaly_detected": true, "severity": "warning", "category": "error", "classification": "warn"}
+         Actual:   HDFS DataNode encountered an exception while serving a block, indicating a potential data transfer issue.
+
+   [PASS] ANN_171 (3422ms)
+         Expected: {"anomaly_detected": true, "severity": "critical", "category": "error", "classification": "alert"}
+         Actual:   Kernel termination with reason code 1004 indicates a severe system failure in the BlueGene/L supercomputer's RAS log.
+
+   [PASS] ANN_194 (3149ms)
+         Expected: {"anomaly_detected": true, "severity": "critical", "category": "error", "classification": "alert"}
+         Actual:   Lustre mount failed on BlueGene/L supercomputer RAS log
+
+--- RCA TESTS (15/15 passed) ---
+
+   [PASS] RCA_034 (22844ms)
+         Expected: for
+         Actual:   
+
+{
+    "root_cause": "The user is asking for the correct Bash command to iterate over files in a directory, which requires identifying the appropriate loop construct.",
+    "causal_chain": [
+        
+
+   [PASS] RCA_155 (25066ms)
+         Expected: loadgenerator_cpu_spike
+         Actual:   
+
+{
+    "root_cause": "Unanticipated CPU resource exhaustion due to unoptimized code execution or sudden traffic surge",
+    "causal_chain": [
+        "Recent deployment of unoptimized code introduced
+
+   [PASS] RCA_177 (50942ms)
+         Expected: cloudwatch_network_latency
+         Actual:   
+
+{
+  "root_cause": "Misconfigured Amazon CloudWatch Agent leading to improper metric collection and potential monitoring gaps",
+  "causal_chain": [
+    "CloudWatch Agent attempted to read default con
+
+   [PASS] RCA_162 (27918ms)
+         Expected: ratings_memory_leak
+         Actual:   
+
+{
+    "root_cause": "Deprecated Symfony method usage causing memory leak in application code",
+    "causal_chain": [
+        "Symfony\\Component\\HttpKernel\\Event\\KernelEvent::isMasterRequest() de
+
+   [PASS] RCA_060 (19994ms)
+         Expected: A device that converts analog signals to digital signals and back again
+         Actual:   
+
+{
+    "root_cause": "Insufficient incident data provided - context contains a quiz question about modems rather than actual system telemetry or incident details",
+    "causal_chain": [
+        "User
+
+   [PASS] RCA_171 (30200ms)
+         Expected: user_disk_io_issue
+         Actual:   
+
+{
+    "root_cause": "Disk I/O latency causing health check timeouts",
+    "causal_chain": [
+        "Disk I/O performance degradation",
+        "Health check endpoint (method=Health) experiencing in
+
+   [PASS] RCA_082 (23727ms)
+         Expected: Reduce user access volume
+         Actual:   
+
+{
+    "root_cause": "The question asks for the method not typically prioritized as a first choice for addressing system performance bottlenecks.",
+    "causal_chain": [
+        "The system experienc
+
+   [PASS] RCA_122 (25184ms)
+         Expected: chaos-controller_dependency_failure
+         Actual:   
+
+{
+  "root_cause": "Failure in Chaos Mesh Schedule controller due to unhandled dependency failure during scheduled chaos experiment",
+  "causal_chain": [
+    "Scheduled chaos experiment triggered by 
+
+   [PASS] RCA_002 (22374ms)
+         Expected: TACACS+
+         Actual:   
+
+{
+    "root_cause": "The question lacks context about specific network infrastructure requirements, but the correct protocol of choice for network device access control is TACACS+ due to its granula
+
+   [PASS] RCA_096 (29772ms)
+         Expected: Control plane
+         Actual:   
+
+{
+    "root_cause": "The SDN controller interfaces with the switching fabric at the control plane.",
+    "causal_chain": [
+        "SDN architecture separates control plane (decision-making) from fo
+
+   [PASS] RCA_003 (76649ms)
+         Expected: Short
+         Actual:   
+
+{
+    "root_cause": "Short between two conductors in the twisted-pair cable",
+    "causal_chain": [
+        "Tone generator applied to a single pin at one end of the cable",
+        "Signal leakage 
+
+   [PASS] RCA_040 (24296ms)
+         Expected: A, B, and C
+         Actual:   
+
+{
+    "root_cause": "The question is about identifying routing protocols that support VLSMs, with the correct answer being EIGRP, OSPF, and IS-IS.",
+    "causal_chain": [
+        "The user asked whi
+
+   [PASS] RCA_180 (27897ms)
+         Expected: ebs_cpu_spike
+         Actual:   
+
+{
+    "root_cause": "Misconfigured or malfunctioning CSI driver (ebs.csi.aws.com) causing infinite loop in driver discovery process",
+    "causal_chain": [
+        "CSI driver discovery process init
+
+   [PASS] RCA_067 (34876ms)
+         Expected: 100MHz
+         Actual:   
+
+{
+    "root_cause": "The question is based on a misunderstanding of 5G sub-6GHz frequency band capabilities, specifically the maximum bandwidth it can support.",
+    "causal_chain": [
+        "The u
+
+   [PASS] RCA_139 (29943ms)
+         Expected: carts_memory_leak
+         Actual:   
+
+{
+    "root_cause": "Memory leak in the 'carts' service due to improper resource management or unbounded data retention in application code",
+    "causal_chain": [
+        "Recent deployment introdu
+
+======================================================================
+SCORE SUMMARY
+======================================================================
+Annotation: 15/15 = 100.0%
+RCA:        15/15 = 100.0%
+Overall:    30/30 = 100.0%
+
+Annotation Latency: avg=3322ms, min=2496ms, max=4156ms
+RCA Latency:        avg=31445ms, min=19994ms, max=76649ms
+======================================================================
+
+[EVAL] Running multi-metric evaluation (post-processing)...
+sentence-transformers not installed. Install with: pip install sentence-transformers torch
+BERTScore not available. Install with: pip install bert-score
+[EVAL] Multi-metric evaluation complete
+
+[SAVED] Per-test results -> /mnt/aiops-repo/benchmark/results/constitutional_aiops/results.json
+[SAVED] Summary -> /mnt/aiops-repo/benchmark/results/constitutional_aiops/summary.json
+[SAVED] API-compatible -> /mnt/aiops-repo/benchmark/results/constitutional_aiops/benchmark_result.json
+[SAVED] Combined results -> /mnt/aiops-repo/benchmark/results/combined_results.json
+
+[EXPORT] Generating all benchmark output files...
+[SAVED] LaTeX tables -> /mnt/aiops-repo/benchmark/results/paper_tables.tex
+[SAVED] Markdown tables -> /mnt/aiops-repo/benchmark/results/paper_tables.md
+[SAVED] Per-model tables -> /mnt/aiops-repo/benchmark/results/constitutional_aiops/
+[SAVED] All tables (MD)    -> /mnt/aiops-repo/benchmark/results/all_tables.md
+[SAVED] All tables (LaTeX) -> /mnt/aiops-repo/benchmark/results/all_tables.tex
+[SAVED] Combined results   -> /mnt/aiops-repo/benchmark/results/combined_results.md
+[SAVED] Results index      -> /mnt/aiops-repo/benchmark/results/results_index.md
+[EXPORT] All output files generated successfully!

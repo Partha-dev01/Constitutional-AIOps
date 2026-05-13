@@ -1,0 +1,138 @@
+[INFO] Using pre-set FAST_AGENT_URL=http://localhost:8000/v1
+[INFO] Using pre-set REASONING_AGENT_URL=http://localhost:8001/v1
+======================================================================
+CONSTITUTIONAL AIOPS - BENCHMARK TEST
+======================================================================
+Timestamp: 2026-05-13T06:21:46.054111
+Fast Model:      qwen3-4b
+Reasoning Model: qwen3-14b
+Endpoint:        None
+Dataset:         curated_150 (seed=42, English only)
+Test counts:     5 annotation + 5 RCA
+======================================================================
+
+[STARTING] 5+5 benchmark...
+   [ANNOTATION] 1/5
+   [ANNOTATION] 2/5
+   [ANNOTATION] 3/5
+   [ANNOTATION] 4/5
+   [ANNOTATION] 5/5
+   [RCA] 1/5
+   [RCA] 2/5
+   [RCA] 3/5
+   [RCA] 4/5
+   [RCA] 5/5
+
+======================================================================
+RESULTS SUMMARY
+======================================================================
+Status:              completed
+Total Tests:         10
+Passed:              10
+Annotation Accuracy: 100.00%
+RCA Accuracy:        100.00%
+Avg Latency:         14893.76ms
+P50 Latency:         12043.47ms
+P95 Latency:         31978.30ms
+Network RTT:         1.57ms
+======================================================================
+
+--- ANNOTATION TESTS (5/5 passed) ---
+
+   [PASS] ANN_083 (3117ms)
+         Expected: {"anomaly_detected": true, "severity": "warning", "category": "error", "classification": "warn"}
+         Actual:   HDFS DataNode encountered an exception while serving a block, indicating a potential data transfer issue.
+
+   [PASS] ANN_023 (3990ms)
+         Expected: {"anomaly_detected": false, "severity": "info", "category": "normal", "classification": "info"}
+         Actual:   HDFS DataNode is adding a block to the invalid set, indicating potential data corruption or network issues.
+
+   [PASS] ANN_007 (2505ms)
+         Expected: {"anomaly_detected": false, "severity": "info", "category": "normal", "classification": "info"}
+         Actual:   Informational log about block allocation in HDFS
+
+   [PASS] ANN_028 (3673ms)
+         Expected: {"anomaly_detected": false, "severity": "info", "category": "normal", "classification": "info"}
+         Actual:   DataNode is receiving a block from a source node to a destination node
+
+   [PASS] ANN_037 (3811ms)
+         Expected: {"anomaly_detected": false, "severity": "info", "category": "normal", "classification": "info"}
+         Actual:   HDFS DataNode log indicating a block was added to the invalid set
+
+--- RCA TESTS (5/5 passed) ---
+
+   [PASS] RCA_034 (22682ms)
+         Expected: for
+         Actual:   
+
+{
+    "root_cause": "The user is asking for the correct Bash command to iterate over files in a directory, which requires identifying the appropriate loop construct.",
+    "causal_chain": [
+        
+
+   [PASS] RCA_155 (25798ms)
+         Expected: loadgenerator_cpu_spike
+         Actual:   
+
+{
+    "root_cause": "Unanticipated CPU utilization spike due to increased request load or inefficient processing in a critical service component",
+    "causal_chain": [
+        "Surge in incoming re
+
+   [PASS] RCA_177 (35094ms)
+         Expected: cloudwatch_network_latency
+         Actual:   
+
+{
+    "root_cause": "Misconfigured Amazon CloudWatch Agent configuration file causing improper network communication",
+    "causal_chain": [
+        "CloudWatch Agent attempted to read default_linux
+
+   [PASS] RCA_162 (28170ms)
+         Expected: ratings_memory_leak
+         Actual:   
+
+{
+    "root_cause": "Deprecated Symfony method usage causing memory leak in application code",
+    "causal_chain": [
+        "Symfony\\Component\\HttpKernel\\Event\\KernelEvent::isMasterRequest() de
+
+   [PASS] RCA_060 (20097ms)
+         Expected: A device that converts analog signals to digital signals and back again
+         Actual:   
+
+{
+    "root_cause": "Insufficient incident data provided - context contains a quiz question about modems rather than actual system telemetry or incident details",
+    "causal_chain": [
+        "User
+
+======================================================================
+SCORE SUMMARY
+======================================================================
+Annotation: 5/5 = 100.0%
+RCA:        5/5 = 100.0%
+Overall:    10/10 = 100.0%
+
+Annotation Latency: avg=3419ms, min=2505ms, max=3990ms
+RCA Latency:        avg=26368ms, min=20097ms, max=35094ms
+======================================================================
+
+[EVAL] Running multi-metric evaluation (post-processing)...
+sentence-transformers not installed. Install with: pip install sentence-transformers torch
+BERTScore not available. Install with: pip install bert-score
+[EVAL] Multi-metric evaluation complete
+
+[SAVED] Per-test results -> /mnt/aiops-repo/benchmark/results/constitutional_aiops/results.json
+[SAVED] Summary -> /mnt/aiops-repo/benchmark/results/constitutional_aiops/summary.json
+[SAVED] API-compatible -> /mnt/aiops-repo/benchmark/results/constitutional_aiops/benchmark_result.json
+[SAVED] Combined results -> /mnt/aiops-repo/benchmark/results/combined_results.json
+
+[EXPORT] Generating all benchmark output files...
+[SAVED] LaTeX tables -> /mnt/aiops-repo/benchmark/results/paper_tables.tex
+[SAVED] Markdown tables -> /mnt/aiops-repo/benchmark/results/paper_tables.md
+[SAVED] Per-model tables -> /mnt/aiops-repo/benchmark/results/constitutional_aiops/
+[SAVED] All tables (MD)    -> /mnt/aiops-repo/benchmark/results/all_tables.md
+[SAVED] All tables (LaTeX) -> /mnt/aiops-repo/benchmark/results/all_tables.tex
+[SAVED] Combined results   -> /mnt/aiops-repo/benchmark/results/combined_results.md
+[SAVED] Results index      -> /mnt/aiops-repo/benchmark/results/results_index.md
+[EXPORT] All output files generated successfully!
