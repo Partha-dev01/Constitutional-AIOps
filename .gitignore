@@ -123,6 +123,14 @@ nul
 # Runs directory (per-experiment outputs created during benchmarks)
 runs/
 
+# Dataset preparation progress markers (transient, script-generated)
+benchmark/.progress.json
+benchmark/.benchmark_step2_complete
+benchmark/.benchmark_step*
+
+# Local benchmark results (transient overwrite by test runs — real results in results_aws/)
+benchmark/results/
+
 # Distribution archives (built by scripts/archive.sh)
 dist/
 
