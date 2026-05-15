@@ -108,14 +108,21 @@ def _build_prompt(fmt: str, system: str, user: str) -> str:
 
 # ── Bedrock call ─────────────────────────────────────────────────────────────
 
-def _call_bedrock(client, model_cfg: dict, prompt: str, max_tokens: int) -> tuple[str, float]:
+def _call_bedrock(client, model_cfg: dict, prompt: str, max_tokens: int, system: str = "", user: str = "") -> tuple[str, float]:
     """Returns (text, latency_ms). Retries on throttling with exponential backoff."""
     fmt = model_cfg["format"]
     if fmt == "deepseek":
         body = json.dumps({"prompt": prompt, "max_tokens": max_tokens, "temperature": 0.0})
     elif fmt == "deepseek-v3":
-        # DeepSeek V3.2 on Bedrock uses the converse API
-        body = json.dumps({"prompt": prompt, "max_tokens": max_tokens, "temperature": 0.0})
+        # DeepSeek V3.2 on Bedrock uses OpenAI-compatible messages API (not prompt field)
+        body = json.dumps({
+            "messages": [
+                {"role": "system", "content": system},
+                {"role": "user", "content": user},
+            ],
+            "max_tokens": max_tokens,
+            "temperature": 0.0,
+        })
     elif fmt == "llama3":
         body = json.dumps({"prompt": prompt, "max_gen_len": max_tokens, "temperature": 0.0})
     else:
@@ -148,8 +155,9 @@ def _call_bedrock(client, model_cfg: dict, prompt: str, max_tokens: int) -> tupl
         text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL)
         text = text.replace("<|end_of_sentence|>", "").strip()
     elif fmt == "deepseek-v3":
-        # V3.2 response format: choices[0].text or generation
-        text = raw.get("choices", [{}])[0].get("text", "") or raw.get("generation", "")
+        # V3.2 messages API response: choices[0].message.content
+        choices = raw.get("choices", [{}])
+        text = (choices[0].get("message", {}).get("content", "") if choices else "") or raw.get("generation", "")
         text = text.strip()
     elif fmt == "llama3":
         text = raw.get("generation", "").strip()
@@ -226,7 +234,7 @@ def _run_annotation(client, model_cfg: dict, case: dict) -> dict:
 
     prompt = _build_prompt(model_cfg["format"], _ANN_SYSTEM, user_msg)
     try:
-        text, lat = _call_bedrock(client, model_cfg, prompt, model_cfg["max_tokens_ann"])
+        text, lat = _call_bedrock(client, model_cfg, prompt, model_cfg["max_tokens_ann"], system=_ANN_SYSTEM, user=user_msg)
         correct, score = _eval_annotation(text, case.get("expected", {}))
     except Exception as e:
         text, lat, correct, score = str(e)[:200], 0.0, False, 0.0
@@ -263,7 +271,7 @@ def _run_rca(client, model_cfg: dict, case: dict) -> dict:
 
     prompt = _build_prompt(model_cfg["format"], _RCA_SYSTEM, user_msg[:3000])
     try:
-        text, lat = _call_bedrock(client, model_cfg, prompt, model_cfg["max_tokens_rca"])
+        text, lat = _call_bedrock(client, model_cfg, prompt, model_cfg["max_tokens_rca"], system=_RCA_SYSTEM, user=user_msg[:3000])
         correct, score = _eval_rca(text, case)
     except Exception as e:
         text, lat, correct, score = str(e)[:200], 0.0, False, 0.0
@@ -308,7 +316,7 @@ def main() -> int:
 
     # Quick connectivity check
     try:
-        _call_bedrock(client, model_cfg, _build_prompt(model_cfg["format"], "You are helpful.", "Say OK"), 8)
+        _call_bedrock(client, model_cfg, _build_prompt(model_cfg["format"], "You are helpful.", "Say OK"), 8, system="You are helpful.", user="Say OK")
         print(f"[sota] Bedrock connectivity OK")
     except Exception as e:
         print(f"[sota] ERROR: Bedrock connection failed: {e}", file=sys.stderr)
