@@ -225,7 +225,14 @@ class FastAnnotator(BaseAgent):
             latency_ms = (time.perf_counter() - start_time) * 1000
 
             # Build agent response
-            confidence = annotation.get("confidence", 0.5)
+            # Coerce confidence to float: models without system prompt may return
+            # confidence as a string ("0.85", "high") which breaks downstream `>=` comparisons.
+            raw_confidence = annotation.get("confidence", 0.5)
+            try:
+                confidence = float(raw_confidence) if not isinstance(raw_confidence, bool) else 0.5
+            except (TypeError, ValueError):
+                confidence = 0.5
+            confidence = max(0.0, min(1.0, confidence))
 
             # Extract and validate triplets (Phase 2: Semantic triplet extraction)
             # Uses canonicalize_entity() to map variants to canonical forms

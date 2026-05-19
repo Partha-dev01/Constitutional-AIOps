@@ -50,9 +50,11 @@ class BenchmarkConfig:
     calibrate_network: bool = True
     use_curated_150: bool = True  # Use curated benchmark (seed=42)
     curated_dataset: str = ""  # Custom curated file (e.g., "benchmark_500_seed42.json")
-    skip_system_prompt: bool = False  # Ablation: skip system prompts
+    skip_system_prompt: bool = False  # Ablation: skip system prompts entirely
     inject_graph_context: bool = False  # Ablation: inject historical episode context
     use_orchestrator: bool = False  # Ablation: use LangGraph orchestrated pipeline
+    no_structured: bool = False  # Ablation: request plain-text responses (no JSON format)
+    skip_constitutional: bool = False  # Ablation: strip constitutional/principle language from prompts
 
 
 @dataclass
@@ -413,9 +415,41 @@ class BenchmarkRunner:
 
             # Apply ablation flags
             if config.skip_system_prompt:
-                # Override system prompts with empty strings
+                # Override system prompts with empty strings (most aggressive ablation)
                 self.fast_annotator.get_system_prompt = lambda: ""
                 self.reasoning_agent.get_system_prompt = lambda mode="chat": ""
+            elif config.no_structured:
+                # Ablation: remove JSON format instructions, keep task description
+                # Tests value of structured output for downstream parsing
+                _PLAINTEXT_ANN = (
+                    "You are a fast telemetry annotator. Given a log entry, describe in 1-2 plain sentences "
+                    "whether it indicates an anomaly, what the severity appears to be (info/warning/error/critical), "
+                    "and the category (normal/error/performance/security/resource). Plain text only, no JSON."
+                )
+                _PLAINTEXT_RCA = (
+                    "You are an expert SRE performing root cause analysis. Given incident logs or a question, "
+                    "state the root cause in 1-2 concise plain-text sentences. No JSON, no markdown lists."
+                )
+                self.fast_annotator.get_system_prompt = lambda: _PLAINTEXT_ANN
+                self.reasoning_agent.get_system_prompt = lambda mode="chat": _PLAINTEXT_RCA
+            elif config.skip_constitutional:
+                # Ablation: strip all constitutional/safety/principle language from system prompts.
+                # This is conceptually a no-op in the accuracy benchmark because the RCA and
+                # annotation system prompts (used here) do not contain explicit constitutional
+                # principle text — those live in CHAT_SYSTEM_PROMPT used in production chat mode.
+                # We override with minimal "task only" prompts to maximize differentiation vs full.
+                _NO_CONST_ANN = (
+                    "Classify this log entry. Respond with JSON: "
+                    '{"anomaly_detected": <bool>, "severity": "<info|warning|error|critical>", '
+                    '"category": "<normal|error|performance|security|resource>", "confidence": <0-1>, '
+                    '"summary": "<short>", "needs_reasoning": <bool>}'
+                )
+                _NO_CONST_RCA = (
+                    "Identify the root cause of this incident in JSON: "
+                    '{"root_cause": "<text>", "confidence": <0-1>, "reasoning": "<short>"}'
+                )
+                self.fast_annotator.get_system_prompt = lambda: _NO_CONST_ANN
+                self.reasoning_agent.get_system_prompt = lambda mode="chat": _NO_CONST_RCA
 
             # Calibrate network if requested
             if config.calibrate_network:

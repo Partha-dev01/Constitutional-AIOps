@@ -24,7 +24,7 @@ from typing import Any, Optional
 
 import httpx
 
-from src.config import config
+import src.config as _cfg_module
 
 logger = logging.getLogger(__name__)
 
@@ -73,17 +73,17 @@ class ModelRouter:
             fast_agent_url: URL for fast agent (default from config)
             reasoning_agent_url: URL for reasoning agent (default from config)
         """
-        self.fast_agent_url = fast_agent_url or config.llm.fast_agent_url
-        self.reasoning_agent_url = reasoning_agent_url or config.llm.reasoning_agent_url
+        self.fast_agent_url = fast_agent_url or _cfg_module.config.llm.fast_agent_url
+        self.reasoning_agent_url = reasoning_agent_url or _cfg_module.config.llm.reasoning_agent_url
 
         # Create separate HTTP clients for each endpoint
         self._fast_client = httpx.AsyncClient(
             base_url=self.fast_agent_url,
-            timeout=config.llm.fast_agent_timeout,
+            timeout=_cfg_module.config.llm.fast_agent_timeout,
         )
         self._reasoning_client = httpx.AsyncClient(
             base_url=self.reasoning_agent_url,
-            timeout=config.llm.reasoning_agent_timeout,
+            timeout=_cfg_module.config.llm.reasoning_agent_timeout,
         )
 
         # Latency tracking for benchmarking
@@ -193,7 +193,7 @@ class ModelRouter:
         messages.append({"role": "user", "content": prompt})
 
         payload = {
-            "model": config.llm.fast_agent_model,
+            "model": _cfg_module.config.llm.fast_agent_model,
             "messages": messages,
             "max_tokens": max_tokens,
             "temperature": temperature,
@@ -203,7 +203,7 @@ class ModelRouter:
         # vLLM + Qwen3 has thinking ON by default when --reasoning-parser qwen3 is set.
         # Annotation (4B) must NOT think — Ollama's qwen3:4b-instruct suppresses it via
         # instruct tuning; vLLM AWQ does not. Detect vLLM by model name (no colon).
-        if ":" not in config.llm.fast_agent_model:
+        if ":" not in _cfg_module.config.llm.fast_agent_model:
             payload["chat_template_kwargs"] = {"enable_thinking": False}
 
         start_time = time.perf_counter()
@@ -296,7 +296,7 @@ class ModelRouter:
         messages.append({"role": "user", "content": prompt})
 
         payload = {
-            "model": config.llm.reasoning_agent_model,
+            "model": _cfg_module.config.llm.reasoning_agent_model,
             "messages": messages,
             "max_tokens": max_tokens,
             "temperature": temperature,
@@ -380,7 +380,7 @@ class ModelRouter:
         prompt_hash = hash(prompt) % (2**32)
 
         payload = {
-            "model": config.llm.reasoning_agent_model,
+            "model": _cfg_module.config.llm.reasoning_agent_model,
             "messages": [{"role": "user", "content": prompt}],
             "max_tokens": max_tokens,
             "temperature": temperature,
