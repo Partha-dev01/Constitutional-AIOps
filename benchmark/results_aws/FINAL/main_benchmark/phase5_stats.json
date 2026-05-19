@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "source": "benchmark\\results_aws\\FINAL\\main_benchmark\\results_sota_eval_431.json",
+  "bootstrap": {
+    "n_resamples": 10000,
+    "ci": 0.95,
+    "method": "BCa",
+    "seed": 42
+  },
+  "block": {
+    "label": "Main re-run (constitutional_aiops, new prompt)",
+    "tasks": {
+      "annotation": {
+        "n": 218,
+        "correct": 180,
+        "accuracy": 0.8256880733944955,
+        "ci_low": 0.7706422018348624,
+        "ci_high": 0.8715596330275229
+      },
+      "rca": {
+        "n": 142,
+        "correct": 114,
+        "accuracy": 0.8028169014084507,
+        "ci_low": 0.7323943661971831,
+        "ci_high": 0.8591549295774648
+      },
+      "overall": {
+        "n": 360,
+        "correct": 294,
+        "accuracy": 0.8166666666666667,
+        "ci_low": 0.775,
+        "ci_high": 0.8555555555555555
+      }
+    }
+  }
+}

@@ -112,11 +112,22 @@ def setup_env(config: dict):
     os.environ["FAST_AGENT_TIMEOUT"] = "120"
     os.environ["REASONING_AGENT_TIMEOUT"] = "180"
 
-    # Reload config AND runner so MODELS dict gets fresh values from new env vars
-    # (MODELS is module-level, evaluated once at import - must reload to rebuild)
+    # Reload config AND all modules holding cached `config` references so MODELS
+    # dict and agent endpoint configurations pick up new env var values.
+    # CRITICAL: model_router previously had `from src.config import config` which
+    # captured a stale reference and pinned all ablation configs to the first run's
+    # models. Even with the dynamic-config fix in model_router.py, we reload it here
+    # as belt-and-suspenders. Runner must be reloaded last because it imports the
+    # agents.
     import importlib
     import src.config
     importlib.reload(src.config)
+    import src.agents.model_router
+    importlib.reload(src.agents.model_router)
+    import src.agents.fast_annotator
+    importlib.reload(src.agents.fast_annotator)
+    import src.agents.reasoning_agent
+    importlib.reload(src.agents.reasoning_agent)
     import src.benchmark.runner
     importlib.reload(src.benchmark.runner)
 
@@ -160,6 +171,8 @@ async def run_single_ablation(
         skip_system_prompt=config.get("skip_system_prompt", False),
         inject_graph_context=config.get("inject_graph_context", False),
         use_orchestrator=config.get("use_orchestrator", False),
+        no_structured=config.get("no_structured", False),
+        skip_constitutional=config.get("skip_constitutional", False),
     )
 
     runner = BenchmarkRunner()
@@ -351,8 +364,12 @@ async def main():
     )
     args = parser.parse_args()
 
+    # All 8 ablation configs are now properly wired through BenchmarkConfig.
+    # no_structured overrides agent prompts to plain-text mode (no JSON request).
+    # skip_constitutional overrides agent prompts to strip safety/principle language.
+    VALID_FOR_ALL = list(ABLATION_CONFIGS.keys())
     configs_to_run = (
-        list(ABLATION_CONFIGS.keys()) if args.config == "all"
+        VALID_FOR_ALL if args.config == "all"
         else [args.config]
     )
 

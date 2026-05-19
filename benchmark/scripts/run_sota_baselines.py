@@ -90,17 +90,22 @@ _RCA_SYSTEM = (
 
 def _build_prompt(fmt: str, system: str, user: str) -> str:
     if fmt == "deepseek":
-        # Plain text System/User format — special tokens like <|System|> are not
-        # part of R1's vocabulary and produce empty completions.
-        return f"<|begin_of_sentence|>System: {system}\n\nUser: {user}\n\nAssistant:"
+        if system:
+            return f"<|begin_of_sentence|>System: {system}\n\nUser: {user}\n\nAssistant:"
+        return f"<|begin_of_sentence|>User: {user}\n\nAssistant:"
     if fmt == "deepseek-v3":
-        # DeepSeek V3.2 on Bedrock uses converse-style messages API
-        # We pass the prompt as a plain combined string (system + user)
-        return f"System: {system}\n\nUser: {user}\n\nAssistant:"
+        if system:
+            return f"System: {system}\n\nUser: {user}\n\nAssistant:"
+        return f"User: {user}\n\nAssistant:"
     if fmt == "llama3":
+        if system:
+            return (
+                f"<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n{system}\n"
+                f"<|eot_id|><|start_header_id|>user<|end_header_id|>\n{user}\n"
+                f"<|eot_id|><|start_header_id|>assistant<|end_header_id|>"
+            )
         return (
-            f"<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n{system}\n"
-            f"<|eot_id|><|start_header_id|>user<|end_header_id|>\n{user}\n"
+            f"<|begin_of_text|><|start_header_id|>user<|end_header_id|>\n{user}\n"
             f"<|eot_id|><|start_header_id|>assistant<|end_header_id|>"
         )
     raise ValueError(f"Unknown format: {fmt}")
@@ -111,20 +116,22 @@ def _build_prompt(fmt: str, system: str, user: str) -> str:
 def _call_bedrock(client, model_cfg: dict, prompt: str, max_tokens: int, system: str = "", user: str = "") -> tuple[str, float]:
     """Returns (text, latency_ms). Retries on throttling with exponential backoff."""
     fmt = model_cfg["format"]
+    temp = float(model_cfg.get("temperature", 0.0))
     if fmt == "deepseek":
-        body = json.dumps({"prompt": prompt, "max_tokens": max_tokens, "temperature": 0.0})
+        body = json.dumps({"prompt": prompt, "max_tokens": max_tokens, "temperature": temp})
     elif fmt == "deepseek-v3":
         # DeepSeek V3.2 on Bedrock uses OpenAI-compatible messages API (not prompt field)
+        messages = []
+        if system:
+            messages.append({"role": "system", "content": system})
+        messages.append({"role": "user", "content": user})
         body = json.dumps({
-            "messages": [
-                {"role": "system", "content": system},
-                {"role": "user", "content": user},
-            ],
+            "messages": messages,
             "max_tokens": max_tokens,
-            "temperature": 0.0,
+            "temperature": temp,
         })
     elif fmt == "llama3":
-        body = json.dumps({"prompt": prompt, "max_gen_len": max_tokens, "temperature": 0.0})
+        body = json.dumps({"prompt": prompt, "max_gen_len": max_tokens, "temperature": temp})
     else:
         raise ValueError(fmt)
 
@@ -167,20 +174,60 @@ def _call_bedrock(client, model_cfg: dict, prompt: str, max_tokens: int, system:
 
 # ── Evaluation ───────────────────────────────────────────────────────────────
 
-def _eval_annotation(response_text: str, expected: dict) -> tuple[bool, float]:
+_NL_ANOMALY_POSITIVE = re.compile(
+    r'\b(anomal(?:y|ous)|abnormal|attack(?:ed)?|intrusion|brute.?force|'
+    r'unauthorized|malicious|suspicious|corruption|overflow|'
+    r'fail(?:ed|ure)|error\s+detected|exception|violation|'
+    r'indicates?\s+(?:an?\s+)?(?:anomaly|issue|problem|attack)|'
+    r'security\s+(?:issue|threat|breach)|this\s+is\s+an?\s+anomaly)\b',
+    re.IGNORECASE,
+)
+_NL_ANOMALY_NEGATIVE = re.compile(
+    r'\b(no\s+anomaly|not\s+an?\s+anomaly|normal\s+operation|normal\s+behavior|'
+    r'no\s+(?:issue|error|fault|failure|attack|problem)|'
+    r'routine|expected\s+behavior|legitimate|healthy|benign|'
+    r'regular\s+operation|typical\s+behavior|this\s+is\s+normal)\b',
+    re.IGNORECASE,
+)
+
+def _nl_anomaly_predict(text: str) -> bool:
+    """Keyword-based anomaly prediction from natural-language response (no-prompt fallback)."""
+    pos = bool(_NL_ANOMALY_POSITIVE.search(text))
+    neg = bool(_NL_ANOMALY_NEGATIVE.search(text))
+    if pos and not neg:
+        return True
+    if neg and not pos:
+        return False
+    # Ambiguous — count weighted signals
+    pos_words = re.findall(r'\b(?:error|fail(?:ed|ure)?|attack|malicious|suspicious|critical|alert|violation|unauthorized)\b', text, re.IGNORECASE)
+    neg_words = re.findall(r'\b(?:normal|routine|expected|regular|legitimate|benign)\b', text, re.IGNORECASE)
+    return len(pos_words) > len(neg_words)
+
+
+def _eval_annotation(response_text: str, expected: dict, no_prompt: bool = False) -> tuple[bool, float]:
     """
     Fair single-model annotation eval. Parses JSON from model response.
     Score: 1pt anomaly_detected match + 1pt severity match. Pass if score >= 1.0.
+    When no_prompt=True and JSON is absent, falls back to NL keyword matching
+    for anomaly_detected only (severity cannot be inferred without structure).
     """
     score = 0.0
+    parsed = None
     try:
-        # Extract JSON from response (model may add surrounding text)
         m = re.search(r"\{[^{}]+\}", response_text, re.DOTALL)
-        if not m:
-            return False, 0.0
-        parsed = json.loads(m.group())
+        if m:
+            parsed = json.loads(m.group())
     except (json.JSONDecodeError, AttributeError):
-        return False, 0.0
+        pass
+
+    if parsed is None:
+        if not no_prompt:
+            return False, 0.0
+        # No-prompt fallback: NL keyword matching for anomaly_detected only
+        predicted_anomaly = _nl_anomaly_predict(response_text)
+        exp_anomaly = expected.get("anomaly_detected", False)
+        score = 1.0 if predicted_anomaly == exp_anomaly else 0.0
+        return score >= 1.0, score
 
     exp_anomaly = expected.get("anomaly_detected", False)
     act_anomaly = parsed.get("anomaly_detected", False)
@@ -232,10 +279,12 @@ def _run_annotation(client, model_cfg: dict, case: dict) -> dict:
     if context:
         user_msg += f"\nContext: {context}"
 
-    prompt = _build_prompt(model_cfg["format"], _ANN_SYSTEM, user_msg)
+    no_prompt = model_cfg.get("no_prompt", False)
+    system = "" if no_prompt else _ANN_SYSTEM
+    prompt = _build_prompt(model_cfg["format"], system, user_msg)
     try:
-        text, lat = _call_bedrock(client, model_cfg, prompt, model_cfg["max_tokens_ann"], system=_ANN_SYSTEM, user=user_msg)
-        correct, score = _eval_annotation(text, case.get("expected", {}))
+        text, lat = _call_bedrock(client, model_cfg, prompt, model_cfg["max_tokens_ann"], system=system, user=user_msg)
+        correct, score = _eval_annotation(text, case.get("expected", {}), no_prompt=no_prompt)
     except Exception as e:
         text, lat, correct, score = str(e)[:200], 0.0, False, 0.0
 
@@ -269,9 +318,11 @@ def _run_rca(client, model_cfg: dict, case: dict) -> dict:
             parts.append(f"Logs:\n{log_text}")
         user_msg = "\n".join(parts) if parts else "Analyze the incident."
 
-    prompt = _build_prompt(model_cfg["format"], _RCA_SYSTEM, user_msg[:3000])
+    no_prompt = model_cfg.get("no_prompt", False)
+    system = "" if no_prompt else _RCA_SYSTEM
+    prompt = _build_prompt(model_cfg["format"], system, user_msg[:3000])
     try:
-        text, lat = _call_bedrock(client, model_cfg, prompt, model_cfg["max_tokens_rca"], system=_RCA_SYSTEM, user=user_msg[:3000])
+        text, lat = _call_bedrock(client, model_cfg, prompt, model_cfg["max_tokens_rca"], system=system, user=user_msg[:3000])
         correct, score = _eval_rca(text, case)
     except Exception as e:
         text, lat, correct, score = str(e)[:200], 0.0, False, 0.0
@@ -301,11 +352,23 @@ def main() -> int:
                     help="Output JSONL path")
     ap.add_argument("--aws-profile", default="aiops-operator")
     ap.add_argument("--region", default="us-east-1")
-    ap.add_argument("--ann", type=int, default=0, help="Limit annotation cases (0=all)")
-    ap.add_argument("--rca", type=int, default=0, help="Limit RCA cases (0=all)")
+    ap.add_argument("--ann", type=int, default=None, help="Max annotation cases (omit=all, 0=skip)")
+    ap.add_argument("--rca", type=int, default=None, help="Max RCA cases (omit=all, 0=skip)")
+    ap.add_argument("--no-prompt", action="store_true",
+                    help="Phase 4.6 Part B: strip system prompt entirely (cross-model robustness test)")
+    ap.add_argument("--temperature", type=float, default=0.0,
+                    help="Sampling temperature (default 0.0 deterministic; 0.05-0.1 introduces natural variance for reproducibility across re-runs)")
     args = ap.parse_args()
 
     model_cfg = MODELS[args.model]
+    # Phase 4.6 Part B: strip prompts to test cross-model robustness
+    model_cfg = dict(model_cfg)  # shallow copy — don't mutate global (needed for both temp and no_prompt overrides)
+    model_cfg["temperature"] = args.temperature
+    if args.no_prompt:
+        model_cfg["no_prompt"] = True
+        print(f"[sota] Mode: NO-PROMPT (Phase 4.6 Part B)")
+    if args.temperature != 0.0:
+        print(f"[sota] Temperature: {args.temperature} (non-zero — variance will affect reproducibility)")
     print(f"[sota] Model: {model_cfg['display']} ({model_cfg['bedrock_id']})")
     print(f"[sota] Dataset: {args.dataset}")
     print(f"[sota] Output: {args.out}")
@@ -327,10 +390,19 @@ def main() -> int:
     cases = raw.get("test_cases", raw) if isinstance(raw, dict) else raw
     ann_cases = [c for c in cases if c.get("task_type") == "annotation"]
     rca_cases = [c for c in cases if c.get("task_type") == "rca"]
-    if args.ann:
-        ann_cases = ann_cases[:args.ann]
-    if args.rca:
-        rca_cases = rca_cases[:args.rca]
+    if args.ann is not None:
+        ann_cases = ann_cases[:args.ann]   # 0 means skip all annotation
+    if args.rca is not None:
+        rca_cases = rca_cases[:args.rca]   # 0 means skip all RCA
+
+    # Load excluded RCA case IDs (71 cases: 39 Chinese expected + 32 bare-letter MC)
+    _excluded_path = REPO_ROOT / "benchmark/datasets/processed/excluded_rca_cases.json"
+    excluded_ids: set[str] = set()
+    if _excluded_path.exists():
+        _ex = json.loads(_excluded_path.read_text(encoding="utf-8"))
+        excluded_ids = {item["id"] for item in _ex.get("excluded_ids", [])}
+    if excluded_ids:
+        print(f"[sota] {len(excluded_ids)} RCA cases will be marked correct=null (Chinese/MC excluded)")
 
     print(f"[sota] {len(ann_cases)} annotation + {len(rca_cases)} RCA cases")
 
@@ -369,6 +441,22 @@ def main() -> int:
         for i, case in enumerate(rca_cases):
             if case["id"] in done_ids:
                 continue
+            if case["id"] in excluded_ids:
+                rec = {
+                    "case_id": case["id"], "task_type": "rca",
+                    "source": case.get("source", ""),
+                    "correct": None, "rule_score": None,
+                    "skip_reason": "excluded_unevaluable",
+                    "inference_latency_ms": 0.0,
+                    "model_response": "",
+                    "expected_root_cause": case.get("expected_root_cause", ""),
+                    "timestamp": datetime.utcnow().isoformat(),
+                }
+                f.write(json.dumps(rec) + "\n")
+                f.flush()
+                done_ids.add(case["id"])
+                print(f"  [RCA {i+1:3d}/{len(rca_cases)}] SKIP {case['id']:20s} (excluded)")
+                continue
             time.sleep(delay)
             rec = _run_rca(client, model_cfg, case)
             f.write(json.dumps(rec) + "\n")
@@ -377,21 +465,25 @@ def main() -> int:
             status = "OK " if rec["correct"] else "FAIL"
             print(f"  [RCA {i+1:3d}/{len(rca_cases)}] {status} {case['id']:20s} lat={rec['inference_latency_ms']:.0f}ms")
 
-    # Summary
+    # Summary (excluded RCA cases have correct=None; only count evaluable)
     results = [json.loads(l) for l in args.out.read_text(encoding="utf-8").splitlines() if l.strip()]
-    ann_r = [r for r in results if r["task_type"] == "annotation"]
-    rca_r = [r for r in results if r["task_type"] == "rca"]
-    ann_acc = sum(1 for r in ann_r if r["correct"]) / max(len(ann_r), 1) * 100
-    rca_acc = sum(1 for r in rca_r if r["correct"]) / max(len(rca_r), 1) * 100
-    overall = sum(1 for r in results if r["correct"]) / max(len(results), 1) * 100
+    ann_r = [r for r in results if r.get("task_type") == "annotation"]
+    rca_r = [r for r in results if r.get("task_type") == "rca"]
+    rca_eval = [r for r in rca_r if r.get("correct") is not None]
+    rca_excl = len(rca_r) - len(rca_eval)
+    ann_acc = sum(1 for r in ann_r if r.get("correct")) / max(len(ann_r), 1) * 100
+    rca_acc = sum(1 for r in rca_eval if r.get("correct")) / max(len(rca_eval), 1) * 100
+    all_eval = ann_r + rca_eval
+    overall = sum(1 for r in all_eval if r.get("correct")) / max(len(all_eval), 1) * 100
 
+    excl_note = f" ({rca_excl} excluded)" if rca_excl else ""
     print(f"\n{'='*60}")
     print(f"  {model_cfg['display']} Results")
     print(f"{'='*60}")
-    print(f"  Annotation: {sum(1 for r in ann_r if r['correct'])}/{len(ann_r)} = {ann_acc:.1f}%")
-    print(f"  RCA:        {sum(1 for r in rca_r if r['correct'])}/{len(rca_r)} = {rca_acc:.1f}%")
-    print(f"  Overall:    {sum(1 for r in results if r['correct'])}/{len(results)} = {overall:.1f}%")
-    lats = [r["inference_latency_ms"] for r in results if r["inference_latency_ms"] > 0]
+    print(f"  Annotation: {sum(1 for r in ann_r if r.get('correct'))}/{len(ann_r)} = {ann_acc:.1f}%")
+    print(f"  RCA:        {sum(1 for r in rca_eval if r.get('correct'))}/{len(rca_eval)} evaluable = {rca_acc:.1f}%{excl_note}")
+    print(f"  Overall:    {sum(1 for r in all_eval if r.get('correct'))}/{len(all_eval)} evaluable = {overall:.1f}%")
+    lats = [r["inference_latency_ms"] for r in results if r.get("inference_latency_ms", 0) > 0]
     if lats:
         lats_s = sorted(lats)
         n = len(lats_s)

@@ -1,0 +1,376 @@
+{
+  "description": "RCA cases excluded from SOTA comparison eval (benchmark_400_seed42)",
+  "total_rca_cases": 198,
+  "total_ann_cases": 202,
+  "excluded_count": 71,
+  "excluded_chinese": 39,
+  "excluded_mc_letter": 32,
+  "evaluable_rca": 127,
+  "evaluable_total": 329,
+  "rationale": {
+    "chinese_expected": "Expected root-cause is in Chinese; substring eval on English responses cannot score these. 39 cases from OpsEval and LEMMA-RCA Chinese subsets.",
+    "multiple_choice_letter": "Expected answer is a bare letter (A/B/C/D). Substring eval trivially matches any letter in any English sentence, inflating accuracy for all systems equally. 32 cases from OpsEval re-mined subset."
+  },
+  "table7_evaluable_base": {
+    "ann_cases": 202,
+    "rca_cases_eval": 127,
+    "total_eval": 329
+  },
+  "excluded_ids": [
+    {
+      "id": "RCA_081",
+      "source": "opseval_Wired Network",
+      "reason": "chinese_expected"
+    },
+    {
+      "id": "RCA_059",
+      "source": "opseval_Log Analysis",
+      "reason": "chinese_expected"
+    },
+    {
+      "id": "RCA_079",
+      "source": "opseval_Wired Network",
+      "reason": "chinese_expected"
+    },
+    {
+      "id": "RCA_094",
+      "source": "opseval_Wired Network",
+      "reason": "chinese_expected"
+    },
+    {
+      "id": "RCA_070",
+      "source": "opseval_Wired Network",
+      "reason": "chinese_expected"
+    },
+    {
+      "id": "RCA_035",
+      "source": "opseval_Wired Network",
+      "reason": "chinese_expected"
+    },
+    {
+      "id": "RCA_062",
+      "source": "opseval_Log Analysis",
+      "reason": "chinese_expected"
+    },
+    {
+      "id": "RCA_063",
+      "source": "opseval_Wired Network",
+      "reason": "chinese_expected"
+    },
+    {
+      "id": "RCA_019",
+      "source": "opseval_Wired Network",
+      "reason": "chinese_expected"
+    },
+    {
+      "id": "RCA_073",
+      "source": "opseval_Wired Network",
+      "reason": "chinese_expected"
+    },
+    {
+      "id": "RCA_023",
+      "source": "opseval_Log Analysis",
+      "reason": "chinese_expected"
+    },
+    {
+      "id": "RCA_016",
+      "source": "opseval_Wired Network",
+      "reason": "chinese_expected"
+    },
+    {
+      "id": "RCA_042",
+      "source": "opseval_Wired Network",
+      "reason": "chinese_expected"
+    },
+    {
+      "id": "RCA_052",
+      "source": "opseval_Wired Network",
+      "reason": "chinese_expected"
+    },
+    {
+      "id": "RCA_009",
+      "source": "opseval_Wired Network",
+      "reason": "chinese_expected"
+    },
+    {
+      "id": "RCA_086",
+      "source": "opseval_Wired Network",
+      "reason": "chinese_expected"
+    },
+    {
+      "id": "RCA_074",
+      "source": "opseval_Wired Network",
+      "reason": "chinese_expected"
+    },
+    {
+      "id": "RCA_036",
+      "source": "opseval_Wired Network",
+      "reason": "chinese_expected"
+    },
+    {
+      "id": "RCA_057",
+      "source": "opseval_Wired Network",
+      "reason": "chinese_expected"
+    },
+    {
+      "id": "RCA_030",
+      "source": "opseval_Wired Network",
+      "reason": "chinese_expected"
+    },
+    {
+      "id": "RCA_085",
+      "source": "opseval_Wired Network",
+      "reason": "chinese_expected"
+    },
+    {
+      "id": "RCA_051",
+      "source": "opseval_Wired Network",
+      "reason": "chinese_expected"
+    },
+    {
+      "id": "RCA_076",
+      "source": "opseval_Wired Network",
+      "reason": "chinese_expected"
+    },
+    {
+      "id": "RCA_012",
+      "source": "opseval_Wired Network",
+      "reason": "chinese_expected"
+    },
+    {
+      "id": "RCA_048",
+      "source": "opseval_Wired Network",
+      "reason": "chinese_expected"
+    },
+    {
+      "id": "RCA_015",
+      "source": "opseval_Wired Network",
+      "reason": "chinese_expected"
+    },
+    {
+      "id": "RCA_084",
+      "source": "opseval_Wired Network",
+      "reason": "chinese_expected"
+    },
+    {
+      "id": "RCA_064",
+      "source": "opseval_Wired Network",
+      "reason": "chinese_expected"
+    },
+    {
+      "id": "RCA_098",
+      "source": "opseval_Wired Network",
+      "reason": "chinese_expected"
+    },
+    {
+      "id": "RCA_007",
+      "source": "opseval_Wired Network",
+      "reason": "chinese_expected"
+    },
+    {
+      "id": "RCA_090",
+      "source": "opseval_Wired Network",
+      "reason": "chinese_expected"
+    },
+    {
+      "id": "RCA_004",
+      "source": "opseval_Wired Network",
+      "reason": "chinese_expected"
+    },
+    {
+      "id": "RCA_032",
+      "source": "opseval_Wired Network",
+      "reason": "chinese_expected"
+    },
+    {
+      "id": "RCA_021",
+      "source": "opseval_Wired Network",
+      "reason": "chinese_expected"
+    },
+    {
+      "id": "RCA_043",
+      "source": "opseval_Wired Network",
+      "reason": "chinese_expected"
+    },
+    {
+      "id": "RCA_071",
+      "source": "opseval_Wired Network",
+      "reason": "chinese_expected"
+    },
+    {
+      "id": "RCA_100",
+      "source": "opseval_Wired Network",
+      "reason": "chinese_expected"
+    },
+    {
+      "id": "RCA_077",
+      "source": "opseval_Wired Network",
+      "reason": "chinese_expected"
+    },
+    {
+      "id": "RCA_024",
+      "source": "opseval_Wired Network",
+      "reason": "chinese_expected"
+    },
+    {
+      "id": "RCA_OPSEVAL_RM_019",
+      "source": "opseval_remine_Wired Network",
+      "reason": "multiple_choice_letter"
+    },
+    {
+      "id": "RCA_OPSEVAL_RM_015",
+      "source": "opseval_remine_Wired Network",
+      "reason": "multiple_choice_letter"
+    },
+    {
+      "id": "RCA_OPSEVAL_RM_003",
+      "source": "opseval_remine_Wired Network",
+      "reason": "multiple_choice_letter"
+    },
+    {
+      "id": "RCA_OPSEVAL_RM_013",
+      "source": "opseval_remine_Wired Network",
+      "reason": "multiple_choice_letter"
+    },
+    {
+      "id": "RCA_OPSEVAL_RM_009",
+      "source": "opseval_remine_Wired Network",
+      "reason": "multiple_choice_letter"
+    },
+    {
+      "id": "RCA_OPSEVAL_RM_024",
+      "source": "opseval_remine_Wired Network",
+      "reason": "multiple_choice_letter"
+    },
+    {
+      "id": "RCA_OPSEVAL_RM_021",
+      "source": "opseval_remine_Wired Network",
+      "reason": "multiple_choice_letter"
+    },
+    {
+      "id": "RCA_OPSEVAL_RM_001",
+      "source": "opseval_remine_Wired Network",
+      "reason": "multiple_choice_letter"
+    },
+    {
+      "id": "RCA_OPSEVAL_RM_029",
+      "source": "opseval_remine_Mobile Communication Network",
+      "reason": "multiple_choice_letter"
+    },
+    {
+      "id": "RCA_010",
+      "source": "opseval_Log Analysis",
+      "reason": "multiple_choice_letter"
+    },
+    {
+      "id": "RCA_OPSEVAL_RM_026",
+      "source": "opseval_remine_Wired Network",
+      "reason": "multiple_choice_letter"
+    },
+    {
+      "id": "RCA_OPSEVAL_RM_020",
+      "source": "opseval_remine_Wired Network",
+      "reason": "multiple_choice_letter"
+    },
+    {
+      "id": "RCA_OPSEVAL_RM_002",
+      "source": "opseval_remine_Wired Network",
+      "reason": "multiple_choice_letter"
+    },
+    {
+      "id": "RCA_OPSEVAL_RM_025",
+      "source": "opseval_remine_Wired Network",
+      "reason": "multiple_choice_letter"
+    },
+    {
+      "id": "RCA_OPSEVAL_RM_008",
+      "source": "opseval_remine_Wired Network",
+      "reason": "multiple_choice_letter"
+    },
+    {
+      "id": "RCA_OPSEVAL_RM_017",
+      "source": "opseval_remine_Wired Network",
+      "reason": "multiple_choice_letter"
+    },
+    {
+      "id": "RCA_OPSEVAL_RM_004",
+      "source": "opseval_remine_Wired Network",
+      "reason": "multiple_choice_letter"
+    },
+    {
+      "id": "RCA_OPSEVAL_RM_011",
+      "source": "opseval_remine_Wired Network",
+      "reason": "multiple_choice_letter"
+    },
+    {
+      "id": "RCA_OPSEVAL_RM_006",
+      "source": "opseval_remine_Wired Network",
+      "reason": "multiple_choice_letter"
+    },
+    {
+      "id": "RCA_OPSEVAL_RM_010",
+      "source": "opseval_remine_Wired Network",
+      "reason": "multiple_choice_letter"
+    },
+    {
+      "id": "RCA_OPSEVAL_RM_030",
+      "source": "opseval_remine_Wired Network",
+      "reason": "multiple_choice_letter"
+    },
+    {
+      "id": "RCA_088",
+      "source": "opseval_Log Analysis",
+      "reason": "multiple_choice_letter"
+    },
+    {
+      "id": "RCA_OPSEVAL_RM_028",
+      "source": "opseval_remine_Wired Network",
+      "reason": "multiple_choice_letter"
+    },
+    {
+      "id": "RCA_OPSEVAL_RM_027",
+      "source": "opseval_remine_Wired Network",
+      "reason": "multiple_choice_letter"
+    },
+    {
+      "id": "RCA_OPSEVAL_RM_018",
+      "source": "opseval_remine_Wired Network",
+      "reason": "multiple_choice_letter"
+    },
+    {
+      "id": "RCA_OPSEVAL_RM_005",
+      "source": "opseval_remine_Wired Network",
+      "reason": "multiple_choice_letter"
+    },
+    {
+      "id": "RCA_OPSEVAL_RM_012",
+      "source": "opseval_remine_Wired Network",
+      "reason": "multiple_choice_letter"
+    },
+    {
+      "id": "RCA_OPSEVAL_RM_033",
+      "source": "opseval_remine_Wired Network",
+      "reason": "multiple_choice_letter"
+    },
+    {
+      "id": "RCA_OPSEVAL_RM_014",
+      "source": "opseval_remine_Wired Network",
+      "reason": "multiple_choice_letter"
+    },
+    {
+      "id": "RCA_OPSEVAL_RM_007",
+      "source": "opseval_remine_Wired Network",
+      "reason": "multiple_choice_letter"
+    },
+    {
+      "id": "RCA_OPSEVAL_RM_023",
+      "source": "opseval_remine_Wired Network",
+      "reason": "multiple_choice_letter"
+    },
+    {
+      "id": "RCA_OPSEVAL_RM_031",
+      "source": "opseval_remine_Wired Network",
+      "reason": "multiple_choice_letter"
+    }
+  ]
+}

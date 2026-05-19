@@ -1,0 +1,10 @@
+{
+  "model": "drain3",
+  "dataset": "benchmark\\datasets\\processed\\benchmark_400_seed42.json",
+  "timestamp": "2026-05-15T09:32:26.507455+00:00",
+  "annotation_accuracy": 0.505,
+  "annotation_correct": 102,
+  "annotation_total": 202,
+  "rca_accuracy": null,
+  "note": "Drain is a template-based log parser. No RCA capability."
+}

@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.11.2] - 2026-05-15
+
+### Session 5 — DeepSeek SOTA, Paper v2 Draft, Ablation Launched
+
+#### Completed
+- **Phase 4.7 DeepSeek V3.2 SOTA**: 400/400 via Bedrock (`deepseek.v3.2`). Ann 90.6%, RCA **57.1%** (deduped by case_id), Overall 74.0%. RCA gap vs ours: **+37.7pp**. Results: `benchmark/results_aws/sota_deepseek_v3/results.jsonl`.
+- **compile_results.py**: New script at `benchmark/scripts/compile_results.py` — generates `benchmark/results_aws/RESULTS_SUMMARY.md` with deduped SOTA accuracy table + LaTeX snippet for Table 7.
+- **Paper v2 draft**: `sn-article-template.v2/sn-article.tex` — 17-page revision draft. Fixed all broken `%%TBD%%` LaTeX comment patterns. Added 11 new bibliography entries (all citations now resolved). Filled Table 1 dataset N values. Updated Table 7 with confirmed Llama + DeepSeek numbers.
+- **Phase 4.3 Ablation launched**: 8 configs × 400 cases on AWS instance. Running via nohup at `/mnt/runs/ablation_full.log`. Estimated ~17 hrs remaining from 08:10 UTC 2026-05-15.
+- **Git cleanup**: Stale local test artifacts restored via `git restore`, added to `.gitignore`. Working tree clean.
+
+#### SOTA Baseline Summary (N=400, same rubric)
+| System | Ann | RCA | Overall | ΔRCA vs Ours |
+|--------|-----|-----|---------|--------------|
+| **Constitutional AIOps (Ours)** | 82.6% | **94.8%** | 88.6% | — |
+| Llama 3.3-70B (Bedrock) | 92.1% | 58.6% | 75.5% | −36.2pp |
+| DeepSeek V3.2 (Bedrock) | 90.6% | 57.1% | 74.0% | −37.7pp |
+
+#### AWS State
+- Instance `i-091c4de0e95d63154` RUNNING (ablation in progress — do NOT stop)
+- Budget used: ~$20 / $120 ceiling
+- CloudWatch idle-stop alarm: OK state (CPU active)
+- Daily budget cap ($5/day): alerts-only, no auto-stop action
+
+---
+
 ## [0.11.1] - 2026-05-13
 
 ### Session 4 — BERTScore, Neo4j Population, Llama SOTA, Instance Freeze
