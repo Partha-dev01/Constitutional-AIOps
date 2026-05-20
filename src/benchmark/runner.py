@@ -313,13 +313,13 @@ class BenchmarkRunner:
         return self._network_rtt_ms
 
     def load_dataset(self, dataset_type: str) -> list[dict]:
-        """Load test dataset from benchmark/datasets/processed/.
+        """Load test dataset from benchmark/intermediate/datasets/.
 
         Args:
             dataset_type: "annotation", "rca", "benchmark_150", or a filename
                 like "benchmark_500_seed42.json"
         """
-        base_path = Path(__file__).parent.parent.parent / "benchmark" / "datasets" / "processed"
+        base_path = Path(__file__).parent.parent.parent / "benchmark" / "intermediate" / "datasets"
 
         if dataset_type == "annotation":
             # Use cleaned dataset (62 bogus BGL entries removed)
