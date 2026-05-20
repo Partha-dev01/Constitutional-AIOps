@@ -92,8 +92,10 @@ temp/
 .ssh/jarvis_labs_key
 !.ssh/jarvis_labs_key.pub
 
-# Benchmark raw datasets (5.5GB+ - download via scripts)
-benchmark/raw/
+# Benchmark raw datasets (5.5GB+ - download via scripts).
+# Use /* + negate-README pattern so README.md is trackable while the data files are not.
+benchmark/raw/*
+!benchmark/raw/README.md
 benchmark/datasets/raw/
 # Both patterns active during 2026-05-20 reorg transition; remove the legacy line once reorg complete + verified.
 
