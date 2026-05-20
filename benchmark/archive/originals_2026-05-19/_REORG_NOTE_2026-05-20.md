@@ -20,4 +20,4 @@ The notices' content is otherwise historically accurate at the time they were
 written (2026-05-19) and is preserved verbatim for forensic continuity. Do not
 edit the notices to retrofit new paths — use this single mapping table instead.
 
-See also: `benchmark/final/REORG_PROPOSAL_2026-05-20.md`, `benchmark/archive/README.md`.
+See also: `benchmark/final/audit/REORG_PROPOSAL_2026-05-20.md`, `benchmark/archive/README.md`.

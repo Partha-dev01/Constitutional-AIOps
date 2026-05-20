@@ -30,4 +30,4 @@ Historical / superseded artifacts. Nothing here is read by active scripts. Prese
 
 ## Provenance
 
-Reorganized 2026-05-20 (session 12) from the legacy `benchmark/results/`, `benchmark/results_v2.0_frozen/`, and `benchmark/results_aws/` (non-FINAL) trees. See `benchmark/final/REORG_PROPOSAL_2026-05-20.md`.
+Reorganized 2026-05-20 (session 12) from the legacy `benchmark/results/`, `benchmark/results_v2.0_frozen/`, and `benchmark/results_aws/` (non-FINAL) trees. See `benchmark/final/audit/REORG_PROPOSAL_2026-05-20.md`.

@@ -9,7 +9,7 @@ SOTA evaluation pipeline (`_eval_annotation` and `_eval_rca` from
 NO new inference is performed. Reads existing `actual_output` and
 `expected_output` strings, recomputes `correct`/`rule_score` only.
 
-Why this exists: see `benchmark/final/METHODOLOGY.md` §6.
+Why this exists: see `benchmark/final/docs/METHODOLOGY.md` §6.
 
 Usage:
     python benchmark/scripts/rescore_ours_with_sota_eval.py \

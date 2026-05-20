@@ -37,4 +37,4 @@ Moved here 2026-05-20 from the legacy paths:
 - `benchmark/datasets/processed/` → `benchmark/intermediate/datasets/` (9 files, all tracked, R100 rename)
 - `benchmark/v0.11/` → `benchmark/intermediate/candidates/` (3 files, R100 rename)
 
-See `benchmark/final/REORG_PROPOSAL_2026-05-20.md` for the full plan and `benchmark/final/CV_PASS2_CODEBASE_AUDIT.md` Part B for per-file metadata.
+See `benchmark/final/audit/REORG_PROPOSAL_2026-05-20.md` for the full plan and `benchmark/final/audit/CV_PASS2_CODEBASE_AUDIT.md` Part B for per-file metadata.

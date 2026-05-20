@@ -20,4 +20,4 @@ python benchmark/scripts/download_datasets.py --all  # ALL including LEMMA-RCA
 
 ## Provenance
 
-Moved here 2026-05-20 from the legacy path `benchmark/datasets/raw/` as part of the 4-partition reorg (raw / intermediate / final / archive). See `benchmark/final/REORG_PROPOSAL_2026-05-20.md` for the full plan and `benchmark/final/CV_PASS2_CODEBASE_AUDIT.md` Part B for per-file metadata.
+Moved here 2026-05-20 from the legacy path `benchmark/datasets/raw/` as part of the 4-partition reorg (raw / intermediate / final / archive). See `benchmark/final/audit/REORG_PROPOSAL_2026-05-20.md` for the full plan and `benchmark/final/audit/CV_PASS2_CODEBASE_AUDIT.md` Part B for per-file metadata.
