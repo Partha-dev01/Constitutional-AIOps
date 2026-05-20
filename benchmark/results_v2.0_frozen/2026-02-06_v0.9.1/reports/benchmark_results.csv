@@ -1,2 +1,0 @@
-model_name,model_type,vram_gb,annotation_accuracy,rca_accuracy,avg_inference_latency_ms,p50_latency_ms,p95_latency_ms,p99_latency_ms,total_tests,total_correct,timestamp
-constitutional_aiops,hybrid,15,60.0,80.0,19597.76,14237.19,48318.76,63941.66,10,7,2026-02-01T07:37:34.113228
