@@ -13,8 +13,8 @@ Anomaly detection heuristic:
 
 Usage:
     python benchmark/scripts/run_drain_baseline.py \\
-        --dataset benchmark/datasets/processed/benchmark_400_seed42.json \\
-        --out benchmark/results_aws/sota_drain/results.jsonl
+        --dataset benchmark/intermediate/datasets/benchmark_400_seed42.json \\
+        --out benchmark/final/sota_baselines/drain.jsonl
 
 Paper reference: Table 7, "Drain" row (annotation only; RCA = N/A).
 Cite: zhu2023loghub

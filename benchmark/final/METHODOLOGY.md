@@ -132,11 +132,11 @@ overall         = (ann_correct + rca_correct) / (len(ann) + len(rca_eval))   # /
 
 ## 8. How to verify a saved file matches the paper
 
-For `run_stackA_main431/results_merged.json`:
+For `main_benchmark/results.json`:
 ```bash
 python -c "
 import json
-recs = json.load(open('benchmark/results_aws/run_stackA_main431/results_merged.json'))['test_results']
+recs = json.load(open('benchmark/final/main_benchmark/results.json'))['test_results']
 ann = [r for r in recs if r['task_type']=='annotation']
 rca = [r for r in recs if r['task_type']=='rca']
 print(f'Ann: {sum(1 for r in ann if r[\"correct\"])}/{len(ann)}')

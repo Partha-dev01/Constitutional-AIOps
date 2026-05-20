@@ -11,7 +11,7 @@ import json
 import os
 from datetime import datetime
 
-BASE = os.path.join(os.path.dirname(__file__), "..", "results_aws")
+BASE = os.path.join(os.path.dirname(__file__), "..", "archive", "originals_2026-05-19")
 
 
 def load_deduped(path):

@@ -7,7 +7,7 @@ Sanity check — no assumptions, recompute from raw fields.
 import json
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1] / "results_aws" / "FINAL"
+ROOT = Path(__file__).resolve().parents[1] / "final"
 
 
 def load(path):

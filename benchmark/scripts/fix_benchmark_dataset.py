@@ -12,7 +12,7 @@ This script patches the existing dataset in place.
 import json
 from pathlib import Path
 
-DATASET_DIR = Path(__file__).parent.parent / "datasets" / "processed"
+DATASET_DIR = Path(__file__).parent.parent / "intermediate" / "datasets"
 
 
 def main():

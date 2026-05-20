@@ -19,7 +19,7 @@ Stage 2 (LLM classifier, ~$1, gated by --llm-filter flag):
 Output: list of candidate RCA cases — still needs human spot-check via vet_labels.py.
 
 Usage (regex-only):
-    python benchmark/scripts/mine_opseval.py --target 100 --out benchmark/v0.11/opseval_remine.jsonl
+    python benchmark/scripts/mine_opseval.py --target 100 --out benchmark/intermediate/candidates/opseval_remine.jsonl
 
 Usage (with LLM filter):
     python benchmark/scripts/mine_opseval.py --target 100 --out ... --llm-filter
@@ -36,7 +36,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 OPSEVAL_EN = Path(os.environ.get("OPSEVAL_EN_DIR",
-                                  str(REPO_ROOT / "benchmark/datasets/raw/opseval/data/en")))
+                                  str(REPO_ROOT / "benchmark/raw/opseval/data/en")))
 
 # Stage 1: regex patterns
 

@@ -2,7 +2,16 @@
 """Archive original result dirs into _archive_originals_<date>/ with a zip
 backup sitting outside. NEVER deletes data — only moves.
 
-Steps:
+HISTORICAL — this script already executed once on 2026-05-19, producing
+`benchmark/results_aws/originals_backup_2026-05-19.zip` and
+`benchmark/results_aws/_archive_originals_2026-05-19/`. Both were then
+relocated during the 2026-05-20 benchmark/ reorg to
+`benchmark/archive/originals_backup_2026-05-19.zip` and
+`benchmark/archive/originals_2026-05-19/` respectively. The hardcoded
+paths below reflect the pre-reorg world at execution time and would need
+updating for any future re-run.
+
+Steps (as executed in May 2026):
   1. Build comprehensive zip backup at benchmark/results_aws/originals_backup_<DATE>.zip
   2. Verify the zip contains every source file with matching SHA-256
   3. Create benchmark/results_aws/_archive_originals_<DATE>/
@@ -13,9 +22,6 @@ Steps:
 Run modes:
   --dry-run   show exactly what would happen, change nothing
   --execute   actually do the work
-
-Originals are MOVED (not deleted) into the archive folder. The zip is a
-defense-in-depth backup that sits at the same level so it's findable.
 """
 from __future__ import annotations
 import argparse

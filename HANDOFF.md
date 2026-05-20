@@ -124,12 +124,12 @@ scp -i ~/.ssh/aiops-key.pem <local-file> ubuntu@44.195.172.165:/mnt/aiops-repo/<
 - `bench-v2.0-frozen` — 150-case benchmark before revision
 
 ### Uncommitted local changes (do NOT commit — these are result artifacts)
-- `benchmark/results/` directory — v1 results, frozen, not for commit
-- `benchmark/datasets/processed/annotation_test.json` + `rca_test.json` — dirty (expanded to 249/250 cases by old benchmark_499 pipeline) — do NOT commit
-- `benchmark/results_aws/` — AWS benchmark run results (committed separately after analysis)
+- `benchmark/intermediate/datasets/annotation_test.json` + `rca_test.json` — dirty (expanded to 249/250 cases by old benchmark_499 pipeline) — do NOT commit
 
 ### Deleted artifacts (already gone)
-- `benchmark/datasets/processed/benchmark_499_seed42.json` — deleted (contained loghub_linux + unvetted cases)
+- `benchmark_499_seed42.json` — deleted (contained loghub_linux + unvetted cases)
+- `benchmark/results/` — Jarvis-era v0.9.1 frozen state, moved to `benchmark/archive/v0.9.1_jarvis_baseline/` during 2026-05-20 reorg
+- `benchmark/results_aws/` — restructured into `benchmark/final/` (canonical) + `benchmark/archive/originals_2026-05-19/` (source-of-truth originals) during 2026-05-20 reorg
 
 ---
 
@@ -137,8 +137,8 @@ scp -i ~/.ssh/aiops-key.pem <local-file> ubuntu@44.195.172.165:/mnt/aiops-repo/<
 
 | File | Location | Cases | Purpose | Status |
 |------|----------|-------|---------|--------|
-| `benchmark_431_seed42.json` | `benchmark/datasets/processed/` | 431 | **Main benchmark** | ✅ Ready |
-| `benchmark_400_seed42.json` | `benchmark/datasets/processed/` | 400 | Ablation + SOTA (stratified) | ✅ Ready |
+| `benchmark_431_seed42.json` | `benchmark/intermediate/datasets/` | 431 | **Main benchmark** | ✅ Ready |
+| `benchmark_400_seed42.json` | `benchmark/intermediate/datasets/` | 400 | Ablation + SOTA (stratified) | ✅ Ready |
 
 ### Dataset structure
 ```json
@@ -183,7 +183,7 @@ scp -i ~/.ssh/aiops-key.pem <local-file> ubuntu@44.195.172.165:/mnt/aiops-repo/<
 
 ### Phase 4.2 Main Benchmark — ✅ COMPLETE (final merged results)
 
-**Results file**: `benchmark/results_aws/run_stackA_main431/results_merged.json`  
+**Results file**: `benchmark/archive/run_stackA_main431_OLD_PROMPT/results_merged.json` (OLD prompt v1-paper reference); canonical post-prompt-fix run at `benchmark/final/main_benchmark/results.json`  
 **Stack**: Stack A (Ollama Q4_K_M, qwen3:4b-instruct + qwen3:14b)  
 **Cases**: 431 total (398 original run + 33 remine re-run merged)
 
@@ -220,7 +220,7 @@ scp -i ~/.ssh/aiops-key.pem <local-file> ubuntu@44.195.172.165:/mnt/aiops-repo/<
 - **Gate 1 (accuracy delta < 2pp)**: CONDITIONAL PASS — the 2 Stack A failures were OpsEval knowledge questions excluded from main benchmark
 - **Gate 2 (P95 speedup ≥ 1.5×)**: PASS — 65.96s / 43.71s = 1.51×
 
-**Results**: `benchmark/results_aws/gate15_comparison.md`
+**Results**: `benchmark/final/infrastructure/gate15_comparison.md`
 
 ---
 
@@ -228,8 +228,8 @@ scp -i ~/.ssh/aiops-key.pem <local-file> ubuntu@44.195.172.165:/mnt/aiops-repo/<
 
 | Baseline | Status | Result file | Key numbers |
 |----------|--------|-------------|-------------|
-| Llama 3.3 70B | ✅ **COMPLETE** (commit `98181c0`) | `benchmark/results_aws/sota_llama_3_3_70b/results.jsonl` | Ann 92.1%, RCA **58.6%**, Overall 75.5% |
-| DeepSeek V3.2 | ⏳ **PENDING** | `benchmark/results_aws/sota_deepseek_v3/results.jsonl` | — |
+| Llama 3.3 70B | ✅ **COMPLETE** (commit `98181c0`) | `benchmark/final/sota_baselines/llama_3_3_70b.jsonl` | Ann 92.1%, RCA **58.6%**, Overall 75.5% |
+| DeepSeek V3.2 | ✅ **COMPLETE** | `benchmark/final/sota_baselines/deepseek_v3.jsonl` | Ann 90.4%, RCA 66.9%, Overall 81.1% |
 
 **Key finding from Llama**: Our RCA 94.8% vs Llama RCA 58.6% = **+36pp gap**. Headline novelty argument. Llama is a 70B frontier model; our 14B+4B hybrid beats it by 36 points on RCA.
 
@@ -251,10 +251,10 @@ scp -i ~/.ssh/aiops-key.pem <local-file> ubuntu@44.195.172.165:/mnt/aiops-repo/<
 cd "c:\Users\partha\Downloads\files AIOPS NEW\constitutional-aiops"
 python3 benchmark/scripts/run_sota_baselines.py \
     --model deepseek-v3 \
-    --dataset benchmark/datasets/processed/benchmark_400_seed42.json \
-    --out benchmark/results_aws/sota_deepseek_v3/results.jsonl
+    --dataset benchmark/intermediate/datasets/benchmark_400_seed42.json \
+    --out benchmark/final/sota_baselines/deepseek_v3.jsonl
 # Commit when done:
-git add benchmark/results_aws/sota_deepseek_v3/
+git add benchmark/final/sota_baselines/
 git commit -m "feat(sota): DeepSeek V3.2 SOTA baseline (400 cases)"
 git push
 ```
@@ -278,7 +278,7 @@ export FAST_AGENT_URL=http://localhost:11434/v1
 export REASONING_AGENT_URL=http://localhost:11434/v1
 PYTHONUNBUFFERED=1 nohup python3 -u /mnt/aiops-repo/benchmark/scripts/run_ablation.py \
     --config all --ann 202 --rca 198 \
-    --dataset /mnt/aiops-repo/benchmark/datasets/processed/benchmark_400_seed42.json \
+    --dataset /mnt/aiops-repo/benchmark/intermediate/datasets/benchmark_400_seed42.json \
     > /tmp/ablation.log 2>&1 &
 tail -f /tmp/ablation.log
 ```
@@ -302,7 +302,7 @@ cd /mnt/aiops-repo
 export NEO4J_URI=bolt://localhost:7687
 export NEO4J_PASSWORD=constitutional_aiops_2025
 python3 benchmark/scripts/run_graph_experiments.py --exp all \
-    --dataset benchmark/datasets/processed/benchmark_431_seed42.json \
+    --dataset benchmark/intermediate/datasets/benchmark_431_seed42.json \
     --out /mnt/runs/run_phase45_graph
 ```
 
@@ -332,7 +332,7 @@ Three sub-experiments. Run after Neo4j is populated:
 # Re-run only the "with-graph" config against benchmark_431
 # Config name in run_ablation.py: "with_graph" or similar
 nohup bash /mnt/run_benchmark.sh run_phase45a A --config with_graph \
-    --dataset benchmark/datasets/processed/benchmark_431_seed42.json \
+    --dataset benchmark/intermediate/datasets/benchmark_431_seed42.json \
     > /tmp/phase45a.log 2>&1 &
 ```
 
@@ -462,7 +462,7 @@ export NEO4J_PASSWORD=constitutional_aiops_2025
 4. **DeepSeek R1 rate limit**: 12s delay MANDATORY — do not reduce
 5. **Instance auto-stops on idle** — CloudWatch alarm, restart with command above
 6. **EIP 44.195.172.165**: Do NOT release — elastic IP is assigned to this project
-7. **`benchmark_499_seed42.json`**: DELETE IT — unvetted old artifact at `benchmark/datasets/processed/`
+7. **`benchmark_499_seed42.json`**: DELETE IT — unvetted old artifact at `benchmark/intermediate/datasets/`
 8. **Stack A and Stack B use SAME GPU** — never run simultaneously; stop one before starting other
 9. **Disk space on instance**: was 92% full — clean FP8 cache if needed: `sudo rm -rf /mnt/hf-cache/hub/models--Qwen--Qwen3-14B-FP8`
 10. **DeepSeek R1 format**: Plain text ONLY: `System: ...\n\nUser: ...\n\nAssistant:` — no chat format
@@ -478,10 +478,10 @@ export NEO4J_PASSWORD=constitutional_aiops_2025
 bash aws/sync_results.sh
 
 # Or manual:
-scp -r -i ~/.ssh/aiops-key.pem ubuntu@44.195.172.165:/mnt/runs/* benchmark/results_aws/
+scp -r -i ~/.ssh/aiops-key.pem ubuntu@44.195.172.165:/mnt/runs/* benchmark/final/
 ```
 
-Results stored locally in `benchmark/results_aws/` with subdirectory per run.
+Results stored locally in `benchmark/final/` (paper-ready) or `benchmark/archive/` (historical) with subdirectory per run.
 
 ---
 
@@ -572,7 +572,7 @@ ssh -i ~/.ssh/aiops-key.pem ubuntu@44.195.172.165 "df -h /mnt"
 # Quick accuracy check on results.json:
 python3 -c "
 import json
-with open('benchmark/results_aws/run_stackA_main431/results.json') as f:
+with open('benchmark/final/main_benchmark/results.json') as f:
     results = json.load(f)
 total = len(results)
 correct = sum(1 for r in results if r.get('correct'))
@@ -580,7 +580,7 @@ print(f'{correct}/{total} = {correct/total*100:.1f}%')
 "
 
 # Delete unvetted artifact:
-rm "benchmark/datasets/processed/benchmark_499_seed42.json"
+rm "benchmark/intermediate/datasets/benchmark_499_seed42.json"
 
 # Stop instance (preserves EBS — DO NOT terminate):
 aws ec2 stop-instances --profile aiops-operator --region us-east-1 --instance-ids i-091c4de0e95d63154

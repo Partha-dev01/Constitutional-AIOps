@@ -29,8 +29,8 @@ PROJECT_ROOT = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 BENCHMARK_DIR = PROJECT_ROOT / "benchmark"
-DATASETS_DIR = BENCHMARK_DIR / "datasets" / "processed"
-RESULTS_DIR = BENCHMARK_DIR / "results"
+DATASETS_DIR = BENCHMARK_DIR / "intermediate" / "datasets"
+RESULTS_DIR = BENCHMARK_DIR / "final"
 
 
 class TestResult:

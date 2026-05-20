@@ -4,8 +4,8 @@ Post-processing script: compute BERTScore + cosine similarity on existing result
 
 Usage:
     python benchmark/scripts/compute_semantic_metrics.py \
-        --input benchmark/results_aws/run_stackA_main431/results_merged.json \
-        --output benchmark/results_aws/run_stackA_main431/results_merged_with_metrics.json
+        --input benchmark/archive/run_stackA_main431_OLD_PROMPT/results_merged.json \
+        --output benchmark/archive/run_stackA_main431_OLD_PROMPT/results_merged_with_metrics.json
 
 Requires: pip install sentence-transformers bert-score torch
 """

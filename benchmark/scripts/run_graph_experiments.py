@@ -241,9 +241,9 @@ async def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--exp", choices=["4.5b", "4.5c", "all"], default="all")
     ap.add_argument("--dataset", type=Path,
-                    default=ROOT / "benchmark/datasets/processed/benchmark_431_seed42.json")
+                    default=ROOT / "benchmark/intermediate/datasets/benchmark_431_seed42.json")
     ap.add_argument("--out", type=Path,
-                    default=ROOT / "benchmark/results_aws/run_phase45_graph")
+                    default=ROOT / "benchmark/final/phase45_graph")
     args = ap.parse_args()
 
     lemma_cases = load_lemma_cases(args.dataset)

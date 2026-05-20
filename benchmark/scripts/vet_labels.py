@@ -19,10 +19,10 @@ Usage:
     export OPENAI_API_KEY=sk-...
     export ANTHROPIC_API_KEY=sk-ant-...
     python benchmark/scripts/vet_labels.py \\
-        --in benchmark/v0.11/apache_candidates.jsonl \\
-        --in benchmark/v0.11/openssh_candidates.jsonl \\
-        --in benchmark/v0.11/opseval_remine.jsonl \\
-        --out-dir benchmark/v0.11/vetted/
+        --in benchmark/intermediate/candidates/apache_candidates.jsonl \\
+        --in benchmark/intermediate/candidates/openssh_candidates.jsonl \\
+        --in benchmark/intermediate/candidates/opseval_remine.jsonl \\
+        --out-dir benchmark/intermediate/candidates/vetted/
 
 Without API keys: writes everything into Tier 1 (human review queue) — still
 a useful manual-review pipeline, just no automatic culling.

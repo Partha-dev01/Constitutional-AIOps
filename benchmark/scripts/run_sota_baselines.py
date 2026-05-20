@@ -17,12 +17,12 @@ Evaluation (fair single-model criteria):
 
 Usage:
     python benchmark/scripts/run_sota_baselines.py --model deepseek-r1 \\
-        --dataset benchmark/datasets/processed/benchmark_400_seed42.json \\
-        --out benchmark/results_aws/sota_deepseek_r1/results.jsonl
+        --dataset benchmark/intermediate/datasets/benchmark_400_seed42.json \\
+        --out benchmark/final/sota_baselines/deepseek_r1.jsonl
 
     python benchmark/scripts/run_sota_baselines.py --model llama-3.3-70b \\
-        --dataset benchmark/datasets/processed/benchmark_400_seed42.json \\
-        --out benchmark/results_aws/sota_llama_3_3_70b/results.jsonl
+        --dataset benchmark/intermediate/datasets/benchmark_400_seed42.json \\
+        --out benchmark/final/sota_baselines/llama_3_3_70b.jsonl
 """
 
 from __future__ import annotations
@@ -347,7 +347,7 @@ def main() -> int:
     ap.add_argument("--model", required=True, choices=list(MODELS.keys()),
                     help="Which SOTA baseline to run")
     ap.add_argument("--dataset", type=Path,
-                    default=REPO_ROOT / "benchmark/datasets/processed/benchmark_400_seed42.json")
+                    default=REPO_ROOT / "benchmark/intermediate/datasets/benchmark_400_seed42.json")
     ap.add_argument("--out", type=Path, required=True,
                     help="Output JSONL path")
     ap.add_argument("--aws-profile", default="aiops-operator")
@@ -396,7 +396,7 @@ def main() -> int:
         rca_cases = rca_cases[:args.rca]   # 0 means skip all RCA
 
     # Load excluded RCA case IDs (71 cases: 39 Chinese expected + 32 bare-letter MC)
-    _excluded_path = REPO_ROOT / "benchmark/datasets/processed/excluded_rca_cases.json"
+    _excluded_path = REPO_ROOT / "benchmark/intermediate/datasets/excluded_rca_cases.json"
     excluded_ids: set[str] = set()
     if _excluded_path.exists():
         _ex = json.loads(_excluded_path.read_text(encoding="utf-8"))

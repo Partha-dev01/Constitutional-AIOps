@@ -3,7 +3,7 @@
 import json
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2] / "benchmark/results_aws/FINAL/ablation_v4"
+ROOT = Path(__file__).resolve().parents[2] / "benchmark/final/ablation_v4"
 CONFIGS = [
     "full", "single_4b", "single_14b", "no_structured",
     "no_system_prompt", "with_graph", "no_constitutional", "with_orchestrator",

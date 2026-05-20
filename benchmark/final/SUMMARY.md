@@ -44,9 +44,9 @@ Original result dirs were MOVED (not deleted) on 2026-05-19 to declutter `result
 
 | Item | Location | Note |
 |---|---|---|
-| **Defense layer 1**: file-level archive folder | `benchmark/results_aws/_archive_originals_2026-05-19/` | 6 dirs + `_ARCHIVED.md` map + per-dir `_ARCHIVED_NOTICE.md` |
-| **Defense layer 2**: zip backup | `benchmark/results_aws/originals_backup_2026-05-19.zip` | 1.7 MB, 69 entries, every entry SHA-verified against original |
-| **Defense layer 3**: instance-side tarball (session 10) | `benchmark/results_aws/aiops_archive_2026-05-17.tar.gz` | 5.75 MB, SHA `351aa6734b…` (re-verified this session) |
+| **Defense layer 1**: file-level archive folder | `benchmark/archive/originals_2026-05-19/` | 6 dirs + `_ARCHIVED.md` map + per-dir `_ARCHIVED_NOTICE.md` |
+| **Defense layer 2**: zip backup | `benchmark/archive/originals_backup_2026-05-19.zip` | 1.7 MB, 69 entries, every entry SHA-verified against original |
+| **Defense layer 3**: instance-side tarball (session 10) | `benchmark/archive/aiops_archive_2026-05-17.tar.gz` | 5.75 MB, SHA `351aa6734b…` (re-verified this session) |
 | **Defense layer 4**: AWS EBS snapshot | `snap-01b191aedbf46b598` | cloud disaster recovery, ~$0.13/mo |
 
 Dirs that were MOVED:

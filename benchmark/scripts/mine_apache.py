@@ -5,7 +5,7 @@ Why Apache (vs Linux/Thunderbird): Apache error log uses unambiguous English
 ("File does not exist", "client denied by server config", "AH..." codes),
 making it a LOW-RISK addition that doesn't repeat the BGL false-positive trap.
 
-Input:  benchmark/datasets/raw/loghub/apache/Apache_2k.log_structured.csv
+Input:  benchmark/raw/loghub/apache/Apache_2k.log_structured.csv
 Output: list of vetted annotation cases ready for benchmark_500 assembly
 
 Approach:
@@ -17,7 +17,7 @@ Approach:
 Per Phase 1.5 hardening, every output case has task_type and proper input shape.
 
 Usage:
-    python benchmark/scripts/mine_apache.py --target 40 --out benchmark/v0.11/apache_candidates.jsonl
+    python benchmark/scripts/mine_apache.py --target 40 --out benchmark/intermediate/candidates/apache_candidates.jsonl
 """
 
 from __future__ import annotations
@@ -30,7 +30,7 @@ from collections import defaultdict
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-APACHE_CSV = REPO_ROOT / "benchmark/datasets/raw/loghub/apache/Apache_2k.log_structured.csv"
+APACHE_CSV = REPO_ROOT / "benchmark/raw/loghub/apache/Apache_2k.log_structured.csv"
 
 
 def load_apache_entries() -> list[dict]:

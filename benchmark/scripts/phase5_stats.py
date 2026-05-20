@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """Phase 5 statistics for paper Table 6 (Ablation, matched eval).
 
-Reads each config's matched-eval JSON from FINAL/, computes:
+Reads each config's matched-eval JSON from final/, computes:
   - Accuracy + BCa 95% CI (10k resamples) per task type {ann, rca, overall}
   - McNemar paired p-value vs Full (per task type)
   - Cohen's h effect size vs Full (per task type)
 
-Also runs the same stats on the main re-run (FINAL/main_benchmark/) for
+Also runs the same stats on the main re-run (final/main_benchmark/) for
 the standalone-system row.
 
 Pairing semantics:
@@ -15,9 +15,9 @@ Pairing semantics:
   config X and Full.
 
 Outputs:
-  benchmark/results_aws/FINAL/ablation_v4/phase5_stats.json
-  benchmark/results_aws/FINAL/ablation_v4/phase5_stats.md
-  benchmark/results_aws/FINAL/main_benchmark/phase5_stats.json
+  benchmark/final/ablation_v4/phase5_stats.json
+  benchmark/final/ablation_v4/phase5_stats.md
+  benchmark/final/main_benchmark/phase5_stats.json
 """
 from __future__ import annotations
 import json
@@ -25,7 +25,7 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-FINAL = REPO_ROOT / "benchmark" / "results_aws" / "FINAL"
+FINAL = REPO_ROOT / "benchmark" / "final"
 ABL_ROOT = FINAL / "ablation_v4"
 MAIN_DIR = FINAL / "main_benchmark"
 

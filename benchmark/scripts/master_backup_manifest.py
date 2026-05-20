@@ -1,6 +1,6 @@
 """Generate pre-zip manifest of every file under benchmark/ with SHA-256.
 
-Output: benchmark/results_aws/FINAL/MASTER_BACKUP_MANIFEST_2026-05-20.json
+Output: benchmark/final/MASTER_BACKUP_MANIFEST_2026-05-20.json
 
 Run from repo root.
 """
@@ -33,7 +33,7 @@ def main():
         "files": files,
     }
     print(f"Files: {len(files)}, Total size: {total_size:,} bytes ({total_size/1e6:.2f} MB)")
-    out_path = Path("benchmark/results_aws/FINAL/MASTER_BACKUP_MANIFEST_2026-05-20.json")
+    out_path = Path("benchmark/final/MASTER_BACKUP_MANIFEST_2026-05-20.json")
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(manifest, f, indent=2)

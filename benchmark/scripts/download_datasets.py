@@ -37,7 +37,7 @@ PROJECT_ROOT = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 BENCHMARK_DIR = PROJECT_ROOT / "benchmark"
-RAW_DIR = BENCHMARK_DIR / "datasets" / "raw"
+RAW_DIR = BENCHMARK_DIR / "raw"
 
 
 def download_file(url: str, dest_path: Path, description: str) -> bool:
@@ -264,7 +264,7 @@ def download_lemma_rca(full: bool = False) -> bool:
     info_file = dest_dir / "dataset_info.json"
     if info_file.exists() and not full:
         print("\n  LEMMA-RCA already downloaded. Skipping...")
-        print("  (Delete benchmark/datasets/raw/lemma_rca/ to re-download)")
+        print("  (Delete benchmark/raw/lemma_rca/ to re-download)")
         return True
 
     try:

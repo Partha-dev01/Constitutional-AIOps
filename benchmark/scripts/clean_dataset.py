@@ -221,7 +221,7 @@ def main():
     """Main entry point."""
     # Paths
     base_dir = Path(__file__).parent.parent
-    processed_dir = base_dir / "datasets" / "processed"
+    processed_dir = base_dir / "intermediate" / "datasets"
 
     annotation_input = processed_dir / "annotation_test.json"
     rca_input = processed_dir / "rca_test.json"

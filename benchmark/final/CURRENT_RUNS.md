@@ -14,7 +14,7 @@
 | **Started** | 2026-05-16 05:32:50 UTC |
 | **Finished** | 2026-05-16 07:39:25 UTC |
 | **Duration** | 2 hr 7 min |
-| **Authoritative output dir** | `benchmark/results_aws/run_stackA_main431_newprompt/` |
+| **Authoritative output dir** | `benchmark/final/main_benchmark/` (source: `benchmark/archive/originals_2026-05-19/run_stackA_main431_newprompt/`) |
 | **Results (rich eval)** | Ann 82.57% / RCA 92.49% / Overall 87.47% |
 | **Results (matched eval)** | Ann 82.6% / RCA **80.3%** / Overall 81.7% |
 | **Vs Llama 3.3-70B matched-eval RCA** | **+9.2pp** ⭐ |
@@ -34,7 +34,7 @@
 | **Duration** | ~17 hr 21 min (longer than 14 hr ETA — large no_system_prompt config dragged) |
 | **Log on instance** | `/mnt/runs/ablation_v4_newprompt.log` |
 | **Per-config dirs on instance** | `/mnt/aiops-repo/benchmark/results/ablation_<config>/` × 8 |
-| **Local mirror** | `benchmark/results_aws/ablation_v4_newprompt/ablation_<config>/` × 8 + ablation_table.md/tex/json |
+| **Local mirror** | `benchmark/final/ablation_v4/ablation_<config>/` × 8 + matched_eval_table.md (source: `benchmark/archive/originals_2026-05-19/ablation_v4_newprompt/`) |
 
 ### Headline numbers — runner.py rich eval (DO NOT cite for cross-system)
 
@@ -97,14 +97,14 @@ Ran `benchmark/scripts/inspect_all_configs.py` to compare runner.py's `correct` 
 - **Table 6 (Ablation)**: cite **SOTA matched eval** numbers, not runner.py rich eval. Paper Table 6 currently uses runner.py numbers — needs replacement.
 - **Table 7 (Cross-system SOTA)**: already uses matched eval (only valid option for cross-system).
 - **Table 2 (Main system standalone)**: can keep rich-eval numbers, BUT disclose eval method in caption and pair with matched-eval column for readers who want strict.
-- **No re-run needed** — the model outputs are saved verbatim; eval is just a scoring function. All matched-eval rescores already complete (`benchmark/results_aws/ablation_v4_newprompt/ablation_*/results_sota_eval_431.json`).
+- **No re-run needed** — the model outputs are saved verbatim; eval is just a scoring function. All matched-eval rescores already complete (`benchmark/final/ablation_v4/ablation_*/results_sota_eval_431.json`).
 
 ---
 
 ## 3. Archive + AWS state (session 10 end)
 
 ### Local tarball
-- File: `benchmark/results_aws/aiops_archive_2026-05-17.tar.gz`
+- File: `benchmark/archive/aiops_archive_2026-05-17.tar.gz`
 - Size: 5.75 MB, 384 entries
 - SHA-256: `351aa6734b3063ed2ec5d03cee88909d23608d607b6217deb88afd40a596a7b6`
 - Contains: all `/mnt/aiops-repo/benchmark/results/`, all `/mnt/aiops-repo/runs/` (per-case JSONLs), `/mnt/runs/` logs, edited `reasoning_agent.py`, datasets, `excluded_rca_cases.json`, `run_ablation.py`, `smoke_knowledge_query.py`. Missing: `rescore_ours_with_sota_eval.py` (local-only, never SCP'd to instance).

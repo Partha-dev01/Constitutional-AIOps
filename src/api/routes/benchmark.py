@@ -63,7 +63,7 @@ async def get_available_models():
 @router.get("/datasets")
 async def get_datasets():
     """Get information about available benchmark datasets."""
-    base_path = Path(__file__).parent.parent.parent.parent / "benchmark" / "datasets" / "processed"
+    base_path = Path(__file__).parent.parent.parent.parent / "benchmark" / "intermediate" / "datasets"
 
     datasets = []
 
@@ -107,7 +107,7 @@ async def preview_dataset(
     limit: int = Query(default=5, le=20),
 ):
     """Preview test cases from a dataset."""
-    base_path = Path(__file__).parent.parent.parent.parent / "benchmark" / "datasets" / "processed"
+    base_path = Path(__file__).parent.parent.parent.parent / "benchmark" / "intermediate" / "datasets"
 
     if dataset_name == "annotation":
         path = base_path / "annotation_test.json"

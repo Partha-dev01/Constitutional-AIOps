@@ -29,9 +29,9 @@ _Builder script: `benchmark/scripts/build_final_results.py`_
 
 ## Source paths preserved
 
-Every file in this directory was COPIED (not moved) from its original location
-under `benchmark/results_aws/`. Original paths remain functional for any script
-that references them. See `MANIFEST.md` for the source→dest mapping.
+Every file in this directory was COPIED (not moved) from its original location.
+After the 2026-05-20 reorg the sources live under `benchmark/archive/originals_2026-05-19/`.
+See `MANIFEST.md` for the source→dest mapping.
 
 ## What is NOT in this directory (and why)
 
@@ -39,7 +39,7 @@ that references them. See `MANIFEST.md` for the source→dest mapping.
   these contain runner.py **rich-eval** ablation numbers (e.g. single_4b RCA = 99.1%)
   which are broken: rule_score gives partial credit to literal-opposite answers.
   See `AUDIT_REPORT.md`.
-- `run_stackA_main431/` (OLD prompt v1-paper reference) — kept for diff/provenance only.
-- `results/`, `results_v2.0_frozen/` — Jarvis-era v1.0 / v0.9.1 frozen state.
+- `benchmark/archive/run_stackA_main431_OLD_PROMPT/` (OLD prompt v1-paper reference) — kept for diff/provenance only.
+- `benchmark/archive/v0.9.1_jarvis_baseline/` — Jarvis-era v1.0 / v0.9.1 frozen state.
 - `phase46_noprompt/*_BAK*` and `*.log` — earlier iteration artifacts, kept for
   provenance but not paper-ready (see `phase46_no_prompt/README.md` selection rule).

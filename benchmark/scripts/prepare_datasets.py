@@ -117,8 +117,8 @@ PROJECT_ROOT = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 BENCHMARK_DIR = PROJECT_ROOT / "benchmark"
-RAW_DIR = BENCHMARK_DIR / "datasets" / "raw"
-PROCESSED_DIR = BENCHMARK_DIR / "datasets" / "processed"
+RAW_DIR = BENCHMARK_DIR / "raw"
+PROCESSED_DIR = BENCHMARK_DIR / "intermediate" / "datasets"
 
 
 # ============================================================

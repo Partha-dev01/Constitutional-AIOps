@@ -11,11 +11,11 @@ is N+ failed-password attempts from the same IP within a short window. Single
 
 Anomaly heuristic: 3+ "Failed password" events from same IP within any 60-second window.
 
-Input:  benchmark/datasets/raw/loghub/openssh/OpenSSH_2k.log_structured.csv
+Input:  benchmark/raw/loghub/openssh/OpenSSH_2k.log_structured.csv
 Output: list of annotation cases (mix of anomaly bursts + normal single-event lines)
 
 Usage:
-    python benchmark/scripts/mine_openssh.py --target 40 --out benchmark/v0.11/openssh_candidates.jsonl
+    python benchmark/scripts/mine_openssh.py --target 40 --out benchmark/intermediate/candidates/openssh_candidates.jsonl
 """
 
 from __future__ import annotations
@@ -30,7 +30,7 @@ from datetime import datetime
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-OPENSSH_CSV = REPO_ROOT / "benchmark/datasets/raw/loghub/openssh/OpenSSH_2k.log_structured.csv"
+OPENSSH_CSV = REPO_ROOT / "benchmark/raw/loghub/openssh/OpenSSH_2k.log_structured.csv"
 
 BRUTE_FORCE_WINDOW_SEC = 60
 BRUTE_FORCE_THRESHOLD = 3  # >=N failed logins from same IP in window = anomaly

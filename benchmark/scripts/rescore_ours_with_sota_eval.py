@@ -9,12 +9,12 @@ SOTA evaluation pipeline (`_eval_annotation` and `_eval_rca` from
 NO new inference is performed. Reads existing `actual_output` and
 `expected_output` strings, recomputes `correct`/`rule_score` only.
 
-Why this exists: see `benchmark/results_aws/METHODOLOGY.md` §6.
+Why this exists: see `benchmark/final/METHODOLOGY.md` §6.
 
 Usage:
     python benchmark/scripts/rescore_ours_with_sota_eval.py \
-        --in  benchmark/results_aws/run_stackA_main431/results_merged.json \
-        --out benchmark/results_aws/run_stackA_main431/results_sota_eval_431.json
+        --in  benchmark/archive/run_stackA_main431_OLD_PROMPT/results_merged.json \
+        --out benchmark/archive/run_stackA_main431_OLD_PROMPT/results_sota_eval_431.json
 """
 
 from __future__ import annotations
@@ -71,7 +71,7 @@ def main() -> int:
                     help="Output JSON file with re-scored records")
     ap.add_argument("--excluded",
                     type=Path,
-                    default=REPO_ROOT / "benchmark/datasets/processed/excluded_rca_cases.json",
+                    default=REPO_ROOT / "benchmark/intermediate/datasets/excluded_rca_cases.json",
                     help="Path to excluded RCA case IDs (for inline correct=null marking)")
     args = ap.parse_args()
 

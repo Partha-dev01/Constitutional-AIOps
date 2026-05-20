@@ -1,8 +1,16 @@
 #!/usr/bin/env python3
-"""Build benchmark/results_aws/FINAL/ — a curated copy of all paper-ready
+"""Build benchmark/final/ — a curated copy of all paper-ready
 result files, with per-file SHA verification + anomaly audit.
 
 Original files are NEVER modified or moved. This is COPY-ONLY.
+
+HISTORICAL NOTE (2026-05-20 reorg): the source paths under
+`benchmark/results_aws/<...>` were moved to `benchmark/archive/originals_2026-05-19/`
+during the reorg. This script's source paths still point at the old layout
+for forensic continuity; the FINAL/ build it produced is now at
+`benchmark/final/` and the originals it sourced from are at
+`benchmark/archive/originals_2026-05-19/`. Re-running would require pointing
+RESULTS_AWS at the archive location.
 """
 import hashlib
 import json
@@ -12,7 +20,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-RESULTS_AWS = REPO_ROOT / "benchmark" / "results_aws"
+RESULTS_AWS = REPO_ROOT / "benchmark" / "archive" / "originals_2026-05-19"
 FINAL = RESULTS_AWS / "FINAL"
 # 2026-05-19: originals were archived. Source dirs now live under here.
 SOURCE_ROOT = RESULTS_AWS / "_archive_originals_2026-05-19"
@@ -504,8 +512,8 @@ def main():
         "  duplicate IDs, BERT-zero scan, etc.)\n\n"
         "## Source paths preserved\n\n"
         "Every file in this directory was COPIED (not moved) from its original location\n"
-        "under `benchmark/results_aws/`. Original paths remain functional for any script\n"
-        "that references them. See `MANIFEST.md` for the source→dest mapping.\n\n"
+        "under `benchmark/archive/originals_2026-05-19/`. See `MANIFEST.md` for the\n"
+        "source→dest mapping.\n\n"
         "## What is NOT in this directory (and why)\n\n"
         "- `ablation_v4_newprompt/ablation_table.md` / `.tex` / `ablation_results.json` —\n"
         "  these contain runner.py **rich-eval** ablation numbers (e.g. single_4b RCA = 99.1%)\n"

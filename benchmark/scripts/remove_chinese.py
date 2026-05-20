@@ -13,7 +13,7 @@ import random
 from pathlib import Path
 from datetime import datetime
 
-DATASET_DIR = Path(__file__).parent.parent / "datasets" / "processed"
+DATASET_DIR = Path(__file__).parent.parent / "intermediate" / "datasets"
 
 
 def has_chinese(text: str) -> bool:
