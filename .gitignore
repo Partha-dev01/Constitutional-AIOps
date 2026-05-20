@@ -80,10 +80,8 @@ frontend/dist/
 # Neo4j data
 neo4j_data/
 # Top-level data/ excluded by default (catches downloaded/generated stuff)
-# but benchmark/data/ holds the manifest.json which IS tracked.
 /data/
-!benchmark/data/
-!benchmark/data/manifest.json
+# Note: benchmark/data/ no longer exists (removed at L5222 of session-2 transcript).
 
 # Temporary
 tmp/
@@ -95,7 +93,9 @@ temp/
 !.ssh/jarvis_labs_key.pub
 
 # Benchmark raw datasets (5.5GB+ - download via scripts)
+benchmark/raw/
 benchmark/datasets/raw/
+# Both patterns active during 2026-05-20 reorg transition; remove the legacy line once reorg complete + verified.
 
 # Playwright test artifacts
 frontend/playwright-report/
@@ -128,8 +128,10 @@ benchmark/.progress.json
 benchmark/.benchmark_step2_complete
 benchmark/.benchmark_step*
 
-# Local benchmark results (transient overwrite by test runs — real results in results_aws/)
+# Local benchmark results (transient overwrite by test runs — canonical results in benchmark/final/)
+benchmark/archive/results_local/
 benchmark/results/
+# Both patterns active during 2026-05-20 reorg transition; remove the legacy line once reorg complete + verified.
 
 # Distribution archives (built by scripts/archive.sh)
 dist/

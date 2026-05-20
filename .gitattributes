@@ -6,7 +6,8 @@
 *.dump filter=lfs diff=lfs merge=lfs -text
 *.neo4j-dump filter=lfs diff=lfs merge=lfs -text
 graph-snapshots/*.dump filter=lfs diff=lfs merge=lfs -text
-benchmark/results/**/raw_traces.jsonl filter=lfs diff=lfs merge=lfs -text
+benchmark/archive/results_local/**/raw_traces.jsonl filter=lfs diff=lfs merge=lfs -text
+# Legacy path (pre-2026-05-20 reorg): benchmark/results/**/raw_traces.jsonl
 
 # Line-endings hygiene (single team, mixed OS - Windows + Linux on AWS VM)
 * text=auto eol=lf
