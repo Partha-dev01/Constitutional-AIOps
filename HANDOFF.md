@@ -12,7 +12,7 @@
 | 1 | **THIS FILE** | Current state, what to do |
 | 2 | `C:\Users\partha\.claude\plans\misty-knitting-pine.md` | Full implementation plan (Phases 0–7) |
 | 3 | `C:\Users\partha\.claude\projects\c--Users-partha-Downloads-files-AIOPS-NEW\memory\project_aiops_next.md` | AWS state, datasets, graph-fix details |
-| 4 | `c:\Users\partha\Downloads\files AIOPS NEW\AiOps Research Paper Stuff\Final Submission Paper (Accepted v.1)\REVIEWER_RESPONSE.md` | §13 graph memory, §15 dual-stack rationale, §17 VRAM tuning |
+| 4 | `c:\Users\partha\Downloads\files AIOPS NEW\PAPER AND FORMAL DOCUMENTATION\PAPER\Final Submission Paper (Accepted v.1)\REVIEWER RESPONSE\1ST SUBMISSION RESPONSE\AI GEN RESPONSE\V1\REVIEWER_RESPONSE.md` | §13 graph memory, §15 dual-stack rationale, §17 VRAM tuning |
 | 5 | `C:\Users\partha\.claude\projects\c--Users-partha-Downloads-files-AIOPS-NEW\memory\MEMORY.md` | All memory index entries |
 
 **Prior session transcript** (full context):  
@@ -24,7 +24,9 @@
 
 **What this is**: Constitutional AIOps — autonomous IT operations system for a B.Tech final year paper submitted to COMSYS 2026. Weak Accept verdict from 3 reviewers. This work is a revision to address their concerns.
 
-**Paper location**: `c:\Users\partha\Downloads\files AIOPS NEW\AiOps Research Paper Stuff\Final Submission Paper (Accepted v.1)\Aiops_Compsys\sn-article-template\sn-article.tex`
+**Paper location (v2 active edit target)**: `c:\Users\partha\Downloads\files AIOPS NEW\PAPER AND FORMAL DOCUMENTATION\PAPER\New Draft Paper (Not Accepted v.2)\sn-article-template.v2\sn-article.tex`
+**Paper v1 (reference only, do NOT edit)**: `c:\Users\partha\Downloads\files AIOPS NEW\PAPER AND FORMAL DOCUMENTATION\PAPER\Final Submission Paper (Accepted v.1)\1ST SUBMISSION\sn-article-template\sn-article.tex`
+_(Paths updated 2026-05-20 — old `AiOps Research Paper Stuff/Aiops_Compsys/` tree no longer exists.)_
 
 **Key reviewer concerns to address**:
 - R1/R2: Dataset too small (150 → 500 cases needed)
@@ -318,8 +320,8 @@ result = mcnemar_test(baseline_flags, variant_flags)  # returns p_value, cohens_
 ### Action 5 — Phase 6 Paper Update (after Phase 5)
 
 Files:
-- **Paper**: `c:\Users\partha\Downloads\files AIOPS NEW\AiOps Research Paper Stuff\Final Submission Paper (Accepted v.1)\Aiops_Compsys\sn-article-template\sn-article.tex`
-- **Bibliography**: `...sn-article-template\sn-bibliography.bib`
+- **Paper (v2 active)**: `c:\Users\partha\Downloads\files AIOPS NEW\PAPER AND FORMAL DOCUMENTATION\PAPER\New Draft Paper (Not Accepted v.2)\sn-article-template.v2\sn-article.tex`
+- **Bibliography**: `...sn-article-template.v2\sn-bibliography.bib`
 
 ### Action 5 — Phase 4.5 Graph Memory Sub-experiments (after Phase 4.4)
 
@@ -361,9 +363,9 @@ p_val = mcnemar_test(baseline_flags, graph_flags)
 ### Action 7 — Phase 6: Paper Update
 
 Files to update:
-- **Main paper**: `c:\Users\partha\Downloads\files AIOPS NEW\AiOps Research Paper Stuff\Final Submission Paper (Accepted v.1)\Aiops_Compsys\sn-article-template\sn-article.tex`
-- **Bibliography**: `...sn-article-template\sn-bibliography.bib`
-- **Reviewer response**: `...Final Submission Paper (Accepted v.1)\REVIEWER_RESPONSE.md`
+- **Main paper (v2)**: `c:\Users\partha\Downloads\files AIOPS NEW\PAPER AND FORMAL DOCUMENTATION\PAPER\New Draft Paper (Not Accepted v.2)\sn-article-template.v2\sn-article.tex`
+- **Bibliography**: `...sn-article-template.v2\sn-bibliography.bib`
+- **Reviewer response**: `c:\Users\partha\Downloads\files AIOPS NEW\PAPER AND FORMAL DOCUMENTATION\PAPER\Final Submission Paper (Accepted v.1)\REVIEWER RESPONSE\1ST SUBMISSION RESPONSE\AI GEN RESPONSE\V1\REVIEWER_RESPONSE.md`
 
 ---
 

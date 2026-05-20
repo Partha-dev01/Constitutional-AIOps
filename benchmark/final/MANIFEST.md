@@ -5,6 +5,8 @@ _By: `benchmark/scripts/build_final_results.py`_
 
 > COPY-ONLY operation. Source files at original paths are UNTOUCHED and remain authoritative for any path-dependent script. This directory is purely a curated mirror for paper-ready files.
 
+> **2026-05-20 update**: For per-file metadata covering the **entire `benchmark/` tree** (not just FINAL/) — git first-add + git last-modify + filesystem mtime + discrepancy flag, all side-by-side — see **`CV_PASS2_CODEBASE_AUDIT.md` Part B** (491 files indexed). A separate pre-backup hash manifest of the whole `benchmark/` tree exists at `MASTER_BACKUP_MANIFEST_2026-05-20.json` (493 files + SHA-256s). The MANIFEST below remains the source of truth for the 47 files copied into FINAL/.
+
 ## Files (source → dest, with SHA-256)
 
 | Status | Source | Dest | Size | SHA-256 |

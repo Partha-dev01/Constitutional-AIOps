@@ -1,6 +1,14 @@
 # FINAL/ — Results Summary
 
-_Last updated: 2026-05-19 (session 11) — Phase 5 statistics complete (BCa CI + McNemar + Cohen's h). All numbers independently recomputed from raw JSONs._
+_Last updated: 2026-05-20 (session 12) — added CV passes + master backup pointer. Previous: 2026-05-19 (session 11) — Phase 5 statistics complete (BCa CI + McNemar + Cohen's h). All numbers independently recomputed from raw JSONs._
+
+> ## Cross-validation + per-file metadata (added 2026-05-20)
+>
+> - **Audit doc**: `FULL_TRANSCRIPT_AUDIT.md` (1507 lines, full 4-phase forensic audit of session 1–11 transcript)
+> - **CV Pass 1** (audit doc ↔ JSONL): `CV_PASS1_DISCREPANCIES.md` (303 lines, 1 CRITICAL + 1 MEDIUM + 3 LOW + 2 UNVERIFIABLE)
+> - **CV Pass 2** (audit doc ↔ codebase + per-file metadata): `CV_PASS2_CODEBASE_AUDIT.md` (715 lines, 31 Tier 1-3 VERIFIED, 0 errors). **Part B of this file is the canonical per-file metadata table for the entire `benchmark/` tree** — 491 files with git first-add commit + last-modify commit + filesystem mtime + discrepancy flag (side-by-side).
+> - **Master backup**: `../../../Backups/benchmark_master_backup_2026-05-20.zip` (14.27 MB, SHA `7b01aef090…`, 494 entries, integrity verified)
+> - **Pre-backup manifest** (493 files + SHA-256s): `MASTER_BACKUP_MANIFEST_2026-05-20.json`
 
 ---
 
