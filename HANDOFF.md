@@ -249,7 +249,7 @@ scp -i ~/.ssh/aiops-key.pem <local-file> ubuntu@203.0.113.10:/mnt/aiops-repo/<pa
 
 ```bash
 cd "c:\Users\you\Downloads\files AIOPS NEW\constitutional-aiops"
-python3 benchmark/scripts/run_sota_baselines.py \
+python3 benchmark/scripts/run/run_sota_baselines.py \
     --model deepseek-v3 \
     --dataset benchmark/intermediate/datasets/benchmark_400_seed42.json \
     --out benchmark/final/sota_baselines/deepseek_v3.jsonl
@@ -276,7 +276,7 @@ Then on instance:
 cd /mnt/aiops-repo
 export FAST_AGENT_URL=http://localhost:11434/v1
 export REASONING_AGENT_URL=http://localhost:11434/v1
-PYTHONUNBUFFERED=1 nohup python3 -u /mnt/aiops-repo/benchmark/scripts/run_ablation.py \
+PYTHONUNBUFFERED=1 nohup python3 -u /mnt/aiops-repo/benchmark/scripts/run/run_ablation.py \
     --config all --ann 202 --rca 198 \
     --dataset /mnt/aiops-repo/benchmark/intermediate/datasets/benchmark_400_seed42.json \
     > /tmp/ablation.log 2>&1 &
@@ -287,12 +287,12 @@ tail -f /tmp/ablation.log
 
 ### Action 3 — Phase 4.5 Graph Experiments (INSTANCE, after ablation)
 
-Neo4j already populated. Script already committed: `benchmark/scripts/run_graph_experiments.py`.
+Neo4j already populated. Script already committed: `benchmark/scripts/run/run_graph_experiments.py`.
 
 SCP to instance first (script was added after last push to instance):
 ```bash
-scp -i ~/.ssh/aiops-key.pem benchmark/scripts/run_graph_experiments.py \
-    ubuntu@203.0.113.10:/mnt/aiops-repo/benchmark/scripts/
+scp -i ~/.ssh/aiops-key.pem benchmark/scripts/run/run_graph_experiments.py \
+    ubuntu@203.0.113.10:/mnt/aiops-repo/benchmark/scripts/run/
 ```
 
 Then run:
@@ -301,7 +301,7 @@ Then run:
 cd /mnt/aiops-repo
 export NEO4J_URI=bolt://localhost:7687
 export NEO4J_PASSWORD=constitutional_aiops_2025
-python3 benchmark/scripts/run_graph_experiments.py --exp all \
+python3 benchmark/scripts/run/run_graph_experiments.py --exp all \
     --dataset benchmark/intermediate/datasets/benchmark_431_seed42.json \
     --out /mnt/runs/run_phase45_graph
 ```
@@ -414,7 +414,7 @@ Files to update:
 ### SOTA Baselines
 - Using AWS Bedrock: DeepSeek R1 (`us.deepseek.r1-v1:0`) + Llama 3.3 70B (`us.meta.llama3-3-70b-instruct-v1:0`)
 - Anthropic Bedrock models BLOCKED (Indian card 3D Secure)
-- Bedrock runner: `benchmark/scripts/run_sota_baselines.py`
+- Bedrock runner: `benchmark/scripts/run/run_sota_baselines.py`
 
 ---
 
