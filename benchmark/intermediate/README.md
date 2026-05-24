@@ -6,7 +6,7 @@ Processed datasets + mining-output candidates that sit between `benchmark/raw/` 
 
 | Subdir | Contents | Source |
 |---|---|---|
-| `datasets/` | Clean canonical benchmark JSONs that feed the runner | Built from `benchmark/raw/` via `benchmark/scripts/prepare_datasets.py` + `clean_dataset.py` + manual curation |
+| `datasets/` | Clean canonical benchmark JSONs that feed the runner | Built from `benchmark/raw/` via `benchmark/scripts/prep/prepare_datasets.py` + `clean_dataset.py` + manual curation |
 | `candidates/` | Mining-stage candidate JSONLs (Apache 40, OpenSSH 40, OpsEval remine 33) | Output of `benchmark/scripts/mine_*.py` before vetting + integration into `benchmark_431_seed42.json` |
 
 ## datasets/ — canonical inputs to the runner

@@ -1,7 +1,7 @@
 # Benchmark Methodology — `results_aws/`
 
 > **Scope**: Documents the evaluation rules, exclusion list rationale, sampling temperature, and how to read the saved JSONL files. Intended as a one-stop reference for the paper §3 methodology section and as reviewer-facing supplementary material.
-> **Source of truth for the rules**: `benchmark/scripts/run_sota_baselines.py` (SOTA), `src/benchmark/evaluator.py` (our system), `benchmark/datasets/processed/excluded_rca_cases.json` (exclusion list).
+> **Source of truth for the rules**: `benchmark/scripts/run/run_sota_baselines.py` (SOTA), `src/benchmark/evaluator.py` (our system), `benchmark/intermediate/datasets/excluded_rca_cases.json` (exclusion list).
 
 ---
 
@@ -228,7 +228,7 @@ The prompt does NOT mention any canonical labels or eval-relevant strings. The c
 
 ### Validation
 
-A 3-case smoke test (`benchmark/scripts/smoke_knowledge_query.py`) verified the fix on the 3 documented refusal cases:
+A 3-case smoke test (`benchmark/scripts/_dev/smoke_knowledge_query.py`) verified the fix on the 3 documented refusal cases:
 - RCA_002 (expected "TACACS+"): pre-edit refused → post-edit answered "TACACS+"
 - RCA_028 (expected IGMPv3 source filtering): pre-edit refused → post-edit answered with the substantive technical distinction
 - RCA_067 (expected "100MHz"): pre-edit refused → post-edit answered "100MHz"
@@ -263,7 +263,7 @@ The 2.3pp drop on rich eval reflects the old verbose refusals' accidental term-o
 1. The prompt edit does not mention canonical labels or eval-relevant strings.
 2. The fix is a capability addition: the system now handles a real input format (knowledge query) it previously refused.
 3. The improvement generalizes to 18 cases beyond the 3 targeted in the diagnostic.
-4. The pre/post diff is in git; smoke test is in `benchmark/scripts/smoke_knowledge_query.py`.
+4. The pre/post diff is in git; smoke test is in `benchmark/scripts/_dev/smoke_knowledge_query.py`.
 5. The trade-off (−2.3pp on lenient eval, +11.3pp on strict eval) is reported transparently.
 
 ### What still needs to happen

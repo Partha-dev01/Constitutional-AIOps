@@ -252,11 +252,11 @@
 
 | File | Purpose |
 |------|---------|
-| [benchmark/scripts/download_datasets.py](../benchmark/scripts/download_datasets.py) | Download OpsEval + Loghub datasets |
-| [benchmark/scripts/prepare_datasets.py](../benchmark/scripts/prepare_datasets.py) | Convert to standardized JSON format |
-| [benchmark/scripts/run_benchmark.py](../benchmark/scripts/run_benchmark.py) | Execute benchmarks with latency compensation |
-| [benchmark/scripts/evaluate_results.py](../benchmark/scripts/evaluate_results.py) | Calculate BERTScore + accuracy metrics |
-| [benchmark/scripts/export_metrics.py](../benchmark/scripts/export_metrics.py) | Export results (JSON, CSV, LaTeX) |
+| [benchmark/scripts/prep/download_datasets.py](../benchmark/scripts/prep/download_datasets.py) | Download OpsEval + Loghub datasets |
+| [benchmark/scripts/prep/prepare_datasets.py](../benchmark/scripts/prep/prepare_datasets.py) | Convert to standardized JSON format |
+| [benchmark/scripts/run/run_benchmark.py](../benchmark/scripts/run/run_benchmark.py) | Execute benchmarks with latency compensation |
+| [benchmark/scripts/eval/evaluate_results.py](../benchmark/scripts/eval/evaluate_results.py) | Calculate BERTScore + accuracy metrics |
+| [benchmark/scripts/eval/export_metrics.py](../benchmark/scripts/eval/export_metrics.py) | Export results (JSON, CSV, LaTeX) |
 
 ### Scripts - 7 Files
 

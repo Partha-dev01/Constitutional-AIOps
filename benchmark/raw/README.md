@@ -14,8 +14,8 @@ Third-party raw datasets, never modified after download. Files in this directory
 ## Regenerate
 
 ```bash
-python benchmark/scripts/download_datasets.py        # core datasets only
-python benchmark/scripts/download_datasets.py --all  # ALL including LEMMA-RCA
+python benchmark/scripts/prep/download_datasets.py        # core datasets only
+python benchmark/scripts/prep/download_datasets.py --all  # ALL including LEMMA-RCA
 ```
 
 ## Provenance

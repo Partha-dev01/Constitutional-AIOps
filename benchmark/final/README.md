@@ -1,7 +1,7 @@
 # FINAL/ — paper-ready result files
 
 _Built: 2026-05-19 04:58 UTC_  
-_Builder script: `benchmark/scripts/build_final_results.py`_
+_Builder script: `benchmark/scripts/ops/build_final_results.py`_
 
 ## Quick map (which file backs which paper artifact)
 

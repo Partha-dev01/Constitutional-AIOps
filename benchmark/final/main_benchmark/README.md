@@ -31,7 +31,7 @@
 | `summary.json` | Aggregate metrics (annotation/rca/overall accuracy, latencies, ...) |
 | `benchmark_result.json` | API-compatible summary |
 | `paper_tables.md` / `.tex` | Pre-formatted tables (instance-generated) |
-| `results_sota_eval_431.json` | Re-scored through SOTA eval (`benchmark/scripts/rescore_ours_with_sota_eval.py`) — used for the apples-to-apples Table 7 comparison |
+| `results_sota_eval_431.json` | Re-scored through SOTA eval (`benchmark/scripts/eval/rescore_ours_with_sota_eval.py`) — used for the apples-to-apples Table 7 comparison |
 
 ---
 
@@ -97,7 +97,7 @@ Known refusal cases all flipped to correct: RCA_002 (TACACS+) ✓, RCA_028 (IGMP
 
 ## Provenance trail (for reviewers)
 
-- Pre-edit refusal smoke (3/3 refused): saved in `../../benchmark/scripts/smoke_knowledge_query.py` history (prompt diff in git).
+- Pre-edit refusal smoke (3/3 refused): saved in `../../benchmark/scripts/_dev/smoke_knowledge_query.py` history (prompt diff in git).
 - Post-edit smoke (3/3 substantive answers): same script, output verified in session 9 chat log.
 - Per-case JSONL with fsync per record on AWS instance at `/mnt/aiops-repo/runs/2026-05-16T05-32-50_bench_constitutional_aiops/results.jsonl`.
 - Old-prompt results preserved in `../run_stackA_main431/` for diff.

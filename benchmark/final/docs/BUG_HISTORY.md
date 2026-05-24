@@ -1,6 +1,6 @@
 # Bug History — Benchmark Infrastructure
 
-> **Scope**: Bugs discovered in `benchmark/scripts/run_sota_baselines.py`, `benchmark/scripts/run_ablation.py`, `src/benchmark/runner.py`, and `src/agents/*` that affected the validity of saved results in this directory. Documented for reviewer transparency and reproducibility.
+> **Scope**: Bugs discovered in `benchmark/scripts/run/run_sota_baselines.py`, `benchmark/scripts/run/run_ablation.py`, `src/benchmark/runner.py`, and `src/agents/*` that affected the validity of saved results in this directory. Documented for reviewer transparency and reproducibility.
 > **Maintained**: Append-only. When a new bug is found and fixed, add a row below.
 
 ---
@@ -76,7 +76,7 @@ import src.config as _cfg_module
 ```
 After `importlib.reload(src.config)`, `_cfg_module.config` reads the **current** module attribute (which has been replaced with the new config). 8 occurrences updated.
 
-**Belt-and-suspenders** (`benchmark/scripts/run_ablation.py:115-130`): `setup_env()` now also reloads `src.agents.model_router`, `src.agents.fast_annotator`, `src.agents.reasoning_agent` after `src.config`. This ensures any other modules that imported `config` via `from src.config import config` also get refreshed.
+**Belt-and-suspenders** (`benchmark/scripts/run/run_ablation.py:115-130`): `setup_env()` now also reloads `src.agents.model_router`, `src.agents.fast_annotator`, `src.agents.reasoning_agent` after `src.config`. This ensures any other modules that imported `config` via `from src.config import config` also get refreshed.
 
 **Verification**: Smoke tests post-fix confirmed:
 - For `single-4b` config, RCA responses now genuinely differ from `full` (4B vs 14B reasoning produces different prose)
@@ -111,7 +111,7 @@ confidence = max(0.0, min(1.0, confidence))
 **Symptom**: The `no-structured` and `no-constitutional` ablation configs produced numbers nearly identical to `full`. Investigation showed these flags were never read by any code path.
 
 **Root cause**:
-- `benchmark/scripts/run_ablation.py` defines flags `no_structured: True` (line 73) and `skip_constitutional: True` (line 94) in the config dicts
+- `benchmark/scripts/run/run_ablation.py` defines flags `no_structured: True` (line 73) and `skip_constitutional: True` (line 94) in the config dicts
 - `BenchmarkConfig` in `src/benchmark/runner.py:43-55` only had 3 ablation fields: `skip_system_prompt`, `inject_graph_context`, `use_orchestrator`
 - The two undeclared flags were silently ignored when building `BenchmarkConfig(...)`
 - Even when passed, the runner had no code path to act on them

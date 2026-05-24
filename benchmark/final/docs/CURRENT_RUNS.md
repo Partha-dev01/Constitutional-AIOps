@@ -68,7 +68,7 @@
 
 ## 2b. Cross-config eval audit (session 10 finding — CRITICAL FOR PAPER)
 
-Ran `benchmark/scripts/inspect_all_configs.py` to compare runner.py's `correct` flag vs SOTA strict-substring `correct` flag across all 142 evaluable RCA cases per config.
+Ran `benchmark/scripts/eval/inspect_all_configs.py` to compare runner.py's `correct` flag vs SOTA strict-substring `correct` flag across all 142 evaluable RCA cases per config.
 
 | Config | Evalbl | runner% | sota% | Δ | FP (runner over) | FN (runner under) |
 |---|---|---|---|---|---|---|

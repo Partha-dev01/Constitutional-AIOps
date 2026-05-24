@@ -1,7 +1,7 @@
 # FINAL/ — Manifest
 
 _Built: 2026-05-19 04:58 UTC_
-_By: `benchmark/scripts/build_final_results.py`_
+_By: `benchmark/scripts/ops/build_final_results.py`_
 
 > COPY-ONLY operation. Source files at original paths are UNTOUCHED and remain authoritative for any path-dependent script. This directory is purely a curated mirror for paper-ready files.
 

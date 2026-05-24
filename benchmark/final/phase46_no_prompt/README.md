@@ -71,14 +71,14 @@ DeepSeek tends to output structured JSON even without the prompt (smaller annota
 cd "<repo-root>"
 
 # Llama no-prompt
-python benchmark/scripts/run_sota_baselines.py \
+python benchmark/scripts/run/run_sota_baselines.py \
     --model llama-3.3-70b \
     --no-prompt --temperature 0.05 \
     --dataset benchmark/datasets/processed/benchmark_400_seed42.json \
     --out benchmark/results_aws/phase46_noprompt/llama_noprompt_clean.jsonl
 
 # DeepSeek no-prompt
-python benchmark/scripts/run_sota_baselines.py \
+python benchmark/scripts/run/run_sota_baselines.py \
     --model deepseek-v3 \
     --no-prompt --temperature 0.05 \
     --dataset benchmark/datasets/processed/benchmark_400_seed42.json \

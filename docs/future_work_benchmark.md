@@ -82,7 +82,7 @@ self.incident_graph = build_incident_graph(
 
 1d. Make orchestrator the DEFAULT for main benchmark (`use_orchestrator=True`).
 
-**File: `benchmark/scripts/run_ablation.py`**
+**File: `benchmark/scripts/run/run_ablation.py`**
 - `full` (baseline) → now uses orchestrator
 - Rename `with-orchestrator` to `without-orchestrator` (direct calls = old baseline)
 
@@ -90,13 +90,13 @@ self.incident_graph = build_incident_graph(
 
 ```bash
 cd "c:/Users/partha/Downloads/files AIOPS NEW/constitutional-aiops"
-python benchmark/scripts/download_datasets.py --all --skip-lemma
+python benchmark/scripts/prep/download_datasets.py --all --skip-lemma
 ```
 
 ### Step 3: Prepare Expanded Benchmark Dataset
 
 ```bash
-python benchmark/scripts/prepare_datasets.py --target 250
+python benchmark/scripts/prep/prepare_datasets.py --target 250
 ```
 
 Creates `benchmark/datasets/processed/benchmark_250_seed42.json`.
@@ -127,10 +127,10 @@ cd /root/constitutional-aiops
 pip install -r requirements.txt
 
 # Main benchmark (250 tests, ~45-60 min)
-python benchmark/scripts/test_5plus5.py --dataset benchmark/datasets/processed/benchmark_250_seed42.json
+python benchmark/scripts/run/test_5plus5.py --dataset benchmark/datasets/processed/benchmark_250_seed42.json
 
 # Ablation study (250 tests × 7+ configs, ~3-5 hours)
-python benchmark/scripts/run_ablation.py --dataset benchmark/datasets/processed/benchmark_250_seed42.json
+python benchmark/scripts/run/run_ablation.py --dataset benchmark/datasets/processed/benchmark_250_seed42.json
 ```
 
 ### Step 7: Retrieve Results
@@ -140,7 +140,7 @@ scp -i .ssh/jarvis_labs_key -P 11214 -r \
   root@sshq.jarvislabs.ai:/root/constitutional-aiops/benchmark/results/ \
   benchmark/results_2/
 
-python benchmark/scripts/export_metrics.py
+python benchmark/scripts/eval/export_metrics.py
 ```
 
 ### Step 8: Update Paper Tables
@@ -153,11 +153,11 @@ Update `sn-article.tex` with new 250-test results, expanded per-source table, up
 
 | File | Role |
 |------|------|
-| `benchmark/scripts/download_datasets.py` | Downloads raw data (supports --all) |
-| `benchmark/scripts/prepare_datasets.py` | Transforms to benchmark format (supports --target N) |
-| `benchmark/scripts/test_5plus5.py` | Runs main benchmark |
-| `benchmark/scripts/run_ablation.py` | Runs 7-config ablation |
-| `benchmark/scripts/export_metrics.py` | Generates LaTeX + MD tables |
+| `benchmark/scripts/prep/download_datasets.py` | Downloads raw data (supports --all) |
+| `benchmark/scripts/prep/prepare_datasets.py` | Transforms to benchmark format (supports --target N) |
+| `benchmark/scripts/run/test_5plus5.py` | Runs main benchmark |
+| `benchmark/scripts/run/run_ablation.py` | Runs 7-config ablation |
+| `benchmark/scripts/eval/export_metrics.py` | Generates LaTeX + MD tables |
 | `src/benchmark/runner.py` | Core benchmark execution engine |
 | `src/benchmark/evaluator.py` | Multi-metric evaluation |
 | `src/orchestration/graph.py` | LangGraph StateGraph pipeline |

@@ -1,5 +1,7 @@
 # Session 12 → Session 13 Handoff (2026-05-20)
 
+> **POST-SESSION-13 UPDATE (2026-05-20)**: §1 and §3 paths below have been updated to reflect the sub-folder reorg of `benchmark/final/` (audit/, docs/, docs/_archived_session_history/). Original session-12-close paths were all flat under `benchmark/final/` (e.g. `benchmark/final/SESSION_12_HANDOFF.md`). §4 retains the session-12-close path snapshot for forensic record. The historical body of §2 (Stages A–D commit list, "Final tree achieved" diagram) is preserved verbatim.
+
 > ## ⚠ NEXT SESSION: READ EVERY FILE IN §1 IN ORDER. DO NOT SKIP. CONTEXT LOSS BREAKS REPRODUCIBILITY.
 
 ## 1. Mandatory reads (every file, in order, no skipping)
@@ -8,12 +10,12 @@
 |---|---|---|---|
 | 1 | `C:\Users\partha\.claude\projects\c--Users-partha-Downloads-files-AIOPS-NEW\memory\MEMORY.md` | Auto-loaded; entry index + hard pointers + SESSION 13 STARTUP block | session 13 startup block lives here |
 | 2 | `C:\Users\partha\.claude\projects\c--Users-partha-Downloads-files-AIOPS-NEW\memory\project_aiops_next.md` | Active resume protocol §A (now references this session-12 handoff) | full §A.0–§A.6 protocol must be re-read |
-| 3 | **THIS FILE**: `benchmark/final/SESSION_12_HANDOFF.md` | What happened in session 12 + exactly where to resume | most recent state-of-the-world |
+| 3 | **THIS FILE**: `benchmark/final/audit/SESSION_12_HANDOFF.md` | What happened in session 12 + exactly where to resume | most recent state-of-the-world |
 | 4 | `benchmark/final/SUMMARY.md` | Canonical results landscape (Phase 5 stats + headline narrative) | numbers for paper edits |
-| 5 | `benchmark/final/REORG_PROPOSAL_2026-05-20.md` | Full reorg plan; Stages A-D done, E/F/G/H pending | resume execution from Stage E |
-| 6 | `benchmark/final/FULL_TRANSCRIPT_AUDIT.md` (1507 lines) | Forensic audit of sessions 1-11 transcript, 4 phases | paper-defensibility landmines |
-| 7 | `benchmark/final/CV_PASS1_DISCREPANCIES.md` | Pass 1 cross-validation (audit doc ↔ JSONL) | 1 CRITICAL + 1 MEDIUM + 3 LOW findings |
-| 8 | `benchmark/final/CV_PASS2_CODEBASE_AUDIT.md` (715 lines) | Pass 2 cross-validation (audit doc ↔ codebase + per-file metadata, 491 files) | Part B = canonical per-file metadata table |
+| 5 | `benchmark/final/audit/REORG_PROPOSAL_2026-05-20.md` | Full reorg plan; Stages A-D done, E/F/G/H pending | resume execution from Stage E |
+| 6 | `benchmark/final/audit/FULL_TRANSCRIPT_AUDIT.md` (1507 lines) | Forensic audit of sessions 1-11 transcript, 4 phases | paper-defensibility landmines |
+| 7 | `benchmark/final/audit/CV_PASS1_DISCREPANCIES.md` | Pass 1 cross-validation (audit doc ↔ JSONL) | 1 CRITICAL + 1 MEDIUM + 3 LOW findings |
+| 8 | `benchmark/final/audit/CV_PASS2_CODEBASE_AUDIT.md` (715 lines) | Pass 2 cross-validation (audit doc ↔ codebase + per-file metadata, 491 files) | Part B = canonical per-file metadata table |
 | 9 | `benchmark/final/ablation_v4/phase5_stats.md` | Paper-ready Table 6 (BCa CI + McNemar p + Cohen's h) | source for paper v2 Table 6 |
 | 10 | `benchmark/final/MANIFEST.md` | FINAL/ build manifest (per-file SHA-256) | sanity check FINAL/ integrity |
 | 11 | `benchmark/final/AUDIT_REPORT.md` | Per-file content audit (23 OK / 0 WARN / 0 FAIL) | sanity check FINAL/ content |
@@ -31,7 +33,7 @@
 
 ### 2.2 Master backup (before destructive operations)
 - `c:/Users/partha/Downloads/files AIOPS NEW/Backups/benchmark_master_backup_2026-05-20.zip` — 14.27 MB, SHA `7b01aef090599d0a158895959e332f6a1d6d9aebb4820362161c4460daaa165d`, 494 entries, `unzip -t` PASS, 0 files lost vs pre-zip manifest.
-- Pre-zip manifest: `benchmark/final/MASTER_BACKUP_MANIFEST_2026-05-20.json` (493 files + per-file SHA-256).
+- Pre-zip manifest: `benchmark/final/audit/MASTER_BACKUP_MANIFEST_2026-05-20.json` (493 files + per-file SHA-256).
 - Generator script: `benchmark/scripts/master_backup_manifest.py`.
 
 ### 2.3 benchmark/ reorg — Stages A-D DONE (committed locally, NOT yet pushed)
@@ -101,13 +103,13 @@ ls benchmark/results_aws/ 2>&1             # expect: No such file or directory
 # 3d. Master backup intact
 sha256sum "../Backups/benchmark_master_backup_2026-05-20.zip"   # expect 7b01aef090...
 
-# 3e. Audit doc + CV docs present
-wc -l benchmark/final/FULL_TRANSCRIPT_AUDIT.md  # expect: 1507
-wc -l benchmark/final/CV_PASS1_DISCREPANCIES.md # expect: 303
-wc -l benchmark/final/CV_PASS2_CODEBASE_AUDIT.md # expect: 715
-[ -f benchmark/final/REORG_PROPOSAL_2026-05-20.md ] && echo "REORG_PROPOSAL OK"
-[ -f benchmark/final/MASTER_BACKUP_MANIFEST_2026-05-20.json ] && echo "MASTER_BACKUP_MANIFEST OK"
-[ -f benchmark/final/SESSION_12_HANDOFF.md ] && echo "SESSION_12_HANDOFF OK"
+# 3e. Audit doc + CV docs present (post-sub-folder-reorg paths)
+wc -l benchmark/final/audit/FULL_TRANSCRIPT_AUDIT.md  # expect: 1507
+wc -l benchmark/final/audit/CV_PASS1_DISCREPANCIES.md # expect: 303
+wc -l benchmark/final/audit/CV_PASS2_CODEBASE_AUDIT.md # expect: 715
+[ -f benchmark/final/audit/REORG_PROPOSAL_2026-05-20.md ] && echo "REORG_PROPOSAL OK"
+[ -f benchmark/final/audit/MASTER_BACKUP_MANIFEST_2026-05-20.json ] && echo "MASTER_BACKUP_MANIFEST OK"
+[ -f benchmark/final/audit/SESSION_12_HANDOFF.md ] && echo "SESSION_12_HANDOFF OK"
 ```
 
 ## 4. What's still uncommitted at session 12 close (intentional — Stage H rolls them up)

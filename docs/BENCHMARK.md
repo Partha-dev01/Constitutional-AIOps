@@ -549,19 +549,19 @@ Raw Data Sources
 
 ### Step 1: Download Raw Datasets
 
-**Script**: `benchmark/scripts/download_datasets.py`
+**Script**: `benchmark/scripts/prep/download_datasets.py`
 
 ```bash
 cd constitutional-aiops
 
 # Download all datasets (including LEMMA-RCA ~4.74GB)
-python benchmark/scripts/download_datasets.py
+python benchmark/scripts/prep/download_datasets.py
 
 # Skip LEMMA-RCA for faster download (test mode)
-python benchmark/scripts/download_datasets.py --skip-lemma
+python benchmark/scripts/prep/download_datasets.py --skip-lemma
 
 # Download only LEMMA-RCA
-python benchmark/scripts/download_datasets.py --lemma-only
+python benchmark/scripts/prep/download_datasets.py --lemma-only
 ```
 
 **What it downloads**:
@@ -573,14 +573,14 @@ python benchmark/scripts/download_datasets.py --lemma-only
 
 ### Step 2: Prepare Standardized Datasets
 
-**Script**: `benchmark/scripts/prepare_datasets.py`
+**Script**: `benchmark/scripts/prep/prepare_datasets.py`
 
 ```bash
 # Prepare all datasets (200 annotation + 200 RCA = 400 total)
-python benchmark/scripts/prepare_datasets.py
+python benchmark/scripts/prep/prepare_datasets.py
 
 # Skip LEMMA-RCA processing (100 OpsEval-only RCA cases)
-python benchmark/scripts/prepare_datasets.py --skip-lemma
+python benchmark/scripts/prep/prepare_datasets.py --skip-lemma
 ```
 
 **Processing Logic**:
@@ -750,11 +750,11 @@ benchmark/
 
 **Purpose**: Downloads all required datasets from their official sources.
 
-**Location**: `benchmark/scripts/download_datasets.py`
+**Location**: `benchmark/scripts/prep/download_datasets.py`
 
 **Usage**:
 ```bash
-python benchmark/scripts/download_datasets.py
+python benchmark/scripts/prep/download_datasets.py
 ```
 
 **Functions**:
@@ -778,11 +778,11 @@ python benchmark/scripts/download_datasets.py
 
 **Purpose**: Converts raw datasets to standardized benchmark format.
 
-**Location**: `benchmark/scripts/prepare_datasets.py`
+**Location**: `benchmark/scripts/prep/prepare_datasets.py`
 
 **Usage**:
 ```bash
-python benchmark/scripts/prepare_datasets.py
+python benchmark/scripts/prep/prepare_datasets.py
 ```
 
 **Functions**:
@@ -806,18 +806,18 @@ python benchmark/scripts/prepare_datasets.py
 
 **Purpose**: Executes benchmarks against all LLM configurations.
 
-**Location**: `benchmark/scripts/run_benchmark.py`
+**Location**: `benchmark/scripts/run/run_benchmark.py`
 
 **Usage**:
 ```bash
 # Run all benchmarks
-python benchmark/scripts/run_benchmark.py
+python benchmark/scripts/run/run_benchmark.py
 
 # Run specific model
-python benchmark/scripts/run_benchmark.py --model qwen3:4b
+python benchmark/scripts/run/run_benchmark.py --model qwen3:4b
 
 # Run specific task
-python benchmark/scripts/run_benchmark.py --task annotation
+python benchmark/scripts/run/run_benchmark.py --task annotation
 ```
 
 **Key Classes**:
@@ -853,11 +853,11 @@ class BenchmarkRunner:
 
 **Purpose**: Calculates evaluation metrics including BERTScore.
 
-**Location**: `benchmark/scripts/evaluate_results.py`
+**Location**: `benchmark/scripts/eval/evaluate_results.py`
 
 **Usage**:
 ```bash
-python benchmark/scripts/evaluate_results.py
+python benchmark/scripts/eval/evaluate_results.py
 ```
 
 **Metrics Calculated**:
@@ -889,15 +889,15 @@ P, R, F1 = bert_score(
 
 **Purpose**: Generates publication-ready tables and exports.
 
-**Location**: `benchmark/scripts/export_metrics.py`
+**Location**: `benchmark/scripts/eval/export_metrics.py`
 
 **Usage**:
 ```bash
 # Export all formats
-python benchmark/scripts/export_metrics.py
+python benchmark/scripts/eval/export_metrics.py
 
 # Export specific format
-python benchmark/scripts/export_metrics.py --format latex
+python benchmark/scripts/eval/export_metrics.py --format latex
 ```
 
 **Export Formats**:
@@ -1101,17 +1101,17 @@ Visual comparison of model performance:
 
 ```bash
 # Step 1: Download datasets (one-time)
-python benchmark/scripts/download_datasets.py
+python benchmark/scripts/prep/download_datasets.py
 
 # Step 2: Prepare standardized format (one-time)
-python benchmark/scripts/prepare_datasets.py
+python benchmark/scripts/prep/prepare_datasets.py
 
 # Step 3: Run benchmarks (requires VM)
-python benchmark/scripts/run_benchmark.py
+python benchmark/scripts/run/run_benchmark.py
 
 # Step 4: Evaluate and export
-python benchmark/scripts/evaluate_results.py
-python benchmark/scripts/export_metrics.py
+python benchmark/scripts/eval/evaluate_results.py
+python benchmark/scripts/eval/export_metrics.py
 ```
 
 ### Via API

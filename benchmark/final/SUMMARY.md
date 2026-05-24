@@ -67,9 +67,9 @@ Dirs NOT touched (preserved in place per prior-session constraints):
 - All top-level nav docs (BROKEN_ABLATIONS.md, BUG_HISTORY.md, CURRENT_RUNS.md, FILE_PROVENANCE.md, METHODOLOGY.md, RESULTS_SUMMARY.md, RUNS_INDEX.md) — `FILE_PROVENANCE.md` + `RUNS_INDEX.md` + `RESULTS_SUMMARY.md` got an ARCHIVE NOTICE header
 
 Scripts updated to read from new paths:
-- `benchmark/scripts/verify_authoritative_numbers.py` → reads `FINAL/`
-- `benchmark/scripts/inspect_all_configs.py` → reads `FINAL/ablation_v4/`
-- `benchmark/scripts/build_final_results.py` → sources from `_archive_originals_2026-05-19/` so re-build still works
+- `benchmark/scripts/eval/verify_authoritative_numbers.py` → reads `FINAL/`
+- `benchmark/scripts/eval/inspect_all_configs.py` → reads `FINAL/ablation_v4/`
+- `benchmark/scripts/ops/build_final_results.py` → sources from `_archive_originals_2026-05-19/` so re-build still works
 
 ---
 
@@ -259,13 +259,13 @@ To re-derive everything in this directory from the archived originals:
 ```bash
 cd "<repo root>"
 # 1. Rebuild FINAL/ from archive (COPY + SHA-verify + audit)
-python benchmark/scripts/build_final_results.py
+python benchmark/scripts/ops/build_final_results.py
 
 # 2. Re-verify all matched-eval headline numbers from the source JSONs
-python benchmark/scripts/verify_authoritative_numbers.py
+python benchmark/scripts/eval/verify_authoritative_numbers.py
 
 # 3. Re-run Phase 5 statistics
-python benchmark/scripts/phase5_stats.py
+python benchmark/scripts/eval/phase5_stats.py
 ```
 
 Per-file SHA-256 in `MANIFEST.md`. Per-file content audit in `AUDIT_REPORT.md`. Phase 5 paper-ready output in `ablation_v4/phase5_stats.md`.
