@@ -73,7 +73,7 @@ async def run_rca_cases(cases: list[dict], inject_graph: bool, label: str) -> li
     tmp.write_text(json.dumps(cases), encoding="utf-8")
 
     cfg = BenchmarkConfig(
-        model_name=f"graph_exp_{label}",
+        model_name="constitutional_aiops",
         max_annotation_tests=0,
         max_rca_tests=len(cases),
         temperature=0.0,
@@ -182,43 +182,51 @@ async def exp_4_5c(lemma_cases: list[dict], out_dir: Path) -> dict:
     from src.memory.embedding_service import EmbeddingService
 
     neo4j = Neo4jClient()
+    await neo4j.connect()
     embedding_svc = EmbeddingService()
-    embedding_svc._ensure_loaded()
+    embedding_svc._load_model()
 
-    for n_episodes in ns:
-        print(f"\n  N={n_episodes} episodes in graph...")
-        # Clear graph and insert exactly n_episodes
-        # We use a dedicated label _cold_start_temp to avoid touching the main 431 episodes
-        neo4j.run_query("MATCH (e:Episode {_cold_start:true}) DETACH DELETE e")
-        if n_episodes > 0:
-            pool_slice = episode_pool[:n_episodes]
-            for case in pool_slice:
-                q = case.get("incident", {}).get("question", "")
-                emb = embedding_svc.generate_embedding(q or case.get("id", ""))
-                neo4j.run_query(
-                    """
-                    MERGE (e:Episode {id: $id})
-                    SET e.incident_description = $desc,
-                        e.root_cause = $rc,
-                        e.embedding = $emb,
-                        e.category = $cat,
-                        e._cold_start = true
-                    """,
-                    id=f"_cs_{case['id']}",
-                    desc=q[:500] if q else case.get("id",""),
-                    rc=str(case.get("expected_root_cause",""))[:200],
-                    emb=emb,
-                    cat="lemma_rca_cloud",
-                )
+    try:
+        for n_episodes in ns:
+            print(f"\n  N={n_episodes} episodes in graph...")
+            # Clear graph and insert exactly n_episodes
+            # We use a dedicated flag _cold_start to avoid touching the main 431 episodes
+            async with neo4j.session() as sess:
+                await sess.run("MATCH (e:Episode {_cold_start:true}) DETACH DELETE e")
+                if n_episodes > 0:
+                    pool_slice = episode_pool[:n_episodes]
+                    for case in pool_slice:
+                        q = case.get("incident", {}).get("question", "")
+                        emb = embedding_svc.encode(q or case.get("id", ""))
+                        if emb is None:
+                            continue
+                        await sess.run(
+                            """
+                            MERGE (e:Episode {id: $id})
+                            SET e.incident_description = $desc,
+                                e.root_cause = $rc,
+                                e.embedding = $emb,
+                                e.category = $cat,
+                                e._cold_start = true
+                            """,
+                            id=f"_cs_{case['id']}",
+                            desc=q[:500] if q else case.get("id",""),
+                            rc=str(case.get("expected_root_cause",""))[:200],
+                            emb=emb,
+                            cat="lemma_rca_cloud",
+                        )
 
-        print(f"    Inserted {n_episodes} cold-start episodes. Running {len(test_cases)} test cases...")
-        results = await run_rca_cases(test_cases, inject_graph=True, label=f"cs_n{n_episodes}")
-        acc = sum(1 for r in results if r.get("correct")) / max(len(results), 1)
-        curve.append({"n": n_episodes, "acc": round(acc * 100, 1), "correct": sum(1 for r in results if r.get("correct")), "total": len(results)})
-        print(f"    N={n_episodes}: acc={acc*100:.1f}%")
+            print(f"    Inserted {n_episodes} cold-start episodes. Running {len(test_cases)} test cases...")
+            results = await run_rca_cases(test_cases, inject_graph=True, label=f"cs_n{n_episodes}")
+            acc = sum(1 for r in results if r.get("correct")) / max(len(results), 1)
+            curve.append({"n": n_episodes, "acc": round(acc * 100, 1), "correct": sum(1 for r in results if r.get("correct")), "total": len(results)})
+            print(f"    N={n_episodes}: acc={acc*100:.1f}%")
 
-    # Clean up temp cold-start nodes
-    neo4j.run_query("MATCH (e:Episode {_cold_start:true}) DETACH DELETE e")
+        # Clean up temp cold-start nodes
+        async with neo4j.session() as sess:
+            await sess.run("MATCH (e:Episode {_cold_start:true}) DETACH DELETE e")
+    finally:
+        await neo4j.close()
 
     summary = {
         "experiment": "4.5c",
