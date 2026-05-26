@@ -1,6 +1,6 @@
 # Constitutional AIOps — Agent Handoff Document
 
-**Last updated**: 2026-05-26 (session 22 close — DIFF PDF complete + sandbox reorganized into `main/` + `diff/` + root file housekeeping + HANDOFF.md relocated to `benchmark/`)
+**Last updated**: 2026-05-26 (session 23 in progress — Group A audit fixes applied: abstract + §1 + §2 v3.0-numbers rewrite + Table 4 14B refit n=213 + Table 7 Drain row dropped + vLLM+FP8 -> vLLM AWQ + 71-vs-74 exclusion flip (13 files) + MANIFEST SHA refresh + HANDOFF §7 drift fix. PRE-GATE-4 state.)
 **For**: Next AI agent (Claude Code, Codex, etc.) to resume this work
 **Working directory**: `c:\Users\partha\Downloads\files AIOPS NEW\constitutional-aiops\`
 **Document location** (moved session 22): `constitutional-aiops/benchmark/HANDOFF.md` (was at repo root)
@@ -13,10 +13,12 @@
 |----------|------|-----|
 | 1 | **THIS FILE** | Current state, what to do |
 | 2 | `MEMORY.md` SESSION 23 STARTUP block | Live state snapshot, path discipline (auto-loaded) |
-| 3 | `benchmark/final/audit/SESSION_21_HANDOFF.md` | Session 21 → 22 handoff (DIFF resume + sandbox polish) |
-| 4 | `benchmark/final/audit/SESSION_20_HANDOFF.md` §6.1 | Gate 1 commit grouping (7 themed commits) |
-| 5 | `benchmark/final/SUMMARY.md` | Canonical results landscape |
-| 6 | `benchmark/final/docs/METHODOLOGY.md` | Eval methodology + 3-point rubric disclosure |
+| 3 | `benchmark/final/audit/SESSION_22_HANDOFF.md` | Session 22 close + 5-agent paper audit synthesis (10 CRITICAL + 14 IMPORTANT + 7 MINOR findings) |
+| 4 | `benchmark/final/audit/paper_audit_session22_2026-05-26/00_SUMMARY.md` | Master audit synthesis — file:line citations for every finding |
+| 5 | `benchmark/final/audit/SESSION_21_HANDOFF.md` | Session 21 → 22 handoff (DIFF resume + sandbox polish) |
+| 6 | `benchmark/final/audit/SESSION_20_HANDOFF.md` §6.1 | Gate 1 commit grouping reference |
+| 7 | `benchmark/final/SUMMARY.md` | Canonical results landscape |
+| 8 | `benchmark/final/docs/METHODOLOGY.md` | Eval methodology + 3-point rubric disclosure |
 
 Memory dir (all files auto-loaded via MEMORY.md):
 `C:\Users\partha\.claude\projects\c--Users-partha-Downloads-files-AIOPS-NEW\memory\`
@@ -147,15 +149,15 @@ After session 22 reorganization, the sandbox contains exactly 2 subfolders, each
 sn-article-template.v2.sandbox-session16/
 ├── main/
 │   ├── bst/  empty.eps  fig.eps
-│   ├── sn-article.tex                (54,037 B, 632 lines)
-│   ├── sn-article.pdf                (460,355 B, 16 pages)
+│   ├── sn-article.tex                (54,591 B, 786 lines — post-session-23 audit fixes)
+│   ├── sn-article.pdf                (463,353 B, 16 pages)
 │   ├── sn-bibliography.bib           (31 cited entries)
 │   ├── sn-jnl.cls  sn-mathphys-num.bst
 └── diff/
     ├── bst/  empty.eps  fig.eps
-    ├── sn-article.tex                (54,037 B — read-only copy = diff target)
-    ├── sn-article-DIFF.tex           (68,844 B — latexdiff-fast INVISIBLE + --no-del + red text override)
-    ├── sn-article-DIFF.pdf           (461,798 B, 16 pages, 0 undefined refs, plain red highlights)
+    ├── sn-article.tex                (54,591 B — read-only copy = diff target, mirrors main)
+    ├── sn-article-DIFF.tex           (68,616 B — latexdiff-fast INVISIBLE + --no-del + red text override)
+    ├── sn-article-DIFF.pdf           (464,912 B, 16 pages, 0 undefined refs, plain red highlights)
     ├── sn-bibliography.bib  sn-jnl.cls  sn-mathphys-num.bst
 ```
 
@@ -211,26 +213,26 @@ Source: `benchmark/final/main_benchmark/results.json` + `phase5_stats.json`.
 
 ### Phase 4.3 Ablation (8 configs, matched eval — post-D-1)
 
-| Configuration | Ann (218) | RCA (139) | Overall (357) | Δ Overall | McNemar p |
+| Configuration | Ann (218) | RCA (139) | Overall (357) | Δ Overall | McNemar p (overall) |
 |---|---|---|---|---|---|
-| **Full Hybrid** | 84.4% | **85.6%** | **84.0%** | — | — |
-| Single-4B | 82.6% | 83.5% | 82.9% | −1.1pp | NS |
-| Single-14B | 84.4% | 83.5% | 83.5% | −0.5pp | NS |
-| No structured output | 82.6% | 75.5% | 79.8% | −4.2pp | <0.05 |
-| **No system prompt** | **48.6%** | 81.3% | 60.8% | **−23.2pp** | <1e-15 |
+| **Full Hybrid** | **83.0%** | **85.6%** | **84.0%** | — | — |
+| Single-4B | 82.6% | 82.7% | 82.6% | −1.4pp | 0.302 |
+| Single-14B | 84.4% | 82.7% | 83.8% | −0.3pp | 1.000 |
+| No structured output | 82.6% | 75.5% | 79.8% | −4.2pp | 0.086 |
+| **No system prompt** | **48.6%** | 81.3% | 61.3% | **−22.7pp** | **3.40e-11** |
 | With Graph | 82.6% | 83.5% | 82.9% | −1.1pp | **0.289 (NS)** |
-| No constitutional | 89.4% | 71.9% | 82.6% | −1.4pp | NS overall |
-| With orchestrator | 82.6% | 83.5% | 82.9% | −1.1pp | NS |
+| No constitutional | 89.4% | 72.7% | 82.9% | −1.1pp | 0.652 |
+| With orchestrator | 82.6% | 83.5% | 82.9% | −1.1pp | 0.289 |
 
-Source: `benchmark/final/ablation_v4/ablation_*/results_sota_eval_431.json` + `phase5_stats.md`.
+Source: `benchmark/final/ablation_v4/ablation_*/results_sota_eval_431.json` + `phase5_stats.md`. (Cells re-synced 2026-05-26 session 23 — prior version had 5-row drift on Single-4B, Single-14B, No-system-prompt, No-constitutional, and Full Hybrid Ann.)
 
 ### Phase 4.7 SOTA Baselines (Bedrock)
 
 | System | Ann | RCA | Overall | Source file |
 |---|---|---|---|---|
 | **Ours (Full Hybrid)** | 82.6% (180/218) | **82.0% (114/139)** | 82.4% (294/357) | `main_benchmark/results.json` |
-| Llama 3.3-70B | 91.3% | 71.2% (99/139) | 83.3% | `sota_baselines/llama_3_3_70b.jsonl` |
-| DeepSeek V3.2 | 90.4% | 66.9% (93/139) | 81.1% | `sota_baselines/deepseek_v3.jsonl` |
+| Llama 3.3-70B | 91.3% | 71.2% (99/139) | 83.5% | `sota_baselines/llama_3_3_70b.jsonl` |
+| DeepSeek V3.2 | 90.4% | 66.9% (93/139) | 81.2% | `sota_baselines/deepseek_v3.jsonl` |
 
 **ΔRCA Ours vs Llama: +10.8pp.** **ΔRCA Ours vs DeepSeek: +15.1pp.**
 
