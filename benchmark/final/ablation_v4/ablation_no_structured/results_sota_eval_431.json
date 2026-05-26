@@ -11,7 +11,8 @@
       "severity": "high",
       "category": "security"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_025",
@@ -26,7 +27,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_APACHE_025",
@@ -40,7 +42,8 @@
       "severity": "high",
       "category": "error"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_051",
@@ -55,7 +58,8 @@
       "category": "error",
       "classification": "warn"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_122",
@@ -70,7 +74,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.7936
   },
   {
     "case_id": "ANN_049",
@@ -85,7 +90,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_100",
@@ -100,7 +106,8 @@
       "category": "error",
       "classification": "warn"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_OPENSSH_001",
@@ -114,7 +121,8 @@
       "severity": "info",
       "category": "unknown"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_OPENSSH_027",
@@ -128,7 +136,8 @@
       "severity": "info",
       "category": "unknown"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_APACHE_020",
@@ -142,7 +151,8 @@
       "severity": "info",
       "category": "unknown"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_082",
@@ -157,7 +167,8 @@
       "category": "error",
       "classification": "warn"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_061",
@@ -172,7 +183,8 @@
       "category": "error",
       "classification": "warn"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_095",
@@ -187,7 +199,8 @@
       "category": "error",
       "classification": "warn"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_050",
@@ -202,7 +215,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_APACHE_022",
@@ -216,7 +230,8 @@
       "severity": "high",
       "category": "error"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_OPENSSH_028",
@@ -230,7 +245,8 @@
       "severity": "high",
       "category": "security"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_170",
@@ -245,7 +261,8 @@
       "category": "error",
       "classification": "alert"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_094",
@@ -260,7 +277,8 @@
       "category": "error",
       "classification": "warn"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_OPENSSH_007",
@@ -274,7 +292,8 @@
       "severity": "info",
       "category": "unknown"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_021",
@@ -289,7 +308,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_002",
@@ -304,7 +324,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_039",
@@ -319,7 +340,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_056",
@@ -334,7 +356,8 @@
       "category": "error",
       "classification": "warn"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_APACHE_024",
@@ -348,7 +371,8 @@
       "severity": "info",
       "category": "unknown"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_065",
@@ -363,7 +387,8 @@
       "category": "error",
       "classification": "warn"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_078",
@@ -378,7 +403,8 @@
       "category": "error",
       "classification": "warn"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_014",
@@ -393,7 +419,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_APACHE_011",
@@ -407,7 +434,8 @@
       "severity": "info",
       "category": "unknown"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_APACHE_003",
@@ -421,7 +449,8 @@
       "severity": "high",
       "category": "error"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_098",
@@ -436,7 +465,8 @@
       "category": "error",
       "classification": "warn"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_APACHE_007",
@@ -450,7 +480,8 @@
       "severity": "high",
       "category": "error"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_024",
@@ -465,7 +496,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_070",
@@ -480,7 +512,8 @@
       "category": "error",
       "classification": "warn"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_189",
@@ -495,7 +528,8 @@
       "category": "error",
       "classification": "alert"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_060",
@@ -510,7 +544,8 @@
       "category": "error",
       "classification": "warn"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_154",
@@ -525,7 +560,8 @@
       "category": "error",
       "classification": "alert"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_075",
@@ -540,7 +576,8 @@
       "category": "error",
       "classification": "warn"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_APACHE_019",
@@ -554,7 +591,8 @@
       "severity": "info",
       "category": "unknown"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_026",
@@ -569,7 +607,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_067",
@@ -584,7 +623,8 @@
       "category": "error",
       "classification": "warn"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_033",
@@ -599,7 +639,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_097",
@@ -614,7 +655,8 @@
       "category": "error",
       "classification": "warn"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_034",
@@ -629,7 +671,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_052",
@@ -644,7 +687,8 @@
       "category": "error",
       "classification": "warn"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_118",
@@ -659,7 +703,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_OPENSSH_029",
@@ -673,7 +718,8 @@
       "severity": "high",
       "category": "security"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_027",
@@ -688,7 +734,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_071",
@@ -703,7 +750,8 @@
       "category": "error",
       "classification": "warn"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_036",
@@ -718,7 +766,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_045",
@@ -733,7 +782,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_173",
@@ -748,7 +798,8 @@
       "category": "error",
       "classification": "alert"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_142",
@@ -763,7 +814,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_194",
@@ -778,7 +830,8 @@
       "category": "error",
       "classification": "alert"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_OPENSSH_010",
@@ -792,7 +845,8 @@
       "severity": "info",
       "category": "unknown"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_023",
@@ -807,7 +861,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_OPENSSH_035",
@@ -821,7 +876,8 @@
       "severity": "info",
       "category": "unknown"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_OPENSSH_006",
@@ -835,7 +891,8 @@
       "severity": "high",
       "category": "security"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_084",
@@ -850,7 +907,8 @@
       "category": "error",
       "classification": "warn"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_105",
@@ -865,7 +923,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_130",
@@ -880,7 +939,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_090",
@@ -895,7 +955,8 @@
       "category": "error",
       "classification": "warn"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_066",
@@ -910,7 +971,8 @@
       "category": "error",
       "classification": "warn"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_OPENSSH_018",
@@ -924,7 +986,8 @@
       "severity": "info",
       "category": "unknown"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_072",
@@ -939,7 +1002,8 @@
       "category": "error",
       "classification": "warn"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_179",
@@ -954,7 +1018,8 @@
       "category": "error",
       "classification": "alert"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_APACHE_036",
@@ -968,7 +1033,8 @@
       "severity": "info",
       "category": "unknown"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_APACHE_031",
@@ -982,7 +1048,8 @@
       "severity": "info",
       "category": "unknown"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_156",
@@ -997,7 +1064,8 @@
       "category": "error",
       "classification": "alert"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_APACHE_018",
@@ -1011,7 +1079,8 @@
       "severity": "info",
       "category": "unknown"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_OPENSSH_004",
@@ -1025,7 +1094,8 @@
       "severity": "info",
       "category": "unknown"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_OPENSSH_038",
@@ -1039,7 +1109,8 @@
       "severity": "high",
       "category": "security"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_017",
@@ -1054,7 +1125,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_088",
@@ -1069,7 +1141,8 @@
       "category": "error",
       "classification": "warn"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_167",
@@ -1084,7 +1157,8 @@
       "category": "error",
       "classification": "alert"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_OPENSSH_005",
@@ -1098,7 +1172,8 @@
       "severity": "high",
       "category": "security"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_APACHE_006",
@@ -1112,7 +1187,8 @@
       "severity": "high",
       "category": "error"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_OPENSSH_025",
@@ -1126,7 +1202,8 @@
       "severity": "info",
       "category": "unknown"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_086",
@@ -1141,7 +1218,8 @@
       "category": "error",
       "classification": "warn"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_009",
@@ -1156,7 +1234,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_164",
@@ -1171,7 +1250,8 @@
       "category": "error",
       "classification": "alert"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_APACHE_039",
@@ -1185,7 +1265,8 @@
       "severity": "info",
       "category": "unknown"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_019",
@@ -1200,7 +1281,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_091",
@@ -1215,7 +1297,8 @@
       "category": "error",
       "classification": "warn"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_OPENSSH_030",
@@ -1229,7 +1312,8 @@
       "severity": "high",
       "category": "security"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_041",
@@ -1244,7 +1328,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_016",
@@ -1259,7 +1344,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_OPENSSH_024",
@@ -1273,7 +1359,8 @@
       "severity": "info",
       "category": "unknown"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_028",
@@ -1288,7 +1375,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_APACHE_005",
@@ -1302,7 +1390,8 @@
       "severity": "high",
       "category": "error"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_001",
@@ -1317,7 +1406,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_018",
@@ -1332,7 +1422,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_044",
@@ -1347,7 +1438,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_077",
@@ -1362,7 +1454,8 @@
       "category": "error",
       "classification": "warn"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_APACHE_002",
@@ -1376,7 +1469,8 @@
       "severity": "high",
       "category": "error"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_APACHE_030",
@@ -1390,7 +1484,8 @@
       "severity": "info",
       "category": "unknown"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_198",
@@ -1405,7 +1500,8 @@
       "category": "error",
       "classification": "alert"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_APACHE_028",
@@ -1419,7 +1515,8 @@
       "severity": "info",
       "category": "unknown"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_176",
@@ -1434,7 +1531,8 @@
       "category": "error",
       "classification": "alert"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_APACHE_009",
@@ -1448,7 +1546,8 @@
       "severity": "info",
       "category": "unknown"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_OPENSSH_019",
@@ -1462,7 +1561,8 @@
       "severity": "info",
       "category": "unknown"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_184",
@@ -1477,7 +1577,8 @@
       "category": "error",
       "classification": "alert"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_064",
@@ -1492,7 +1593,8 @@
       "category": "error",
       "classification": "warn"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_022",
@@ -1507,7 +1609,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_063",
@@ -1522,7 +1625,8 @@
       "category": "error",
       "classification": "warn"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_APACHE_012",
@@ -1536,7 +1640,8 @@
       "severity": "info",
       "category": "unknown"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_085",
@@ -1551,7 +1656,8 @@
       "category": "error",
       "classification": "warn"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_OPENSSH_037",
@@ -1565,7 +1671,8 @@
       "severity": "info",
       "category": "unknown"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_APACHE_038",
@@ -1579,7 +1686,8 @@
       "severity": "info",
       "category": "unknown"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_OPENSSH_023",
@@ -1593,7 +1701,8 @@
       "severity": "high",
       "category": "security"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_APACHE_033",
@@ -1607,7 +1716,8 @@
       "severity": "high",
       "category": "error"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_OPENSSH_015",
@@ -1621,7 +1731,8 @@
       "severity": "high",
       "category": "security"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_APACHE_016",
@@ -1635,7 +1746,8 @@
       "severity": "info",
       "category": "unknown"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_APACHE_001",
@@ -1649,7 +1761,8 @@
       "severity": "high",
       "category": "error"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_012",
@@ -1664,7 +1777,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_005",
@@ -1679,7 +1793,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_177",
@@ -1694,7 +1809,8 @@
       "category": "error",
       "classification": "alert"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_OPENSSH_013",
@@ -1708,7 +1824,8 @@
       "severity": "info",
       "category": "unknown"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_APACHE_017",
@@ -1722,7 +1839,8 @@
       "severity": "info",
       "category": "unknown"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_035",
@@ -1737,7 +1855,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_068",
@@ -1752,7 +1871,8 @@
       "category": "error",
       "classification": "warn"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_042",
@@ -1767,7 +1887,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_030",
@@ -1782,7 +1903,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_099",
@@ -1797,7 +1919,8 @@
       "category": "error",
       "classification": "warn"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_171",
@@ -1812,7 +1935,8 @@
       "category": "error",
       "classification": "alert"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_055",
@@ -1827,7 +1951,8 @@
       "category": "error",
       "classification": "warn"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_029",
@@ -1842,7 +1967,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_166",
@@ -1857,7 +1983,8 @@
       "category": "error",
       "classification": "alert"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_129",
@@ -1872,7 +1999,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_OPENSSH_008",
@@ -1886,7 +2014,8 @@
       "severity": "high",
       "category": "security"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_020",
@@ -1901,7 +2030,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_182",
@@ -1916,7 +2046,8 @@
       "category": "error",
       "classification": "alert"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_048",
@@ -1931,7 +2062,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_APACHE_035",
@@ -1945,7 +2077,8 @@
       "severity": "info",
       "category": "unknown"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_135",
@@ -1960,7 +2093,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_OPENSSH_012",
@@ -1974,7 +2108,8 @@
       "severity": "high",
       "category": "security"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_OPENSSH_033",
@@ -1988,7 +2123,8 @@
       "severity": "info",
       "category": "unknown"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_APACHE_027",
@@ -2002,7 +2138,8 @@
       "severity": "info",
       "category": "unknown"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_OPENSSH_017",
@@ -2016,7 +2153,8 @@
       "severity": "high",
       "category": "security"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_153",
@@ -2031,7 +2169,8 @@
       "category": "error",
       "classification": "alert"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_092",
@@ -2046,7 +2185,8 @@
       "category": "error",
       "classification": "warn"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_169",
@@ -2061,7 +2201,8 @@
       "category": "error",
       "classification": "alert"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_040",
@@ -2076,7 +2217,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_OPENSSH_034",
@@ -2090,7 +2232,8 @@
       "severity": "high",
       "category": "security"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_OPENSSH_036",
@@ -2104,7 +2247,8 @@
       "severity": "info",
       "category": "unknown"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_069",
@@ -2119,7 +2263,8 @@
       "category": "error",
       "classification": "warn"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_114",
@@ -2134,7 +2279,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_121",
@@ -2149,7 +2295,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_107",
@@ -2164,7 +2311,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_007",
@@ -2179,7 +2327,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_APACHE_013",
@@ -2193,7 +2342,8 @@
       "severity": "info",
       "category": "unknown"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_146",
@@ -2208,7 +2358,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_141",
@@ -2223,7 +2374,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_OPENSSH_021",
@@ -2237,7 +2389,8 @@
       "severity": "info",
       "category": "unknown"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_010",
@@ -2252,7 +2405,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_OPENSSH_011",
@@ -2266,7 +2420,8 @@
       "severity": "high",
       "category": "security"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_APACHE_023",
@@ -2280,7 +2435,8 @@
       "severity": "info",
       "category": "unknown"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_059",
@@ -2295,7 +2451,8 @@
       "category": "error",
       "classification": "warn"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_003",
@@ -2310,7 +2467,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_079",
@@ -2325,7 +2483,8 @@
       "category": "error",
       "classification": "warn"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_096",
@@ -2340,7 +2499,8 @@
       "category": "error",
       "classification": "warn"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_083",
@@ -2355,7 +2515,8 @@
       "category": "error",
       "classification": "warn"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_APACHE_037",
@@ -2369,7 +2530,8 @@
       "severity": "info",
       "category": "unknown"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_APACHE_032",
@@ -2383,7 +2545,8 @@
       "severity": "high",
       "category": "error"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_008",
@@ -2398,7 +2561,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_APACHE_034",
@@ -2412,7 +2576,8 @@
       "severity": "high",
       "category": "error"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_123",
@@ -2427,7 +2592,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_APACHE_014",
@@ -2441,7 +2607,8 @@
       "severity": "high",
       "category": "error"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_062",
@@ -2456,7 +2623,8 @@
       "category": "error",
       "classification": "warn"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_APACHE_026",
@@ -2470,7 +2638,8 @@
       "severity": "info",
       "category": "unknown"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_057",
@@ -2485,7 +2654,8 @@
       "category": "error",
       "classification": "warn"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_174",
@@ -2500,7 +2670,8 @@
       "category": "error",
       "classification": "alert"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_APACHE_008",
@@ -2514,7 +2685,8 @@
       "severity": "high",
       "category": "error"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_OPENSSH_032",
@@ -2528,7 +2700,8 @@
       "severity": "high",
       "category": "security"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_OPENSSH_026",
@@ -2542,7 +2715,8 @@
       "severity": "info",
       "category": "unknown"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_093",
@@ -2557,7 +2731,8 @@
       "category": "error",
       "classification": "warn"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_OPENSSH_014",
@@ -2571,7 +2746,8 @@
       "severity": "info",
       "category": "unknown"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_031",
@@ -2586,7 +2762,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_APACHE_021",
@@ -2600,7 +2777,8 @@
       "severity": "info",
       "category": "unknown"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_047",
@@ -2615,7 +2793,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_168",
@@ -2630,7 +2809,8 @@
       "category": "error",
       "classification": "alert"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_OPENSSH_003",
@@ -2644,7 +2824,8 @@
       "severity": "info",
       "category": "unknown"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_192",
@@ -2659,7 +2840,8 @@
       "category": "error",
       "classification": "alert"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_APACHE_004",
@@ -2673,7 +2855,8 @@
       "severity": "high",
       "category": "error"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_081",
@@ -2688,7 +2871,8 @@
       "category": "error",
       "classification": "warn"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_053",
@@ -2703,7 +2887,8 @@
       "category": "error",
       "classification": "warn"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_OPENSSH_016",
@@ -2717,7 +2902,8 @@
       "severity": "high",
       "category": "security"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_054",
@@ -2732,7 +2918,8 @@
       "category": "error",
       "classification": "warn"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_015",
@@ -2747,7 +2934,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_076",
@@ -2762,7 +2950,8 @@
       "category": "error",
       "classification": "warn"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_151",
@@ -2777,7 +2966,8 @@
       "category": "error",
       "classification": "alert"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_119",
@@ -2792,7 +2982,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_OPENSSH_039",
@@ -2806,7 +2997,8 @@
       "severity": "info",
       "category": "unknown"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_APACHE_040",
@@ -2820,7 +3012,8 @@
       "severity": "info",
       "category": "unknown"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_032",
@@ -2835,7 +3028,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_OPENSSH_031",
@@ -2849,7 +3043,8 @@
       "severity": "high",
       "category": "security"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_089",
@@ -2864,7 +3059,8 @@
       "category": "error",
       "classification": "warn"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_087",
@@ -2879,7 +3075,8 @@
       "category": "error",
       "classification": "warn"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_OPENSSH_002",
@@ -2893,7 +3090,8 @@
       "severity": "high",
       "category": "security"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_APACHE_015",
@@ -2907,7 +3105,8 @@
       "severity": "info",
       "category": "unknown"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_OPENSSH_009",
@@ -2921,7 +3120,8 @@
       "severity": "high",
       "category": "security"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_155",
@@ -2936,7 +3136,8 @@
       "category": "error",
       "classification": "alert"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_074",
@@ -2951,7 +3152,8 @@
       "category": "error",
       "classification": "warn"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_080",
@@ -2966,7 +3168,8 @@
       "category": "error",
       "classification": "warn"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_006",
@@ -2981,7 +3184,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_073",
@@ -2996,7 +3200,8 @@
       "category": "error",
       "classification": "warn"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_004",
@@ -3011,7 +3216,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_149",
@@ -3026,7 +3232,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_011",
@@ -3041,7 +3248,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_APACHE_029",
@@ -3055,7 +3263,8 @@
       "severity": "info",
       "category": "unknown"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_038",
@@ -3070,7 +3279,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_OPENSSH_020",
@@ -3084,7 +3294,8 @@
       "severity": "high",
       "category": "security"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_013",
@@ -3099,7 +3310,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_058",
@@ -3114,7 +3326,8 @@
       "category": "error",
       "classification": "warn"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_043",
@@ -3129,7 +3342,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_OPENSSH_022",
@@ -3143,7 +3357,8 @@
       "severity": "info",
       "category": "unknown"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_046",
@@ -3158,7 +3373,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_037",
@@ -3173,7 +3389,8 @@
       "category": "normal",
       "classification": "info"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "ANN_APACHE_010",
@@ -3187,7 +3404,8 @@
       "severity": "info",
       "category": "unknown"
     },
-    "eval_method": "preserved_from_runner_structured_field_match"
+    "eval_method": "preserved_from_runner_structured_field_match",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_115",
@@ -3197,7 +3415,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "orders-db_disk_io_issue",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8118
   },
   {
     "case_id": "RCA_105",
@@ -3207,7 +3426,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "rabbitmq_config_error",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8471
   },
   {
     "case_id": "RCA_142",
@@ -3217,7 +3437,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "user-db_connection_timeout",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8431
   },
   {
     "case_id": "RCA_100",
@@ -3227,7 +3448,8 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u4ee3\u7406\uff08\u5ba2\u6237\u7aef\uff09\u4f8b\u5982AnyConnect\u5b89\u5168\u79fb\u52a8\u5ba2\u6237\u7aef"
+    "expected_root_cause": "\u4ee3\u7406\uff08\u5ba2\u6237\u7aef\uff09\u4f8b\u5982AnyConnect\u5b89\u5168\u79fb\u52a8\u5ba2\u6237\u7aef",
+    "bert_f1": 0.7667
   },
   {
     "case_id": "RCA_123",
@@ -3237,17 +3459,20 @@
     "correct": false,
     "rule_score": 0.0,
     "expected_root_cause": "ebs_network_latency",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.7978
   },
   {
     "case_id": "RCA_OPSEVAL_RM_025",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "model_response": "Dirty optical cables and excessive cable length are possible causes of decibel loss in fiber-optic cable runs.",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "Dirty optical cables; Excessive cable length"
+    "expected_root_cause": "Dirty optical cables; Excessive cable length",
+    "excluded_reason": "MCQ knowledge format (post-hoc audit 2026-05-25); originally judged DIAGNOSTIC by Qwen3-4B-Instruct fallback judge",
+    "bert_f1": 0.9242
   },
   {
     "case_id": "RCA_091",
@@ -3257,7 +3482,8 @@
     "correct": true,
     "rule_score": 1.0,
     "expected_root_cause": "Coaxial",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_034",
@@ -3267,7 +3493,8 @@
     "correct": true,
     "rule_score": 1.0,
     "expected_root_cause": "for",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_119",
@@ -3277,7 +3504,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "adservice_service_degradation",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.839
   },
   {
     "case_id": "RCA_012",
@@ -3287,17 +3515,20 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u805a\u7c7b; \u8d1f\u8f7d\u5747\u8861"
+    "expected_root_cause": "\u805a\u7c7b; \u8d1f\u8f7d\u5747\u8861",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_OPSEVAL_RM_006",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "model_response": "The error \"Print sub-system not available\" typically indicates the Print Spooler service is not running. Check if the spooler service is running first, as it is critical for print operations.",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "The spooler service is running."
+    "expected_root_cause": "The spooler service is running.",
+    "excluded_reason": "MCQ knowledge format (post-hoc audit 2026-05-25); originally judged DIAGNOSTIC by Qwen3-4B-Instruct fallback judge",
+    "bert_f1": 0.8972
   },
   {
     "case_id": "RCA_171",
@@ -3307,7 +3538,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "user_disk_io_issue",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8078
   },
   {
     "case_id": "RCA_009",
@@ -3317,7 +3549,8 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "802.11b\u662f\u4e00\u79cd\u65e0\u7ebf\u7f51\u7edc\u6807\u51c6\uff0c\u4e5f\u79f0\u4e3aWi-Fi\u6807\u51c6\uff0c\u5b83\u4f7f\u75282.4GHz\u9891\u6bb5\u8fdb\u884c\u901a\u4fe1\uff0c\u6700\u9ad8\u4f20\u8f93\u901f\u7387\u4e3a11Mbps\u3002; 802.11g\u662f\u4e00\u79cd\u65e0\u7ebf\u7f51\u7edc\u6807\u51c6\uff0c\u5b83\u652f\u63012.4GHz\u9891\u6bb5\uff0c\u6700\u9ad8\u4f20\u8f93\u901f\u7387\u4e3a54Mbps\u3002"
+    "expected_root_cause": "802.11b\u662f\u4e00\u79cd\u65e0\u7ebf\u7f51\u7edc\u6807\u51c6\uff0c\u4e5f\u79f0\u4e3aWi-Fi\u6807\u51c6\uff0c\u5b83\u4f7f\u75282.4GHz\u9891\u6bb5\u8fdb\u884c\u901a\u4fe1\uff0c\u6700\u9ad8\u4f20\u8f93\u901f\u7387\u4e3a11Mbps\u3002; 802.11g\u662f\u4e00\u79cd\u65e0\u7ebf\u7f51\u7edc\u6807\u51c6\uff0c\u5b83\u652f\u63012.4GHz\u9891\u6bb5\uff0c\u6700\u9ad8\u4f20\u8f93\u901f\u7387\u4e3a54Mbps\u3002",
+    "bert_f1": 0.7781
   },
   {
     "case_id": "RCA_097",
@@ -3327,7 +3560,8 @@
     "correct": true,
     "rule_score": 1.0,
     "expected_root_cause": "PTR",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_130",
@@ -3337,7 +3571,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "emailservice_disk_io_issue",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8144
   },
   {
     "case_id": "RCA_155",
@@ -3347,7 +3582,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "loadgenerator_cpu_spike",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8298
   },
   {
     "case_id": "RCA_057",
@@ -3357,7 +3593,8 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u5177\u6709\u5730\u5740\u4ece192.168.0.0\u5230192.168.15.255\u7684\u8def\u7531\uff0c\u5b50\u7f51\u63a9\u7801\u4e3a24\u523028\u3002"
+    "expected_root_cause": "\u5177\u6709\u5730\u5740\u4ece192.168.0.0\u5230192.168.15.255\u7684\u8def\u7531\uff0c\u5b50\u7f51\u63a9\u7801\u4e3a24\u523028\u3002",
+    "bert_f1": 0.8035
   },
   {
     "case_id": "RCA_029",
@@ -3367,7 +3604,8 @@
     "correct": false,
     "rule_score": 0.0,
     "expected_root_cause": "Regularly update security patches",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8759
   },
   {
     "case_id": "RCA_026",
@@ -3377,7 +3615,8 @@
     "correct": true,
     "rule_score": 1.0,
     "expected_root_cause": "Cat 5",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_081",
@@ -3387,7 +3626,8 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "iSCSI\uff08Internet Small Computer System Interface\uff09\u662f\u4e00\u79cd\u57fa\u4e8eIP\u7f51\u7edc\u7684\u5b58\u50a8\u534f\u8bae\uff0c\u7528\u4e8e\u5728\u8ba1\u7b97\u673a\u4e4b\u95f4\u4f20\u8f93\u6570\u636e\u5757\u3002\u5b83\u5141\u8bb8\u8fdc\u7a0b\u8bbf\u95ee\u5b58\u50a8\u8bbe\u5907\uff0c\u4f7f\u5f97\u591a\u4e2a\u8ba1\u7b97\u673a\u53ef\u4ee5\u5171\u4eab\u5b58\u50a8\u8d44\u6e90\u3002; FCoE"
+    "expected_root_cause": "iSCSI\uff08Internet Small Computer System Interface\uff09\u662f\u4e00\u79cd\u57fa\u4e8eIP\u7f51\u7edc\u7684\u5b58\u50a8\u534f\u8bae\uff0c\u7528\u4e8e\u5728\u8ba1\u7b97\u673a\u4e4b\u95f4\u4f20\u8f93\u6570\u636e\u5757\u3002\u5b83\u5141\u8bb8\u8fdc\u7a0b\u8bbf\u95ee\u5b58\u50a8\u8bbe\u5907\uff0c\u4f7f\u5f97\u591a\u4e2a\u8ba1\u7b97\u673a\u53ef\u4ee5\u5171\u4eab\u5b58\u50a8\u8d44\u6e90\u3002; FCoE",
+    "bert_f1": 0.7502
   },
   {
     "case_id": "RCA_138",
@@ -3397,7 +3637,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "orders_resource_exhaustion",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8004
   },
   {
     "case_id": "RCA_002",
@@ -3407,17 +3648,20 @@
     "correct": true,
     "rule_score": 1.0,
     "expected_root_cause": "TACACS+",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_OPSEVAL_RM_023",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "model_response": "The root cause is that the question asks for the most specific identifier to troubleshoot a wireless client, which is the client's MAC address. The correct answer is C.",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "Client\u2019s MAC address"
+    "expected_root_cause": "Client\u2019s MAC address",
+    "excluded_reason": "MCQ knowledge format (post-hoc audit 2026-05-25); originally judged DIAGNOSTIC by Qwen3-4B-Instruct fallback judge",
+    "bert_f1": 0.8807
   },
   {
     "case_id": "RCA_098",
@@ -3427,7 +3671,8 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "DHCP\u670d\u52a1\u5668"
+    "expected_root_cause": "DHCP\u670d\u52a1\u5668",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_075",
@@ -3437,7 +3682,8 @@
     "correct": false,
     "rule_score": 0.0,
     "expected_root_cause": "ABC",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_085",
@@ -3447,7 +3693,8 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u5c40\u57df\u7f51"
+    "expected_root_cause": "\u5c40\u57df\u7f51",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_054",
@@ -3457,7 +3704,8 @@
     "correct": false,
     "rule_score": 0.0,
     "expected_root_cause": "Hello; Update; Query",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8394
   },
   {
     "case_id": "RCA_144",
@@ -3467,7 +3715,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "dashboard_connection_timeout",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8385
   },
   {
     "case_id": "RCA_040",
@@ -3477,7 +3726,8 @@
     "correct": false,
     "rule_score": 0.0,
     "expected_root_cause": "A, B, and C",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_035",
@@ -3487,7 +3737,8 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u6240\u6709\u8fd9\u4e9b\u7b54\u6848\u90fd\u662f\u6b63\u786e\u7684\u3002"
+    "expected_root_cause": "\u6240\u6709\u8fd9\u4e9b\u7b54\u6848\u90fd\u662f\u6b63\u786e\u7684\u3002",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_021",
@@ -3497,7 +3748,8 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "REST\u4ee3\u8868\u8868\u8ff0\u6027\u72b6\u6001\u8f6c\u79fb\u3002; RESTful\u6307\u7684\u662f\u5e94\u7528REST\u67b6\u6784\u6982\u5ff5\u7f16\u5199\u7684Web\u670d\u52a1\uff0c\u5b83\u4eec\u88ab\u79f0\u4e3aRESTful\u670d\u52a1\u3002"
+    "expected_root_cause": "REST\u4ee3\u8868\u8868\u8ff0\u6027\u72b6\u6001\u8f6c\u79fb\u3002; RESTful\u6307\u7684\u662f\u5e94\u7528REST\u67b6\u6784\u6982\u5ff5\u7f16\u5199\u7684Web\u670d\u52a1\uff0c\u5b83\u4eec\u88ab\u79f0\u4e3aRESTful\u670d\u52a1\u3002",
+    "bert_f1": 0.7535
   },
   {
     "case_id": "RCA_156",
@@ -3507,17 +3759,20 @@
     "correct": false,
     "rule_score": 0.0,
     "expected_root_cause": "prometheus_service_degradation",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.816
   },
   {
     "case_id": "RCA_OPSEVAL_RM_020",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "model_response": "The intermittent service slowdowns and outages are caused by electromagnetic interference (EMI) from the building's elevator machinery, which is disrupting network communication due to proximity between the elevator machinery room and the network racks.",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "EMI"
+    "expected_root_cause": "EMI",
+    "excluded_reason": "MCQ knowledge format (post-hoc audit 2026-05-25); originally judged DIAGNOSTIC by Qwen3-4B-Instruct fallback judge",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_016",
@@ -3527,17 +3782,20 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u626d\u66f2\u6709\u52a9\u4e8e\u9632\u6b62\u76f8\u90bb\u7ebf\u5bf9\u4e4b\u95f4\u7684\u4e32\u6270\u3002; \u626d\u66f2\u53ef\u4ee5\u9650\u5236\u7535\u78c1\u5e72\u6270\uff08EMI\uff09\u5bf9\u7535\u7f06\u4f20\u8f93\u4fe1\u53f7\u7684\u5f71\u54cd\u3002"
+    "expected_root_cause": "\u626d\u66f2\u6709\u52a9\u4e8e\u9632\u6b62\u76f8\u90bb\u7ebf\u5bf9\u4e4b\u95f4\u7684\u4e32\u6270\u3002; \u626d\u66f2\u53ef\u4ee5\u9650\u5236\u7535\u78c1\u5e72\u6270\uff08EMI\uff09\u5bf9\u7535\u7f06\u4f20\u8f93\u4fe1\u53f7\u7684\u5f71\u54cd\u3002",
+    "bert_f1": 0.7569
   },
   {
     "case_id": "RCA_OPSEVAL_RM_014",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "model_response": "The problem is caused by two transmitters operating on the same channel (channel 11), resulting in co-channel interference. Co-channel interference occurs when multiple devices transmit on identical frequency channels, directly competing for the same spectrum and causing signal degradation.",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "Co-channel interference"
+    "expected_root_cause": "Co-channel interference",
+    "excluded_reason": "MCQ knowledge format (post-hoc audit 2026-05-25); originally judged DIAGNOSTIC by Qwen3-4B-Instruct fallback judge",
+    "bert_f1": 0.8847
   },
   {
     "case_id": "RCA_102",
@@ -3547,7 +3805,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "node_service_degradation",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8279
   },
   {
     "case_id": "RCA_068",
@@ -3557,7 +3816,8 @@
     "correct": true,
     "rule_score": 1.0,
     "expected_root_cause": "VLANs",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_116",
@@ -3567,7 +3827,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "details_resource_exhaustion",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8244
   },
   {
     "case_id": "RCA_071",
@@ -3577,7 +3838,8 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u7b2c\u56db\u5c42\u4f20\u8f93\u5c42\u4fe1\u606f; \u7b2c\u4e03\u5c42\u5e94\u7528\u7a0b\u5e8f\u4fe1\u606f"
+    "expected_root_cause": "\u7b2c\u56db\u5c42\u4f20\u8f93\u5c42\u4fe1\u606f; \u7b2c\u4e03\u5c42\u5e94\u7528\u7a0b\u5e8f\u4fe1\u606f",
+    "bert_f1": 0.7527
   },
   {
     "case_id": "RCA_113",
@@ -3587,7 +3849,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "details_config_error",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.824
   },
   {
     "case_id": "RCA_163",
@@ -3597,7 +3860,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "carts-db_cpu_spike",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8403
   },
   {
     "case_id": "RCA_124",
@@ -3607,7 +3871,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "payment_service_degradation",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8148
   },
   {
     "case_id": "RCA_049",
@@ -3617,7 +3882,8 @@
     "correct": false,
     "rule_score": 0.0,
     "expected_root_cause": "Supports new services introduced by 5G 5GC",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8666
   },
   {
     "case_id": "RCA_063",
@@ -3627,7 +3893,8 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "4\u74e6\u7279"
+    "expected_root_cause": "4\u74e6\u7279",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_078",
@@ -3637,7 +3904,8 @@
     "correct": false,
     "rule_score": 0.0,
     "expected_root_cause": "Option3X",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_080",
@@ -3647,7 +3915,8 @@
     "correct": false,
     "rule_score": 0.0,
     "expected_root_cause": "The client synchronizes its time-of-day clock based on the NTP server.",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.922
   },
   {
     "case_id": "RCA_151",
@@ -3657,7 +3926,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "aws_connection_timeout",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8281
   },
   {
     "case_id": "RCA_101",
@@ -3667,7 +3937,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "user_pod_crash",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_177",
@@ -3677,7 +3948,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "cloudwatch_network_latency",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8273
   },
   {
     "case_id": "RCA_004",
@@ -3687,7 +3959,8 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "RIPv1\uff08Routing Information Protocol version 1\uff09\u662f\u4e00\u79cd\u57fa\u4e8e\u8ddd\u79bb\u5411\u91cf\u7b97\u6cd5\u7684\u8def\u7531\u534f\u8bae\uff0c\u7528\u4e8e\u5728\u4e92\u8054\u7f51\u4e2d\u4f20\u9012\u8def\u7531\u4fe1\u606f\u3002; RIPv2\uff08Routing Information Protocol version 2\uff09"
+    "expected_root_cause": "RIPv1\uff08Routing Information Protocol version 1\uff09\u662f\u4e00\u79cd\u57fa\u4e8e\u8ddd\u79bb\u5411\u91cf\u7b97\u6cd5\u7684\u8def\u7531\u534f\u8bae\uff0c\u7528\u4e8e\u5728\u4e92\u8054\u7f51\u4e2d\u4f20\u9012\u8def\u7531\u4fe1\u606f\u3002; RIPv2\uff08Routing Information Protocol version 2\uff09",
+    "bert_f1": 0.778
   },
   {
     "case_id": "RCA_011",
@@ -3697,7 +3970,8 @@
     "correct": false,
     "rule_score": 0.0,
     "expected_root_cause": "ABD",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_028",
@@ -3707,7 +3981,8 @@
     "correct": false,
     "rule_score": 0.0,
     "expected_root_cause": "IGMPv3 introduced a new IGMP membership report with source filtering support.",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.9081
   },
   {
     "case_id": "RCA_152",
@@ -3717,7 +3992,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "cart_resource_exhaustion",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8201
   },
   {
     "case_id": "RCA_121",
@@ -3727,7 +4003,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "coredns_disk_io_issue",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8121
   },
   {
     "case_id": "RCA_061",
@@ -3737,7 +4014,8 @@
     "correct": false,
     "rule_score": 0.0,
     "expected_root_cause": "All are valid Class B network IDs.",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8798
   },
   {
     "case_id": "RCA_133",
@@ -3747,7 +4025,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "queue_connection_timeout",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.833
   },
   {
     "case_id": "RCA_020",
@@ -3757,7 +4036,8 @@
     "correct": false,
     "rule_score": 0.0,
     "expected_root_cause": "The DNS server is down.",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.9062
   },
   {
     "case_id": "RCA_175",
@@ -3767,7 +4047,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "dispatch_memory_leak",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8154
   },
   {
     "case_id": "RCA_178",
@@ -3777,7 +4058,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "productpage_cpu_spike",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8268
   },
   {
     "case_id": "RCA_095",
@@ -3787,7 +4069,8 @@
     "correct": true,
     "rule_score": 1.0,
     "expected_root_cause": "6 dB",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_143",
@@ -3797,7 +4080,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "user_network_latency",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8561
   },
   {
     "case_id": "RCA_041",
@@ -3807,7 +4091,8 @@
     "correct": false,
     "rule_score": 0.0,
     "expected_root_cause": "UNIX time",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_117",
@@ -3817,7 +4102,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "web_resource_exhaustion",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8221
   },
   {
     "case_id": "RCA_048",
@@ -3827,7 +4113,8 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u5c06\u4eba\u540d\u8f6c\u6362\u4e3aIP\u5730\u5740"
+    "expected_root_cause": "\u5c06\u4eba\u540d\u8f6c\u6362\u4e3aIP\u5730\u5740",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_088",
@@ -3837,7 +4124,8 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "A"
+    "expected_root_cause": "A",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_065",
@@ -3847,7 +4135,8 @@
     "correct": false,
     "rule_score": 0.0,
     "expected_root_cause": "RUN policy manager state",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.822
   },
   {
     "case_id": "RCA_106",
@@ -3857,7 +4146,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "mongodb_pod_crash",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.821
   },
   {
     "case_id": "RCA_153",
@@ -3867,17 +4157,20 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "cartservice_network_latency",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8225
   },
   {
     "case_id": "RCA_OPSEVAL_RM_005",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "model_response": "The IP address in option B (130.200.130.1) is not on the same network as the others because its network address (130.200.128.0) differs from the network addresses of the other options (130.200.64.0).",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "`130.200.130.1`"
+    "expected_root_cause": "`130.200.130.1`",
+    "excluded_reason": "MCQ knowledge format (post-hoc audit 2026-05-25); originally judged DIAGNOSTIC by Qwen3-4B-Instruct fallback judge",
+    "bert_f1": 0.8869
   },
   {
     "case_id": "RCA_077",
@@ -3887,7 +4180,8 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u8981\u6c42\u7528\u6237\u79fb\u52a8\u5230\u5efa\u7b51\u7269\u7684\u53e6\u4e00\u4e2a\u697c\u5c42\uff0c\u7136\u540e\u518d\u5c1d\u8bd5\u4e00\u6b21\u3002"
+    "expected_root_cause": "\u8981\u6c42\u7528\u6237\u79fb\u52a8\u5230\u5efa\u7b51\u7269\u7684\u53e6\u4e00\u4e2a\u697c\u5c42\uff0c\u7136\u540e\u518d\u5c1d\u8bd5\u4e00\u6b21\u3002",
+    "bert_f1": 0.7538
   },
   {
     "case_id": "RCA_024",
@@ -3897,7 +4191,8 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u9ed8\u8ba4\u7f51\u5173"
+    "expected_root_cause": "\u9ed8\u8ba4\u7f51\u5173",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_107",
@@ -3907,7 +4202,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "payment_resource_exhaustion",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8079
   },
   {
     "case_id": "RCA_031",
@@ -3917,7 +4213,8 @@
     "correct": true,
     "rule_score": 1.0,
     "expected_root_cause": "DHCP",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_150",
@@ -3927,7 +4224,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "catalogue_pod_crash",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8243
   },
   {
     "case_id": "RCA_073",
@@ -3937,7 +4235,8 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "OSPF\u662f\u4e00\u79cd\u5185\u90e8\u7f51\u5173\u534f\u8bae\u3002; OSPF\u662f\u4e00\u79cd\u94fe\u8def\u72b6\u6001\u8def\u7531\u534f\u8bae\u3002; OSPF\u5728\u81ea\u6cbb\u7cfb\u7edf\u5185\u5171\u4eab\u8def\u7531\u3002"
+    "expected_root_cause": "OSPF\u662f\u4e00\u79cd\u5185\u90e8\u7f51\u5173\u534f\u8bae\u3002; OSPF\u662f\u4e00\u79cd\u94fe\u8def\u72b6\u6001\u8def\u7531\u534f\u8bae\u3002; OSPF\u5728\u81ea\u6cbb\u7cfb\u7edf\u5185\u5171\u4eab\u8def\u7531\u3002",
+    "bert_f1": 0.7668
   },
   {
     "case_id": "RCA_008",
@@ -3947,17 +4246,20 @@
     "correct": true,
     "rule_score": 1.0,
     "expected_root_cause": "64",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_OPSEVAL_RM_031",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "model_response": "The root cause is failing to first question the user and identify recent changes to the computer, which is the foundational step in establishing a theory of probable cause during troubleshooting. This oversight prevents accurate diagnosis and leads to ineffective resolution steps.",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "If necessary, conduct external or internal research based on symptoms."
+    "expected_root_cause": "If necessary, conduct external or internal research based on symptoms.",
+    "excluded_reason": "MCQ knowledge format (post-hoc audit 2026-05-25); originally judged DIAGNOSTIC by Qwen3-4B-Instruct fallback judge",
+    "bert_f1": 0.8488
   },
   {
     "case_id": "RCA_127",
@@ -3967,7 +4269,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "shipping_memory_leak",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8303
   },
   {
     "case_id": "RCA_093",
@@ -3977,7 +4280,8 @@
     "correct": true,
     "rule_score": 1.0,
     "expected_root_cause": "Puppet",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_168",
@@ -3987,7 +4291,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "carts_config_error",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8125
   },
   {
     "case_id": "RCA_162",
@@ -3997,7 +4302,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "ratings_memory_leak",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8238
   },
   {
     "case_id": "RCA_122",
@@ -4007,7 +4313,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "chaos-controller_dependency_failure",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8446
   },
   {
     "case_id": "RCA_079",
@@ -4017,17 +4324,20 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u8be5\u4ea4\u6362\u673a\u7aef\u53e3\u5df2\u7981\u7528\u3002; \u8be5\u4ea4\u6362\u673a\u5df2\u914d\u7f6e\u4f7f\u7528\u7aef\u53e3\u5b89\u5168\u3002"
+    "expected_root_cause": "\u8be5\u4ea4\u6362\u673a\u7aef\u53e3\u5df2\u7981\u7528\u3002; \u8be5\u4ea4\u6362\u673a\u5df2\u914d\u7f6e\u4f7f\u7528\u7aef\u53e3\u5b89\u5168\u3002",
+    "bert_f1": 0.7685
   },
   {
     "case_id": "RCA_OPSEVAL_RM_027",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "model_response": "The CLI requires device-by-device configuration (D), making it inefficient for large-scale deployments, and is prone to human error (A), increasing the risk of misconfigurations when managing many devices.",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "The CLI is prone to human error and misconfiguration.; The command line is used on a device-by-device basis."
+    "expected_root_cause": "The CLI is prone to human error and misconfiguration.; The command line is used on a device-by-device basis.",
+    "excluded_reason": "MCQ knowledge format (post-hoc audit 2026-05-25); originally judged DIAGNOSTIC by Qwen3-4B-Instruct fallback judge",
+    "bert_f1": 0.9071
   },
   {
     "case_id": "RCA_129",
@@ -4037,17 +4347,20 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "fluent_pod_crash",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8284
   },
   {
     "case_id": "RCA_OPSEVAL_RM_003",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "model_response": "Okay, let's see. Ralph is having issues with his Wi-Fi network. He's using 802.11n, which operates on the 2.4 GHz band. The problem is that there are many other networks using channels 1, 6, and 11, which are the default channels. This causes a lot of interference, leading to long association times and poor performance.\n\nThe question is asking what he should do. The options are to switch to channels 2, 5, 9, or 10. Since the 2.4 GHz band has only 11 channels, but channels 1, 6, and 11 are the mo",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "Configure his equipment to use channel 9"
+    "expected_root_cause": "Configure his equipment to use channel 9",
+    "excluded_reason": "MCQ knowledge format (post-hoc audit 2026-05-25); originally judged DIAGNOSTIC by Qwen3-4B-Instruct fallback judge",
+    "bert_f1": 0.8288
   },
   {
     "case_id": "RCA_154",
@@ -4057,7 +4370,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "productpage_disk_io_issue",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.7988
   },
   {
     "case_id": "RCA_176",
@@ -4067,7 +4381,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "redis_connection_timeout",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8434
   },
   {
     "case_id": "RCA_135",
@@ -4077,7 +4392,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "fluent_service_degradation",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8092
   },
   {
     "case_id": "RCA_019",
@@ -4087,17 +4403,20 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u65e0\u7ebf\u5c40\u57df\u7f51\u670d\u52a1\u5668"
+    "expected_root_cause": "\u65e0\u7ebf\u5c40\u57df\u7f51\u670d\u52a1\u5668",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_OPSEVAL_RM_010",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "model_response": "The least likely first step is checking the user's job title, as troubleshooting should focus on technical issues rather than user importance. Root cause: The question tests recognition that initial steps prioritize technical diagnosis over assessing user significance.",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "Check the configuration of the router connecting the Local Area Network (LAN) to the Internet."
+    "expected_root_cause": "Check the configuration of the router connecting the Local Area Network (LAN) to the Internet.",
+    "excluded_reason": "MCQ knowledge format (post-hoc audit 2026-05-25); originally judged DIAGNOSTIC by Qwen3-4B-Instruct fallback judge",
+    "bert_f1": 0.8405
   },
   {
     "case_id": "RCA_109",
@@ -4107,7 +4426,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "payment_connection_timeout",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8161
   },
   {
     "case_id": "RCA_086",
@@ -4117,7 +4437,8 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u9002\u7528\u4e8e\u5ef6\u8fdf\u8f83\u4f4e\u3001\u62e5\u585e\u975e\u5e38\u5c0f\u7684\u5927\u578b\u94fe\u63a5\uff0c\u4f46\u4e0d\u9700\u8981\u4f18\u5148\u7ea7\u6216\u6d41\u91cf\u7c7b\u522b\u7684\u8981\u6c42\u3002"
+    "expected_root_cause": "\u9002\u7528\u4e8e\u5ef6\u8fdf\u8f83\u4f4e\u3001\u62e5\u585e\u975e\u5e38\u5c0f\u7684\u5927\u578b\u94fe\u63a5\uff0c\u4f46\u4e0d\u9700\u8981\u4f18\u5148\u7ea7\u6216\u6d41\u91cf\u7c7b\u522b\u7684\u8981\u6c42\u3002",
+    "bert_f1": 0.7424
   },
   {
     "case_id": "RCA_104",
@@ -4127,7 +4448,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "mongodb_disk_io_issue",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8014
   },
   {
     "case_id": "RCA_161",
@@ -4137,7 +4459,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "productpage_memory_leak",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8234
   },
   {
     "case_id": "RCA_052",
@@ -4147,7 +4470,8 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u5927\u4e8e255\u7684\u6570\u5b57\u5206\u7ec4\u3002"
+    "expected_root_cause": "\u5927\u4e8e255\u7684\u6570\u5b57\u5206\u7ec4\u3002",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_137",
@@ -4157,7 +4481,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "catalogue_service_degradation",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8136
   },
   {
     "case_id": "RCA_169",
@@ -4167,27 +4492,32 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "orders-db_cpu_spike",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8204
   },
   {
     "case_id": "RCA_OPSEVAL_RM_012",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "model_response": "The root cause is a failure in the connection between the WAP and the router, preventing access to network resources while allowing local communication. Troubleshoot the connection between the WAP and the router first.",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "The connection between the WAP and the router"
+    "expected_root_cause": "The connection between the WAP and the router",
+    "excluded_reason": "MCQ knowledge format (post-hoc audit 2026-05-25); originally judged DIAGNOSTIC by Qwen3-4B-Instruct fallback judge",
+    "bert_f1": 0.9198
   },
   {
     "case_id": "RCA_OPSEVAL_RM_001",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "model_response": "The least likely step is checking the user's job title, as troubleshooting focuses on technical diagnostics rather than user importance. Alice would prioritize checking local network access, verifying if others are affected, and examining router configuration before considering non-technical factors like job title.",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "Check the configuration of the router connecting the LAN to the Internet"
+    "expected_root_cause": "Check the configuration of the router connecting the LAN to the Internet",
+    "excluded_reason": "MCQ knowledge format (post-hoc audit 2026-05-25); originally judged DIAGNOSTIC by Qwen3-4B-Instruct fallback judge",
+    "bert_f1": 0.8724
   },
   {
     "case_id": "RCA_051",
@@ -4197,7 +4527,8 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "MAC\u6cdb\u6d2a\u653b\u51fb"
+    "expected_root_cause": "MAC\u6cdb\u6d2a\u653b\u51fb",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_170",
@@ -4207,7 +4538,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "catalogue_connection_timeout",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8256
   },
   {
     "case_id": "RCA_128",
@@ -4217,7 +4549,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "dashboard_service_degradation",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8151
   },
   {
     "case_id": "RCA_114",
@@ -4227,7 +4560,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "paymentservice_dependency_failure",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8029
   },
   {
     "case_id": "RCA_045",
@@ -4237,7 +4571,8 @@
     "correct": false,
     "rule_score": 0.0,
     "expected_root_cause": "With the exception of the source port, floods the network with the frame looking for the device",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.9178
   },
   {
     "case_id": "RCA_056",
@@ -4247,7 +4582,8 @@
     "correct": true,
     "rule_score": 1.0,
     "expected_root_cause": "SSH encrypts all data exchange, including login passwords; Telnet encrypts nothing.",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.9393
   },
   {
     "case_id": "RCA_090",
@@ -4257,27 +4593,32 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u624b\u52a8\u8f93\u5165SSID\u3002"
+    "expected_root_cause": "\u624b\u52a8\u8f93\u5165SSID\u3002",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_OPSEVAL_RM_016",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "model_response": "The 5 GHz frequency performs better due to having more channels (A), fewer conflicts with household devices (C), and faster transmission speeds (D). The 5 GHz frequency does not support longer ranges than 2.4 GHz (B is incorrect).",
     "correct": false,
     "rule_score": 0.0,
     "expected_root_cause": "The 5 GHz frequency has more channels than the 2.4 GHz frequency.; The 5 GHz frequency conflicts with fewer common household devices than the 2.4 GHz frequency.; The 5 GHz frequency transmits at faster speeds than the 2.4 GHz frequency.",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "excluded_reason": "MCQ knowledge format (post-hoc audit 2026-05-25); originally judged DIAGNOSTIC by Qwen3-4B-Instruct fallback judge",
+    "bert_f1": 0.9066
   },
   {
     "case_id": "RCA_OPSEVAL_RM_022",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "model_response": "The root cause is likely a temporary device glitch or incorrect Wi-Fi configuration. The recommended actions are to power cycle the device (A), forget the Wi-Fi network (D), and verify the correct SSID was entered (E).",
     "correct": false,
     "rule_score": 0.0,
     "expected_root_cause": "Power cycle the device.; Forget the Wi-Fi network.; Ensure that the correct SSID was entered.",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "excluded_reason": "MCQ knowledge format (post-hoc audit 2026-05-25); originally judged DIAGNOSTIC by Qwen3-4B-Instruct fallback judge",
+    "bert_f1": 0.9161
   },
   {
     "case_id": "RCA_062",
@@ -4287,7 +4628,8 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "2xx\uff1a\u6210\u529f\n3xx\uff1a\u91cd\u5b9a\u5411\n4xx\uff1a\u5ba2\u6237\u7aef\u9519\u8bef\n5xx\uff1a\u670d\u52a1\u5668\u9519\u8bef"
+    "expected_root_cause": "2xx\uff1a\u6210\u529f\n3xx\uff1a\u91cd\u5b9a\u5411\n4xx\uff1a\u5ba2\u6237\u7aef\u9519\u8bef\n5xx\uff1a\u670d\u52a1\u5668\u9519\u8bef",
+    "bert_f1": 0.7757
   },
   {
     "case_id": "RCA_167",
@@ -4297,7 +4639,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "ratings_disk_io_issue",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.869
   },
   {
     "case_id": "RCA_039",
@@ -4307,7 +4650,8 @@
     "correct": true,
     "rule_score": 1.0,
     "expected_root_cause": "CCXv3",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_047",
@@ -4317,17 +4661,20 @@
     "correct": true,
     "rule_score": 1.0,
     "expected_root_cause": "Data link",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_OPSEVAL_RM_004",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "model_response": "The correct answer is A. Because the fact that one of your clients has decided to leave your network for an AP you do not manage is suspicious.",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "Because the fact that one of your clients has decided to leave your network for an AP you do not manage is suspicious"
+    "expected_root_cause": "Because the fact that one of your clients has decided to leave your network for an AP you do not manage is suspicious",
+    "excluded_reason": "MCQ knowledge format (post-hoc audit 2026-05-25); originally judged DIAGNOSTIC by Qwen3-4B-Instruct fallback judge",
+    "bert_f1": 0.9744
   },
   {
     "case_id": "RCA_006",
@@ -4337,17 +4684,20 @@
     "correct": false,
     "rule_score": 0.0,
     "expected_root_cause": "Underlay network",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8483
   },
   {
     "case_id": "RCA_OPSEVAL_RM_019",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "model_response": "The intermittent connection drops are likely due to wireless channel congestion or interference. Changing the channel the devices are using (Option C) would mitigate this by reducing interference from other devices or networks on the same frequency.",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "Change the channel the devices are using"
+    "expected_root_cause": "Change the channel the devices are using",
+    "excluded_reason": "MCQ knowledge format (post-hoc audit 2026-05-25); originally judged DIAGNOSTIC by Qwen3-4B-Instruct fallback judge",
+    "bert_f1": 0.903
   },
   {
     "case_id": "RCA_025",
@@ -4357,7 +4707,8 @@
     "correct": false,
     "rule_score": 0.0,
     "expected_root_cause": "Intersection.",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_092",
@@ -4367,7 +4718,8 @@
     "correct": false,
     "rule_score": 0.0,
     "expected_root_cause": "INVITE; UPDATE",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_179",
@@ -4377,7 +4729,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "details_dependency_failure",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8211
   },
   {
     "case_id": "RCA_140",
@@ -4387,7 +4740,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "queue_resource_exhaustion",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.821
   },
   {
     "case_id": "RCA_146",
@@ -4397,7 +4751,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "user_service_degradation",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8227
   },
   {
     "case_id": "RCA_082",
@@ -4407,17 +4762,20 @@
     "correct": true,
     "rule_score": 1.0,
     "expected_root_cause": "Reduce user access volume",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8837
   },
   {
     "case_id": "RCA_OPSEVAL_RM_029",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Mobile Communication Network",
     "model_response": "The root cause is that recurring error messages indicate a systemic issue requiring configuration validation rather than immediate hardware replacement or service restarts. Checking related system configurations is the appropriate next step to identify misconfigurations or inconsistencies causing the repeated errors.",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "Check the related system configurations"
+    "expected_root_cause": "Check the related system configurations",
+    "excluded_reason": "MCQ knowledge format (post-hoc audit 2026-05-25); originally judged DIAGNOSTIC by Qwen3-4B-Instruct fallback judge",
+    "bert_f1": 0.8789
   },
   {
     "case_id": "RCA_005",
@@ -4427,7 +4785,8 @@
     "correct": false,
     "rule_score": 0.0,
     "expected_root_cause": "10.168.0.0/24; 10.173.1.0/28",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8763
   },
   {
     "case_id": "RCA_044",
@@ -4437,7 +4796,8 @@
     "correct": false,
     "rule_score": 0.0,
     "expected_root_cause": "You can switch seamlessly between the Task Attribute view and the Raw view without losing your configuration.",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8704
   },
   {
     "case_id": "RCA_074",
@@ -4447,7 +4807,8 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "IPv6 DHCP\u4e2d\u7ee7\u76ee\u7684\u5730\u3002"
+    "expected_root_cause": "IPv6 DHCP\u4e2d\u7ee7\u76ee\u7684\u5730\u3002",
+    "bert_f1": 0.887
   },
   {
     "case_id": "RCA_158",
@@ -4457,7 +4818,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "fluent_connection_timeout",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8268
   },
   {
     "case_id": "RCA_033",
@@ -4467,7 +4829,8 @@
     "correct": true,
     "rule_score": 1.0,
     "expected_root_cause": "SDN",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_037",
@@ -4477,7 +4840,8 @@
     "correct": false,
     "rule_score": 0.0,
     "expected_root_cause": "Analyze the disk usage of each server and identify the files or directories occupying the most space",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.9224
   },
   {
     "case_id": "RCA_050",
@@ -4487,7 +4851,8 @@
     "correct": true,
     "rule_score": 1.0,
     "expected_root_cause": "Mesh-to-spoke",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_015",
@@ -4497,7 +4862,8 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u5f53LSA\u8fbe\u52303600\u79d2\u65f6\uff0c\u901a\u8fc7\u5220\u9664LSA\u6765\u4f7f\u5176\u8fc7\u65f6\u3002"
+    "expected_root_cause": "\u5f53LSA\u8fbe\u52303600\u79d2\u65f6\uff0c\u901a\u8fc7\u5220\u9664LSA\u6765\u4f7f\u5176\u8fc7\u65f6\u3002",
+    "bert_f1": 0.7823
   },
   {
     "case_id": "RCA_083",
@@ -4507,7 +4873,8 @@
     "correct": true,
     "rule_score": 1.0,
     "expected_root_cause": "STP",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_089",
@@ -4517,7 +4884,8 @@
     "correct": true,
     "rule_score": 1.0,
     "expected_root_cause": "ISM",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_067",
@@ -4527,7 +4895,8 @@
     "correct": true,
     "rule_score": 1.0,
     "expected_root_cause": "100MHz",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_055",
@@ -4537,7 +4906,8 @@
     "correct": false,
     "rule_score": 0.0,
     "expected_root_cause": "No specific requirements must be met.",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8878
   },
   {
     "case_id": "RCA_126",
@@ -4547,7 +4917,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "queue_dependency_failure",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8334
   },
   {
     "case_id": "RCA_027",
@@ -4557,7 +4928,8 @@
     "correct": false,
     "rule_score": 0.0,
     "expected_root_cause": "Level of engineering expertise needed; Number of managed endpoints; Correlation of information across devices",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.9207
   },
   {
     "case_id": "RCA_066",
@@ -4567,17 +4939,20 @@
     "correct": true,
     "rule_score": 1.0,
     "expected_root_cause": "Host",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_OPSEVAL_RM_008",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "model_response": "The root cause of the poor network performance is excessive interference from neighboring networks using overlapping channels (1, 6, 11) on the 2.4 GHz band. The optimal solution is to configure the equipment to use channel 9, which is less commonly used and minimizes overlap with the crowded standard channels.",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "Configure your equipment to use channel 9."
+    "expected_root_cause": "Configure your equipment to use channel 9.",
+    "excluded_reason": "MCQ knowledge format (post-hoc audit 2026-05-25); originally judged DIAGNOSTIC by Qwen3-4B-Instruct fallback judge",
+    "bert_f1": 0.8824
   },
   {
     "case_id": "RCA_053",
@@ -4587,7 +4962,8 @@
     "correct": true,
     "rule_score": 1.0,
     "expected_root_cause": "80",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_112",
@@ -4597,7 +4973,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "checkoutservice_cpu_spike",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.847
   },
   {
     "case_id": "RCA_132",
@@ -4607,7 +4984,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "orders_dependency_failure",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.7968
   },
   {
     "case_id": "RCA_069",
@@ -4617,17 +4995,20 @@
     "correct": false,
     "rule_score": 0.0,
     "expected_root_cause": "\u78c1\u76d8\u955c\u50cf\u4f7f\u670d\u52a1\u5668\u80fd\u591f\u5728\u78c1\u76d8\u9a71\u52a8\u5668\u6216\u78c1\u76d8\u63a7\u5236\u5668\u6545\u969c\u65f6\u7ee7\u7eed\u8fd0\u884c\u3002",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.754
   },
   {
     "case_id": "RCA_OPSEVAL_RM_011",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "model_response": "The leaf and spine topology is not necessarily less expensive to implement than the three-tier topology, making option C the incorrect reason. The three-tier topology can be more cost-effective in smaller-scale deployments due to fewer switches and simpler cabling requirements.",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "The leaf and spine topology is less expensive to implement than the three-tier topology."
+    "expected_root_cause": "The leaf and spine topology is less expensive to implement than the three-tier topology.",
+    "excluded_reason": "MCQ knowledge format (post-hoc audit 2026-05-25); originally judged DIAGNOSTIC by Qwen3-4B-Instruct fallback judge",
+    "bert_f1": 0.9295
   },
   {
     "case_id": "RCA_018",
@@ -4637,17 +5018,20 @@
     "correct": false,
     "rule_score": 0.0,
     "expected_root_cause": "option2",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_OPSEVAL_RM_032",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "model_response": "The complete failure of a wired network connection is caused by duplex mismatch (C), TX/RX reversal (D), and a bad switch port (E), as these issues prevent link establishment or result in non-functional communication. Speed mismatch (B) may cause performance issues but not a complete failure, and bottleneck (A) affects throughput, not connectivity.",
     "correct": false,
     "rule_score": 0.0,
     "expected_root_cause": "Speed mismatch; TX/RX reversal; Bad switch port",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "excluded_reason": "MCQ knowledge format (post-hoc audit 2026-05-25); originally judged DIAGNOSTIC by Qwen3-4B-Instruct fallback judge",
+    "bert_f1": 0.8781
   },
   {
     "case_id": "RCA_060",
@@ -4657,7 +5041,8 @@
     "correct": true,
     "rule_score": 1.0,
     "expected_root_cause": "A device that converts analog signals to digital signals and back again",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8989
   },
   {
     "case_id": "RCA_108",
@@ -4667,7 +5052,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "orders_connection_timeout",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8258
   },
   {
     "case_id": "RCA_087",
@@ -4677,7 +5063,8 @@
     "correct": true,
     "rule_score": 1.0,
     "expected_root_cause": "`ping`",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_131",
@@ -4687,7 +5074,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "recommendationservice_pod_crash",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.7953
   },
   {
     "case_id": "RCA_013",
@@ -4697,7 +5085,8 @@
     "correct": true,
     "rule_score": 1.0,
     "expected_root_cause": "systemctl enable",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8532
   },
   {
     "case_id": "RCA_103",
@@ -4707,7 +5096,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "chaos_memory_leak",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8415
   },
   {
     "case_id": "RCA_173",
@@ -4717,17 +5107,20 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "ratings_network_latency",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8556
   },
   {
     "case_id": "RCA_OPSEVAL_RM_007",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "model_response": "The routing table lacks a default gateway entry, preventing the user's workstation from routing internet-bound traffic beyond the local network. The absence of a default gateway (0.0.0.0/0) with a valid next-hop address is the root cause of the internet connectivity failure.",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "The routing table does not specify a default gateway address."
+    "expected_root_cause": "The routing table does not specify a default gateway address.",
+    "excluded_reason": "MCQ knowledge format (post-hoc audit 2026-05-25); originally judged DIAGNOSTIC by Qwen3-4B-Instruct fallback judge",
+    "bert_f1": 0.8979
   },
   {
     "case_id": "RCA_084",
@@ -4737,7 +5130,8 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u8bbf\u95ee"
+    "expected_root_cause": "\u8bbf\u95ee",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_125",
@@ -4747,7 +5141,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "reviews_dependency_failure",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8264
   },
   {
     "case_id": "RCA_007",
@@ -4757,7 +5152,8 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u903b\u8f91\u56fe\u3002"
+    "expected_root_cause": "\u903b\u8f91\u56fe\u3002",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_134",
@@ -4767,7 +5163,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "front_resource_exhaustion",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8138
   },
   {
     "case_id": "RCA_180",
@@ -4777,27 +5174,32 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "ebs_cpu_spike",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_OPSEVAL_RM_009",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "model_response": "The root cause is a network issue between the workstations and the server, which can be identified by running `tracert` from a workstation to trace the network path and detect packet loss or routing problems.",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "Check the server console for user connections."
+    "expected_root_cause": "Check the server console for user connections.",
+    "excluded_reason": "MCQ knowledge format (post-hoc audit 2026-05-25); originally judged DIAGNOSTIC by Qwen3-4B-Instruct fallback judge",
+    "bert_f1": 0.8649
   },
   {
     "case_id": "RCA_OPSEVAL_RM_026",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "model_response": "The issue is likely caused by a problem with the Wireless Access Point (WAP), as the connectivity issue affects only wireless devices (laptops) while wired devices (desktops) function normally.",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "WAP"
+    "expected_root_cause": "WAP",
+    "excluded_reason": "MCQ knowledge format (post-hoc audit 2026-05-25); originally judged DIAGNOSTIC by Qwen3-4B-Instruct fallback judge",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_145",
@@ -4807,7 +5209,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "orders_config_error",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8238
   },
   {
     "case_id": "RCA_160",
@@ -4817,7 +5220,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "prometheus_pod_crash",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8311
   },
   {
     "case_id": "RCA_096",
@@ -4827,7 +5231,8 @@
     "correct": true,
     "rule_score": 1.0,
     "expected_root_cause": "Control plane",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_070",
@@ -4837,7 +5242,8 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "IPv6\u5730\u5740\u81ea\u52a8\u914d\u7f6e"
+    "expected_root_cause": "IPv6\u5730\u5740\u81ea\u52a8\u914d\u7f6e",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_003",
@@ -4847,7 +5253,8 @@
     "correct": true,
     "rule_score": 1.0,
     "expected_root_cause": "Short",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_094",
@@ -4857,17 +5264,20 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u9519\u8bef\u7684\uff0c\u4e0d\u6b63\u786e\u7684\u3002"
+    "expected_root_cause": "\u9519\u8bef\u7684\uff0c\u4e0d\u6b63\u786e\u7684\u3002",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_OPSEVAL_RM_017",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "model_response": "The workstation is using an APIPA (169.254.x.x) address, indicating failure to obtain a DHCP lease, which could be due to the DHCPv4 scope being exhausted (no available IP addresses), preventing proper network configuration. The incorrect subnet mask (255.255.0.0) is a secondary symptom of the failed DHCP assignment.",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "The DHCPv4 scope is exhausted."
+    "expected_root_cause": "The DHCPv4 scope is exhausted.",
+    "excluded_reason": "MCQ knowledge format (post-hoc audit 2026-05-25); originally judged DIAGNOSTIC by Qwen3-4B-Instruct fallback judge",
+    "bert_f1": 0.8907
   },
   {
     "case_id": "RCA_023",
@@ -4877,17 +5287,20 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u6b63\u5219\u8868\u8fbe\u5f0f\u89e3\u6790\uff1a\u4f7f\u7528\u6b63\u5219\u8868\u8fbe\u5f0f\u5339\u914d\u65e5\u5fd7\u884c\u4e2d\u7684\u7279\u5b9a\u6a21\u5f0f\uff0c\u5e76\u63d0\u53d6\u6240\u9700\u7684\u5b57\u6bb5\u3002\u8fd9\u79cd\u65b9\u6cd5\u901a\u5e38\u7528\u4e8e\u65e5\u5fd7\u683c\u5f0f\u6bd4\u8f83\u56fa\u5b9a\u3001\u89c4\u5219\u660e\u786e\u7684\u60c5\u51b5\u3002\n\u6a21\u677f\u89e3\u6790\uff1a\u6709\u4e9b\u65e5\u5fd7\u683c\u5f0f\u662f\u57fa\u4e8e\u6a21\u677f\u751f\u6210\u7684\uff0c\u53ef\u4ee5\u6839\u636e\u65e5\u5fd7\u6a21\u677f\u7684\u5b9a\u4e49\u6765\u89e3\u6790\u65e5\u5fd7\u884c\uff0c\u63d0\u53d6\u6240\u9700\u7684\u5b57\u6bb5\u3002\u8fd9\u79cd\u65b9\u6cd5\u9002\u7528\u4e8e\u6a21\u677f\u683c\u5f0f\u7684\u65e5\u5fd7\u3002\n\u5206\u5272\u7b26\u89e3\u6790\uff1a\u6839\u636e\u6307\u5b9a\u7684\u5206\u9694\u7b26\u5c06\u65e5\u5fd7\u884c\u5206\u5272\u6210\u591a\u4e2a\u5b57\u6bb5\u3002\u8fd9\u79cd\u65b9\u6cd5\u9002\u7528\u4e8e\u7b80\u5355\u7684\u65e5\u5fd7\u683c\u5f0f\uff0c\u5982\u4ee5\u7a7a\u683c\u6216\u9017\u53f7\u5206\u9694\u7684\u65e5\u5fd7\u884c\u3002\n\u673a\u5668\u5b66\u4e60\u7b97\u6cd5\uff1a\u4f7f\u7528\u673a\u5668\u5b66\u4e60\u7b97\u6cd5\u5bf9\u65e5\u5fd7\u6570\u636e\u8fdb\u884c\u8bad\u7ec3\u548c\u5b66\u4e60\uff0c\u81ea\u52a8\u8bc6\u522b\u548c\u63d0\u53d6\u5b57\u6bb5\u3002\u8fd9\u79cd\u65b9\u6cd5\u9002\u7528\u4e8e\u590d\u6742\u7684\u65e5\u5fd7\u683c\u5f0f\u548c\u4e0d\u89c4\u5219\u7684\u6587\u672c\u6570\u636e\u3002\nNLP\uff08\u81ea\u7136\u8bed\u8a00\u5904\u7406\uff09\u6280\u672f\uff1a\u901a\u8fc7\u81ea\u7136\u8bed\u8a00\u5904\u7406\u6280\u672f\u5bf9\u65e5\u5fd7\u6587\u672c\u8fdb\u884c\u89e3\u6790\u548c\u8bed\u4e49\u7406\u89e3\uff0c\u63d0\u53d6\u6240\u9700\u7684\u5b57\u6bb5\u3002\u8fd9\u79cd\u65b9\u6cd5\u9002\u7528\u4e8e\u5305\u542b\u4eba\u7c7b\u53ef\u8bfb\u4fe1\u606f\u7684\u65e5\u5fd7\u6570\u636e\u3002\n\u6839\u636e\u4e0d\u540c\u7684\u65e5\u5fd7\u683c\u5f0f\u548c\u9700\u6c42\uff0c\u53ef\u4ee5\u9009\u62e9\u9002\u5408\u7684\u65b9\u6cd5\u8fdb\u884c\u5b57\u6bb5\u62bd\u53d6\u3002\u5728\u5b9e\u9645\u5e94\u7528\u4e2d\uff0c\u53ef\u80fd\u9700\u8981\u6839\u636e\u5177\u4f53\u60c5\u51b5\u7ec4\u5408\u4f7f\u7528\u591a\u79cd\u65b9\u6cd5\u3002"
+    "expected_root_cause": "\u6b63\u5219\u8868\u8fbe\u5f0f\u89e3\u6790\uff1a\u4f7f\u7528\u6b63\u5219\u8868\u8fbe\u5f0f\u5339\u914d\u65e5\u5fd7\u884c\u4e2d\u7684\u7279\u5b9a\u6a21\u5f0f\uff0c\u5e76\u63d0\u53d6\u6240\u9700\u7684\u5b57\u6bb5\u3002\u8fd9\u79cd\u65b9\u6cd5\u901a\u5e38\u7528\u4e8e\u65e5\u5fd7\u683c\u5f0f\u6bd4\u8f83\u56fa\u5b9a\u3001\u89c4\u5219\u660e\u786e\u7684\u60c5\u51b5\u3002\n\u6a21\u677f\u89e3\u6790\uff1a\u6709\u4e9b\u65e5\u5fd7\u683c\u5f0f\u662f\u57fa\u4e8e\u6a21\u677f\u751f\u6210\u7684\uff0c\u53ef\u4ee5\u6839\u636e\u65e5\u5fd7\u6a21\u677f\u7684\u5b9a\u4e49\u6765\u89e3\u6790\u65e5\u5fd7\u884c\uff0c\u63d0\u53d6\u6240\u9700\u7684\u5b57\u6bb5\u3002\u8fd9\u79cd\u65b9\u6cd5\u9002\u7528\u4e8e\u6a21\u677f\u683c\u5f0f\u7684\u65e5\u5fd7\u3002\n\u5206\u5272\u7b26\u89e3\u6790\uff1a\u6839\u636e\u6307\u5b9a\u7684\u5206\u9694\u7b26\u5c06\u65e5\u5fd7\u884c\u5206\u5272\u6210\u591a\u4e2a\u5b57\u6bb5\u3002\u8fd9\u79cd\u65b9\u6cd5\u9002\u7528\u4e8e\u7b80\u5355\u7684\u65e5\u5fd7\u683c\u5f0f\uff0c\u5982\u4ee5\u7a7a\u683c\u6216\u9017\u53f7\u5206\u9694\u7684\u65e5\u5fd7\u884c\u3002\n\u673a\u5668\u5b66\u4e60\u7b97\u6cd5\uff1a\u4f7f\u7528\u673a\u5668\u5b66\u4e60\u7b97\u6cd5\u5bf9\u65e5\u5fd7\u6570\u636e\u8fdb\u884c\u8bad\u7ec3\u548c\u5b66\u4e60\uff0c\u81ea\u52a8\u8bc6\u522b\u548c\u63d0\u53d6\u5b57\u6bb5\u3002\u8fd9\u79cd\u65b9\u6cd5\u9002\u7528\u4e8e\u590d\u6742\u7684\u65e5\u5fd7\u683c\u5f0f\u548c\u4e0d\u89c4\u5219\u7684\u6587\u672c\u6570\u636e\u3002\nNLP\uff08\u81ea\u7136\u8bed\u8a00\u5904\u7406\uff09\u6280\u672f\uff1a\u901a\u8fc7\u81ea\u7136\u8bed\u8a00\u5904\u7406\u6280\u672f\u5bf9\u65e5\u5fd7\u6587\u672c\u8fdb\u884c\u89e3\u6790\u548c\u8bed\u4e49\u7406\u89e3\uff0c\u63d0\u53d6\u6240\u9700\u7684\u5b57\u6bb5\u3002\u8fd9\u79cd\u65b9\u6cd5\u9002\u7528\u4e8e\u5305\u542b\u4eba\u7c7b\u53ef\u8bfb\u4fe1\u606f\u7684\u65e5\u5fd7\u6570\u636e\u3002\n\u6839\u636e\u4e0d\u540c\u7684\u65e5\u5fd7\u683c\u5f0f\u548c\u9700\u6c42\uff0c\u53ef\u4ee5\u9009\u62e9\u9002\u5408\u7684\u65b9\u6cd5\u8fdb\u884c\u5b57\u6bb5\u62bd\u53d6\u3002\u5728\u5b9e\u9645\u5e94\u7528\u4e2d\uff0c\u53ef\u80fd\u9700\u8981\u6839\u636e\u5177\u4f53\u60c5\u51b5\u7ec4\u5408\u4f7f\u7528\u591a\u79cd\u65b9\u6cd5\u3002",
+    "bert_f1": 0.7168
   },
   {
     "case_id": "RCA_OPSEVAL_RM_002",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "model_response": "The leaf and spine topology ensures consistent hop counts for all data flows (B) and employs a full mesh topology between leaf and spine switches (C), which improves scalability and reduces latency compared to the three-tier model.",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "In a leaf and spine topology, all data flows require the same number of hops.; The leaf and spine arrangement uses a full mesh switching topology.; The leaf and spine topology uses software-defined networking to direct traffic, rather than blocking ports using the spanning tree protocol."
+    "expected_root_cause": "In a leaf and spine topology, all data flows require the same number of hops.; The leaf and spine arrangement uses a full mesh switching topology.; The leaf and spine topology uses software-defined networking to direct traffic, rather than blocking ports using the spanning tree protocol.",
+    "excluded_reason": "MCQ knowledge format (post-hoc audit 2026-05-25); originally judged DIAGNOSTIC by Qwen3-4B-Instruct fallback judge",
+    "bert_f1": 0.8952
   },
   {
     "case_id": "RCA_036",
@@ -4897,17 +5310,20 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "BGP\u662f\u4e00\u79cd\u94fe\u8def\u72b6\u6001\u8def\u7531\u534f\u8bae\u3002"
+    "expected_root_cause": "BGP\u662f\u4e00\u79cd\u94fe\u8def\u72b6\u6001\u8def\u7531\u534f\u8bae\u3002",
+    "bert_f1": 0.7716
   },
   {
     "case_id": "RCA_OPSEVAL_RM_033",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "model_response": "The root cause is Wi-Fi interference due to channel congestion or overlapping signals. The most effective solutions are choosing a different channel (D) to avoid congestion and disabling SSID broadcast (B) to reduce unnecessary network discovery traffic that may exacerbate interference.",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "Increase the WAP's power setting.; Choose a different channel."
+    "expected_root_cause": "Increase the WAP's power setting.; Choose a different channel.",
+    "excluded_reason": "MCQ knowledge format (post-hoc audit 2026-05-25); originally judged DIAGNOSTIC by Qwen3-4B-Instruct fallback judge",
+    "bert_f1": 0.8582
   },
   {
     "case_id": "RCA_111",
@@ -4917,7 +5333,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "redis_service_degradation",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8367
   },
   {
     "case_id": "RCA_022",
@@ -4927,17 +5344,20 @@
     "correct": false,
     "rule_score": 0.0,
     "expected_root_cause": "REFER",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_OPSEVAL_RM_028",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "model_response": "The root cause is that the device is not properly obtaining an IP address from the DHCP server, leading to a duplicate IP conflict. The next step is to ensure the device is configured to automatically obtain an IP address via DHCP.",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "Ensure that this computer is set to obtain an IP address automatically."
+    "expected_root_cause": "Ensure that this computer is set to obtain an IP address automatically.",
+    "excluded_reason": "MCQ knowledge format (post-hoc audit 2026-05-25); originally judged DIAGNOSTIC by Qwen3-4B-Instruct fallback judge",
+    "bert_f1": 0.9102
   },
   {
     "case_id": "RCA_181",
@@ -4947,7 +5367,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "productpage_network_latency",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8169
   },
   {
     "case_id": "RCA_157",
@@ -4957,7 +5378,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "reviews_resource_exhaustion",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8229
   },
   {
     "case_id": "RCA_072",
@@ -4967,7 +5389,8 @@
     "correct": false,
     "rule_score": 0.0,
     "expected_root_cause": "The network is a Class B network.; The number of host bits in the unsubnetted network is 16.",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8935
   },
   {
     "case_id": "RCA_043",
@@ -4977,7 +5400,8 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u5dee\u5206\u7684\uff1b\u5fae\u5206\u7684\uff1b\u5dee\u5f02\u7684"
+    "expected_root_cause": "\u5dee\u5206\u7684\uff1b\u5fae\u5206\u7684\uff1b\u5dee\u5f02\u7684",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_014",
@@ -4987,7 +5411,8 @@
     "correct": false,
     "rule_score": 0.0,
     "expected_root_cause": "The Windows-based firewall; The Cisco router; One of the Linux web servers",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8597
   },
   {
     "case_id": "RCA_183",
@@ -4997,17 +5422,20 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "catalogue_disk_io_issue",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.7961
   },
   {
     "case_id": "RCA_OPSEVAL_RM_013",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "model_response": "The most likely problem is that the default gateway is down, preventing access to external networks while allowing local communication like printing. Other users being affected and no error messages align with a gateway failure rather than isolated issues like IP conflicts or subnet mask errors.",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "Default gateway down"
+    "expected_root_cause": "Default gateway down",
+    "excluded_reason": "MCQ knowledge format (post-hoc audit 2026-05-25); originally judged DIAGNOSTIC by Qwen3-4B-Instruct fallback judge",
+    "bert_f1": 0.865
   },
   {
     "case_id": "RCA_001",
@@ -5017,7 +5445,8 @@
     "correct": false,
     "rule_score": 0.0,
     "expected_root_cause": "The EIGRP command distance 165 10.1.1.1 0.0.0.0 changes the AD to 165 for internal EIGRP routes learned from neighbor 10.1.1.1.",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.9913
   },
   {
     "case_id": "RCA_166",
@@ -5027,7 +5456,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "shippingservice_cpu_spike",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8029
   },
   {
     "case_id": "RCA_030",
@@ -5037,7 +5467,8 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u5c06\u60a8\u7684\u8bbe\u5907\u914d\u7f6e\u4e3a\u4f7f\u7528\u9891\u90539\u3002"
+    "expected_root_cause": "\u5c06\u60a8\u7684\u8bbe\u5907\u914d\u7f6e\u4e3a\u4f7f\u7528\u9891\u90539\u3002",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_136",
@@ -5047,7 +5478,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "orders-db_network_latency",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8117
   },
   {
     "case_id": "RCA_172",
@@ -5057,7 +5489,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "orders-db_memory_leak",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8271
   },
   {
     "case_id": "RCA_099",
@@ -5067,7 +5500,8 @@
     "correct": false,
     "rule_score": 0.0,
     "expected_root_cause": "Ring; Mesh",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_010",
@@ -5077,7 +5511,8 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "A"
+    "expected_root_cause": "A",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_120",
@@ -5087,7 +5522,8 @@
     "correct": false,
     "rule_score": 0.0,
     "expected_root_cause": "ratings_cpu_spike",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8195
   },
   {
     "case_id": "RCA_149",
@@ -5097,7 +5533,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "catalogue-db_resource_exhaustion",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8291
   },
   {
     "case_id": "RCA_110",
@@ -5107,7 +5544,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "metrics_network_latency",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8326
   },
   {
     "case_id": "RCA_159",
@@ -5117,7 +5555,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "loadgenerator_memory_leak",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8219
   },
   {
     "case_id": "RCA_148",
@@ -5127,7 +5566,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "chaos-controller_config_error",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8377
   },
   {
     "case_id": "RCA_147",
@@ -5137,27 +5577,32 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "currencyservice_pod_crash",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.7883
   },
   {
     "case_id": "RCA_OPSEVAL_RM_015",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "model_response": "The root cause is the user's lack of knowledge about the appropriate command-line tool for viewing network connection statistics. The correct utility is `netstat`, which displays active TCP connections and their associated IP addresses.",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "`netstat`"
+    "expected_root_cause": "`netstat`",
+    "excluded_reason": "MCQ knowledge format (post-hoc audit 2026-05-25); originally judged DIAGNOSTIC by Qwen3-4B-Instruct fallback judge",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_OPSEVAL_RM_024",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "model_response": "The most appropriate tool to test the theory that network cables are mislabeled is a tone generator and probe, as it allows tracing and identifying specific cables by sending a signal through the wire and detecting it with the probe.",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "Tone generator and probe"
+    "expected_root_cause": "Tone generator and probe",
+    "excluded_reason": "MCQ knowledge format (post-hoc audit 2026-05-25); originally judged DIAGNOSTIC by Qwen3-4B-Instruct fallback judge",
+    "bert_f1": 0.8549
   },
   {
     "case_id": "RCA_058",
@@ -5167,7 +5612,8 @@
     "correct": false,
     "rule_score": 0.0,
     "expected_root_cause": "Analyze the source and destination of the traffic data",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.9087
   },
   {
     "case_id": "RCA_038",
@@ -5177,17 +5623,20 @@
     "correct": false,
     "rule_score": 0.0,
     "expected_root_cause": "1000Base-T",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_OPSEVAL_RM_018",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "model_response": "The user is likely working on one of the Linux web servers (B) or the Cisco router (A), as these are hosts or network devices capable of executing the traceroute command to diagnose connectivity issues. The CSU/DSU console (C) is not a host or network device that runs such commands, and the Windows-based firewall (D) is typically not used as a source for traceroute in this context.",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "The Cisco router; One of the Linux web servers"
+    "expected_root_cause": "The Cisco router; One of the Linux web servers",
+    "excluded_reason": "MCQ knowledge format (post-hoc audit 2026-05-25); originally judged DIAGNOSTIC by Qwen3-4B-Instruct fallback judge",
+    "bert_f1": 0.8618
   },
   {
     "case_id": "RCA_046",
@@ -5197,7 +5646,8 @@
     "correct": true,
     "rule_score": 1.0,
     "expected_root_cause": "False",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_164",
@@ -5207,7 +5657,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "kube_config_error",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8049
   },
   {
     "case_id": "RCA_076",
@@ -5217,7 +5668,8 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u7f51\u7edc\u5206\u6790\u7b56\u7565"
+    "expected_root_cause": "\u7f51\u7edc\u5206\u6790\u7b56\u7565",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_059",
@@ -5227,17 +5679,20 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u9009\u62e9\u5408\u9002\u7684\u65e5\u5fd7\u6587\u4ef6\uff1a\u6839\u636e\u9700\u8981\u9009\u62e9\u8981\u5206\u6790\u7684\u65e5\u5fd7\u6587\u4ef6\uff0c\u5982\u9519\u8bef\u65e5\u5fd7\u3001\u67e5\u8be2\u65e5\u5fd7\u3001\u6162\u67e5\u8be2\u65e5\u5fd7\u7b49\u3002\u8fd9\u53d6\u51b3\u4e8e\u4f60\u8981\u89e3\u51b3\u7684\u95ee\u9898\u6216\u5173\u6ce8\u7684\u65b9\u9762\u3002\n\n\u67e5\u770b\u65e5\u5fd7\u6587\u4ef6\uff1a\u4f7f\u7528\u6587\u672c\u7f16\u8f91\u5668\u6216\u547d\u4ee4\u884c\u5de5\u5177\u6253\u5f00\u65e5\u5fd7\u6587\u4ef6\u3002\u6d4f\u89c8\u6587\u4ef6\u5185\u5bb9\uff0c\u67e5\u627e\u5173\u952e\u4fe1\u606f\uff0c\u5982\u9519\u8bef\u6d88\u606f\u3001\u67e5\u8be2\u8bed\u53e5\u3001\u6267\u884c\u65f6\u95f4\u7b49\u3002\n\n\u8fc7\u6ee4\u548c\u641c\u7d22\uff1a\u6839\u636e\u9700\u6c42\u4f7f\u7528\u6587\u672c\u641c\u7d22\u5de5\u5177\uff08\u5982grep\u3001awk\u7b49\uff09\u6216\u65e5\u5fd7\u5206\u6790\u5de5\u5177\u6765\u8fc7\u6ee4\u548c\u641c\u7d22\u65e5\u5fd7\u6587\u4ef6\u3002\u8fd9\u6709\u52a9\u4e8e\u5feb\u901f\u5b9a\u4f4d\u7279\u5b9a\u7c7b\u578b\u7684\u65e5\u5fd7\u6761\u76ee\u6216\u5173\u952e\u5b57\u3002\n\n\u5206\u6790\u65e5\u5fd7\u5185\u5bb9\uff1a\u6839\u636e\u65e5\u5fd7\u6587\u4ef6\u7684\u7c7b\u578b\uff0c\u8fdb\u884c\u76f8\u5e94\u7684\u5206\u6790\u3002\u4f8b\u5982\uff0c\u9519\u8bef\u65e5\u5fd7\u53ef\u4ee5\u5e2e\u52a9\u4f60\u8bc6\u522b\u6570\u636e\u5e93\u670d\u52a1\u5668\u7684\u95ee\u9898\u548c\u5f02\u5e38\u60c5\u51b5\uff1b\u67e5\u8be2\u65e5\u5fd7\u53ef\u4ee5\u7528\u4e8e\u6027\u80fd\u5206\u6790\u548c\u4f18\u5316\uff1b\u6162\u67e5\u8be2\u65e5\u5fd7\u53ef\u4ee5\u5e2e\u52a9\u4f60\u53d1\u73b0\u6027\u80fd\u8f83\u5dee\u7684\u67e5\u8be2\u5e76\u8fdb\u884c\u6539\u8fdb\u7b49\u3002\n\n\u4f7f\u7528\u5de5\u5177\u548c\u811a\u672c\uff1a\u5229\u7528\u5404\u79cd\u53ef\u7528\u7684\u65e5\u5fd7\u5206\u6790\u5de5\u5177\u548c\u811a\u672c\u6765\u66f4\u6df1\u5165\u5730\u5206\u6790\u65e5\u5fd7\u6587\u4ef6\u3002MySQL\u63d0\u4f9b\u4e86\u4e00\u4e9b\u5185\u7f6e\u5de5\u5177\uff0c\u5982mysqldumpslow\u7528\u4e8e\u6162\u67e5\u8be2\u65e5\u5fd7\u5206\u6790\u3002\u6b64\u5916\uff0c\u8fd8\u6709\u7b2c\u4e09\u65b9\u5de5\u5177\u548c\u811a\u672c\u53ef\u7528\u4e8e\u66f4\u9ad8\u7ea7\u7684\u65e5\u5fd7\u5206\u6790\u548c\u53ef\u89c6\u5316\u3002\n\n\u751f\u6210\u62a5\u544a\u548c\u7edf\u8ba1\u6570\u636e\uff1a\u6839\u636e\u65e5\u5fd7\u5206\u6790\u7684\u7ed3\u679c\uff0c\u751f\u6210\u76f8\u5e94\u7684\u62a5\u544a\u548c\u7edf\u8ba1\u6570\u636e\u3002\u8fd9\u53ef\u4ee5\u5e2e\u52a9\u4f60\u7406\u89e3\u6570\u636e\u5e93\u7684\u6027\u80fd\u74f6\u9888\u3001\u67e5\u8be2\u4f18\u5316\u673a\u4f1a\u7b49\uff0c\u5e76\u91c7\u53d6\u76f8\u5e94\u7684\u63aa\u65bd\u6539\u8fdb\u6570\u636e\u5e93\u6027\u80fd\u3002"
+    "expected_root_cause": "\u9009\u62e9\u5408\u9002\u7684\u65e5\u5fd7\u6587\u4ef6\uff1a\u6839\u636e\u9700\u8981\u9009\u62e9\u8981\u5206\u6790\u7684\u65e5\u5fd7\u6587\u4ef6\uff0c\u5982\u9519\u8bef\u65e5\u5fd7\u3001\u67e5\u8be2\u65e5\u5fd7\u3001\u6162\u67e5\u8be2\u65e5\u5fd7\u7b49\u3002\u8fd9\u53d6\u51b3\u4e8e\u4f60\u8981\u89e3\u51b3\u7684\u95ee\u9898\u6216\u5173\u6ce8\u7684\u65b9\u9762\u3002\n\n\u67e5\u770b\u65e5\u5fd7\u6587\u4ef6\uff1a\u4f7f\u7528\u6587\u672c\u7f16\u8f91\u5668\u6216\u547d\u4ee4\u884c\u5de5\u5177\u6253\u5f00\u65e5\u5fd7\u6587\u4ef6\u3002\u6d4f\u89c8\u6587\u4ef6\u5185\u5bb9\uff0c\u67e5\u627e\u5173\u952e\u4fe1\u606f\uff0c\u5982\u9519\u8bef\u6d88\u606f\u3001\u67e5\u8be2\u8bed\u53e5\u3001\u6267\u884c\u65f6\u95f4\u7b49\u3002\n\n\u8fc7\u6ee4\u548c\u641c\u7d22\uff1a\u6839\u636e\u9700\u6c42\u4f7f\u7528\u6587\u672c\u641c\u7d22\u5de5\u5177\uff08\u5982grep\u3001awk\u7b49\uff09\u6216\u65e5\u5fd7\u5206\u6790\u5de5\u5177\u6765\u8fc7\u6ee4\u548c\u641c\u7d22\u65e5\u5fd7\u6587\u4ef6\u3002\u8fd9\u6709\u52a9\u4e8e\u5feb\u901f\u5b9a\u4f4d\u7279\u5b9a\u7c7b\u578b\u7684\u65e5\u5fd7\u6761\u76ee\u6216\u5173\u952e\u5b57\u3002\n\n\u5206\u6790\u65e5\u5fd7\u5185\u5bb9\uff1a\u6839\u636e\u65e5\u5fd7\u6587\u4ef6\u7684\u7c7b\u578b\uff0c\u8fdb\u884c\u76f8\u5e94\u7684\u5206\u6790\u3002\u4f8b\u5982\uff0c\u9519\u8bef\u65e5\u5fd7\u53ef\u4ee5\u5e2e\u52a9\u4f60\u8bc6\u522b\u6570\u636e\u5e93\u670d\u52a1\u5668\u7684\u95ee\u9898\u548c\u5f02\u5e38\u60c5\u51b5\uff1b\u67e5\u8be2\u65e5\u5fd7\u53ef\u4ee5\u7528\u4e8e\u6027\u80fd\u5206\u6790\u548c\u4f18\u5316\uff1b\u6162\u67e5\u8be2\u65e5\u5fd7\u53ef\u4ee5\u5e2e\u52a9\u4f60\u53d1\u73b0\u6027\u80fd\u8f83\u5dee\u7684\u67e5\u8be2\u5e76\u8fdb\u884c\u6539\u8fdb\u7b49\u3002\n\n\u4f7f\u7528\u5de5\u5177\u548c\u811a\u672c\uff1a\u5229\u7528\u5404\u79cd\u53ef\u7528\u7684\u65e5\u5fd7\u5206\u6790\u5de5\u5177\u548c\u811a\u672c\u6765\u66f4\u6df1\u5165\u5730\u5206\u6790\u65e5\u5fd7\u6587\u4ef6\u3002MySQL\u63d0\u4f9b\u4e86\u4e00\u4e9b\u5185\u7f6e\u5de5\u5177\uff0c\u5982mysqldumpslow\u7528\u4e8e\u6162\u67e5\u8be2\u65e5\u5fd7\u5206\u6790\u3002\u6b64\u5916\uff0c\u8fd8\u6709\u7b2c\u4e09\u65b9\u5de5\u5177\u548c\u811a\u672c\u53ef\u7528\u4e8e\u66f4\u9ad8\u7ea7\u7684\u65e5\u5fd7\u5206\u6790\u548c\u53ef\u89c6\u5316\u3002\n\n\u751f\u6210\u62a5\u544a\u548c\u7edf\u8ba1\u6570\u636e\uff1a\u6839\u636e\u65e5\u5fd7\u5206\u6790\u7684\u7ed3\u679c\uff0c\u751f\u6210\u76f8\u5e94\u7684\u62a5\u544a\u548c\u7edf\u8ba1\u6570\u636e\u3002\u8fd9\u53ef\u4ee5\u5e2e\u52a9\u4f60\u7406\u89e3\u6570\u636e\u5e93\u7684\u6027\u80fd\u74f6\u9888\u3001\u67e5\u8be2\u4f18\u5316\u673a\u4f1a\u7b49\uff0c\u5e76\u91c7\u53d6\u76f8\u5e94\u7684\u63aa\u65bd\u6539\u8fdb\u6570\u636e\u5e93\u6027\u80fd\u3002",
+    "bert_f1": 0.7221
   },
   {
     "case_id": "RCA_OPSEVAL_RM_021",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "model_response": "The root cause is that Alice did not use a display filter to narrow down the captured frames, resulting in an overwhelming number of irrelevant frames in the buffer. Configuring a display filter (option A) allows her to view only the frames between the two hosts without deleting or recapturing data.",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "Configure a display filter"
+    "expected_root_cause": "Configure a display filter",
+    "excluded_reason": "MCQ knowledge format (post-hoc audit 2026-05-25); originally judged DIAGNOSTIC by Qwen3-4B-Instruct fallback judge",
+    "bert_f1": 0.8809
   },
   {
     "case_id": "RCA_139",
@@ -5247,7 +5702,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "carts_memory_leak",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8189
   },
   {
     "case_id": "RCA_141",
@@ -5257,7 +5713,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "payment_pod_crash",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8229
   },
   {
     "case_id": "RCA_174",
@@ -5267,7 +5724,8 @@
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "carts_dependency_failure",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.8095
   },
   {
     "case_id": "RCA_042",
@@ -5277,7 +5735,8 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u7279\u5b9a\u7684\u7ec4\u64ad\u6d41\u5c06\u88ab\u91cd\u5b9a\u5411\u4e3a\u65e0\u7ebf\u5ba2\u6237\u7aef\u7684\u5355\u64ad\u6d41\u3002"
+    "expected_root_cause": "\u7279\u5b9a\u7684\u7ec4\u64ad\u6d41\u5c06\u88ab\u91cd\u5b9a\u5411\u4e3a\u65e0\u7ebf\u5ba2\u6237\u7aef\u7684\u5355\u64ad\u6d41\u3002",
+    "bert_f1": 0.7651
   },
   {
     "case_id": "RCA_064",
@@ -5287,7 +5746,8 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u4e00\u4e2a\u7f51\u7edc\u5b89\u5168\u548c\u7b56\u7565\u5e73\u53f0"
+    "expected_root_cause": "\u4e00\u4e2a\u7f51\u7edc\u5b89\u5168\u548c\u7b56\u7565\u5e73\u53f0",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_017",
@@ -5297,17 +5757,20 @@
     "correct": true,
     "rule_score": 1.0,
     "expected_root_cause": "df",
-    "eval_method": "rescored_with_sota_eval_substring"
+    "eval_method": "rescored_with_sota_eval_substring",
+    "bert_f1": 0.0
   },
   {
     "case_id": "RCA_OPSEVAL_RM_030",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "model_response": "Ralph might be working on the Windows-based firewall (A), the Cisco router (B), or one of the Linux web servers (D), as these systems can execute ping commands to test connectivity to the internal IP address 192.168.1.76. The CSU/DSU (C) is not a host and cannot run ping.",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "The Windows-based firewall; The Cisco router; One of the Linux web servers"
+    "expected_root_cause": "The Windows-based firewall; The Cisco router; One of the Linux web servers",
+    "excluded_reason": "MCQ knowledge format (post-hoc audit 2026-05-25); originally judged DIAGNOSTIC by Qwen3-4B-Instruct fallback judge",
+    "bert_f1": 0.8737
   },
   {
     "case_id": "RCA_032",
@@ -5317,6 +5780,7 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u5c06AP\u66ff\u6362\u4e3a\u652f\u6301802.11n\u7684\u578b\u53f7\u3002"
+    "expected_root_cause": "\u5c06AP\u66ff\u6362\u4e3a\u652f\u6301802.11n\u7684\u578b\u53f7\u3002",
+    "bert_f1": 0.7754
   }
 ]

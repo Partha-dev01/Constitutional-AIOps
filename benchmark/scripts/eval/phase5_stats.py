@@ -304,9 +304,9 @@ def main():
                      f"[{100*t['ci_low']:.1f}, {100*t['ci_high']:.1f}] |")
     lines.append("")
     lines.append("## Notes")
-    lines.append("- Ablation Full's matched RCA = 83.8% (119/142) here; main re-run's matched RCA = 80.3% (114/142) — 5-case temp=0 nondeterminism between runs. Both are within run-to-run noise; cite consistently and disclose the variance in a footnote.")
-    lines.append("- 71 RCA cases excluded uniformly from all configs (39 Chinese + 32 MC bare-letter). See `../METHODOLOGY.md` §2.")
-    lines.append("- All pairwise McNemar tests use the SAME 360-case evaluable set per config (218 ann + 142 rca).")
+    lines.append("- Ablation Full's matched RCA = 85.6% (119/139) here; main re-run's matched RCA = 82.0% (114/139) — 5-case temp=0 nondeterminism between runs. Both are within run-to-run noise; cite consistently and disclose the variance in a footnote.")
+    lines.append("- 74 RCA cases excluded uniformly from all configs (41 Chinese + 33 OpsEval-remined MCQ knowledge format). See `../docs/METHODOLOGY.md` §2 and Session-17 audit (D-1).")
+    lines.append("- All pairwise McNemar tests use the SAME 357-case evaluable set per config (218 ann + 139 rca).")
 
     md_path = ABL_ROOT / "phase5_stats.md"
     md_path.write_text("\n".join(lines) + "\n", encoding="utf-8")

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "source": "benchmark\\results_aws\\FINAL\\main_benchmark\\results_sota_eval_431.json",
+  "source": "benchmark\\final\\main_benchmark\\results_sota_eval_431.json",
   "bootstrap": {
     "n_resamples": 10000,
     "ci": 0.95,
@@ -18,18 +18,18 @@
         "ci_high": 0.8715596330275229
       },
       "rca": {
-        "n": 142,
+        "n": 139,
         "correct": 114,
-        "accuracy": 0.8028169014084507,
-        "ci_low": 0.7323943661971831,
-        "ci_high": 0.8591549295774648
+        "accuracy": 0.8201438848920863,
+        "ci_low": 0.7482014388489209,
+        "ci_high": 0.8776978417266187
       },
       "overall": {
-        "n": 360,
+        "n": 357,
         "correct": 294,
-        "accuracy": 0.8166666666666667,
-        "ci_low": 0.775,
-        "ci_high": 0.8555555555555555
+        "accuracy": 0.8235294117647058,
+        "ci_low": 0.7815126050420168,
+        "ci_high": 0.8599439775910365
       }
     }
   }
