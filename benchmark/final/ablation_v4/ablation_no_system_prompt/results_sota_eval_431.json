@@ -3448,7 +3448,7 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u4ee3\u7406\uff08\u5ba2\u6237\u7aef\uff09\u4f8b\u5982AnyConnect\u5b89\u5168\u79fb\u52a8\u5ba2\u6237\u7aef",
+    "expected_root_cause": "代理（客户端）例如AnyConnect安全移动客户端",
     "bert_f1": 0.7474
   },
   {
@@ -3466,7 +3466,7 @@
     "case_id": "RCA_OPSEVAL_RM_025",
     "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
-    "model_response": "**Root Cause Analysis for Decibel Loss in Fiber-Optic Cable Runs**\n\n**Context Summary:**  \nAlice's company experienced issues with devices connected to a fiber-optic network. A contractor detected significant decibel (dB) loss in some cable runs, indicating potential causes for the problems. The question asks which options (A\u2013D) could contribute to this loss.\n\n---\n\n### **Analysis of Possible Causes:**\n\n**A. Electromagnetic interference (EMI)**  \n- **Verdict:** **Not a likely cause**.  \n- **Reaso",
+    "model_response": "**Root Cause Analysis for Decibel Loss in Fiber-Optic Cable Runs**\n\n**Context Summary:**  \nAlice's company experienced issues with devices connected to a fiber-optic network. A contractor detected significant decibel (dB) loss in some cable runs, indicating potential causes for the problems. The question asks which options (A–D) could contribute to this loss.\n\n---\n\n### **Analysis of Possible Causes:**\n\n**A. Electromagnetic interference (EMI)**  \n- **Verdict:** **Not a likely cause**.  \n- **Reaso",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
@@ -3515,7 +3515,7 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u805a\u7c7b; \u8d1f\u8f7d\u5747\u8861",
+    "expected_root_cause": "聚类; 负载均衡",
     "bert_f1": 0.0
   },
   {
@@ -3534,7 +3534,7 @@
     "case_id": "RCA_171",
     "task_type": "rca",
     "source": "lemma_rca_cloud",
-    "model_response": "### Root Cause Analysis for \"disk_io_issue\" (High Severity)\n\n---\n\n#### **1. Summary of the Issue**\n- **Fault Type**: Disk I/O Performance Degradation  \n- **Severity**: High  \n- **Observed Symptom**: Health check method (`Health`) is returning a non-zero result (`result=2`) with increasing latency (511\u03bcs \u2192 812\u03bcs).  \n- **Timestamp**: 2026-05-16T16:32:03.733712  \n\n---\n\n#### **2. Key Observations from Logs**\n- **Health Check Latency**: The `Health` method's execution time increases over time, indica",
+    "model_response": "### Root Cause Analysis for \"disk_io_issue\" (High Severity)\n\n---\n\n#### **1. Summary of the Issue**\n- **Fault Type**: Disk I/O Performance Degradation  \n- **Severity**: High  \n- **Observed Symptom**: Health check method (`Health`) is returning a non-zero result (`result=2`) with increasing latency (511μs → 812μs).  \n- **Timestamp**: 2026-05-16T16:32:03.733712  \n\n---\n\n#### **2. Key Observations from Logs**\n- **Health Check Latency**: The `Health` method's execution time increases over time, indica",
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "user_disk_io_issue",
@@ -3549,7 +3549,7 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "802.11b\u662f\u4e00\u79cd\u65e0\u7ebf\u7f51\u7edc\u6807\u51c6\uff0c\u4e5f\u79f0\u4e3aWi-Fi\u6807\u51c6\uff0c\u5b83\u4f7f\u75282.4GHz\u9891\u6bb5\u8fdb\u884c\u901a\u4fe1\uff0c\u6700\u9ad8\u4f20\u8f93\u901f\u7387\u4e3a11Mbps\u3002; 802.11g\u662f\u4e00\u79cd\u65e0\u7ebf\u7f51\u7edc\u6807\u51c6\uff0c\u5b83\u652f\u63012.4GHz\u9891\u6bb5\uff0c\u6700\u9ad8\u4f20\u8f93\u901f\u7387\u4e3a54Mbps\u3002",
+    "expected_root_cause": "802.11b是一种无线网络标准，也称为Wi-Fi标准，它使用2.4GHz频段进行通信，最高传输速率为11Mbps。; 802.11g是一种无线网络标准，它支持2.4GHz频段，最高传输速率为54Mbps。",
     "bert_f1": 0.7514
   },
   {
@@ -3589,11 +3589,11 @@
     "case_id": "RCA_057",
     "task_type": "rca",
     "source": "opseval_Wired Network",
-    "model_response": "The correct answer is **A**:  \n**\"\u5177\u6709\u5730\u5740\u4ece192.168.0.0\u5230192.168.15.255\u7684\u8def\u7531\uff0c\u5b50\u7f51\u63a9\u7801\u4e3a24\u523028\u3002\"**\n\n### **Root Cause Analysis:**\n1. **ACL Rule Breakdown:**  \n   - The rule `ip prefix-list ENARSI seq 35 deny 192.168.0.0/20 ge 24 le 28` denies routes that:  \n     - Belong to the **192.168.0.0/20** network (covering **192.168.0.0\u2013192.168.15.255**).  \n     - Have a **subnet mask between /24 and /28** (inclusive).  \n\n2. **Why Option A is Correct:**  \n   - It explicitly matches the **range of IP addresses** (192.168",
+    "model_response": "The correct answer is **A**:  \n**\"具有地址从192.168.0.0到192.168.15.255的路由，子网掩码为24到28。\"**\n\n### **Root Cause Analysis:**\n1. **ACL Rule Breakdown:**  \n   - The rule `ip prefix-list ENARSI seq 35 deny 192.168.0.0/20 ge 24 le 28` denies routes that:  \n     - Belong to the **192.168.0.0/20** network (covering **192.168.0.0–192.168.15.255**).  \n     - Have a **subnet mask between /24 and /28** (inclusive).  \n\n2. **Why Option A is Correct:**  \n   - It explicitly matches the **range of IP addresses** (192.168",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u5177\u6709\u5730\u5740\u4ece192.168.0.0\u5230192.168.15.255\u7684\u8def\u7531\uff0c\u5b50\u7f51\u63a9\u7801\u4e3a24\u523028\u3002",
+    "expected_root_cause": "具有地址从192.168.0.0到192.168.15.255的路由，子网掩码为24到28。",
     "bert_f1": 0.8653
   },
   {
@@ -3626,7 +3626,7 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "iSCSI\uff08Internet Small Computer System Interface\uff09\u662f\u4e00\u79cd\u57fa\u4e8eIP\u7f51\u7edc\u7684\u5b58\u50a8\u534f\u8bae\uff0c\u7528\u4e8e\u5728\u8ba1\u7b97\u673a\u4e4b\u95f4\u4f20\u8f93\u6570\u636e\u5757\u3002\u5b83\u5141\u8bb8\u8fdc\u7a0b\u8bbf\u95ee\u5b58\u50a8\u8bbe\u5907\uff0c\u4f7f\u5f97\u591a\u4e2a\u8ba1\u7b97\u673a\u53ef\u4ee5\u5171\u4eab\u5b58\u50a8\u8d44\u6e90\u3002; FCoE",
+    "expected_root_cause": "iSCSI（Internet Small Computer System Interface）是一种基于IP网络的存储协议，用于在计算机之间传输数据块。它允许远程访问存储设备，使得多个计算机可以共享存储资源。; FCoE",
     "bert_f1": 0.7366
   },
   {
@@ -3655,11 +3655,11 @@
     "case_id": "RCA_OPSEVAL_RM_023",
     "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
-    "model_response": "**Root Cause Analysis (RCA) for the Query:**\n\n**Context Summary:**  \nThe query asks which piece of information (WLC IP address, SSID, Client\u2019s MAC address, or AP name) should be input on the **Monitor > Clients** page of a wireless controller (WLC) or PI (Performance Inspector) to obtain the best troubleshooting data for a specific wireless client.\n\n---\n\n### **1. Understanding the Goal**  \nThe objective is to **identify a specific wireless client** on the **Monitor > Clients** page to gather tro",
+    "model_response": "**Root Cause Analysis (RCA) for the Query:**\n\n**Context Summary:**  \nThe query asks which piece of information (WLC IP address, SSID, Client’s MAC address, or AP name) should be input on the **Monitor > Clients** page of a wireless controller (WLC) or PI (Performance Inspector) to obtain the best troubleshooting data for a specific wireless client.\n\n---\n\n### **1. Understanding the Goal**  \nThe objective is to **identify a specific wireless client** on the **Monitor > Clients** page to gather tro",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "Client\u2019s MAC address",
+    "expected_root_cause": "Client’s MAC address",
     "excluded_reason": "MCQ knowledge format (post-hoc audit 2026-05-25); originally judged DIAGNOSTIC by Qwen3-4B-Instruct fallback judge",
     "bert_f1": 0.842
   },
@@ -3671,7 +3671,7 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "DHCP\u670d\u52a1\u5668",
+    "expected_root_cause": "DHCP服务器",
     "bert_f1": 0.0
   },
   {
@@ -3693,14 +3693,14 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u5c40\u57df\u7f51",
+    "expected_root_cause": "局域网",
     "bert_f1": 0.0
   },
   {
     "case_id": "RCA_054",
     "task_type": "rca",
     "source": "opseval_Wired Network",
-    "model_response": "The EIGRP data packet types used in the **diffusion process** (during topology changes and route recalculations) are:\n\n### \u2705 **Correct Answers:**\n- **Update**  \n- **Query**  \n- **Reply**\n\n---\n\n### **Explanation:**\n\n1. **Update**  \n   - **Purpose**: Propagates routing information (e.g., new or updated routes) to neighbors.  \n   - **Role in Diffusion**: Sent when a router detects a change in the network topology (e.g., link failure) to update neighbors about the new state.  \n\n2. **Query**  \n   - *",
+    "model_response": "The EIGRP data packet types used in the **diffusion process** (during topology changes and route recalculations) are:\n\n### ✅ **Correct Answers:**\n- **Update**  \n- **Query**  \n- **Reply**\n\n---\n\n### **Explanation:**\n\n1. **Update**  \n   - **Purpose**: Propagates routing information (e.g., new or updated routes) to neighbors.  \n   - **Role in Diffusion**: Sent when a router detects a change in the network topology (e.g., link failure) to update neighbors about the new state.  \n\n2. **Query**  \n   - *",
     "correct": false,
     "rule_score": 0.0,
     "expected_root_cause": "Hello; Update; Query",
@@ -3737,7 +3737,7 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u6240\u6709\u8fd9\u4e9b\u7b54\u6848\u90fd\u662f\u6b63\u786e\u7684\u3002",
+    "expected_root_cause": "所有这些答案都是正确的。",
     "bert_f1": 0.0
   },
   {
@@ -3748,7 +3748,7 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "REST\u4ee3\u8868\u8868\u8ff0\u6027\u72b6\u6001\u8f6c\u79fb\u3002; RESTful\u6307\u7684\u662f\u5e94\u7528REST\u67b6\u6784\u6982\u5ff5\u7f16\u5199\u7684Web\u670d\u52a1\uff0c\u5b83\u4eec\u88ab\u79f0\u4e3aRESTful\u670d\u52a1\u3002",
+    "expected_root_cause": "REST代表表述性状态转移。; RESTful指的是应用REST架构概念编写的Web服务，它们被称为RESTful服务。",
     "bert_f1": 0.7462
   },
   {
@@ -3782,7 +3782,7 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u626d\u66f2\u6709\u52a9\u4e8e\u9632\u6b62\u76f8\u90bb\u7ebf\u5bf9\u4e4b\u95f4\u7684\u4e32\u6270\u3002; \u626d\u66f2\u53ef\u4ee5\u9650\u5236\u7535\u78c1\u5e72\u6270\uff08EMI\uff09\u5bf9\u7535\u7f06\u4f20\u8f93\u4fe1\u53f7\u7684\u5f71\u54cd\u3002",
+    "expected_root_cause": "扭曲有助于防止相邻线对之间的串扰。; 扭曲可以限制电磁干扰（EMI）对电缆传输信号的影响。",
     "bert_f1": 0.7389
   },
   {
@@ -3838,7 +3838,7 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u7b2c\u56db\u5c42\u4f20\u8f93\u5c42\u4fe1\u606f; \u7b2c\u4e03\u5c42\u5e94\u7528\u7a0b\u5e8f\u4fe1\u606f",
+    "expected_root_cause": "第四层传输层信息; 第七层应用程序信息",
     "bert_f1": 0.7305
   },
   {
@@ -3867,7 +3867,7 @@
     "case_id": "RCA_124",
     "task_type": "rca",
     "source": "lemma_rca_cloud",
-    "model_response": "### **Root Cause Analysis for Cloud Computing Fault: service_degradation**\n\n---\n\n#### **1. Summary of the Issue**\n- **Fault Type**: Service Degradation  \n- **Severity**: High  \n- **Timestamp**: 2026-05-16T16:55:54.443406  \n- **Key Logs**:  \n  - Repeated entries from `logging.go:40` for the `Health` method with `result=1` and execution times of ~3\u20138.6 microseconds.  \n  - Logs are written to `stderr`, indicating an error or failure.  \n\n---\n\n#### **2. Observations**\n- **Health Check Failures**:  \n ",
+    "model_response": "### **Root Cause Analysis for Cloud Computing Fault: service_degradation**\n\n---\n\n#### **1. Summary of the Issue**\n- **Fault Type**: Service Degradation  \n- **Severity**: High  \n- **Timestamp**: 2026-05-16T16:55:54.443406  \n- **Key Logs**:  \n  - Repeated entries from `logging.go:40` for the `Health` method with `result=1` and execution times of ~3–8.6 microseconds.  \n  - Logs are written to `stderr`, indicating an error or failure.  \n\n---\n\n#### **2. Observations**\n- **Health Check Failures**:  \n ",
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "payment_service_degradation",
@@ -3893,7 +3893,7 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "4\u74e6\u7279",
+    "expected_root_cause": "4瓦特",
     "bert_f1": 0.0
   },
   {
@@ -3933,7 +3933,7 @@
     "case_id": "RCA_101",
     "task_type": "rca",
     "source": "lemma_rca_cloud",
-    "model_response": "### **Root Cause Analysis for Cloud Computing Fault: pod_crash**\n\n---\n\n#### **1. Summary of the Issue**\n- **Fault Type**: Pod Crash (High Severity)\n- **Symptoms**: Repeated failures in the `Health` method of `middlewares.go`, with increasing response times (162ms \u2192 530ms) and error code `result=2`.\n- **Impact**: Pod instability, potential service downtime, and cascading failures in dependent systems.\n\n---\n\n#### **2. Key Observations from Logs**\n- **Error Pattern**: \n  - The `Health` method is re",
+    "model_response": "### **Root Cause Analysis for Cloud Computing Fault: pod_crash**\n\n---\n\n#### **1. Summary of the Issue**\n- **Fault Type**: Pod Crash (High Severity)\n- **Symptoms**: Repeated failures in the `Health` method of `middlewares.go`, with increasing response times (162ms → 530ms) and error code `result=2`.\n- **Impact**: Pod instability, potential service downtime, and cascading failures in dependent systems.\n\n---\n\n#### **2. Key Observations from Logs**\n- **Error Pattern**: \n  - The `Health` method is re",
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "user_pod_crash",
@@ -3959,7 +3959,7 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "RIPv1\uff08Routing Information Protocol version 1\uff09\u662f\u4e00\u79cd\u57fa\u4e8e\u8ddd\u79bb\u5411\u91cf\u7b97\u6cd5\u7684\u8def\u7531\u534f\u8bae\uff0c\u7528\u4e8e\u5728\u4e92\u8054\u7f51\u4e2d\u4f20\u9012\u8def\u7531\u4fe1\u606f\u3002; RIPv2\uff08Routing Information Protocol version 2\uff09",
+    "expected_root_cause": "RIPv1（Routing Information Protocol version 1）是一种基于距离向量算法的路由协议，用于在互联网中传递路由信息。; RIPv2（Routing Information Protocol version 2）",
     "bert_f1": 0.7578
   },
   {
@@ -4010,7 +4010,7 @@
     "case_id": "RCA_061",
     "task_type": "rca",
     "source": "opseval_Wired Network",
-    "model_response": "**Root Cause Analysis:**\n\nThe question asks which of the provided options are **not valid Class B network IDs**. To determine this, we analyze the structure of Class B IP addresses and validate each option against the Class B range.\n\n---\n\n### **Class B Network ID Criteria**\n- **First octet range**: 128\u2013191 (inclusive).\n- **Default subnet mask**: `255.255.0.0`.\n- **Network ID format**: The first two octets define the network portion, and the remaining two octets must be `0.0` (for a network ID, n",
+    "model_response": "**Root Cause Analysis:**\n\nThe question asks which of the provided options are **not valid Class B network IDs**. To determine this, we analyze the structure of Class B IP addresses and validate each option against the Class B range.\n\n---\n\n### **Class B Network ID Criteria**\n- **First octet range**: 128–191 (inclusive).\n- **Default subnet mask**: `255.255.0.0`.\n- **Network ID format**: The first two octets define the network portion, and the remaining two octets must be `0.0` (for a network ID, n",
     "correct": false,
     "rule_score": 0.0,
     "expected_root_cause": "All are valid Class B network IDs.",
@@ -4043,7 +4043,7 @@
     "case_id": "RCA_175",
     "task_type": "rca",
     "source": "lemma_rca_cloud",
-    "model_response": "### **Root Cause Analysis for Cloud Computing Fault: Memory Leak**\n\n---\n\n#### **1. Immediate Symptoms and Context**\n- **Error Type**: Memory leak (high severity).\n- **Key Logs**:\n  - `dial tcp 10.1.64.80:42699: connect: connection refused` \u2192 Indicates a failed connection to a service on port 42699.\n  - `Instana: ERROR: Failed sending profiles, backing off next sending` and `sender not ready` \u2192 Suggests Instana (a monitoring tool) is unable to communicate with its backend or a dependent service.\n",
+    "model_response": "### **Root Cause Analysis for Cloud Computing Fault: Memory Leak**\n\n---\n\n#### **1. Immediate Symptoms and Context**\n- **Error Type**: Memory leak (high severity).\n- **Key Logs**:\n  - `dial tcp 10.1.64.80:42699: connect: connection refused` → Indicates a failed connection to a service on port 42699.\n  - `Instana: ERROR: Failed sending profiles, backing off next sending` and `sender not ready` → Suggests Instana (a monitoring tool) is unable to communicate with its backend or a dependent service.\n",
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "dispatch_memory_leak",
@@ -4109,18 +4109,18 @@
     "case_id": "RCA_048",
     "task_type": "rca",
     "source": "opseval_Wired Network",
-    "model_response": "**Root Cause Analysis (RCA) for the User Query:**\n\n---\n\n### **1. Understanding the User's Question**\nThe user is asking about the **role of the A record in a DNS server** within their network. The question is phrased in Chinese and includes four multiple-choice options. The key focus is on clarifying the **function of the A record** in DNS.\n\n---\n\n### **2. Analyzing the Options**\nLet\u2019s evaluate the provided choices to identify the correct answer:\n\n- **Option 1:** *\"\u5c06\u4eba\u540d\u8f6c\u6362\u4e3aIP\u5730\u5740\"* (Converts a person",
+    "model_response": "**Root Cause Analysis (RCA) for the User Query:**\n\n---\n\n### **1. Understanding the User's Question**\nThe user is asking about the **role of the A record in a DNS server** within their network. The question is phrased in Chinese and includes four multiple-choice options. The key focus is on clarifying the **function of the A record** in DNS.\n\n---\n\n### **2. Analyzing the Options**\nLet’s evaluate the provided choices to identify the correct answer:\n\n- **Option 1:** *\"将人名转换为IP地址\"* (Converts a person",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u5c06\u4eba\u540d\u8f6c\u6362\u4e3aIP\u5730\u5740",
+    "expected_root_cause": "将人名转换为IP地址",
     "bert_f1": 0.0
   },
   {
     "case_id": "RCA_088",
     "task_type": "rca",
     "source": "opseval_Log Analysis",
-    "model_response": "The correct answer is **A. \u6536\u96c6\u2192\u5b58\u50a8\u2192\u5206\u6790\u2192\u76d1\u63a7\u2192\u62a5\u8b66** (Collect \u2192 Storage \u2192 Analysis \u2192 Monitoring \u2192 Alarm). Here's the root cause analysis:\n\n1. **Sequence Logic**:  \n   - **Collect (\u6536\u96c6)**: Data gathering is the first step in any process.  \n   - **Storage (\u5b58\u50a8)**: Collected data must be stored before further processing.  \n   - **Analysis (\u5206\u6790)**: Stored data is analyzed to derive insights.  \n   - **Monitoring (\u76d1\u63a7)**: Continuous monitoring ensures system health based on analysis.  \n   - **Alarm (\u62a5\u8b66)**: Alerts ",
+    "model_response": "The correct answer is **A. 收集→存储→分析→监控→报警** (Collect → Storage → Analysis → Monitoring → Alarm). Here's the root cause analysis:\n\n1. **Sequence Logic**:  \n   - **Collect (收集)**: Data gathering is the first step in any process.  \n   - **Storage (存储)**: Collected data must be stored before further processing.  \n   - **Analysis (分析)**: Stored data is analyzed to derive insights.  \n   - **Monitoring (监控)**: Continuous monitoring ensures system health based on analysis.  \n   - **Alarm (报警)**: Alerts ",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
@@ -4180,7 +4180,7 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u8981\u6c42\u7528\u6237\u79fb\u52a8\u5230\u5efa\u7b51\u7269\u7684\u53e6\u4e00\u4e2a\u697c\u5c42\uff0c\u7136\u540e\u518d\u5c1d\u8bd5\u4e00\u6b21\u3002",
+    "expected_root_cause": "要求用户移动到建筑物的另一个楼层，然后再尝试一次。",
     "bert_f1": 0.7412
   },
   {
@@ -4191,7 +4191,7 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u9ed8\u8ba4\u7f51\u5173",
+    "expected_root_cause": "默认网关",
     "bert_f1": 0.0
   },
   {
@@ -4220,7 +4220,7 @@
     "case_id": "RCA_150",
     "task_type": "rca",
     "source": "lemma_rca_cloud",
-    "model_response": "### **Root Cause Analysis for Pod Crash (pod_crash)**\n\n---\n\n#### **1. Summary of the Issue**\n- **Fault Type**: Pod Crash  \n- **Severity**: High  \n- **Timestamp**: 2026-05-16T17:25:34.201957 (likely a placeholder or future date)  \n- **Key Logs**:  \n  - Repeated entries from `logging.go:85` indicating the `Health` method is failing with `result=2` and consistent execution times (~40 \u00b5s).  \n\n---\n\n#### **2. Immediate Observations**\n- **Health Check Failure**: The `Health` method is returning a non-z",
+    "model_response": "### **Root Cause Analysis for Pod Crash (pod_crash)**\n\n---\n\n#### **1. Summary of the Issue**\n- **Fault Type**: Pod Crash  \n- **Severity**: High  \n- **Timestamp**: 2026-05-16T17:25:34.201957 (likely a placeholder or future date)  \n- **Key Logs**:  \n  - Repeated entries from `logging.go:85` indicating the `Health` method is failing with `result=2` and consistent execution times (~40 µs).  \n\n---\n\n#### **2. Immediate Observations**\n- **Health Check Failure**: The `Health` method is returning a non-z",
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "catalogue_pod_crash",
@@ -4235,7 +4235,7 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "OSPF\u662f\u4e00\u79cd\u5185\u90e8\u7f51\u5173\u534f\u8bae\u3002; OSPF\u662f\u4e00\u79cd\u94fe\u8def\u72b6\u6001\u8def\u7531\u534f\u8bae\u3002; OSPF\u5728\u81ea\u6cbb\u7cfb\u7edf\u5185\u5171\u4eab\u8def\u7531\u3002",
+    "expected_root_cause": "OSPF是一种内部网关协议。; OSPF是一种链路状态路由协议。; OSPF在自治系统内共享路由。",
     "bert_f1": 0.7501
   },
   {
@@ -4320,11 +4320,11 @@
     "case_id": "RCA_079",
     "task_type": "rca",
     "source": "opseval_Wired Network",
-    "model_response": "**Root Cause Analysis:**\n\n**Context Summary:**  \nThe user is asking for the root cause of a network issue, with possible hardware-related causes listed (e.g., faulty cables, switch, patch panel, etc.). However, the answer choices focus on **configuration/service issues** (DNS, NAT, switch port status, secure port settings) rather than hardware failures.\n\n**Analysis of Answer Choices:**  \n1. **DNS Server Failure** \u2013 Unrelated to the hardware issues listed in the context.  \n2. **Switch Port Disabl",
+    "model_response": "**Root Cause Analysis:**\n\n**Context Summary:**  \nThe user is asking for the root cause of a network issue, with possible hardware-related causes listed (e.g., faulty cables, switch, patch panel, etc.). However, the answer choices focus on **configuration/service issues** (DNS, NAT, switch port status, secure port settings) rather than hardware failures.\n\n**Analysis of Answer Choices:**  \n1. **DNS Server Failure** – Unrelated to the hardware issues listed in the context.  \n2. **Switch Port Disabl",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u8be5\u4ea4\u6362\u673a\u7aef\u53e3\u5df2\u7981\u7528\u3002; \u8be5\u4ea4\u6362\u673a\u5df2\u914d\u7f6e\u4f7f\u7528\u7aef\u53e3\u5b89\u5168\u3002",
+    "expected_root_cause": "该交换机端口已禁用。; 该交换机已配置使用端口安全。",
     "bert_f1": 0.7442
   },
   {
@@ -4403,7 +4403,7 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u65e0\u7ebf\u5c40\u57df\u7f51\u670d\u52a1\u5668",
+    "expected_root_cause": "无线局域网服务器",
     "bert_f1": 0.0
   },
   {
@@ -4422,7 +4422,7 @@
     "case_id": "RCA_109",
     "task_type": "rca",
     "source": "lemma_rca_cloud",
-    "model_response": "### Root Cause Analysis for \"Cloud Computing Fault: connection_timeout\"\n\n---\n\n#### **1. Summary of the Issue**\n- **Fault Type**: Connection Timeout  \n- **Severity**: High  \n- **Timestamp**: 2026-05-16T17:42:14.456556  \n- **Logs**: Repeated entries from `logging.go:40` indicating the `Health` method is returning `result=1` with execution times of ~2.96\u20138.71 microseconds.  \n\n---\n\n#### **2. Key Observations**\n- **Health Check Logs**:  \n  - The `Health` method is being called repeatedly, with consis",
+    "model_response": "### Root Cause Analysis for \"Cloud Computing Fault: connection_timeout\"\n\n---\n\n#### **1. Summary of the Issue**\n- **Fault Type**: Connection Timeout  \n- **Severity**: High  \n- **Timestamp**: 2026-05-16T17:42:14.456556  \n- **Logs**: Repeated entries from `logging.go:40` indicating the `Health` method is returning `result=1` with execution times of ~2.96–8.71 microseconds.  \n\n---\n\n#### **2. Key Observations**\n- **Health Check Logs**:  \n  - The `Health` method is being called repeatedly, with consis",
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "payment_connection_timeout",
@@ -4437,7 +4437,7 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u9002\u7528\u4e8e\u5ef6\u8fdf\u8f83\u4f4e\u3001\u62e5\u585e\u975e\u5e38\u5c0f\u7684\u5927\u578b\u94fe\u63a5\uff0c\u4f46\u4e0d\u9700\u8981\u4f18\u5148\u7ea7\u6216\u6d41\u91cf\u7c7b\u522b\u7684\u8981\u6c42\u3002",
+    "expected_root_cause": "适用于延迟较低、拥塞非常小的大型链接，但不需要优先级或流量类别的要求。",
     "bert_f1": 0.7019
   },
   {
@@ -4466,18 +4466,18 @@
     "case_id": "RCA_052",
     "task_type": "rca",
     "source": "opseval_Wired Network",
-    "model_response": "The correct answer is: **\u5927\u4e8e255\u7684\u6570\u5b57\u5206\u7ec4** (A number greater than 255 group).  \n\n### Root Cause Analysis:\nHSRPv2 (Hot Standby Router Protocol version 2) introduced **support for more than 255 virtual IP addresses** in a single group, which was a limitation in HSRPv1. This enhancement allows larger networks to use HSRP for redundancy without requiring multiple groups, improving scalability.  \n\n### Key Differentiators:\n1. **Virtual MAC Address**: Both HSRPv1 and HSRPv2 use virtual MAC addresses (e.g., ",
+    "model_response": "The correct answer is: **大于255的数字分组** (A number greater than 255 group).  \n\n### Root Cause Analysis:\nHSRPv2 (Hot Standby Router Protocol version 2) introduced **support for more than 255 virtual IP addresses** in a single group, which was a limitation in HSRPv1. This enhancement allows larger networks to use HSRP for redundancy without requiring multiple groups, improving scalability.  \n\n### Key Differentiators:\n1. **Virtual MAC Address**: Both HSRPv1 and HSRPv2 use virtual MAC addresses (e.g., ",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u5927\u4e8e255\u7684\u6570\u5b57\u5206\u7ec4\u3002",
+    "expected_root_cause": "大于255的数字分组。",
     "bert_f1": 0.0
   },
   {
     "case_id": "RCA_137",
     "task_type": "rca",
     "source": "lemma_rca_cloud",
-    "model_response": "### **Root Cause Analysis for Cloud Computing Fault: service_degradation**\n\n---\n\n#### **1. Summary of the Issue**\n- **Fault Type**: Service Degradation  \n- **Severity**: High  \n- **Timestamp**: 2026-05-16T17:47:16.963691  \n- **Key Logs**:  \n  - Repeated entries from `logging.go:85` for the `Health` method with `result=2` and execution times of ~27\u201343 \u00b5s.  \n  - Logs are written to `stderr`, indicating an error condition.  \n\n---\n\n#### **2. Immediate Observations**\n- **Health Check Failure**: The `",
+    "model_response": "### **Root Cause Analysis for Cloud Computing Fault: service_degradation**\n\n---\n\n#### **1. Summary of the Issue**\n- **Fault Type**: Service Degradation  \n- **Severity**: High  \n- **Timestamp**: 2026-05-16T17:47:16.963691  \n- **Key Logs**:  \n  - Repeated entries from `logging.go:85` for the `Health` method with `result=2` and execution times of ~27–43 µs.  \n  - Logs are written to `stderr`, indicating an error condition.  \n\n---\n\n#### **2. Immediate Observations**\n- **Health Check Failure**: The `",
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "catalogue_service_degradation",
@@ -4523,18 +4523,18 @@
     "case_id": "RCA_051",
     "task_type": "rca",
     "source": "opseval_Wired Network",
-    "model_response": "The question asks which type of network attack can be mitigated by using a **honeypot** for early prevention. Here's the analysis:\n\n### **Key Concepts**:\n- **Honeypot**: A decoy system or network designed to attract and analyze attacks, providing early detection and diversion of threats.\n- **Mitigation**: Reducing the impact or likelihood of an attack.\n\n### **Option Analysis**:\n1. **DNS Hijacking (DNS\u52ab\u6301)**:\n   - **Honeypot Use**: Honeypots can detect DNS hijacking by monitoring unusual DNS queri",
+    "model_response": "The question asks which type of network attack can be mitigated by using a **honeypot** for early prevention. Here's the analysis:\n\n### **Key Concepts**:\n- **Honeypot**: A decoy system or network designed to attract and analyze attacks, providing early detection and diversion of threats.\n- **Mitigation**: Reducing the impact or likelihood of an attack.\n\n### **Option Analysis**:\n1. **DNS Hijacking (DNS劫持)**:\n   - **Honeypot Use**: Honeypots can detect DNS hijacking by monitoring unusual DNS queri",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "MAC\u6cdb\u6d2a\u653b\u51fb",
+    "expected_root_cause": "MAC泛洪攻击",
     "bert_f1": 0.0
   },
   {
     "case_id": "RCA_170",
     "task_type": "rca",
     "source": "lemma_rca_cloud",
-    "model_response": "### Root Cause Analysis for \"Cloud Computing Fault: connection_timeout\"\n\n---\n\n#### **1. Context Summary**\n- **Fault Type**: `connection_timeout`  \n- **Severity**: High  \n- **Logs**:  \n  - Repeated entries from `logging.go:85` for the `Health` method, with `result=2` and execution times of ~40\u201343 microseconds.  \n  - No explicit error messages or network-related logs.  \n- **Timestamp**: Future date (`2026-05-16`), likely a data entry error (but not directly relevant to the analysis).  \n\n---\n\n#### ",
+    "model_response": "### Root Cause Analysis for \"Cloud Computing Fault: connection_timeout\"\n\n---\n\n#### **1. Context Summary**\n- **Fault Type**: `connection_timeout`  \n- **Severity**: High  \n- **Logs**:  \n  - Repeated entries from `logging.go:85` for the `Health` method, with `result=2` and execution times of ~40–43 microseconds.  \n  - No explicit error messages or network-related logs.  \n- **Timestamp**: Future date (`2026-05-16`), likely a data entry error (but not directly relevant to the analysis).  \n\n---\n\n#### ",
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "catalogue_connection_timeout",
@@ -4589,11 +4589,11 @@
     "case_id": "RCA_090",
     "task_type": "rca",
     "source": "opseval_Wired Network",
-    "model_response": "Alice is unable to see the SSID in the lunchroom, which suggests the network might be **hidden** (not broadcasting its SSID). Hidden networks require users to **manually enter the SSID** and password to connect. \n\n### Root Cause:\n- **Hidden SSID**: The network does not broadcast its SSID, making it invisible in the list of available networks. Alice must manually input the SSID and WPA2 password to connect.\n\n### Correct Action:\n**\"\u624b\u52a8\u8f93\u5165SSID\" (Manually enter the SSID)**  \nThis is the only option th",
+    "model_response": "Alice is unable to see the SSID in the lunchroom, which suggests the network might be **hidden** (not broadcasting its SSID). Hidden networks require users to **manually enter the SSID** and password to connect. \n\n### Root Cause:\n- **Hidden SSID**: The network does not broadcast its SSID, making it invisible in the list of available networks. Alice must manually input the SSID and WPA2 password to connect.\n\n### Correct Action:\n**\"手动输入SSID\" (Manually enter the SSID)**  \nThis is the only option th",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u624b\u52a8\u8f93\u5165SSID\u3002",
+    "expected_root_cause": "手动输入SSID。",
     "bert_f1": 0.0
   },
   {
@@ -4601,7 +4601,7 @@
     "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "model_response": "The possible reasons why the 5 GHz frequency tends to perform better than the 2.4 GHz frequency on a wireless LAN are:\n\n**A. The 5 GHz frequency has more channels than the 2.4 GHz frequency.**  \n- **Correct.** The 5 GHz band supports more non-overlapping channels (e.g., 24-40 channels in the 5 GHz range compared to only 3 in 2.4 GHz), reducing congestion and enabling better performance in dense environments.\n\n**C. The 5 GHz frequency conflicts with fewer common household devices than the 2.4 GHz",
-    "correct": false,
+    "correct": null,
     "rule_score": 0.0,
     "expected_root_cause": "The 5 GHz frequency has more channels than the 2.4 GHz frequency.; The 5 GHz frequency conflicts with fewer common household devices than the 2.4 GHz frequency.; The 5 GHz frequency transmits at faster speeds than the 2.4 GHz frequency.",
     "eval_method": "rescored_with_sota_eval_substring",
@@ -4613,7 +4613,7 @@
     "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "model_response": "**Root Cause Analysis and Recommended Course of Action:**\n\nThe customer's mobile device was previously working with Wi-Fi but now cannot connect. This suggests a **recent change** (e.g., network configuration, device settings, or environmental factors) rather than a hardware failure. The best steps to address this are:\n\n### **Top 3 Answers:**\n**A. Power cycle the device**  \n- **Rationale:** Restarting the device can resolve temporary software glitches or connectivity issues caused by background ",
-    "correct": false,
+    "correct": null,
     "rule_score": 0.0,
     "expected_root_cause": "Power cycle the device.; Forget the Wi-Fi network.; Ensure that the correct SSID was entered.",
     "eval_method": "rescored_with_sota_eval_substring",
@@ -4628,7 +4628,7 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "2xx\uff1a\u6210\u529f\n3xx\uff1a\u91cd\u5b9a\u5411\n4xx\uff1a\u5ba2\u6237\u7aef\u9519\u8bef\n5xx\uff1a\u670d\u52a1\u5668\u9519\u8bef",
+    "expected_root_cause": "2xx：成功\n3xx：重定向\n4xx：客户端错误\n5xx：服务器错误",
     "bert_f1": 0.7468
   },
   {
@@ -4668,7 +4668,7 @@
     "case_id": "RCA_OPSEVAL_RM_004",
     "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
-    "model_response": "**Root Cause Analysis: Why Alarms for Rogue Clients?**\n\n**Context Summary:**  \nThe query focuses on identifying the correct reason to raise alarms about a \"rogue client\" in a wired network context. The options provided (A\u2013D) describe different scenarios, and the analysis must determine which aligns with the definition of a rogue client and its associated risks.\n\n---\n\n### **Key Definitions and Analysis:**\n\n1. **Rogue Client Definition:**  \n   A **rogue client** typically refers to an **unauthoriz",
+    "model_response": "**Root Cause Analysis: Why Alarms for Rogue Clients?**\n\n**Context Summary:**  \nThe query focuses on identifying the correct reason to raise alarms about a \"rogue client\" in a wired network context. The options provided (A–D) describe different scenarios, and the analysis must determine which aligns with the definition of a rogue client and its associated risks.\n\n---\n\n### **Key Definitions and Analysis:**\n\n1. **Rogue Client Definition:**  \n   A **rogue client** typically refers to an **unauthoriz",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
@@ -4747,7 +4747,7 @@
     "case_id": "RCA_146",
     "task_type": "rca",
     "source": "lemma_rca_cloud",
-    "model_response": "### Root Cause Analysis for Cloud Computing Fault: **service_degradation**\n\n---\n\n#### **1. Summary of the Issue**\n- **Fault Type**: Service Degradation  \n- **Severity**: High  \n- **Observed Behavior**: Repeated failures in the `Health` endpoint (result=2) with minimal latency (1.4\u20131.6ms).  \n- **Impact**: Likely disruption of service availability or reliability due to failed health checks.  \n\n---\n\n#### **2. Key Observations from Logs**\n- **Log Entries**:  \n  ```\n  stderr F ts= caller=middlewares.",
+    "model_response": "### Root Cause Analysis for Cloud Computing Fault: **service_degradation**\n\n---\n\n#### **1. Summary of the Issue**\n- **Fault Type**: Service Degradation  \n- **Severity**: High  \n- **Observed Behavior**: Repeated failures in the `Health` endpoint (result=2) with minimal latency (1.4–1.6ms).  \n- **Impact**: Likely disruption of service availability or reliability due to failed health checks.  \n\n---\n\n#### **2. Key Observations from Logs**\n- **Log Entries**:  \n  ```\n  stderr F ts= caller=middlewares.",
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "user_service_degradation",
@@ -4803,11 +4803,11 @@
     "case_id": "RCA_074",
     "task_type": "rca",
     "source": "opseval_Wired Network",
-    "model_response": "The correct command to configure the router's interface as a DHCPv6 relay agent is **\"IPv6 DHCP\u4e2d\u7ee7\u76ee\u6807\"** (IPv6 DHCP Relay Agent Destination). \n\n### Root Cause Analysis:\n1. **Problem**: The user is asking which command configures a router interface as a DHCPv6 relay agent.\n2. **Key Insight**: DHCPv6 relay agents forward DHCPv6 messages between clients and servers. The configuration requires specifying the **relay destination** (the server's IPv6 address).\n3. **Why Other Options Are Incorrect**:\n   ",
+    "model_response": "The correct command to configure the router's interface as a DHCPv6 relay agent is **\"IPv6 DHCP中继目标\"** (IPv6 DHCP Relay Agent Destination). \n\n### Root Cause Analysis:\n1. **Problem**: The user is asking which command configures a router interface as a DHCPv6 relay agent.\n2. **Key Insight**: DHCPv6 relay agents forward DHCPv6 messages between clients and servers. The configuration requires specifying the **relay destination** (the server's IPv6 address).\n3. **Why Other Options Are Incorrect**:\n   ",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "IPv6 DHCP\u4e2d\u7ee7\u76ee\u7684\u5730\u3002",
+    "expected_root_cause": "IPv6 DHCP中继目的地。",
     "bert_f1": 0.8526
   },
   {
@@ -4862,7 +4862,7 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u5f53LSA\u8fbe\u52303600\u79d2\u65f6\uff0c\u901a\u8fc7\u5220\u9664LSA\u6765\u4f7f\u5176\u8fc7\u65f6\u3002",
+    "expected_root_cause": "当LSA达到3600秒时，通过删除LSA来使其过时。",
     "bert_f1": 0.7551
   },
   {
@@ -4880,7 +4880,7 @@
     "case_id": "RCA_089",
     "task_type": "rca",
     "source": "opseval_Wired Network",
-    "model_response": "The correct answer is **ISM**. Here's the root cause analysis:\n\n1. **Understanding the Context**: The question asks about the frequency allotment that provides **11 channels** for **unlicensed use** in **North America** for **WLANs** (Wireless Local Area Networks).\n\n2. **Key Terminology**:\n   - **ISM Bands**: Allocated for unlicensed use in the **2.4 GHz** range (2.4\u20132.4835 GHz). This band is widely used for Wi-Fi, Bluetooth, and other short-range devices. It provides **11 overlapping channels**",
+    "model_response": "The correct answer is **ISM**. Here's the root cause analysis:\n\n1. **Understanding the Context**: The question asks about the frequency allotment that provides **11 channels** for **unlicensed use** in **North America** for **WLANs** (Wireless Local Area Networks).\n\n2. **Key Terminology**:\n   - **ISM Bands**: Allocated for unlicensed use in the **2.4 GHz** range (2.4–2.4835 GHz). This band is widely used for Wi-Fi, Bluetooth, and other short-range devices. It provides **11 overlapping channels**",
     "correct": true,
     "rule_score": 1.0,
     "expected_root_cause": "ISM",
@@ -4991,10 +4991,10 @@
     "case_id": "RCA_069",
     "task_type": "rca",
     "source": "opseval_Wired Network",
-    "model_response": "The correct answer is:  \n**\"\u78c1\u76d8\u955c\u50cf\u4f7f\u670d\u52a1\u80fd\u591f\u5728\u78c1\u76d8\u9a71\u52a8\u5668\u7684\u9a71\u52a8\u5668\u6216\u63a7\u5236\u5668\u6545\u969c\u65f6\u7ee7\u7eed\u8fd0\u884c\u3002\"** (Option 3 or 4, as they are identical in the provided choices).\n\n### Root Cause Analysis:\n1. **Understanding the Context**:  \n   The question revolves around **RAID 1 (mirroring)**, where data is duplicated across two drives. The key principle is redundancy: if one drive fails, the other continues operations.\n\n2. **Key Components**:  \n   - **Actuator Failure**: A hardware component responsible for reading/writing data. If it fails, t",
+    "model_response": "The correct answer is:  \n**\"磁盘镜像使服务能够在磁盘驱动器的驱动器或控制器故障时继续运行。\"** (Option 3 or 4, as they are identical in the provided choices).\n\n### Root Cause Analysis:\n1. **Understanding the Context**:  \n   The question revolves around **RAID 1 (mirroring)**, where data is duplicated across two drives. The key principle is redundancy: if one drive fails, the other continues operations.\n\n2. **Key Components**:  \n   - **Actuator Failure**: A hardware component responsible for reading/writing data. If it fails, t",
     "correct": false,
     "rule_score": 0.0,
-    "expected_root_cause": "\u78c1\u76d8\u955c\u50cf\u4f7f\u670d\u52a1\u5668\u80fd\u591f\u5728\u78c1\u76d8\u9a71\u52a8\u5668\u6216\u78c1\u76d8\u63a7\u5236\u5668\u6545\u969c\u65f6\u7ee7\u7eed\u8fd0\u884c\u3002",
+    "expected_root_cause": "磁盘镜像使服务器能够在磁盘驱动器或磁盘控制器故障时继续运行。",
     "eval_method": "rescored_with_sota_eval_substring",
     "bert_f1": 0.8919
   },
@@ -5026,7 +5026,7 @@
     "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "model_response": "**Root Cause Analysis for Wired Network Connection Failure**  \nThe question asks which wired network problems **cause a complete failure** of a network connection. Here's the breakdown of each option:\n\n---\n\n### **Correct Answers (Cause Complete Failure):**  \n**C. Duplex Mismatch**  \n- **Explanation**: A duplex mismatch occurs when one device is configured for full-duplex and the other for half-duplex. This leads to **collisions**, **data corruption**, and **complete loss of communication** becau",
-    "correct": false,
+    "correct": null,
     "rule_score": 0.0,
     "expected_root_cause": "Speed mismatch; TX/RX reversal; Bad switch port",
     "eval_method": "rescored_with_sota_eval_substring",
@@ -5130,7 +5130,7 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u8bbf\u95ee",
+    "expected_root_cause": "访问",
     "bert_f1": 0.0
   },
   {
@@ -5148,11 +5148,11 @@
     "case_id": "RCA_007",
     "task_type": "rca",
     "source": "opseval_Wired Network",
-    "model_response": "The correct answer is **\"\u6d41\u7a0b\u56fe\uff08Flowchart\uff09\"**. \n\n**Root Cause Analysis:**  \nThe question asks for a chart type that allows viewing **information flow from a high-level perspective**.  \n- **Flowchart** (\u6d41\u7a0b\u56fe) is specifically designed to represent processes, workflows, and information flow in a structured, hierarchical manner, making it ideal for high-level overviews.  \n- **Physical Diagram** (\u7269\u7406\u56fe) focuses on physical components or layouts, not abstract information flow.  \n- **Symbolic Chart** (\u7b26\u53f7\u56fe) u",
+    "model_response": "The correct answer is **\"流程图（Flowchart）\"**. \n\n**Root Cause Analysis:**  \nThe question asks for a chart type that allows viewing **information flow from a high-level perspective**.  \n- **Flowchart** (流程图) is specifically designed to represent processes, workflows, and information flow in a structured, hierarchical manner, making it ideal for high-level overviews.  \n- **Physical Diagram** (物理图) focuses on physical components or layouts, not abstract information flow.  \n- **Symbolic Chart** (符号图) u",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u903b\u8f91\u56fe\u3002",
+    "expected_root_cause": "逻辑图。",
     "bert_f1": 0.0
   },
   {
@@ -5242,7 +5242,7 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "IPv6\u5730\u5740\u81ea\u52a8\u914d\u7f6e",
+    "expected_root_cause": "IPv6地址自动配置",
     "bert_f1": 0.0
   },
   {
@@ -5264,7 +5264,7 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u9519\u8bef\u7684\uff0c\u4e0d\u6b63\u786e\u7684\u3002",
+    "expected_root_cause": "错误的，不正确的。",
     "bert_f1": 0.0
   },
   {
@@ -5283,11 +5283,11 @@
     "case_id": "RCA_023",
     "task_type": "rca",
     "source": "opseval_Log Analysis",
-    "model_response": "To perform a root cause analysis (RCA) for the issue of **\"regular expression parsing errors\"** (e.g., \u6b63\u5219\u8868\u8fbe\u5f0f\u89e3\u6790\u9519\u8bef) in production systems, follow a structured approach. Below is a step-by-step breakdown of the RCA process, tailored to this specific scenario:\n\n---\n\n### **1. Define the Problem Clearly**\n- **Issue**: Regular expression parsing errors occurring in production (e.g., during data extraction, log processing, or validation).\n- **Impact**: High severity (as indicated in the context), potent",
+    "model_response": "To perform a root cause analysis (RCA) for the issue of **\"regular expression parsing errors\"** (e.g., 正则表达式解析错误) in production systems, follow a structured approach. Below is a step-by-step breakdown of the RCA process, tailored to this specific scenario:\n\n---\n\n### **1. Define the Problem Clearly**\n- **Issue**: Regular expression parsing errors occurring in production (e.g., during data extraction, log processing, or validation).\n- **Impact**: High severity (as indicated in the context), potent",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u6b63\u5219\u8868\u8fbe\u5f0f\u89e3\u6790\uff1a\u4f7f\u7528\u6b63\u5219\u8868\u8fbe\u5f0f\u5339\u914d\u65e5\u5fd7\u884c\u4e2d\u7684\u7279\u5b9a\u6a21\u5f0f\uff0c\u5e76\u63d0\u53d6\u6240\u9700\u7684\u5b57\u6bb5\u3002\u8fd9\u79cd\u65b9\u6cd5\u901a\u5e38\u7528\u4e8e\u65e5\u5fd7\u683c\u5f0f\u6bd4\u8f83\u56fa\u5b9a\u3001\u89c4\u5219\u660e\u786e\u7684\u60c5\u51b5\u3002\n\u6a21\u677f\u89e3\u6790\uff1a\u6709\u4e9b\u65e5\u5fd7\u683c\u5f0f\u662f\u57fa\u4e8e\u6a21\u677f\u751f\u6210\u7684\uff0c\u53ef\u4ee5\u6839\u636e\u65e5\u5fd7\u6a21\u677f\u7684\u5b9a\u4e49\u6765\u89e3\u6790\u65e5\u5fd7\u884c\uff0c\u63d0\u53d6\u6240\u9700\u7684\u5b57\u6bb5\u3002\u8fd9\u79cd\u65b9\u6cd5\u9002\u7528\u4e8e\u6a21\u677f\u683c\u5f0f\u7684\u65e5\u5fd7\u3002\n\u5206\u5272\u7b26\u89e3\u6790\uff1a\u6839\u636e\u6307\u5b9a\u7684\u5206\u9694\u7b26\u5c06\u65e5\u5fd7\u884c\u5206\u5272\u6210\u591a\u4e2a\u5b57\u6bb5\u3002\u8fd9\u79cd\u65b9\u6cd5\u9002\u7528\u4e8e\u7b80\u5355\u7684\u65e5\u5fd7\u683c\u5f0f\uff0c\u5982\u4ee5\u7a7a\u683c\u6216\u9017\u53f7\u5206\u9694\u7684\u65e5\u5fd7\u884c\u3002\n\u673a\u5668\u5b66\u4e60\u7b97\u6cd5\uff1a\u4f7f\u7528\u673a\u5668\u5b66\u4e60\u7b97\u6cd5\u5bf9\u65e5\u5fd7\u6570\u636e\u8fdb\u884c\u8bad\u7ec3\u548c\u5b66\u4e60\uff0c\u81ea\u52a8\u8bc6\u522b\u548c\u63d0\u53d6\u5b57\u6bb5\u3002\u8fd9\u79cd\u65b9\u6cd5\u9002\u7528\u4e8e\u590d\u6742\u7684\u65e5\u5fd7\u683c\u5f0f\u548c\u4e0d\u89c4\u5219\u7684\u6587\u672c\u6570\u636e\u3002\nNLP\uff08\u81ea\u7136\u8bed\u8a00\u5904\u7406\uff09\u6280\u672f\uff1a\u901a\u8fc7\u81ea\u7136\u8bed\u8a00\u5904\u7406\u6280\u672f\u5bf9\u65e5\u5fd7\u6587\u672c\u8fdb\u884c\u89e3\u6790\u548c\u8bed\u4e49\u7406\u89e3\uff0c\u63d0\u53d6\u6240\u9700\u7684\u5b57\u6bb5\u3002\u8fd9\u79cd\u65b9\u6cd5\u9002\u7528\u4e8e\u5305\u542b\u4eba\u7c7b\u53ef\u8bfb\u4fe1\u606f\u7684\u65e5\u5fd7\u6570\u636e\u3002\n\u6839\u636e\u4e0d\u540c\u7684\u65e5\u5fd7\u683c\u5f0f\u548c\u9700\u6c42\uff0c\u53ef\u4ee5\u9009\u62e9\u9002\u5408\u7684\u65b9\u6cd5\u8fdb\u884c\u5b57\u6bb5\u62bd\u53d6\u3002\u5728\u5b9e\u9645\u5e94\u7528\u4e2d\uff0c\u53ef\u80fd\u9700\u8981\u6839\u636e\u5177\u4f53\u60c5\u51b5\u7ec4\u5408\u4f7f\u7528\u591a\u79cd\u65b9\u6cd5\u3002",
+    "expected_root_cause": "正则表达式解析：使用正则表达式匹配日志行中的特定模式，并提取所需的字段。这种方法通常用于日志格式比较固定、规则明确的情况。\n模板解析：有些日志格式是基于模板生成的，可以根据日志模板的定义来解析日志行，提取所需的字段。这种方法适用于模板格式的日志。\n分割符解析：根据指定的分隔符将日志行分割成多个字段。这种方法适用于简单的日志格式，如以空格或逗号分隔的日志行。\n机器学习算法：使用机器学习算法对日志数据进行训练和学习，自动识别和提取字段。这种方法适用于复杂的日志格式和不规则的文本数据。\nNLP（自然语言处理）技术：通过自然语言处理技术对日志文本进行解析和语义理解，提取所需的字段。这种方法适用于包含人类可读信息的日志数据。\n根据不同的日志格式和需求，可以选择适合的方法进行字段抽取。在实际应用中，可能需要根据具体情况组合使用多种方法。",
     "bert_f1": 0.7678
   },
   {
@@ -5310,7 +5310,7 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "BGP\u662f\u4e00\u79cd\u94fe\u8def\u72b6\u6001\u8def\u7531\u534f\u8bae\u3002",
+    "expected_root_cause": "BGP是一种链路状态路由协议。",
     "bert_f1": 0.7445
   },
   {
@@ -5396,11 +5396,11 @@
     "case_id": "RCA_043",
     "task_type": "rca",
     "source": "opseval_Wired Network",
-    "model_response": "The question asks which type of preparatory work does **not** emphasize the archival position of a file. Here's the analysis:\n\n### **Key Considerations:**\n1. **\"Complete\" (\u5b8c\u6574\u7684):**  \n   - Implies thorough preparation, which likely includes proper archival positioning (e.g., organizing files systematically for long-term storage).  \n   - **Emphasizes** archival position.\n\n2. **\"Increasing\" (\u9012\u589e\u7684):**  \n   - Suggests a process of incremental addition or growth.  \n   - May not directly relate to archiv",
+    "model_response": "The question asks which type of preparatory work does **not** emphasize the archival position of a file. Here's the analysis:\n\n### **Key Considerations:**\n1. **\"Complete\" (完整的):**  \n   - Implies thorough preparation, which likely includes proper archival positioning (e.g., organizing files systematically for long-term storage).  \n   - **Emphasizes** archival position.\n\n2. **\"Increasing\" (递增的):**  \n   - Suggests a process of incremental addition or growth.  \n   - May not directly relate to archiv",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u5dee\u5206\u7684\uff1b\u5fae\u5206\u7684\uff1b\u5dee\u5f02\u7684",
+    "expected_root_cause": "差分的；微分的；差异的",
     "bert_f1": 0.0
   },
   {
@@ -5467,7 +5467,7 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u5c06\u60a8\u7684\u8bbe\u5907\u914d\u7f6e\u4e3a\u4f7f\u7528\u9891\u90539\u3002",
+    "expected_root_cause": "将您的设备配置为使用频道9。",
     "bert_f1": 0.0
   },
   {
@@ -5518,7 +5518,7 @@
     "case_id": "RCA_120",
     "task_type": "rca",
     "source": "lemma_rca_cloud",
-    "model_response": "### Root Cause Analysis for \"cpu_spike\" in Cloud Computing Environment\n\n---\n\n#### **1. Summary of the Issue**\n- **Title**: Cloud Computing Fault: `cpu_spike`  \n- **Severity**: High  \n- **Timestamp**: 2026-05-16T19:07:19.617378 (future date, possibly a typo)  \n- **Key Logs**:  \n  - Deprecation warning in Symfony (`isMasterRequest()` \u2192 `isMainRequest()`).  \n  - Log entry: `\"Annotated DataCenter us-east1 [] []\"`.  \n  - PDO connectivity status: `pdo_connectivity\":true`.  \n\n---\n\n#### **2. Analysis of",
+    "model_response": "### Root Cause Analysis for \"cpu_spike\" in Cloud Computing Environment\n\n---\n\n#### **1. Summary of the Issue**\n- **Title**: Cloud Computing Fault: `cpu_spike`  \n- **Severity**: High  \n- **Timestamp**: 2026-05-16T19:07:19.617378 (future date, possibly a typo)  \n- **Key Logs**:  \n  - Deprecation warning in Symfony (`isMasterRequest()` → `isMainRequest()`).  \n  - Log entry: `\"Annotated DataCenter us-east1 [] []\"`.  \n  - PDO connectivity status: `pdo_connectivity\":true`.  \n\n---\n\n#### **2. Analysis of",
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "ratings_cpu_spike",
@@ -5668,7 +5668,7 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u7f51\u7edc\u5206\u6790\u7b56\u7565",
+    "expected_root_cause": "网络分析策略",
     "bert_f1": 0.0
   },
   {
@@ -5679,7 +5679,7 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u9009\u62e9\u5408\u9002\u7684\u65e5\u5fd7\u6587\u4ef6\uff1a\u6839\u636e\u9700\u8981\u9009\u62e9\u8981\u5206\u6790\u7684\u65e5\u5fd7\u6587\u4ef6\uff0c\u5982\u9519\u8bef\u65e5\u5fd7\u3001\u67e5\u8be2\u65e5\u5fd7\u3001\u6162\u67e5\u8be2\u65e5\u5fd7\u7b49\u3002\u8fd9\u53d6\u51b3\u4e8e\u4f60\u8981\u89e3\u51b3\u7684\u95ee\u9898\u6216\u5173\u6ce8\u7684\u65b9\u9762\u3002\n\n\u67e5\u770b\u65e5\u5fd7\u6587\u4ef6\uff1a\u4f7f\u7528\u6587\u672c\u7f16\u8f91\u5668\u6216\u547d\u4ee4\u884c\u5de5\u5177\u6253\u5f00\u65e5\u5fd7\u6587\u4ef6\u3002\u6d4f\u89c8\u6587\u4ef6\u5185\u5bb9\uff0c\u67e5\u627e\u5173\u952e\u4fe1\u606f\uff0c\u5982\u9519\u8bef\u6d88\u606f\u3001\u67e5\u8be2\u8bed\u53e5\u3001\u6267\u884c\u65f6\u95f4\u7b49\u3002\n\n\u8fc7\u6ee4\u548c\u641c\u7d22\uff1a\u6839\u636e\u9700\u6c42\u4f7f\u7528\u6587\u672c\u641c\u7d22\u5de5\u5177\uff08\u5982grep\u3001awk\u7b49\uff09\u6216\u65e5\u5fd7\u5206\u6790\u5de5\u5177\u6765\u8fc7\u6ee4\u548c\u641c\u7d22\u65e5\u5fd7\u6587\u4ef6\u3002\u8fd9\u6709\u52a9\u4e8e\u5feb\u901f\u5b9a\u4f4d\u7279\u5b9a\u7c7b\u578b\u7684\u65e5\u5fd7\u6761\u76ee\u6216\u5173\u952e\u5b57\u3002\n\n\u5206\u6790\u65e5\u5fd7\u5185\u5bb9\uff1a\u6839\u636e\u65e5\u5fd7\u6587\u4ef6\u7684\u7c7b\u578b\uff0c\u8fdb\u884c\u76f8\u5e94\u7684\u5206\u6790\u3002\u4f8b\u5982\uff0c\u9519\u8bef\u65e5\u5fd7\u53ef\u4ee5\u5e2e\u52a9\u4f60\u8bc6\u522b\u6570\u636e\u5e93\u670d\u52a1\u5668\u7684\u95ee\u9898\u548c\u5f02\u5e38\u60c5\u51b5\uff1b\u67e5\u8be2\u65e5\u5fd7\u53ef\u4ee5\u7528\u4e8e\u6027\u80fd\u5206\u6790\u548c\u4f18\u5316\uff1b\u6162\u67e5\u8be2\u65e5\u5fd7\u53ef\u4ee5\u5e2e\u52a9\u4f60\u53d1\u73b0\u6027\u80fd\u8f83\u5dee\u7684\u67e5\u8be2\u5e76\u8fdb\u884c\u6539\u8fdb\u7b49\u3002\n\n\u4f7f\u7528\u5de5\u5177\u548c\u811a\u672c\uff1a\u5229\u7528\u5404\u79cd\u53ef\u7528\u7684\u65e5\u5fd7\u5206\u6790\u5de5\u5177\u548c\u811a\u672c\u6765\u66f4\u6df1\u5165\u5730\u5206\u6790\u65e5\u5fd7\u6587\u4ef6\u3002MySQL\u63d0\u4f9b\u4e86\u4e00\u4e9b\u5185\u7f6e\u5de5\u5177\uff0c\u5982mysqldumpslow\u7528\u4e8e\u6162\u67e5\u8be2\u65e5\u5fd7\u5206\u6790\u3002\u6b64\u5916\uff0c\u8fd8\u6709\u7b2c\u4e09\u65b9\u5de5\u5177\u548c\u811a\u672c\u53ef\u7528\u4e8e\u66f4\u9ad8\u7ea7\u7684\u65e5\u5fd7\u5206\u6790\u548c\u53ef\u89c6\u5316\u3002\n\n\u751f\u6210\u62a5\u544a\u548c\u7edf\u8ba1\u6570\u636e\uff1a\u6839\u636e\u65e5\u5fd7\u5206\u6790\u7684\u7ed3\u679c\uff0c\u751f\u6210\u76f8\u5e94\u7684\u62a5\u544a\u548c\u7edf\u8ba1\u6570\u636e\u3002\u8fd9\u53ef\u4ee5\u5e2e\u52a9\u4f60\u7406\u89e3\u6570\u636e\u5e93\u7684\u6027\u80fd\u74f6\u9888\u3001\u67e5\u8be2\u4f18\u5316\u673a\u4f1a\u7b49\uff0c\u5e76\u91c7\u53d6\u76f8\u5e94\u7684\u63aa\u65bd\u6539\u8fdb\u6570\u636e\u5e93\u6027\u80fd\u3002",
+    "expected_root_cause": "选择合适的日志文件：根据需要选择要分析的日志文件，如错误日志、查询日志、慢查询日志等。这取决于你要解决的问题或关注的方面。\n\n查看日志文件：使用文本编辑器或命令行工具打开日志文件。浏览文件内容，查找关键信息，如错误消息、查询语句、执行时间等。\n\n过滤和搜索：根据需求使用文本搜索工具（如grep、awk等）或日志分析工具来过滤和搜索日志文件。这有助于快速定位特定类型的日志条目或关键字。\n\n分析日志内容：根据日志文件的类型，进行相应的分析。例如，错误日志可以帮助你识别数据库服务器的问题和异常情况；查询日志可以用于性能分析和优化；慢查询日志可以帮助你发现性能较差的查询并进行改进等。\n\n使用工具和脚本：利用各种可用的日志分析工具和脚本来更深入地分析日志文件。MySQL提供了一些内置工具，如mysqldumpslow用于慢查询日志分析。此外，还有第三方工具和脚本可用于更高级的日志分析和可视化。\n\n生成报告和统计数据：根据日志分析的结果，生成相应的报告和统计数据。这可以帮助你理解数据库的性能瓶颈、查询优化机会等，并采取相应的措施改进数据库性能。",
     "bert_f1": 0.712
   },
   {
@@ -5709,7 +5709,7 @@
     "case_id": "RCA_141",
     "task_type": "rca",
     "source": "lemma_rca_cloud",
-    "model_response": "### **Root Cause Analysis for Pod Crash (pod_crash)**\n\n---\n\n#### **1. Summary of the Issue**\n- **Symptom**: Pod crash due to failed health checks.\n- **Severity**: High.\n- **Logs**: Repeated failures in the `Health` method with return code `1`, indicating an error. The logs show inconsistent timing (1.028ms vs. ~8\u00b5s), which may be due to formatting issues or intermittent failures.\n\n---\n\n#### **2. Key Observations from Logs**\n- **Health Check Failures**: \n  - The `Health` method returns `result=1`",
+    "model_response": "### **Root Cause Analysis for Pod Crash (pod_crash)**\n\n---\n\n#### **1. Summary of the Issue**\n- **Symptom**: Pod crash due to failed health checks.\n- **Severity**: High.\n- **Logs**: Repeated failures in the `Health` method with return code `1`, indicating an error. The logs show inconsistent timing (1.028ms vs. ~8µs), which may be due to formatting issues or intermittent failures.\n\n---\n\n#### **2. Key Observations from Logs**\n- **Health Check Failures**: \n  - The `Health` method returns `result=1`",
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "payment_pod_crash",
@@ -5735,7 +5735,7 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u7279\u5b9a\u7684\u7ec4\u64ad\u6d41\u5c06\u88ab\u91cd\u5b9a\u5411\u4e3a\u65e0\u7ebf\u5ba2\u6237\u7aef\u7684\u5355\u64ad\u6d41\u3002",
+    "expected_root_cause": "特定的组播流将被重定向为无线客户端的单播流。",
     "bert_f1": 0.7452
   },
   {
@@ -5746,7 +5746,7 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u4e00\u4e2a\u7f51\u7edc\u5b89\u5168\u548c\u7b56\u7565\u5e73\u53f0",
+    "expected_root_cause": "一个网络安全和策略平台",
     "bert_f1": 0.0
   },
   {
@@ -5776,11 +5776,11 @@
     "case_id": "RCA_032",
     "task_type": "rca",
     "source": "opseval_Wired Network",
-    "model_response": "The root cause of the intermittent connectivity issue when connecting an IEEE 802.11g wireless device to an IEEE 802.11b/g access point (AP) is **channel overlap or interference**. The 2.4 GHz band (used by both 802.11b/g and 802.11g devices) has only 11 channels, and if multiple APs or devices are using the same channel, it can lead to congestion and intermittent connectivity problems. \n\n**Correct Solution:**  \n**D. \u66f4\u6539AP\u4f7f\u7528\u7684\u4fe1\u9053 (Change the AP's channel)**  \n\n### Explanation:\n- **Channel Overlap:*",
+    "model_response": "The root cause of the intermittent connectivity issue when connecting an IEEE 802.11g wireless device to an IEEE 802.11b/g access point (AP) is **channel overlap or interference**. The 2.4 GHz band (used by both 802.11b/g and 802.11g devices) has only 11 channels, and if multiple APs or devices are using the same channel, it can lead to congestion and intermittent connectivity problems. \n\n**Correct Solution:**  \n**D. 更改AP使用的信道 (Change the AP's channel)**  \n\n### Explanation:\n- **Channel Overlap:*",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u5c06AP\u66ff\u6362\u4e3a\u652f\u6301802.11n\u7684\u578b\u53f7\u3002",
+    "expected_root_cause": "将AP替换为支持802.11n的型号。",
     "bert_f1": 0.8215
   }
 ]

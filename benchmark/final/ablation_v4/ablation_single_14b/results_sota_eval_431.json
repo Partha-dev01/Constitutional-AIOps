@@ -3444,11 +3444,11 @@
     "case_id": "RCA_100",
     "task_type": "rca",
     "source": "opseval_Wired Network",
-    "model_response": "{\n    \"root_cause\": \"\u4ee3\u7406\u89e3\uff08\u5ba2\u6237\u7aef\uff09\u4f8b\u5982AnyConnect\u5b89\u5168\u79fb\u52a8\u5ba2\u6237\u7aef\",\n    \"causal_chain\": [\"SSL VPN\u5b9e\u73b0\u9700\u8981\u5ba2\u6237\u7aef\u8f6f\u4ef6\", \"AnyConnect\u662fCisco\u7684SSL VPN\u5ba2\u6237\u7aef\u5b9e\u73b0\"],\n    \"impact\": {\n        \"services\": [\"SSL VPN\u670d\u52a1\"],\n        \"severity\": \"low\",\n        \"users_affected\": \"0\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"SSL VPN\u7684\u5178\u578b\u5b9e\u73b0\u5305\u62ec\u4e13\u7528\u5ba2\u6237\u7aef\u8f6f\u4ef6\u3002AnyConnect\u662fCisco\u7684SSL VPN\u89e3\u51b3\u65b9\u6848\uff0c\u5c5e\u4e8e\u5ba2\u6237\u7aef-\u670d\u52a1\u5668\u67b6\u6784\u7684\u5b9e\u73b0\u65b9\u5f0f\u3002\u5176\u4ed6\u9009\u9879\u4e2d\uff0cTor\u6d4f\u89c8\u5668\u7528\u4e8e\u533f\u540d\u8bbf\u95ee\uff0c\u53cd\u5411\u4ee3\u7406\u5c5e\u4e8e\u7f51\u7edc\u67b6\u6784\u6280\u672f\uff0c\u7aef\u70b9\u8f6c\u6362\u6280\u672f\u5c5e\u4e8e\u5e7f\u4e49\u5b89\u5168\u8303\u7574\uff0c\u800cAnyConnect\u662f\u660e\u786e\u7684SSL VPN\u5ba2\u6237\u7aef\u793a\u4f8b\u3002\",\n    \"remediation_steps\": [\n        {\"action\": \"\u786e\u8ba4\u9009\u9879\u4e2d\u660e\u786e\u63d0\u53caSSL VPN\u5ba2\u6237\u7aef\u5b9e\u73b0\", ",
+    "model_response": "{\n    \"root_cause\": \"代理解（客户端）例如AnyConnect安全移动客户端\",\n    \"causal_chain\": [\"SSL VPN实现需要客户端软件\", \"AnyConnect是Cisco的SSL VPN客户端实现\"],\n    \"impact\": {\n        \"services\": [\"SSL VPN服务\"],\n        \"severity\": \"low\",\n        \"users_affected\": \"0\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"SSL VPN的典型实现包括专用客户端软件。AnyConnect是Cisco的SSL VPN解决方案，属于客户端-服务器架构的实现方式。其他选项中，Tor浏览器用于匿名访问，反向代理属于网络架构技术，端点转换技术属于广义安全范畴，而AnyConnect是明确的SSL VPN客户端示例。\",\n    \"remediation_steps\": [\n        {\"action\": \"确认选项中明确提及SSL VPN客户端实现\", ",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u4ee3\u7406\uff08\u5ba2\u6237\u7aef\uff09\u4f8b\u5982AnyConnect\u5b89\u5168\u79fb\u52a8\u5ba2\u6237\u7aef",
+    "expected_root_cause": "代理（客户端）例如AnyConnect安全移动客户端",
     "bert_f1": 0.8185
   },
   {
@@ -3511,11 +3511,11 @@
     "case_id": "RCA_012",
     "task_type": "rca",
     "source": "opseval_Wired Network",
-    "model_response": "{\n    \"root_cause\": \"\u8d1f\u8f7d\u5747\u8861\u5668\",\n    \"causal_chain\": [],\n    \"impact\": {\n        \"services\": [\"\u8d1f\u8f7d\u5747\u8861\u670d\u52a1\"],\n        \"severity\": \"high\",\n        \"users_affected\": \"\u6240\u6709\u4f9d\u8d56\u8d1f\u8f7d\u5747\u8861\u7684\u670d\u52a1\u7528\u6237\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"\u865a\u62dfIP\u5730\u5740\uff08VIP\uff09\u4e3b\u8981\u7528\u4e8e\u5b9e\u73b0\u9ad8\u53ef\u7528\u6027\u573a\u666f\uff0c\u5176\u4e2d\u8d1f\u8f7d\u5747\u8861\u5668\u901a\u8fc7VIP\u4f5c\u4e3a\u524d\u7aef\u5165\u53e3\uff0c\u5c06\u6d41\u91cf\u5206\u53d1\u5230\u540e\u7aef\u670d\u52a1\u5668\u96c6\u7fa4\u3002\u5f53\u67d0\u53f0\u670d\u52a1\u5668\u6545\u969c\u65f6\uff0c\u8d1f\u8f7d\u5747\u8861\u5668\u53ef\u81ea\u52a8\u5c06\u6d41\u91cf\u91cd\u5b9a\u5411\u5230\u5176\u4ed6\u6b63\u5e38\u8282\u70b9\uff0c\u4ece\u800c\u4fdd\u8bc1\u670d\u52a1\u8fde\u7eed\u6027\u3002\u5176\u4ed6\u9009\u9879\u4e2d\uff1aVLAN\u7528\u4e8e\u7f51\u7edc\u5206\u6bb5\uff0cNAT\u7528\u4e8e\u5730\u5740\u8f6c\u6362\uff0cNIC\u56e2\u961f\u7528\u4e8e\u94fe\u8def\u805a\u5408\uff0c\u5747\u4e0d\u76f4\u63a5\u6d89\u53ca\u865a\u62dfIP\u7684\u9ad8\u53ef\u7528\u6027\u7279\u6027\u3002\",\n    \"remediation_steps\": [\n        {\"action\": \"\u786e\u8ba4\u8d1f\u8f7d\u5747\u8861\u5668\u914d\u7f6e\u4e86\u865a\u62dfIP\u5730\u5740\", \"risk\": \"low\"},\n        {\"action\": \"\u9a8c\u8bc1\u540e\u7aef\u670d\u52a1\u5668\u5065\u5eb7\u68c0\u67e5\u673a\u5236\", \"ri",
+    "model_response": "{\n    \"root_cause\": \"负载均衡器\",\n    \"causal_chain\": [],\n    \"impact\": {\n        \"services\": [\"负载均衡服务\"],\n        \"severity\": \"high\",\n        \"users_affected\": \"所有依赖负载均衡的服务用户\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"虚拟IP地址（VIP）主要用于实现高可用性场景，其中负载均衡器通过VIP作为前端入口，将流量分发到后端服务器集群。当某台服务器故障时，负载均衡器可自动将流量重定向到其他正常节点，从而保证服务连续性。其他选项中：VLAN用于网络分段，NAT用于地址转换，NIC团队用于链路聚合，均不直接涉及虚拟IP的高可用性特性。\",\n    \"remediation_steps\": [\n        {\"action\": \"确认负载均衡器配置了虚拟IP地址\", \"risk\": \"low\"},\n        {\"action\": \"验证后端服务器健康检查机制\", \"ri",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u805a\u7c7b; \u8d1f\u8f7d\u5747\u8861",
+    "expected_root_cause": "聚类; 负载均衡",
     "bert_f1": 0.0
   },
   {
@@ -3534,7 +3534,7 @@
     "case_id": "RCA_171",
     "task_type": "rca",
     "source": "lemma_rca_cloud",
-    "model_response": "{\n    \"root_cause\": \"Disk I/O latency causing increased response times in the Health check endpoint\",\n    \"causal_chain\": [\n        \"Increased disk I/O latency due to high disk contention or storage subsystem issues\",\n        \"Health check endpoint (middlewares.go:157) experiencing delayed I/O operations\",\n        \"Resulting in prolonged response times (500-800\u00b5s) and potential service degradation\"\n    ],\n    \"impact\": {\n        \"services\": [\"Health check service\", \"dependent microservices\"],\n  ",
+    "model_response": "{\n    \"root_cause\": \"Disk I/O latency causing increased response times in the Health check endpoint\",\n    \"causal_chain\": [\n        \"Increased disk I/O latency due to high disk contention or storage subsystem issues\",\n        \"Health check endpoint (middlewares.go:157) experiencing delayed I/O operations\",\n        \"Resulting in prolonged response times (500-800µs) and potential service degradation\"\n    ],\n    \"impact\": {\n        \"services\": [\"Health check service\", \"dependent microservices\"],\n  ",
     "correct": true,
     "rule_score": 0.8,
     "expected_root_cause": "user_disk_io_issue",
@@ -3549,7 +3549,7 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "802.11b\u662f\u4e00\u79cd\u65e0\u7ebf\u7f51\u7edc\u6807\u51c6\uff0c\u4e5f\u79f0\u4e3aWi-Fi\u6807\u51c6\uff0c\u5b83\u4f7f\u75282.4GHz\u9891\u6bb5\u8fdb\u884c\u901a\u4fe1\uff0c\u6700\u9ad8\u4f20\u8f93\u901f\u7387\u4e3a11Mbps\u3002; 802.11g\u662f\u4e00\u79cd\u65e0\u7ebf\u7f51\u7edc\u6807\u51c6\uff0c\u5b83\u652f\u63012.4GHz\u9891\u6bb5\uff0c\u6700\u9ad8\u4f20\u8f93\u901f\u7387\u4e3a54Mbps\u3002",
+    "expected_root_cause": "802.11b是一种无线网络标准，也称为Wi-Fi标准，它使用2.4GHz频段进行通信，最高传输速率为11Mbps。; 802.11g是一种无线网络标准，它支持2.4GHz频段，最高传输速率为54Mbps。",
     "bert_f1": 0.7464
   },
   {
@@ -3589,11 +3589,11 @@
     "case_id": "RCA_057",
     "task_type": "rca",
     "source": "opseval_Wired Network",
-    "model_response": "{\n    \"root_cause\": \"\u5177\u6709\u5730\u5740\u4ece192.168.0.0\u5230192.168.15.255\u7684\u8def\u7531\uff0c\u5b50\u7f51\u63a9\u7801\u4e3a24\u523028\u3002\",\n    \"causal_chain\": [\"ACL\u89c4\u5219\u5b9a\u4e49\u4e86192.168.0.0/20\u7f51\u7edc\u8303\u56f4\", \"\u5b50\u7f51\u63a9\u7801\u8303\u56f4\u9650\u5b9a\u4e3age 24 le 28\", \"\u5339\u914d\u8be5\u8303\u56f4\u7684\u8def\u7531\u88ab\u62d2\u7edd\"],\n    \"impact\": {\n        \"services\": [\"\u7f51\u7edc\u8def\u7531\u670d\u52a1\"],\n        \"severity\": \"high\",\n        \"users_affected\": \"\u6240\u6709\u4f7f\u7528\u76f8\u5173\u5b50\u7f51\u7684\u7528\u6237\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"\u8be5ACL\u89c4\u5219\u62d2\u7edd192.168.0.0/20\u7f51\u7edc\u4e2d\u5b50\u7f51\u63a9\u7801\u4e3a24-28\u7684\u8def\u7531\u3002192.168.0.0/20\u8986\u76d6192.168.0.0\u5230192.168.15.255\u7684\u5730\u5740\u8303\u56f4\uff0c\u5b50\u7f51\u63a9\u780124-28\u5bf9\u5e94\u7684\u5177\u4f53\u5b50\u7f51\u6570\u91cf\u4e3a2^((28-24)*4)= 16\u4e2a\u5b50\u7f51\u3002\u9009\u98791\u51c6\u786e\u63cf\u8ff0\u4e86\u8fd9\u4e00\u5339\u914d\u6761\u4ef6\u3002\",\n    \"remediation_steps\": [\n  ",
+    "model_response": "{\n    \"root_cause\": \"具有地址从192.168.0.0到192.168.15.255的路由，子网掩码为24到28。\",\n    \"causal_chain\": [\"ACL规则定义了192.168.0.0/20网络范围\", \"子网掩码范围限定为ge 24 le 28\", \"匹配该范围的路由被拒绝\"],\n    \"impact\": {\n        \"services\": [\"网络路由服务\"],\n        \"severity\": \"high\",\n        \"users_affected\": \"所有使用相关子网的用户\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"该ACL规则拒绝192.168.0.0/20网络中子网掩码为24-28的路由。192.168.0.0/20覆盖192.168.0.0到192.168.15.255的地址范围，子网掩码24-28对应的具体子网数量为2^((28-24)*4)= 16个子网。选项1准确描述了这一匹配条件。\",\n    \"remediation_steps\": [\n  ",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u5177\u6709\u5730\u5740\u4ece192.168.0.0\u5230192.168.15.255\u7684\u8def\u7531\uff0c\u5b50\u7f51\u63a9\u7801\u4e3a24\u523028\u3002",
+    "expected_root_cause": "具有地址从192.168.0.0到192.168.15.255的路由，子网掩码为24到28。",
     "bert_f1": 0.8437
   },
   {
@@ -3626,7 +3626,7 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "iSCSI\uff08Internet Small Computer System Interface\uff09\u662f\u4e00\u79cd\u57fa\u4e8eIP\u7f51\u7edc\u7684\u5b58\u50a8\u534f\u8bae\uff0c\u7528\u4e8e\u5728\u8ba1\u7b97\u673a\u4e4b\u95f4\u4f20\u8f93\u6570\u636e\u5757\u3002\u5b83\u5141\u8bb8\u8fdc\u7a0b\u8bbf\u95ee\u5b58\u50a8\u8bbe\u5907\uff0c\u4f7f\u5f97\u591a\u4e2a\u8ba1\u7b97\u673a\u53ef\u4ee5\u5171\u4eab\u5b58\u50a8\u8d44\u6e90\u3002; FCoE",
+    "expected_root_cause": "iSCSI（Internet Small Computer System Interface）是一种基于IP网络的存储协议，用于在计算机之间传输数据块。它允许远程访问存储设备，使得多个计算机可以共享存储资源。; FCoE",
     "bert_f1": 0.7356
   },
   {
@@ -3655,11 +3655,11 @@
     "case_id": "RCA_OPSEVAL_RM_023",
     "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
-    "model_response": "{\n    \"root_cause\": \"Client\u2019s MAC address\",\n    \"causal_chain\": [\n        \"The Monitor > Clients page requires a unique identifier to isolate a specific wireless client.\",\n        \"SSID, WLC IP address, and AP name are either non-unique or relate to infrastructure components, not the client device.\",\n        \"MAC addresses are globally unique and directly tied to the client\u2019s hardware, enabling precise troubleshooting.\"\n    ],\n    \"impact\": {\n        \"services\": [\"Wireless Network Monitoring\", \"",
+    "model_response": "{\n    \"root_cause\": \"Client’s MAC address\",\n    \"causal_chain\": [\n        \"The Monitor > Clients page requires a unique identifier to isolate a specific wireless client.\",\n        \"SSID, WLC IP address, and AP name are either non-unique or relate to infrastructure components, not the client device.\",\n        \"MAC addresses are globally unique and directly tied to the client’s hardware, enabling precise troubleshooting.\"\n    ],\n    \"impact\": {\n        \"services\": [\"Wireless Network Monitoring\", \"",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "Client\u2019s MAC address",
+    "expected_root_cause": "Client’s MAC address",
     "excluded_reason": "MCQ knowledge format (post-hoc audit 2026-05-25); originally judged DIAGNOSTIC by Qwen3-4B-Instruct fallback judge",
     "bert_f1": 0.8226
   },
@@ -3667,11 +3667,11 @@
     "case_id": "RCA_098",
     "task_type": "rca",
     "source": "opseval_Wired Network",
-    "model_response": "{\n    \"root_cause\": \"DHCP\u670d\u52a1\u5668\",\n    \"causal_chain\": [\n        \"\u7528\u6237\u5468\u672b\u91cd\u542f\u4e3b\u673a\u5173\u673a\u540e\u65e0\u6cd5\u8bbf\u95ee\u5c40\u57df\u7f51\u6216\u4e92\u8054\u7f51\",\n        \"\u4e3b\u673a\u5173\u673a\u540e\u672a\u80fd\u4eceDHCP\u670d\u52a1\u5668\u83b7\u53d6IP\u5730\u5740\",\n        \"\u7f3a\u4e4f\u6709\u6548IP\u5730\u5740\u5bfc\u81f4\u65e0\u6cd5\u8fdb\u884c\u7f51\u7edc\u901a\u4fe1\"\n    ],\n    \"impact\": {\n        \"services\": [\"\u5c40\u57df\u7f51\u8bbf\u95ee\", \"\u4e92\u8054\u7f51\u8bbf\u95ee\"],\n        \"severity\": \"high\",\n        \"users_affected\": \"1\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"\u5f53\u8bbe\u5907\u91cd\u542f\u540e\u9700\u8981\u901a\u8fc7DHCP\u534f\u8bae\u83b7\u53d6IP\u5730\u5740\u624d\u80fd\u63a5\u5165\u7f51\u7edc\u3002\u5982\u679cDHCP\u670d\u52a1\u5668\u6545\u969c\u6216\u914d\u7f6e\u9519\u8bef\uff0c\u8bbe\u5907\u5c06\u65e0\u6cd5\u83b7\u5f97\u6709\u6548IP\u5730\u5740\uff0c\u5bfc\u81f4\u65e0\u6cd5\u8bbf\u95ee\u5c40\u57df\u7f51\u548c\u4e92\u8054\u7f51\u3002\u800cDNS\u670d\u52a1\u5668\u6545\u969c\u53ea\u4f1a\u5bfc\u81f4\u57df\u540d\u89e3\u6790\u5931\u8d25\u4f46\u4e0d\u5f71\u54cd\u57fa\u7840\u7f51\u7edc\u8fde\u901a\u6027\uff0c\u4ee3\u7406\u670d\u52a1\u5668\u6545\u969c\u901a\u5e38\u53ea\u5f71\u54cd\u7279\u5b9a\u7f51\u7edc\u8bbf\u95ee\uff0c\u9632\u706b\u5899\u95ee\u9898\u901a\u5e38\u8868\u73b0\u4e3a\u8bbf\u95ee\u88ab\u963b\u65ad\u800c\u975e\u5b8c\u5168\u65e0\u6cd5\u8fde\u63a5\u3002\",\n    \"remediation_steps\": [\n   ",
+    "model_response": "{\n    \"root_cause\": \"DHCP服务器\",\n    \"causal_chain\": [\n        \"用户周末重启主机关机后无法访问局域网或互联网\",\n        \"主机关机后未能从DHCP服务器获取IP地址\",\n        \"缺乏有效IP地址导致无法进行网络通信\"\n    ],\n    \"impact\": {\n        \"services\": [\"局域网访问\", \"互联网访问\"],\n        \"severity\": \"high\",\n        \"users_affected\": \"1\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"当设备重启后需要通过DHCP协议获取IP地址才能接入网络。如果DHCP服务器故障或配置错误，设备将无法获得有效IP地址，导致无法访问局域网和互联网。而DNS服务器故障只会导致域名解析失败但不影响基础网络连通性，代理服务器故障通常只影响特定网络访问，防火墙问题通常表现为访问被阻断而非完全无法连接。\",\n    \"remediation_steps\": [\n   ",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "DHCP\u670d\u52a1\u5668",
+    "expected_root_cause": "DHCP服务器",
     "bert_f1": 0.0
   },
   {
@@ -3689,11 +3689,11 @@
     "case_id": "RCA_085",
     "task_type": "rca",
     "source": "opseval_Wired Network",
-    "model_response": "{\n    \"root_cause\": \"\u5c40\u57df\u7f51 (LAN)\",\n    \"causal_chain\": [\n        \"\u95ee\u9898\u8be2\u95ee\u7684\u662f\u9650\u5236\u5728\u5c0f\u8303\u56f4\uff08\u5982\u5355\u4e2a\u623f\u95f4\u3001\u697c\u5c42\u6216\u5efa\u7b51\u7269\uff09\u7684\u7f51\u7edc\u7c7b\u578b\",\n        \"\u5e7f\u57df\u7f51 (WAN) \u8986\u76d6\u8303\u56f4\u5927\uff0c\u8d85\u51fa\u4e86\u5355\u4e2a\u5efa\u7b51\u7269\",\n        \"\u57ce\u57df\u7f51 (MAN) \u8986\u76d6\u8303\u56f4\u4e3a\u57ce\u5e02\u7ea7\uff0c\u4e5f\u8d85\u51fa\u5355\u4e2a\u5efa\u7b51\u7269\",\n        \"\u9009\u9879\u4e2d\u53ea\u6709\u300c\u5c40\u57df\u7f51 (LAN)\u300d\u7b26\u5408\u5c0f\u8303\u56f4\u7f51\u7edc\u7684\u5b9a\u4e49\"\n    ],\n    \"impact\": {\n        \"services\": [\"\u7f51\u7edc\u57fa\u7840\u6982\u5ff5\u67e5\u8be2\"],\n        \"severity\": \"low\",\n        \"users_affected\": \"1\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"\u6839\u636e\u7f51\u7edc\u5206\u7c7b\u6807\u51c6\uff0c\u5c40\u57df\u7f51 (LAN) \u7684\u5b9a\u4e49\u662f\u8986\u76d6\u5c0f\u8303\u56f4\u7269\u7406\u533a\u57df\uff08\u5982\u5355\u4e2a\u5efa\u7b51\u7269\u6216\u6821\u56ed\uff09\u7684\u7f51\u7edc\uff0c\u800c\u5e7f\u57df\u7f51 (WAN) \u8986\u76d6\u57ce\u5e02/\u56fd\u5bb6\u8303\u56f4\uff0c\u57ce\u57df\u7f51 (MAN) \u8986\u76d6\u57ce\u5e02\u8303\u56f4\u3002\u95ee\u9898\u4e2d\u7684\u9009\u9879\u300c\u5c40\u57df\u7f51\u300d\u662f\u552f\u4e00\u7b26\u5408\u5c0f\u8303\u56f4\u7f51\u7edc\u7279\u6027\u7684\u7b54\u6848\u3002\",\n    \"remedia",
+    "model_response": "{\n    \"root_cause\": \"局域网 (LAN)\",\n    \"causal_chain\": [\n        \"问题询问的是限制在小范围（如单个房间、楼层或建筑物）的网络类型\",\n        \"广域网 (WAN) 覆盖范围大，超出了单个建筑物\",\n        \"城域网 (MAN) 覆盖范围为城市级，也超出单个建筑物\",\n        \"选项中只有「局域网 (LAN)」符合小范围网络的定义\"\n    ],\n    \"impact\": {\n        \"services\": [\"网络基础概念查询\"],\n        \"severity\": \"low\",\n        \"users_affected\": \"1\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"根据网络分类标准，局域网 (LAN) 的定义是覆盖小范围物理区域（如单个建筑物或校园）的网络，而广域网 (WAN) 覆盖城市/国家范围，城域网 (MAN) 覆盖城市范围。问题中的选项「局域网」是唯一符合小范围网络特性的答案。\",\n    \"remedia",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u5c40\u57df\u7f51",
+    "expected_root_cause": "局域网",
     "bert_f1": 0.0
   },
   {
@@ -3733,22 +3733,22 @@
     "case_id": "RCA_035",
     "task_type": "rca",
     "source": "opseval_Wired Network",
-    "model_response": "{\n    \"root_cause\": \"\u6240\u6709\u8fd9\u4e9b\u7b54\u6848\u90fd\u662f\u6b63\u786e\u7684\",\n    \"causal_chain\": [],\n    \"impact\": {\n        \"services\": [],\n        \"severity\": \"low\",\n        \"users_affected\": \"0\"\n    },\n    \"confidence\": 1.0,\n    \"reasoning\": \"\u6027\u80fd\u6d4b\u8bd5\u914d\u7f6e\u6587\u4ef6\u901a\u5e38\u5305\u542b\u5df2\u90e8\u7f72\u7684\u7aef\u70b9\uff08\u7528\u4e8e\u6d4b\u8bd5\u7684\u63a5\u53e3\uff09\u3001\u8d85\u65f6\u8bbe\u7f6e\uff08\u63a7\u5236\u8bf7\u6c42\u7b49\u5f85\u65f6\u95f4\uff09\u548c\u4f1a\u8bdd\u6301\u7eed\u65f6\u95f4\uff08\u6a21\u62df\u7528\u6237\u4ea4\u4e92\u65f6\u957f\uff09\u3002\u8fd9\u4e09\u4e2a\u53c2\u6570\u90fd\u662f\u6027\u80fd\u6d4b\u8bd5\u4e2d\u5e38\u89c1\u7684\u914d\u7f6e\u9879\uff0c\u56e0\u6b64\u6240\u6709\u9009\u9879\u5747\u6b63\u786e\u3002\",\n    \"remediation_steps\": [],\n    \"prevention\": \"\u65e0\u9002\u7528\u9879\uff0c\u6b64\u4e3a\u77e5\u8bc6\u7c7b\u95ee\u9898\"\n}",
+    "model_response": "{\n    \"root_cause\": \"所有这些答案都是正确的\",\n    \"causal_chain\": [],\n    \"impact\": {\n        \"services\": [],\n        \"severity\": \"low\",\n        \"users_affected\": \"0\"\n    },\n    \"confidence\": 1.0,\n    \"reasoning\": \"性能测试配置文件通常包含已部署的端点（用于测试的接口）、超时设置（控制请求等待时间）和会话持续时间（模拟用户交互时长）。这三个参数都是性能测试中常见的配置项，因此所有选项均正确。\",\n    \"remediation_steps\": [],\n    \"prevention\": \"无适用项，此为知识类问题\"\n}",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u6240\u6709\u8fd9\u4e9b\u7b54\u6848\u90fd\u662f\u6b63\u786e\u7684\u3002",
+    "expected_root_cause": "所有这些答案都是正确的。",
     "bert_f1": 0.0
   },
   {
     "case_id": "RCA_021",
     "task_type": "rca",
     "source": "opseval_Wired Network",
-    "model_response": "{\n    \"root_cause\": \"REST (Representational State Transfer) is an architectural style for distributed systems that uses standard HTTP methods and URIs to manipulate resources. RESTful refers to an API that adheres to these principles, being stateless and using uniform interfaces. The correct options are: 1) 'REST\u4ee3\u8868\u8868\u793a\u72b6\u6001\u8f6c\u79fb' and 3) 'RESTful\u6307\u9075\u5faaREST\u67b6\u6784\u98ce\u683c\u7f16\u5199\u7684Web\u670d\u52a1\uff0c\u88ab\u79f0\u4e3aRESTful\u670d\u52a1'.\",\n    \"causal_chain\": [\n        \"User asked for distinction between REST and RESTful concepts\",\n        \"Multiple-choice optio",
+    "model_response": "{\n    \"root_cause\": \"REST (Representational State Transfer) is an architectural style for distributed systems that uses standard HTTP methods and URIs to manipulate resources. RESTful refers to an API that adheres to these principles, being stateless and using uniform interfaces. The correct options are: 1) 'REST代表表示状态转移' and 3) 'RESTful指遵循REST架构风格编写的Web服务，被称为RESTful服务'.\",\n    \"causal_chain\": [\n        \"User asked for distinction between REST and RESTful concepts\",\n        \"Multiple-choice optio",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "REST\u4ee3\u8868\u8868\u8ff0\u6027\u72b6\u6001\u8f6c\u79fb\u3002; RESTful\u6307\u7684\u662f\u5e94\u7528REST\u67b6\u6784\u6982\u5ff5\u7f16\u5199\u7684Web\u670d\u52a1\uff0c\u5b83\u4eec\u88ab\u79f0\u4e3aRESTful\u670d\u52a1\u3002",
+    "expected_root_cause": "REST代表表述性状态转移。; RESTful指的是应用REST架构概念编写的Web服务，它们被称为RESTful服务。",
     "bert_f1": 0.8585
   },
   {
@@ -3778,11 +3778,11 @@
     "case_id": "RCA_016",
     "task_type": "rca",
     "source": "opseval_Wired Network",
-    "model_response": "{\n    \"root_cause\": \"\u9009\u98791\u548c\u9009\u98794\u6b63\u786e\u3002\u7edd\u7f18\u5c42\u901a\u8fc7\u51cf\u5c11\u7535\u78c1\u5e72\u6270\uff08EMI\uff09\u548c\u9632\u6b62\u76f8\u90bb\u7ebf\u8def\u95f4\u7684\u4e32\u6270\uff08crosstalk\uff09\u6765\u4fdd\u62a4\u53cc\u7ede\u7ebf\u7535\u7f06\u7684\u4fe1\u53f7\u4f20\u8f93\u3002\",\n    \"causal_chain\": [\n        \"\u53cc\u7ede\u7ebf\u7535\u7f06\u7684\u7edd\u7f18\u5c42\u672a\u6709\u6548\u51cf\u5c11\u7535\u78c1\u5e72\u6270\uff08EMI\uff09\",\n        \"\u76f8\u90bb\u7ebf\u8def\u95f4\u7684\u4e32\u6270\uff08crosstalk\uff09\u672a\u88ab\u6291\u5236\",\n        \"\u5bfc\u81f4\u4fe1\u53f7\u4f20\u8f93\u8d28\u91cf\u4e0b\u964d\u6216\u901a\u4fe1\u4e2d\u65ad\"\n    ],\n    \"impact\": {\n        \"services\": [\"\u7535\u4fe1\u7f51\u7edc\", \"\u6570\u636e\u4f20\u8f93\u670d\u52a1\"],\n        \"severity\": \"high\",\n        \"users_affected\": \"\u5927\u91cf\u7528\u6237\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"\u7edd\u7f18\u5c42\u7684\u4e3b\u8981\u529f\u80fd\u5305\u62ec\u6291\u5236\u7535\u78c1\u5e72\u6270\uff08EMI\uff09\u548c\u9632\u6b62\u76f8\u90bb\u7ebf\u8def\u95f4\u7684\u4e32\u6270\u3002\u9009\u98791\u548c4\u5747\u6b63\u786e\u63cf\u8ff0\u4e86\u7edd\u7f18\u5c42\u7684\u4f5c\u7528\u3002\u82e5\u7edd\u7f18\u5c42\u5931\u6548\uff0c\u4f1a\u5bfc\u81f4\u4fe1\u53f7\u5e72\u6270\u548c\u4f20\u8f93\u9519\u8bef\uff0c\u5f71\u54cd\u901a\u4fe1\u670d\u52a1\u8d28\u91cf\u3002\u5176\u4ed6\u9009\u9879\u672a\u76f4\u63a5\u5173\u8054\u7edd\u7f18\u5c42\u7684\u6838\u5fc3\u529f\u80fd\u3002\",\n    \"remediation_steps",
+    "model_response": "{\n    \"root_cause\": \"选项1和选项4正确。绝缘层通过减少电磁干扰（EMI）和防止相邻线路间的串扰（crosstalk）来保护双绞线电缆的信号传输。\",\n    \"causal_chain\": [\n        \"双绞线电缆的绝缘层未有效减少电磁干扰（EMI）\",\n        \"相邻线路间的串扰（crosstalk）未被抑制\",\n        \"导致信号传输质量下降或通信中断\"\n    ],\n    \"impact\": {\n        \"services\": [\"电信网络\", \"数据传输服务\"],\n        \"severity\": \"high\",\n        \"users_affected\": \"大量用户\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"绝缘层的主要功能包括抑制电磁干扰（EMI）和防止相邻线路间的串扰。选项1和4均正确描述了绝缘层的作用。若绝缘层失效，会导致信号干扰和传输错误，影响通信服务质量。其他选项未直接关联绝缘层的核心功能。\",\n    \"remediation_steps",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u626d\u66f2\u6709\u52a9\u4e8e\u9632\u6b62\u76f8\u90bb\u7ebf\u5bf9\u4e4b\u95f4\u7684\u4e32\u6270\u3002; \u626d\u66f2\u53ef\u4ee5\u9650\u5236\u7535\u78c1\u5e72\u6270\uff08EMI\uff09\u5bf9\u7535\u7f06\u4f20\u8f93\u4fe1\u53f7\u7684\u5f71\u54cd\u3002",
+    "expected_root_cause": "扭曲有助于防止相邻线对之间的串扰。; 扭曲可以限制电磁干扰（EMI）对电缆传输信号的影响。",
     "bert_f1": 0.8255
   },
   {
@@ -3834,11 +3834,11 @@
     "case_id": "RCA_071",
     "task_type": "rca",
     "source": "opseval_Wired Network",
-    "model_response": "{\n    \"root_cause\": \"\u7b2c\u4e09\u5c42\u7f51\u7edc\u5c42\u8def\u7531\u4fe1\u606f, \u7b2c\u4e03\u5c42\u5e94\u7528\u5c42\u7a0b\u5e8f\u4fe1\u606f\",\n    \"causal_chain\": [\"\u547c\u53eb\u6d41\u7a0b\u56fe\u9700\u8981\u5c55\u793a\u901a\u4fe1\u8def\u5f84\u7684\u8def\u7531\u4fe1\u606f\", \"\u5e94\u7528\u5c42\u4fe1\u606f\u7528\u4e8e\u6807\u8bc6\u5177\u4f53\u4e1a\u52a1\u7a0b\u5e8f\"],\n    \"impact\": {\n        \"services\": [\"\u7f51\u7edc\u901a\u4fe1\u670d\u52a1\", \"\u5e94\u7528\u5c42\u670d\u52a1\"],\n        \"severity\": \"medium\",\n        \"users_affected\": \"0\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"\u547c\u53eb\u6d41\u7a0b\u56fe\u901a\u5e38\u5305\u542b\u7f51\u7edc\u5c42\u8def\u7531\u4fe1\u606f\uff08\u5982IP\u5730\u5740\u3001\u8def\u7531\u8def\u5f84\uff09\u548c\u5e94\u7528\u5c42\u7a0b\u5e8f\u4fe1\u606f\uff08\u5982\u5177\u4f53\u4e1a\u52a1\u534f\u8bae\uff09\u3002\u7269\u7406\u5c42\u548c\u4f20\u8f93\u5c42\u4fe1\u606f\u867d\u7136\u53ef\u80fd\u6d89\u53ca\uff0c\u4f46\u4e0d\u662f\u6d41\u7a0b\u56fe\u7684\u6838\u5fc3\u8981\u7d20\u3002\u6839\u636eOSI\u6a21\u578b\uff0c\u7b2c\u4e09\u5c42\u548c\u7b2c\u4e03\u5c42\u4fe1\u606f\u6700\u80fd\u4f53\u73b0\u901a\u4fe1\u8fc7\u7a0b\u7684\u5173\u952e\u7279\u5f81\u3002\",\n    \"remediation_steps\": [\n        {\"action\": \"\u786e\u8ba4\u6d41\u7a0b\u56fe\u8bbe\u8ba1\u89c4\u8303\", \"risk\": \"low\"},\n        {\"action\": \"\u4e0e\u7f51\u7edc\u5de5\u7a0b\u5e08\u6838\u5bf9\u4fe1\u606f\u5c42\u7ea7\", \"risk\":",
+    "model_response": "{\n    \"root_cause\": \"第三层网络层路由信息, 第七层应用层程序信息\",\n    \"causal_chain\": [\"呼叫流程图需要展示通信路径的路由信息\", \"应用层信息用于标识具体业务程序\"],\n    \"impact\": {\n        \"services\": [\"网络通信服务\", \"应用层服务\"],\n        \"severity\": \"medium\",\n        \"users_affected\": \"0\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"呼叫流程图通常包含网络层路由信息（如IP地址、路由路径）和应用层程序信息（如具体业务协议）。物理层和传输层信息虽然可能涉及，但不是流程图的核心要素。根据OSI模型，第三层和第七层信息最能体现通信过程的关键特征。\",\n    \"remediation_steps\": [\n        {\"action\": \"确认流程图设计规范\", \"risk\": \"low\"},\n        {\"action\": \"与网络工程师核对信息层级\", \"risk\":",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u7b2c\u56db\u5c42\u4f20\u8f93\u5c42\u4fe1\u606f; \u7b2c\u4e03\u5c42\u5e94\u7528\u7a0b\u5e8f\u4fe1\u606f",
+    "expected_root_cause": "第四层传输层信息; 第七层应用程序信息",
     "bert_f1": 0.8315
   },
   {
@@ -3893,7 +3893,7 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "4\u74e6\u7279",
+    "expected_root_cause": "4瓦特",
     "bert_f1": 0.0
   },
   {
@@ -3955,11 +3955,11 @@
     "case_id": "RCA_004",
     "task_type": "rca",
     "source": "opseval_Wired Network",
-    "model_response": "{\n    \"root_cause\": \"RIPv1\uff08Routing Information Protocol version 1\uff09\u548cRIPv2\uff08Routing Information Protocol version 2\uff09\",\n    \"causal_chain\": [],\n    \"impact\": {\n        \"services\": [],\n        \"severity\": \"low\",\n        \"users_affected\": \"0\"\n    },\n    \"confidence\": 1.0,\n    \"reasoning\": \"RIPv1\u548cRIPv2\u662f\u57fa\u4e8e\u8ddd\u79bb\u5411\u91cf\u7b97\u6cd5\u7684\u8def\u7531\u534f\u8bae\uff0c\u5b83\u4eec\u7684\u9ed8\u8ba4\u7ba1\u7406\u8ddd\u79bb\uff08Administrative Distance\uff09\u5747\u4e3a120\u3002\u800cEIGRP\u7684\u7ba1\u7406\u8ddd\u79bb\u4e3a100\uff0cOSPF\u7684\u7ba1\u7406\u8ddd\u79bb\u4e3a110\u3002\u56e0\u6b64\uff0c\u95ee\u9898\u4e2d\u7ba1\u7406\u8ddd\u79bb\u4e3a120\u7684\u8def\u7531\u534f\u8bae\u5e94\u9009\u62e9RIPv1\u548cRIPv2\u3002\",\n    \"remediation_steps\": [],\n    \"prevention\": \"\"\n}",
+    "model_response": "{\n    \"root_cause\": \"RIPv1（Routing Information Protocol version 1）和RIPv2（Routing Information Protocol version 2）\",\n    \"causal_chain\": [],\n    \"impact\": {\n        \"services\": [],\n        \"severity\": \"low\",\n        \"users_affected\": \"0\"\n    },\n    \"confidence\": 1.0,\n    \"reasoning\": \"RIPv1和RIPv2是基于距离向量算法的路由协议，它们的默认管理距离（Administrative Distance）均为120。而EIGRP的管理距离为100，OSPF的管理距离为110。因此，问题中管理距离为120的路由协议应选择RIPv1和RIPv2。\",\n    \"remediation_steps\": [],\n    \"prevention\": \"\"\n}",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "RIPv1\uff08Routing Information Protocol version 1\uff09\u662f\u4e00\u79cd\u57fa\u4e8e\u8ddd\u79bb\u5411\u91cf\u7b97\u6cd5\u7684\u8def\u7531\u534f\u8bae\uff0c\u7528\u4e8e\u5728\u4e92\u8054\u7f51\u4e2d\u4f20\u9012\u8def\u7531\u4fe1\u606f\u3002; RIPv2\uff08Routing Information Protocol version 2\uff09",
+    "expected_root_cause": "RIPv1（Routing Information Protocol version 1）是一种基于距离向量算法的路由协议，用于在互联网中传递路由信息。; RIPv2（Routing Information Protocol version 2）",
     "bert_f1": 0.8369
   },
   {
@@ -4065,7 +4065,7 @@
     "case_id": "RCA_095",
     "task_type": "rca",
     "source": "opseval_5G Communication",
-    "model_response": "{\n    \"root_cause\": \"6 dB\",\n    \"causal_chain\": [\"Distance doubles\", \"Free space propagation loss formula applies\", \"20 log10(2) \u2248 6 dB increase\"],\n    \"impact\": {\n        \"services\": [],\n        \"severity\": \"high\",\n        \"users_affected\": \"0\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"Free space propagation loss follows the formula: Loss (dB) = 20 log10(d) + 20 log10(f) + 20 log10(4\u03c0/c). When distance doubles, the change in loss is 20 log10(2) \u2248 6.02 dB. This is a fundamental principle ",
+    "model_response": "{\n    \"root_cause\": \"6 dB\",\n    \"causal_chain\": [\"Distance doubles\", \"Free space propagation loss formula applies\", \"20 log10(2) ≈ 6 dB increase\"],\n    \"impact\": {\n        \"services\": [],\n        \"severity\": \"high\",\n        \"users_affected\": \"0\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"Free space propagation loss follows the formula: Loss (dB) = 20 log10(d) + 20 log10(f) + 20 log10(4π/c). When distance doubles, the change in loss is 20 log10(2) ≈ 6.02 dB. This is a fundamental principle ",
     "correct": true,
     "rule_score": 1.0,
     "expected_root_cause": "6 dB",
@@ -4109,18 +4109,18 @@
     "case_id": "RCA_048",
     "task_type": "rca",
     "source": "opseval_Wired Network",
-    "model_response": "{\n    \"root_cause\": \"\u5c06\u4e3b\u673a\u540d\u8f6c\u6362\u4e3aIP\u5730\u5740\",\n    \"causal_chain\": [\"DNS\u670d\u52a1\u4e2d\u7684A\u8bb0\u5f55\u529f\u80fd\u5b9a\u4e49\", \"\u4e3b\u673a\u540d\u5230IP\u5730\u5740\u7684\u6620\u5c04\u8fc7\u7a0b\"],\n    \"impact\": {\n        \"services\": [\"DNS\u670d\u52a1\"],\n        \"severity\": \"low\",\n        \"users_affected\": \"0\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"A\u8bb0\u5f55\uff08Address Record\uff09\u662fDNS\u7cfb\u7edf\u4e2d\u6700\u57fa\u7840\u7684\u8bb0\u5f55\u7c7b\u578b\uff0c\u5176\u6838\u5fc3\u529f\u80fd\u662f\u5c06\u57df\u540d\uff08\u4e3b\u673a\u540d\uff09\u6620\u5c04\u5230\u5bf9\u5e94\u7684IPv4\u5730\u5740\u3002\u8fd9\u76f4\u63a5\u5bf9\u5e94\u9009\u98791\u7684\u63cf\u8ff0\uff0c\u800c\u5176\u4ed6\u9009\u9879\u5206\u522b\u6d89\u53caPTR\u8bb0\u5f55\uff08\u9006\u5411\u89e3\u6790\uff09\u3001\u7f51\u7edc\u8bca\u65ad\u5de5\u5177\u548cQoS\u7b56\u7565\uff0c\u4e0eA\u8bb0\u5f55\u7684\u5b9a\u4e49\u65e0\u5173\u3002\u8be5\u95ee\u9898\u5c5e\u4e8e\u57fa\u7840\u7f51\u7edc\u77e5\u8bc6\u8303\u7574\uff0c\u4e0d\u6d89\u53ca\u5177\u4f53\u6545\u969c\u573a\u666f\u3002\",\n    \"remediation_steps\": [],\n    \"prevention\": \"\u786e\u4fddDNS\u914d\u7f6e\u6587\u6863\u4e2d\u660e\u786e\u533a\u5206A\u8bb0\u5f55\u3001PTR\u8bb0\u5f55\u53ca\u5176\u5b83\u8bb0\u5f55\u7c7b\u578b\u7684\u529f\u80fd\u5b9a\u4e49\uff0c\u907f\u514d\u6982\u5ff5\u6df7\u6dc6\u3002\"\n}",
+    "model_response": "{\n    \"root_cause\": \"将主机名转换为IP地址\",\n    \"causal_chain\": [\"DNS服务中的A记录功能定义\", \"主机名到IP地址的映射过程\"],\n    \"impact\": {\n        \"services\": [\"DNS服务\"],\n        \"severity\": \"low\",\n        \"users_affected\": \"0\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"A记录（Address Record）是DNS系统中最基础的记录类型，其核心功能是将域名（主机名）映射到对应的IPv4地址。这直接对应选项1的描述，而其他选项分别涉及PTR记录（逆向解析）、网络诊断工具和QoS策略，与A记录的定义无关。该问题属于基础网络知识范畴，不涉及具体故障场景。\",\n    \"remediation_steps\": [],\n    \"prevention\": \"确保DNS配置文档中明确区分A记录、PTR记录及其它记录类型的功能定义，避免概念混淆。\"\n}",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u5c06\u4eba\u540d\u8f6c\u6362\u4e3aIP\u5730\u5740",
+    "expected_root_cause": "将人名转换为IP地址",
     "bert_f1": 0.0
   },
   {
     "case_id": "RCA_088",
     "task_type": "rca",
     "source": "opseval_Log Analysis",
-    "model_response": "{\n    \"root_cause\": \"A. \u6536\u96c6\u2192\u5b58\u50a8\u2192\u5206\u6790\u2192\u76d1\u63a7\u2192\u62a5\u8b66\",\n    \"causal_chain\": [\"\u6570\u636e\u6536\u96c6\u662f\u8fd0\u7ef4\u6d41\u7a0b\u7684\u8d77\u70b9\", \"\u6570\u636e\u5b58\u50a8\u4e3a\u540e\u7eed\u5206\u6790\u63d0\u4f9b\u57fa\u7840\", \"\u5206\u6790\u751f\u6210\u6d1e\u5bdf\u4ee5\u652f\u6301\u76d1\u63a7\u51b3\u7b56\", \"\u76d1\u63a7\u786e\u4fdd\u7cfb\u7edf\u72b6\u6001\u53ef\u89c1\u6027\", \"\u62a5\u8b66\u5b9e\u73b0\u5f02\u5e38\u53ca\u65f6\u901a\u77e5\"],\n    \"impact\": {\n        \"services\": [\"\u8fd0\u7ef4\u6d41\u7a0b\", \"\u76d1\u63a7\u7cfb\u7edf\", \"\u62a5\u8b66\u7cfb\u7edf\"],\n        \"severity\": \"high\",\n        \"users_affected\": \"\u6240\u6709\u4f9d\u8d56\u8fd0\u7ef4\u6d41\u7a0b\u7684\u7cfb\u7edf\u7528\u6237\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"\u6b63\u786e\u7684\u8fd0\u7ef4\u6d41\u7a0b\u5e94\u9075\u5faa\u6570\u636e\u751f\u547d\u5468\u671f\uff1a\u5148\u6536\u96c6\u539f\u59cb\u6570\u636e\uff0c\u518d\u5b58\u50a8\u4ee5\u786e\u4fdd\u53ef\u7528\u6027\uff0c\u968f\u540e\u901a\u8fc7\u5206\u6790\u63d0\u53d6\u4ef7\u503c\uff0c\u57fa\u4e8e\u5206\u6790\u7ed3\u679c\u5b9e\u65bd\u76d1\u63a7\uff0c\u6700\u540e\u901a\u8fc7\u62a5\u8b66\u673a\u5236\u5b9e\u73b0\u5f02\u5e38\u54cd\u5e94\u3002\u9009\u9879A\u7b26\u5408\u8fd9\u4e00\u903b\u8f91\u987a\u5e8f\uff0c\u800c\u5176\u4ed6\u9009\u9879\u5b58\u5728\u6b65\u9aa4\u987a\u5e8f\u9519\u8bef\uff08\u5982B\u5c06\u5206\u6790\u7f6e\u4e8e\u5b58\u50a8\u524d\uff0cC\u4ee5\u5206\u6790\u4e3a\u8d77\u70b9\uff0cD\u98a0\u5012\u76d1\u63a7\u4e0e\u62a5\u8b66\u987a\u5e8f\uff09\u3002\",\n    \"remediation_steps\": [\n        {\"action\":",
+    "model_response": "{\n    \"root_cause\": \"A. 收集→存储→分析→监控→报警\",\n    \"causal_chain\": [\"数据收集是运维流程的起点\", \"数据存储为后续分析提供基础\", \"分析生成洞察以支持监控决策\", \"监控确保系统状态可见性\", \"报警实现异常及时通知\"],\n    \"impact\": {\n        \"services\": [\"运维流程\", \"监控系统\", \"报警系统\"],\n        \"severity\": \"high\",\n        \"users_affected\": \"所有依赖运维流程的系统用户\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"正确的运维流程应遵循数据生命周期：先收集原始数据，再存储以确保可用性，随后通过分析提取价值，基于分析结果实施监控，最后通过报警机制实现异常响应。选项A符合这一逻辑顺序，而其他选项存在步骤顺序错误（如B将分析置于存储前，C以分析为起点，D颠倒监控与报警顺序）。\",\n    \"remediation_steps\": [\n        {\"action\":",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
@@ -4131,7 +4131,7 @@
     "case_id": "RCA_065",
     "task_type": "rca",
     "source": "opseval_Wired Network",
-    "model_response": "{\n    \"root_cause\": \"Client\u2019s IP address\",\n    \"causal_chain\": [\n        \"Wireless client associates with AP\",\n        \"DHCP process assigns IP address\",\n        \"IP address confirmation indicates readiness for data transmission\"\n    ],\n    \"impact\": {\n        \"services\": [\"Wireless network services\", \"DHCP service\"],\n        \"severity\": \"medium\",\n        \"users_affected\": \"1\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"The association process alone does not guarantee data readiness. Only a",
+    "model_response": "{\n    \"root_cause\": \"Client’s IP address\",\n    \"causal_chain\": [\n        \"Wireless client associates with AP\",\n        \"DHCP process assigns IP address\",\n        \"IP address confirmation indicates readiness for data transmission\"\n    ],\n    \"impact\": {\n        \"services\": [\"Wireless network services\", \"DHCP service\"],\n        \"severity\": \"medium\",\n        \"users_affected\": \"1\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"The association process alone does not guarantee data readiness. Only a",
     "correct": false,
     "rule_score": 0.0,
     "expected_root_cause": "RUN policy manager state",
@@ -4176,22 +4176,22 @@
     "case_id": "RCA_077",
     "task_type": "rca",
     "source": "opseval_Wired Network",
-    "model_response": "{\n    \"root_cause\": \"\u7528\u6237\u8bbe\u5907\u7684MAC\u5730\u5740\u88ab\u7f51\u7edc\u8fdb\u884c\u8ffd\u8e2a\u548c\u5206\u6790\uff0c\u5bfc\u81f4\u65e0\u6cd5\u8fde\u63a5\u3002\",\n    \"causal_chain\": [\n        \"\u7528\u6237\u5c1d\u8bd5\u8fde\u63a5\u65e0\u7ebf\u7f51\u7edc\u5e76\u9009\u62e9\u4e86\u6b63\u786e\u7684SSID\",\n        \"\u7f51\u7edc\u8bbe\u5907\u5bf9\u8fde\u63a5\u8bf7\u6c42\u7684MAC\u5730\u5740\u8fdb\u884c\u8ffd\u8e2a\u548c\u5206\u6790\",\n        \"\u7528\u6237\u8bbe\u5907\u7684MAC\u5730\u5740\u672a\u88ab\u5141\u8bb8\u6216\u88ab\u963b\u6b62\",\n        \"\u8fde\u63a5\u8bf7\u6c42\u88ab\u62d2\u7edd\uff0c\u5bfc\u81f4\u8fde\u63a5\u5931\u8d25\"\n    ],\n    \"impact\": {\n        \"services\": [\"\u65e0\u7ebf\u7f51\u7edc\u670d\u52a1\"],\n        \"severity\": \"high\",\n        \"users_affected\": \"1\"\n    },\n    \"confidence\": 0.9,\n    \"reasoning\": \"\u7528\u6237\u9009\u62e9\u4e86\u6b63\u786e\u7684SSID\u4f46\u8fde\u63a5\u5931\u8d25\uff0c\u8868\u660e\u95ee\u9898\u4e0d\u5728SSID\u9009\u62e9\u4e0a\u3002MAC\u5730\u5740\u8fc7\u6ee4\u662f\u5e38\u89c1\u7684\u7f51\u7edc\u914d\u7f6e\uff0c\u82e5\u672a\u6b63\u786e\u914d\u7f6e\u5141\u8bb8\u7684MAC\u5730\u5740\u5217\u8868\uff0c\u8bbe\u5907\u5373\u4f7f\u9009\u62e9\u6b63\u786eSSID\u4e5f\u65e0\u6cd5\u8fde\u63a5\u3002\u9009\u98794\u76f4\u63a5\u6307\u5411MAC\u5730\u5740\u8ffd\u8e2a\u548c\u5206\u6790\uff0c\u7b26\u5408\u6b64\u573a\u666f\u3002\",\n    \"remediation_steps\": [\n      ",
+    "model_response": "{\n    \"root_cause\": \"用户设备的MAC地址被网络进行追踪和分析，导致无法连接。\",\n    \"causal_chain\": [\n        \"用户尝试连接无线网络并选择了正确的SSID\",\n        \"网络设备对连接请求的MAC地址进行追踪和分析\",\n        \"用户设备的MAC地址未被允许或被阻止\",\n        \"连接请求被拒绝，导致连接失败\"\n    ],\n    \"impact\": {\n        \"services\": [\"无线网络服务\"],\n        \"severity\": \"high\",\n        \"users_affected\": \"1\"\n    },\n    \"confidence\": 0.9,\n    \"reasoning\": \"用户选择了正确的SSID但连接失败，表明问题不在SSID选择上。MAC地址过滤是常见的网络配置，若未正确配置允许的MAC地址列表，设备即使选择正确SSID也无法连接。选项4直接指向MAC地址追踪和分析，符合此场景。\",\n    \"remediation_steps\": [\n      ",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u8981\u6c42\u7528\u6237\u79fb\u52a8\u5230\u5efa\u7b51\u7269\u7684\u53e6\u4e00\u4e2a\u697c\u5c42\uff0c\u7136\u540e\u518d\u5c1d\u8bd5\u4e00\u6b21\u3002",
+    "expected_root_cause": "要求用户移动到建筑物的另一个楼层，然后再尝试一次。",
     "bert_f1": 0.8019
   },
   {
     "case_id": "RCA_024",
     "task_type": "rca",
     "source": "opseval_Wired Network",
-    "model_response": "{\n    \"root_cause\": \"\u9ed8\u8ba4\u7f51\u5173\",\n    \"causal_chain\": [\"TCP/IP\u4e3b\u673a\u9700\u8981\u8bbf\u95ee\u5916\u90e8\u7f51\u7edc\u65f6\", \"\u9700\u901a\u8fc7\u5185\u90e8\u7f51\u5173\u8bbe\u5907\u8f6c\u53d1\u6d41\u91cf\", \"\u9ed8\u8ba4\u7f51\u5173\u53c2\u6570\u6307\u5b9a\u8be5\u8bbe\u5907\u7684\u5185\u90e8IP\u5730\u5740\"],\n    \"impact\": {\n        \"services\": [\"\u7f51\u7edc\u8def\u7531\u670d\u52a1\", \"\u4e92\u8054\u7f51\u8bbf\u95ee\u529f\u80fd\"],\n        \"severity\": \"high\",\n        \"users_affected\": \"\u6240\u6709\u4f9d\u8d56\u4e92\u8054\u7f51\u8bbf\u95ee\u7684\u7528\u6237\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"\u9ed8\u8ba4\u7f51\u5173\u53c2\u6570\uff08Default Gateway\uff09\u5728TCP/IP\u914d\u7f6e\u4e2d\u7528\u4e8e\u6307\u5b9a\u672c\u5730\u7f51\u7edc\u8fde\u63a5\u5230\u5176\u4ed6\u7f51\u7edc\uff08\u5982\u4e92\u8054\u7f51\uff09\u65f6\u7684\u51fa\u53e3\u8def\u7531\u8bbe\u5907IP\u5730\u5740\u3002\u5f53\u4e3b\u673a\u9700\u8981\u8bbf\u95ee\u672c\u5730\u7f51\u7edc\u4ee5\u5916\u7684\u8d44\u6e90\u65f6\uff0c\u6d41\u91cf\u4f1a\u9996\u5148\u53d1\u9001\u5230\u9ed8\u8ba4\u7f51\u5173\uff0c\u7531\u5176\u8fdb\u884c\u8def\u7531\u8f6c\u53d1\u3002\u5176\u4ed6\u9009\u9879\u4e2d\uff0c\u5b50\u7f51\u63a9\u7801\u7528\u4e8e\u7f51\u7edc\u5212\u5206\uff0cDHCP\u7528\u4e8e\u81ea\u52a8\u5206\u914dIP\uff0cDNS\u7528\u4e8e\u57df\u540d\u89e3\u6790\uff0c\u5747\u4e0d\u76f4\u63a5\u6307\u5b9a\u7f51\u5173\u5730\u5740\u3002\",\n    \"remediation_steps\": [\n        {\"action\": \"\u5728TCP/",
+    "model_response": "{\n    \"root_cause\": \"默认网关\",\n    \"causal_chain\": [\"TCP/IP主机需要访问外部网络时\", \"需通过内部网关设备转发流量\", \"默认网关参数指定该设备的内部IP地址\"],\n    \"impact\": {\n        \"services\": [\"网络路由服务\", \"互联网访问功能\"],\n        \"severity\": \"high\",\n        \"users_affected\": \"所有依赖互联网访问的用户\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"默认网关参数（Default Gateway）在TCP/IP配置中用于指定本地网络连接到其他网络（如互联网）时的出口路由设备IP地址。当主机需要访问本地网络以外的资源时，流量会首先发送到默认网关，由其进行路由转发。其他选项中，子网掩码用于网络划分，DHCP用于自动分配IP，DNS用于域名解析，均不直接指定网关地址。\",\n    \"remediation_steps\": [\n        {\"action\": \"在TCP/",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u9ed8\u8ba4\u7f51\u5173",
+    "expected_root_cause": "默认网关",
     "bert_f1": 0.0
   },
   {
@@ -4235,7 +4235,7 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "OSPF\u662f\u4e00\u79cd\u5185\u90e8\u7f51\u5173\u534f\u8bae\u3002; OSPF\u662f\u4e00\u79cd\u94fe\u8def\u72b6\u6001\u8def\u7531\u534f\u8bae\u3002; OSPF\u5728\u81ea\u6cbb\u7cfb\u7edf\u5185\u5171\u4eab\u8def\u7531\u3002",
+    "expected_root_cause": "OSPF是一种内部网关协议。; OSPF是一种链路状态路由协议。; OSPF在自治系统内共享路由。",
     "bert_f1": 0.7218
   },
   {
@@ -4324,7 +4324,7 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u8be5\u4ea4\u6362\u673a\u7aef\u53e3\u5df2\u7981\u7528\u3002; \u8be5\u4ea4\u6362\u673a\u5df2\u914d\u7f6e\u4f7f\u7528\u7aef\u53e3\u5b89\u5168\u3002",
+    "expected_root_cause": "该交换机端口已禁用。; 该交换机已配置使用端口安全。",
     "bert_f1": 0.7165
   },
   {
@@ -4399,11 +4399,11 @@
     "case_id": "RCA_019",
     "task_type": "rca",
     "source": "opseval_Wired Network",
-    "model_response": "{\n    \"root_cause\": \"\u65e0\u7ebf\u5c40\u57df\u7f51\u4ea4\u6362\u673a\",\n    \"causal_chain\": [\"\u65e0\u7ebf\u5c40\u57df\u7f51\u901a\u5e38\u5305\u542b\u63a5\u5165\u70b9\u3001\u670d\u52a1\u5668\u3001\u5ba2\u6237\u7aef\u8bbe\u5907\", \"\u65e0\u7ebf\u5c40\u57df\u7f51\u4ea4\u6362\u673a\u5c5e\u4e8e\u6709\u7ebf\u7f51\u7edc\u8bbe\u5907\", \"\u65e0\u7ebf\u5c40\u57df\u7f51\u6838\u5fc3\u7ec4\u4ef6\u4e0d\u5305\u542b\u4e13\u7528\u4ea4\u6362\u673a\"],\n    \"impact\": {\n        \"services\": [\"\u65e0\u7ebf\u7f51\u7edc\u90e8\u7f72\", \"\u7f51\u7edc\u8bbe\u5907\u9009\u578b\"],\n        \"severity\": \"medium\",\n        \"users_affected\": \"\u7f51\u7edc\u89c4\u5212\u4eba\u5458\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"\u65e0\u7ebf\u5c40\u57df\u7f51\uff08WLAN\uff09\u7684\u6838\u5fc3\u7ec4\u4ef6\u5305\u62ec\u65e0\u7ebf\u63a5\u5165\u70b9\uff08AP\uff09\u3001\u65e0\u7ebf\u5ba2\u6237\u7aef\u8bbe\u5907\u3001\u8ba4\u8bc1\u670d\u52a1\u5668\uff08\u5982RADIUS\uff09\u548c\u7f51\u7edc\u7ba1\u7406\u7cfb\u7edf\u3002\u4f20\u7edf\u6709\u7ebf\u7f51\u7edc\u4e2d\u7684\u4ea4\u6362\u673a\u5c5e\u4e8e\u6709\u7ebf\u57fa\u7840\u8bbe\u65bd\uff0c\u4e0d\u5c5e\u4e8eWLAN\u7684\u65e0\u7ebf\u90e8\u5206\u3002\u867d\u7136\u73b0\u4ee3\u7f51\u7edc\u53ef\u80fd\u5305\u542b\u652f\u6301\u65e0\u7ebf\u529f\u80fd\u7684\u4ea4\u6362\u673a\uff0c\u4f46'\u65e0\u7ebf\u5c40\u57df\u7f51\u4ea4\u6362\u673a'\u5e76\u975eWLAN\u7684\u6807\u51c6\u7ec4\u6210\u90e8\u5206\uff0c\u5c5e\u4e8e\u6df7\u6dc6\u9879\u3002\",\n    \"remediation_steps\": [\n        {\"action\": \"\u660e\u786eWLAN\u7ec4\u4ef6\u5206\u7c7b\u6807\u51c6\",",
+    "model_response": "{\n    \"root_cause\": \"无线局域网交换机\",\n    \"causal_chain\": [\"无线局域网通常包含接入点、服务器、客户端设备\", \"无线局域网交换机属于有线网络设备\", \"无线局域网核心组件不包含专用交换机\"],\n    \"impact\": {\n        \"services\": [\"无线网络部署\", \"网络设备选型\"],\n        \"severity\": \"medium\",\n        \"users_affected\": \"网络规划人员\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"无线局域网（WLAN）的核心组件包括无线接入点（AP）、无线客户端设备、认证服务器（如RADIUS）和网络管理系统。传统有线网络中的交换机属于有线基础设施，不属于WLAN的无线部分。虽然现代网络可能包含支持无线功能的交换机，但'无线局域网交换机'并非WLAN的标准组成部分，属于混淆项。\",\n    \"remediation_steps\": [\n        {\"action\": \"明确WLAN组件分类标准\",",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u65e0\u7ebf\u5c40\u57df\u7f51\u670d\u52a1\u5668",
+    "expected_root_cause": "无线局域网服务器",
     "bert_f1": 0.0
   },
   {
@@ -4433,11 +4433,11 @@
     "case_id": "RCA_086",
     "task_type": "rca",
     "source": "opseval_Wired Network",
-    "model_response": "{\n    \"root_cause\": \"\u9002\u7528\u4e8e\u5ef6\u8fdf\u8f83\u4f4e\u3001\u4f46\u4e0d\u9700\u8981\u4f18\u5148\u7ea7\u6216\u6d41\u91cf\u7c7b\u522b\u8981\u6c42\u7684\u5927\u578b\u94fe\u8def\uff0c\u4f46\u4e0d\u9700\u8981\u4f18\u5148\u7ea7\u6216\u6d41\u91cf\u7c7b\u522b\u8981\u6c42\u3002\",\n    \"causal_chain\": [\"\u95ee\u9898\u8be2\u95ee\u54ea\u79cdQoS\u6392\u961f\u673a\u5236\u662fFIFO\u7684\u5b9e\u4f8b\", \"\u5206\u6790\u5404\u9009\u9879\u7279\u5f81\", \"\u8bc6\u522bFIFO\u7684\u6838\u5fc3\u7279\u6027\uff08\u65e0\u4f18\u5148\u7ea7\u3001\u5148\u5230\u5148\u670d\u52a1\uff09\", \"\u5339\u914d\u9009\u9879\u4e0eFIFO\u5b9a\u4e49\"],\n    \"impact\": {\n        \"services\": [\"\u7f51\u7edc\u670d\u52a1\u8d28\u91cf(QoS)\u914d\u7f6e\"],\n        \"severity\": \"medium\",\n        \"users_affected\": \"0\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"FIFO\uff08\u5148\u5165\u5148\u51fa\uff09\u961f\u5217\u673a\u5236\u7684\u6838\u5fc3\u7279\u5f81\u662f\u4e0d\u533a\u5206\u6d41\u91cf\u4f18\u5148\u7ea7\uff0c\u4e25\u683c\u6309\u7167\u6570\u636e\u5305\u5230\u8fbe\u987a\u5e8f\u8fdb\u884c\u670d\u52a1\u3002\u7b2c\u56db\u9009\u9879\u660e\u786e\u8bf4\u660e\u300e\u9002\u7528\u4e8e\u5ef6\u8fdf\u8f83\u4f4e\u7684\u94fe\u8def\uff0c\u4e14\u4e0d\u9700\u8981\u4f18\u5148\u7ea7\u6216\u6d41\u91cf\u5206\u7c7b\u8981\u6c42\u300f\uff0c\u8fd9\u4e0eFIFO\u7684\u65e0\u4f18\u5148\u7ea7\u3001\u7eaf\u961f\u5217\u987a\u5e8f\u5904\u7406\u7684\u7279\u6027\u5b8c\u5168\u543b\u5408\u3002\u5176\u4ed6\u9009\u9879\u5747\u6d89\u53ca\u4f18\u5148\u7ea7\uff08\u5982\u7b2c\u4e09\u9009\u9879\u7684\u300e\u4f18\u5148\u7ea7\u961f\u5217\u300f\uff09\u6216\u52a8\u6001\u5206\u914d\uff08\u5982\u7b2c\u4e8c\u9009\u9879\u7684DSCP\u503c\uff09\uff0c\u4e0d\u7b26\u5408FIFO\u5b9a\u4e49\u3002\",\n    ",
+    "model_response": "{\n    \"root_cause\": \"适用于延迟较低、但不需要优先级或流量类别要求的大型链路，但不需要优先级或流量类别要求。\",\n    \"causal_chain\": [\"问题询问哪种QoS排队机制是FIFO的实例\", \"分析各选项特征\", \"识别FIFO的核心特性（无优先级、先到先服务）\", \"匹配选项与FIFO定义\"],\n    \"impact\": {\n        \"services\": [\"网络服务质量(QoS)配置\"],\n        \"severity\": \"medium\",\n        \"users_affected\": \"0\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"FIFO（先入先出）队列机制的核心特征是不区分流量优先级，严格按照数据包到达顺序进行服务。第四选项明确说明『适用于延迟较低的链路，且不需要优先级或流量分类要求』，这与FIFO的无优先级、纯队列顺序处理的特性完全吻合。其他选项均涉及优先级（如第三选项的『优先级队列』）或动态分配（如第二选项的DSCP值），不符合FIFO定义。\",\n    ",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u9002\u7528\u4e8e\u5ef6\u8fdf\u8f83\u4f4e\u3001\u62e5\u585e\u975e\u5e38\u5c0f\u7684\u5927\u578b\u94fe\u63a5\uff0c\u4f46\u4e0d\u9700\u8981\u4f18\u5148\u7ea7\u6216\u6d41\u91cf\u7c7b\u522b\u7684\u8981\u6c42\u3002",
+    "expected_root_cause": "适用于延迟较低、拥塞非常小的大型链接，但不需要优先级或流量类别的要求。",
     "bert_f1": 0.8451
   },
   {
@@ -4466,11 +4466,11 @@
     "case_id": "RCA_052",
     "task_type": "rca",
     "source": "opseval_Wired Network",
-    "model_response": "{\n    \"root_cause\": \"\u5927\u4e8e255\u7684\u6570\u5b57\u7ec4\u3002\",\n    \"causal_chain\": [\"HSRPv1\u4ec5\u652f\u6301\u6700\u591a255\u4e2a\u7ec4\", \"HSRPv2\u6269\u5c55\u4e86\u7ec4\u6570\u91cf\u9650\u5236\"],\n    \"impact\": {\n        \"services\": [\"\u7f51\u7edc\u5197\u4f59\u670d\u52a1\", \"\u8def\u7531\u534f\u8bae\"],\n        \"severity\": \"high\",\n        \"users_affected\": \"0\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"HSRPv2\u7684\u4e3b\u8981\u6539\u8fdb\u662f\u7a81\u7834HSRPv1\u7684255\u7ec4\u9650\u5236\uff0c\u5141\u8bb8\u66f4\u5927\u89c4\u6a21\u7684\u7ec4\u6570\u91cf\u3002\u5176\u4ed6\u9009\u9879\u5982\u865a\u62dfMAC\u5730\u5740\u662fHSRPv1\u5df2\u6709\u7684\u7279\u6027\uff0c\u62a2\u5360\u548c\u4f18\u5148\u7ea7\u662fHSRP\u901a\u7528\u673a\u5236\u800c\u975ev2\u72ec\u6709\u7279\u6027\u3002\",\n    \"remediation_steps\": [\n        {\"action\": \"\u5347\u7ea7\u5230HSRPv2\u4ee5\u652f\u6301\u66f4\u591a\u7ec4\u6570\u91cf\", \"risk\": \"low\"},\n        {\"action\": \"\u9a8c\u8bc1\u7f51\u7edc\u8bbe\u5907\u517c\u5bb9\u6027\", \"risk\": \"medium\"}\n    ],\n    \"prevent",
+    "model_response": "{\n    \"root_cause\": \"大于255的数字组。\",\n    \"causal_chain\": [\"HSRPv1仅支持最多255个组\", \"HSRPv2扩展了组数量限制\"],\n    \"impact\": {\n        \"services\": [\"网络冗余服务\", \"路由协议\"],\n        \"severity\": \"high\",\n        \"users_affected\": \"0\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"HSRPv2的主要改进是突破HSRPv1的255组限制，允许更大规模的组数量。其他选项如虚拟MAC地址是HSRPv1已有的特性，抢占和优先级是HSRP通用机制而非v2独有特性。\",\n    \"remediation_steps\": [\n        {\"action\": \"升级到HSRPv2以支持更多组数量\", \"risk\": \"low\"},\n        {\"action\": \"验证网络设备兼容性\", \"risk\": \"medium\"}\n    ],\n    \"prevent",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u5927\u4e8e255\u7684\u6570\u5b57\u5206\u7ec4\u3002",
+    "expected_root_cause": "大于255的数字分组。",
     "bert_f1": 0.0
   },
   {
@@ -4527,7 +4527,7 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "MAC\u6cdb\u6d2a\u653b\u51fb",
+    "expected_root_cause": "MAC泛洪攻击",
     "bert_f1": 0.0
   },
   {
@@ -4593,7 +4593,7 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u624b\u52a8\u8f93\u5165SSID\u3002",
+    "expected_root_cause": "手动输入SSID。",
     "bert_f1": 0.0
   },
   {
@@ -4601,7 +4601,7 @@
     "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "model_response": "{\n    \"root_cause\": \"A, C, D\",\n    \"causal_chain\": [],\n    \"impact\": {\n        \"services\": [],\n        \"severity\": \"low\",\n        \"users_affected\": \"0\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"5 GHz performs better due to more channels (A), fewer device conflicts (C), and higher data rates (D). 2.4 GHz has longer range (B is incorrect).\",\n    \"remediation_steps\": [],\n    \"prevention\": \"\"\n}",
-    "correct": false,
+    "correct": null,
     "rule_score": 0.0,
     "expected_root_cause": "The 5 GHz frequency has more channels than the 2.4 GHz frequency.; The 5 GHz frequency conflicts with fewer common household devices than the 2.4 GHz frequency.; The 5 GHz frequency transmits at faster speeds than the 2.4 GHz frequency.",
     "eval_method": "rescored_with_sota_eval_substring",
@@ -4613,7 +4613,7 @@
     "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "model_response": "{\n    \"root_cause\": \"The device's Wi-Fi connection failure is likely due to temporary software glitches, incorrect network configuration, or saved network corruption. The recommended steps are power cycling, forgetting the network, and verifying the SSID.\",\n    \"causal_chain\": [\n        \"Device's Wi-Fi configuration may have become corrupted or misaligned with the network's current settings.\",\n        \"Temporary software glitches on the device could disrupt connectivity.\",\n        \"User may have",
-    "correct": false,
+    "correct": null,
     "rule_score": 0.0,
     "expected_root_cause": "Power cycle the device.; Forget the Wi-Fi network.; Ensure that the correct SSID was entered.",
     "eval_method": "rescored_with_sota_eval_substring",
@@ -4628,7 +4628,7 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "2xx\uff1a\u6210\u529f\n3xx\uff1a\u91cd\u5b9a\u5411\n4xx\uff1a\u5ba2\u6237\u7aef\u9519\u8bef\n5xx\uff1a\u670d\u52a1\u5668\u9519\u8bef",
+    "expected_root_cause": "2xx：成功\n3xx：重定向\n4xx：客户端错误\n5xx：服务器错误",
     "bert_f1": 0.742
   },
   {
@@ -4803,11 +4803,11 @@
     "case_id": "RCA_074",
     "task_type": "rca",
     "source": "opseval_Wired Network",
-    "model_response": "{\n    \"root_cause\": \"IPv6 DHCP\u4e2d\u7ee7\u76ee\u6807\",\n    \"causal_chain\": [\"DHCPv6 relay agent requires configuration to forward messages between clients and servers\", \"Relay target configuration specifies the destination for relayed packets\"],\n    \"impact\": {\n        \"services\": [\"DHCPv6 service\", \"Network configuration management\"],\n        \"severity\": \"medium\",\n        \"users_affected\": \"network administrators\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"The correct configuration for a DHCPv6 relay agent",
+    "model_response": "{\n    \"root_cause\": \"IPv6 DHCP中继目标\",\n    \"causal_chain\": [\"DHCPv6 relay agent requires configuration to forward messages between clients and servers\", \"Relay target configuration specifies the destination for relayed packets\"],\n    \"impact\": {\n        \"services\": [\"DHCPv6 service\", \"Network configuration management\"],\n        \"severity\": \"medium\",\n        \"users_affected\": \"network administrators\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"The correct configuration for a DHCPv6 relay agent",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "IPv6 DHCP\u4e2d\u7ee7\u76ee\u7684\u5730\u3002",
+    "expected_root_cause": "IPv6 DHCP中继目的地。",
     "bert_f1": 0.8128
   },
   {
@@ -4858,11 +4858,11 @@
     "case_id": "RCA_015",
     "task_type": "rca",
     "source": "opseval_Wired Network",
-    "model_response": "{\n    \"root_cause\": \"\u5f53LSA\u8fbe\u52303600\u79d2\u65f6\uff0c\u901a\u8fc7\u5220\u9664LSA\u4f7f\u5176\u8fc7\u671f\u3002\",\n    \"causal_chain\": [\n        \"LSA\u7684Age\u5b57\u6bb5\u968f\u65f6\u95f4\u9012\u589e\",\n        \"Age\u5b57\u6bb5\u8fbe\u52303600\u79d2\u9608\u503c\",\n        \"LSA\u88ab\u6807\u8bb0\u4e3a\u8fc7\u671f\u5e76\u4eceLSDB\u4e2d\u5220\u9664\"\n    ],\n    \"impact\": {\n        \"services\": [\"OSPF\u8def\u7531\u534f\u8bae\"],\n        \"severity\": \"high\",\n        \"users_affected\": \"\u7f51\u7edc\u7ba1\u7406\u5458\u53ca\u4f9d\u8d56OSPF\u8def\u7531\u7684\u7528\u6237\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"OSPF\u534f\u8bae\u4e2dLSA\u7684Age\u5b57\u6bb5\u7528\u4e8e\u63a7\u5236LSA\u7684\u751f\u5b58\u65f6\u95f4\u3002\u5f53Age\u8fbe\u52303600\u79d2\uff081\u5c0f\u65f6\uff09\u65f6\uff0cLSA\u4f1a\u88ab\u5220\u9664\u4ee5\u9632\u6b62\u8fc7\u65f6\u4fe1\u606f\u5728\u6570\u636e\u5e93\u4e2d\u957f\u671f\u5b58\u5728\u3002\u8fd9\u786e\u4fdd\u4e86LSDB\u7684\u65f6\u6548\u6027\u548c\u51c6\u786e\u6027\uff0c\u907f\u514d\u8def\u7531\u73af\u8def\u548c\u65e0\u6548\u8def\u7531\u6761\u76ee\u3002\",\n    \"remediation_steps\": [\n        {\"action\": \"\u68c0\u67e5OSPF\u914d\u7f6e\u4e2d\u7684LSA\u5237\u65b0\u65f6",
+    "model_response": "{\n    \"root_cause\": \"当LSA达到3600秒时，通过删除LSA使其过期。\",\n    \"causal_chain\": [\n        \"LSA的Age字段随时间递增\",\n        \"Age字段达到3600秒阈值\",\n        \"LSA被标记为过期并从LSDB中删除\"\n    ],\n    \"impact\": {\n        \"services\": [\"OSPF路由协议\"],\n        \"severity\": \"high\",\n        \"users_affected\": \"网络管理员及依赖OSPF路由的用户\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"OSPF协议中LSA的Age字段用于控制LSA的生存时间。当Age达到3600秒（1小时）时，LSA会被删除以防止过时信息在数据库中长期存在。这确保了LSDB的时效性和准确性，避免路由环路和无效路由条目。\",\n    \"remediation_steps\": [\n        {\"action\": \"检查OSPF配置中的LSA刷新时",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u5f53LSA\u8fbe\u52303600\u79d2\u65f6\uff0c\u901a\u8fc7\u5220\u9664LSA\u6765\u4f7f\u5176\u8fc7\u65f6\u3002",
+    "expected_root_cause": "当LSA达到3600秒时，通过删除LSA来使其过时。",
     "bert_f1": 0.8215
   },
   {
@@ -4991,10 +4991,10 @@
     "case_id": "RCA_069",
     "task_type": "rca",
     "source": "opseval_Wired Network",
-    "model_response": "{\n    \"root_cause\": \"\u78c1\u76d8\u955c\u50cf\u4f7f\u670d\u52a1\u5728\u78c1\u76d8\u63a7\u5236\u5668\u6216\u78c1\u76d8\u9a71\u52a8\u5668\u53d1\u751f\u6545\u969c\u65f6\u4ecd\u80fd\u7ee7\u7eed\u8fd0\u884c\u3002\",\n    \"causal_chain\": [\n        \"\u78c1\u76d8\u955c\u50cf\uff08RAID 1\uff09\u914d\u7f6e\u4e86\u6570\u636e\u5197\u4f59\",\n        \"\u5f53\u78c1\u76d8\u9a71\u52a8\u5668\u6545\u969c\u65f6\uff0c\u955c\u50cf\u6570\u636e\u7531\u53e6\u4e00\u5757\u78c1\u76d8\u63d0\u4f9b\",\n        \"\u5f53\u78c1\u76d8\u63a7\u5236\u5668\u6545\u969c\u65f6\uff0c\u955c\u50cf\u6570\u636e\u4ecd\u53ef\u901a\u8fc7\u53e6\u4e00\u5757\u78c1\u76d8\u8bbf\u95ee\"\n    ],\n    \"impact\": {\n        \"services\": [\"\u5b58\u50a8\u670d\u52a1\", \"\u6570\u636e\u5197\u4f59\u670d\u52a1\"],\n        \"severity\": \"high\",\n        \"users_affected\": \"\u6240\u6709\u4f9d\u8d56\u78c1\u76d8\u955c\u50cf\u7684\u7528\u6237\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"RAID 1\u901a\u8fc7\u955c\u50cf\u6280\u672f\u5b9e\u73b0\u6570\u636e\u5197\u4f59\uff0c\u5f53\u5355\u5757\u78c1\u76d8\u6216\u63a7\u5236\u5668\u6545\u969c\u65f6\uff0c\u7cfb\u7edf\u53ef\u5207\u6362\u81f3\u955c\u50cf\u526f\u672c\u7ee7\u7eed\u8fd0\u884c\u3002\u9009\u98793\u548c4\u63cf\u8ff0\u4e00\u81f4\u4e14\u7b26\u5408RAID 1\u7279\u6027\uff0c\u800c\u5176\u4ed6\u9009\u9879\u672a\u51c6\u786e\u63cf\u8ff0\u955c\u50cf\u7684\u5bb9\u9519\u80fd\u529b\u3002\",\n    \"remediation_steps\": [\n        {\"action\": \"\u9a8c\u8bc1RAID",
+    "model_response": "{\n    \"root_cause\": \"磁盘镜像使服务在磁盘控制器或磁盘驱动器发生故障时仍能继续运行。\",\n    \"causal_chain\": [\n        \"磁盘镜像（RAID 1）配置了数据冗余\",\n        \"当磁盘驱动器故障时，镜像数据由另一块磁盘提供\",\n        \"当磁盘控制器故障时，镜像数据仍可通过另一块磁盘访问\"\n    ],\n    \"impact\": {\n        \"services\": [\"存储服务\", \"数据冗余服务\"],\n        \"severity\": \"high\",\n        \"users_affected\": \"所有依赖磁盘镜像的用户\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"RAID 1通过镜像技术实现数据冗余，当单块磁盘或控制器故障时，系统可切换至镜像副本继续运行。选项3和4描述一致且符合RAID 1特性，而其他选项未准确描述镜像的容错能力。\",\n    \"remediation_steps\": [\n        {\"action\": \"验证RAID",
     "correct": false,
     "rule_score": 0.0,
-    "expected_root_cause": "\u78c1\u76d8\u955c\u50cf\u4f7f\u670d\u52a1\u5668\u80fd\u591f\u5728\u78c1\u76d8\u9a71\u52a8\u5668\u6216\u78c1\u76d8\u63a7\u5236\u5668\u6545\u969c\u65f6\u7ee7\u7eed\u8fd0\u884c\u3002",
+    "expected_root_cause": "磁盘镜像使服务器能够在磁盘驱动器或磁盘控制器故障时继续运行。",
     "eval_method": "rescored_with_sota_eval_substring",
     "bert_f1": 0.8403
   },
@@ -5026,7 +5026,7 @@
     "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "model_response": "{\n    \"root_cause\": \"Duplex mismatch, TX/RX reversal, and Bad switch port\",\n    \"causal_chain\": [\n        \"Network devices configured with mismatched duplex settings (half/full)\",\n        \"Physical TX/RX pin reversal on Ethernet cable\",\n        \"Faulty switch port hardware failure\"\n    ],\n    \"impact\": {\n        \"services\": [\"Wired network connectivity\"],\n        \"severity\": \"medium\",\n        \"users_affected\": \"All users connected to affected network segments\"\n    },\n    \"confidence\": 0.95,\n    ",
-    "correct": false,
+    "correct": null,
     "rule_score": 0.0,
     "expected_root_cause": "Speed mismatch; TX/RX reversal; Bad switch port",
     "eval_method": "rescored_with_sota_eval_substring",
@@ -5126,11 +5126,11 @@
     "case_id": "RCA_084",
     "task_type": "rca",
     "source": "opseval_Wired Network",
-    "model_response": "{\n    \"root_cause\": \"\u8bbf\u95ee\u5c42\",\n    \"causal_chain\": [\n        \"\u4e09\u5c42\u7f51\u7edc\u67b6\u6784\u4e2d\u8bbf\u95ee\u5c42\u8d1f\u8d23\u7ec8\u7aef\u8bbe\u5907\u63a5\u5165\",\n        \"\u670d\u52a1\u8fde\u63a5\u9700\u8981\u901a\u8fc7\u8bbf\u95ee\u5c42\u5b9e\u73b0\u7269\u7406\u548c\u6570\u636e\u94fe\u8def\u5c42\u901a\u4fe1\",\n        \"\u6838\u5fc3\u5c42\u548c\u5206\u5e03\u5c42\u4e0d\u76f4\u63a5\u5904\u7406\u7ec8\u7aef\u8bbe\u5907\u8fde\u63a5\"\n    ],\n    \"impact\": {\n        \"services\": [\"\u7f51\u7edc\u63a5\u5165\u670d\u52a1\", \"\u7ec8\u7aef\u8bbe\u5907\u901a\u4fe1\"],\n        \"severity\": \"medium\",\n        \"users_affected\": \"\u6240\u6709\u7ec8\u7aef\u7528\u6237\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"\u5728\u6807\u51c6\u4e09\u5c42\u7f51\u7edc\u67b6\u6784\u4e2d\uff0c\u8bbf\u95ee\u5c42\uff08\u63a5\u5165\u5c42\uff09\u662f\u7ec8\u7aef\u8bbe\u5907\u8fde\u63a5\u7f51\u7edc\u7684\u5165\u53e3\u5c42\uff0c\u8d1f\u8d23\u57fa\u672c\u7684\u63a5\u5165\u63a7\u5236\u548c\u6570\u636e\u8f6c\u53d1\u3002\u6838\u5fc3\u5c42\u5904\u7406\u9ad8\u901f\u9aa8\u5e72\u4f20\u8f93\uff0c\u5206\u5e03\u5c42\uff08\u6c47\u805a\u5c42\uff09\u8d1f\u8d23\u7b56\u7565\u5b9e\u65bd\u548c\u6d41\u91cf\u6c47\u805a\u3002\u670d\u52a1\u8fde\u63a5\u5fc5\u7136\u9700\u8981\u901a\u8fc7\u8bbf\u95ee\u5c42\u5b9e\u73b0\u7269\u7406\u5c42\u548c\u6570\u636e\u94fe\u8def\u5c42\u7684\u901a\u4fe1\u3002\",\n    \"remediation_steps\": [\n        {\"action\": \"\u68c0\u67e5\u8bbf\u95ee\u5c42\u8bbe\u5907\u914d\u7f6e\", \"risk\": ",
+    "model_response": "{\n    \"root_cause\": \"访问层\",\n    \"causal_chain\": [\n        \"三层网络架构中访问层负责终端设备接入\",\n        \"服务连接需要通过访问层实现物理和数据链路层通信\",\n        \"核心层和分布层不直接处理终端设备连接\"\n    ],\n    \"impact\": {\n        \"services\": [\"网络接入服务\", \"终端设备通信\"],\n        \"severity\": \"medium\",\n        \"users_affected\": \"所有终端用户\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"在标准三层网络架构中，访问层（接入层）是终端设备连接网络的入口层，负责基本的接入控制和数据转发。核心层处理高速骨干传输，分布层（汇聚层）负责策略实施和流量汇聚。服务连接必然需要通过访问层实现物理层和数据链路层的通信。\",\n    \"remediation_steps\": [\n        {\"action\": \"检查访问层设备配置\", \"risk\": ",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u8bbf\u95ee",
+    "expected_root_cause": "访问",
     "bert_f1": 0.0
   },
   {
@@ -5148,11 +5148,11 @@
     "case_id": "RCA_007",
     "task_type": "rca",
     "source": "opseval_Wired Network",
-    "model_response": "{\n    \"root_cause\": \"\u903b\u8f91\u56fe\",\n    \"causal_chain\": [],\n    \"impact\": {\n        \"services\": [],\n        \"severity\": \"low\",\n        \"users_affected\": \"0\"\n    },\n    \"confidence\": 1.0,\n    \"reasoning\": \"\u903b\u8f91\u56fe\uff08Logical Chart\uff09\u7528\u4e8e\u8868\u793a\u4fe1\u606f\u6d41\u4ece\u9ad8\u5c42\u6982\u5ff5\u5230\u8be6\u7ec6\u5c42\u6b21\u7684\u7ed3\u6784\u5173\u7cfb\uff0c\u7b26\u5408\u95ee\u9898\u4e2d\u300e\u67e5\u770b\u4ece\u9ad8\u5c42\u5230\u8be6\u7ec6\u6982\u5ff5\u4fe1\u606f\u6d41\u300f\u7684\u9700\u6c42\u3002\u5176\u4ed6\u9009\u9879\u4e2d\uff0c\u7269\u7406\u56fe\u793a\uff08Physical Diagram\uff09\u5c55\u793a\u5b9e\u9645\u786c\u4ef6/\u57fa\u7840\u8bbe\u65bd\uff0c\u7b26\u53f7\u56fe\uff08Symbolic Chart\uff09\u4f7f\u7528\u62bd\u8c61\u7b26\u53f7\uff0c\u77e5\u8bc6\u5e93\u6587\u7ae0\uff08Knowledge Base Article\uff09\u4e3a\u6587\u672c\u5f62\u5f0f\uff0c\u5747\u4e0d\u7b26\u5408\u4fe1\u606f\u6d41\u5c42\u7ea7\u5c55\u793a\u9700\u6c42\u3002\",\n    \"remediation_steps\": [],\n    \"prevention\": \"\u65e0\u9002\u7528\u573a\u666f\"\n}",
+    "model_response": "{\n    \"root_cause\": \"逻辑图\",\n    \"causal_chain\": [],\n    \"impact\": {\n        \"services\": [],\n        \"severity\": \"low\",\n        \"users_affected\": \"0\"\n    },\n    \"confidence\": 1.0,\n    \"reasoning\": \"逻辑图（Logical Chart）用于表示信息流从高层概念到详细层次的结构关系，符合问题中『查看从高层到详细概念信息流』的需求。其他选项中，物理图示（Physical Diagram）展示实际硬件/基础设施，符号图（Symbolic Chart）使用抽象符号，知识库文章（Knowledge Base Article）为文本形式，均不符合信息流层级展示需求。\",\n    \"remediation_steps\": [],\n    \"prevention\": \"无适用场景\"\n}",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u903b\u8f91\u56fe\u3002",
+    "expected_root_cause": "逻辑图。",
     "bert_f1": 0.0
   },
   {
@@ -5238,11 +5238,11 @@
     "case_id": "RCA_070",
     "task_type": "rca",
     "source": "opseval_Wired Network",
-    "model_response": "{\n    \"root_cause\": \"IPv6\u5730\u5740\u81ea\u52a8\u914d\u7f6e\",\n    \"causal_chain\": [\"SLAAC\u662fIPv6\u7684\u65e0\u72b6\u6001\u5730\u5740\u81ea\u52a8\u914d\u7f6e\u673a\u5236\", \"Cisco IOS\u63a5\u53e3\u9700\u542f\u7528RA\uff08Router Advertisement\uff09\u4ee5\u89e6\u53d1SLAAC\", \"\u672a\u6b63\u786e\u914d\u7f6eRA\u53c2\u6570\u4f1a\u5bfc\u81f4SLAAC\u65e0\u6cd5\u542f\u7528\"],\n    \"impact\": {\n        \"services\": [\"IPv6\u7f51\u7edc\u901a\u4fe1\"],\n        \"severity\": \"high\",\n        \"users_affected\": \"\u6240\u6709\u4f9d\u8d56IPv6\u5730\u5740\u81ea\u52a8\u914d\u7f6e\u7684\u7ec8\u7aef\u8bbe\u5907\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"SLAAC\uff08Stateless Address Autoconfiguration\uff09\u662fIPv6\u7684\u6838\u5fc3\u7279\u6027\uff0c\u901a\u8fc7RA\u62a5\u6587\u5b9e\u73b0\u5730\u5740\u81ea\u52a8\u5206\u914d\u3002Cisco IOS\u4e2d\u9700\u4f7f\u7528'ipv6 nd ra'\u76f8\u5173\u547d\u4ee4\u914d\u7f6eRA\u53c2\u6570\uff0c\u800c\u975e\u76f4\u63a5\u542f\u7528SLAAC\u3002\u9009\u9879A\u6b63\u786e\u63cf\u8ff0\u4e86SLAAC\u7684\u673a\u5236\uff0c\u800c\u9009\u9879D\uff08RA\u6291\u5236\uff09\u662f\u7981\u7528RA\u7684\u547d\u4ee4\uff0c\u4e0e\u95ee\u9898\u610f\u56fe\u76f8\u53cd\u3002\",\n    \"",
+    "model_response": "{\n    \"root_cause\": \"IPv6地址自动配置\",\n    \"causal_chain\": [\"SLAAC是IPv6的无状态地址自动配置机制\", \"Cisco IOS接口需启用RA（Router Advertisement）以触发SLAAC\", \"未正确配置RA参数会导致SLAAC无法启用\"],\n    \"impact\": {\n        \"services\": [\"IPv6网络通信\"],\n        \"severity\": \"high\",\n        \"users_affected\": \"所有依赖IPv6地址自动配置的终端设备\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"SLAAC（Stateless Address Autoconfiguration）是IPv6的核心特性，通过RA报文实现地址自动分配。Cisco IOS中需使用'ipv6 nd ra'相关命令配置RA参数，而非直接启用SLAAC。选项A正确描述了SLAAC的机制，而选项D（RA抑制）是禁用RA的命令，与问题意图相反。\",\n    \"",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "IPv6\u5730\u5740\u81ea\u52a8\u914d\u7f6e",
+    "expected_root_cause": "IPv6地址自动配置",
     "bert_f1": 0.0
   },
   {
@@ -5260,11 +5260,11 @@
     "case_id": "RCA_094",
     "task_type": "rca",
     "source": "opseval_Wired Network",
-    "model_response": "{\n    \"root_cause\": \"\u9519\u8bef\u7684\uff0c\u4e0d\u6b63\u786e\u7684\u3002\",\n    \"causal_chain\": [],\n    \"impact\": {\n        \"services\": [],\n        \"severity\": \"low\",\n        \"users_affected\": \"0\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"\u5728MST\uff08Multiple Spanning Tree\uff09\u534f\u8bae\u4e2d\uff0c\u6839\u6865\uff08Root Bridge\uff09\u8d1f\u8d23\u751f\u6210\u751f\u6210\u6811\u62d3\u6251\uff0c\u4f46\u4e0d\u4f1a\u5e7f\u64adVLAN\u5230\u6240\u6709\u5b9e\u4f8b\u3002VLAN\u4e0eMST\u5b9e\u4f8b\u7684\u6620\u5c04\u662f\u9759\u6001\u914d\u7f6e\u7684\uff0c\u6bcf\u4e2aVLAN\u4ec5\u5c5e\u4e8e\u7279\u5b9aMST\u5b9e\u4f8b\u3002\u5982\u679c\u5b58\u5728\u4f2a\u9020\u7684\u6839\u6865\uff08Fake Root\uff09\uff0c\u53ef\u80fd\u5bfc\u81f4\u751f\u6210\u6811\u62d3\u6251\u9519\u8bef\u6216\u73af\u8def\uff0c\u4f46\u4e0d\u4f1a\u5bfc\u81f4\u6240\u6709MST\u4ea4\u6362\u673a\u5e7f\u64adVLAN\u5230\u5b9e\u4f8b\u3002\u9898\u76ee\u63cf\u8ff0\u7684\u573a\u666f\u4e0d\u7b26\u5408MST\u534f\u8bae\u7684\u5b9e\u9645\u884c\u4e3a\uff0c\u56e0\u6b64\u5224\u65ad\u4e3a\u9519\u8bef\u3002\",\n    \"remediation_steps\": [],\n    \"prevention\": \"\u786e\u4fddMST\u914d\u7f6e\u6b63\u786e\uff0c\u907f\u514d\u4f2a\u9020\u6839\u6865\uff0c\u5b9a\u671f\u68c0\u67e5\u751f\u6210\u6811\u62d3\u6251\u548cVLAN\u5b9e\u4f8b\u6620\u5c04\u3002\"\n}",
+    "model_response": "{\n    \"root_cause\": \"错误的，不正确的。\",\n    \"causal_chain\": [],\n    \"impact\": {\n        \"services\": [],\n        \"severity\": \"low\",\n        \"users_affected\": \"0\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"在MST（Multiple Spanning Tree）协议中，根桥（Root Bridge）负责生成生成树拓扑，但不会广播VLAN到所有实例。VLAN与MST实例的映射是静态配置的，每个VLAN仅属于特定MST实例。如果存在伪造的根桥（Fake Root），可能导致生成树拓扑错误或环路，但不会导致所有MST交换机广播VLAN到实例。题目描述的场景不符合MST协议的实际行为，因此判断为错误。\",\n    \"remediation_steps\": [],\n    \"prevention\": \"确保MST配置正确，避免伪造根桥，定期检查生成树拓扑和VLAN实例映射。\"\n}",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u9519\u8bef\u7684\uff0c\u4e0d\u6b63\u786e\u7684\u3002",
+    "expected_root_cause": "错误的，不正确的。",
     "bert_f1": 0.0
   },
   {
@@ -5283,11 +5283,11 @@
     "case_id": "RCA_023",
     "task_type": "rca",
     "source": "opseval_Log Analysis",
-    "model_response": "{\n    \"root_cause\": \"\u65e5\u5fd7\u4ea7\u54c1\u901a\u5e38\u901a\u8fc7\u6b63\u5219\u8868\u8fbe\u5f0f\u89e3\u7801\u6765\u63d0\u53d6\u548c\u89e3\u6790\u65e5\u5fd7\u4e2d\u7684\u5173\u952e\u4fe1\u606f\uff0c\u4f8b\u5982\u4ece\u975e\u7ed3\u6784\u5316\u6587\u672c\u4e2d\u5339\u914d\u7279\u5b9a\u6a21\u5f0f\uff08\u5982IP\u5730\u5740\u3001\u65f6\u95f4\u6233\u3001\u9519\u8bef\u4ee3\u7801\u7b49\uff09\u3002\u6b64\u65b9\u6cd5\u4f9d\u8d56\u4e8e\u9884\u5b9a\u4e49\u7684\u6a21\u5f0f\u89c4\u5219\uff0c\u4f46\u53ef\u80fd\u56e0\u65e5\u5fd7\u683c\u5f0f\u53d8\u5316\u6216\u5f02\u5e38\u6570\u636e\u5bfc\u81f4\u89e3\u6790\u5931\u8d25\u3002\",\n    \"causal_chain\": [],\n    \"impact\": {\n        \"services\": [\"\u65e5\u5fd7\u5206\u6790\u670d\u52a1\", \"\u76d1\u63a7\u7cfb\u7edf\"],\n        \"severity\": \"medium\",\n        \"users_affected\": \"0\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"\u95ee\u9898\u805a\u7126\u4e8e\u65e5\u5fd7\u4ea7\u54c1\u68c0\u7d22\u65b9\u6cd5\u800c\u975e\u5177\u4f53\u6545\u969c\uff0c\u56e0\u6b64\u5c5e\u4e8e\u6280\u672f\u77e5\u8bc6\u67e5\u8be2\u3002\u6b63\u5219\u8868\u8fbe\u5f0f\u662f\u65e5\u5fd7\u89e3\u6790\u7684\u901a\u7528\u624b\u6bb5\uff0c\u4f46\u5176\u6709\u6548\u6027\u4f9d\u8d56\u4e8e\u65e5\u5fd7\u683c\u5f0f\u7684\u7a33\u5b9a\u6027\u3002\u7531\u4e8e\u672a\u63d0\u4f9b\u5177\u4f53\u6545\u969c\u573a\u666f\u6216\u6570\u636e\uff0c\u65e0\u6cd5\u6df1\u5165\u5206\u6790\u56e0\u679c\u94fe\u6216\u5f71\u54cd\u8303\u56f4\u3002\",\n    \"remediation_steps\": [],\n    \"prevention\": \"\u5bf9\u4e8e\u65e5\u5fd7\u89e3\u6790\uff0c\u5efa\u8bae\u7ed3\u5408\u6b63\u5219\u8868\u8fbe\u5f0f\u4e0e\u7ed3\u6784\u5316\u65e5\u5fd7\u683c\u5f0f\uff08\u5982JSON\uff09\uff0c\u5e76\u5b9e\u65bd\u52a8\u6001\u6a21\u5f0f\u68c0\u6d4b",
+    "model_response": "{\n    \"root_cause\": \"日志产品通常通过正则表达式解码来提取和解析日志中的关键信息，例如从非结构化文本中匹配特定模式（如IP地址、时间戳、错误代码等）。此方法依赖于预定义的模式规则，但可能因日志格式变化或异常数据导致解析失败。\",\n    \"causal_chain\": [],\n    \"impact\": {\n        \"services\": [\"日志分析服务\", \"监控系统\"],\n        \"severity\": \"medium\",\n        \"users_affected\": \"0\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"问题聚焦于日志产品检索方法而非具体故障，因此属于技术知识查询。正则表达式是日志解析的通用手段，但其有效性依赖于日志格式的稳定性。由于未提供具体故障场景或数据，无法深入分析因果链或影响范围。\",\n    \"remediation_steps\": [],\n    \"prevention\": \"对于日志解析，建议结合正则表达式与结构化日志格式（如JSON），并实施动态模式检测",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u6b63\u5219\u8868\u8fbe\u5f0f\u89e3\u6790\uff1a\u4f7f\u7528\u6b63\u5219\u8868\u8fbe\u5f0f\u5339\u914d\u65e5\u5fd7\u884c\u4e2d\u7684\u7279\u5b9a\u6a21\u5f0f\uff0c\u5e76\u63d0\u53d6\u6240\u9700\u7684\u5b57\u6bb5\u3002\u8fd9\u79cd\u65b9\u6cd5\u901a\u5e38\u7528\u4e8e\u65e5\u5fd7\u683c\u5f0f\u6bd4\u8f83\u56fa\u5b9a\u3001\u89c4\u5219\u660e\u786e\u7684\u60c5\u51b5\u3002\n\u6a21\u677f\u89e3\u6790\uff1a\u6709\u4e9b\u65e5\u5fd7\u683c\u5f0f\u662f\u57fa\u4e8e\u6a21\u677f\u751f\u6210\u7684\uff0c\u53ef\u4ee5\u6839\u636e\u65e5\u5fd7\u6a21\u677f\u7684\u5b9a\u4e49\u6765\u89e3\u6790\u65e5\u5fd7\u884c\uff0c\u63d0\u53d6\u6240\u9700\u7684\u5b57\u6bb5\u3002\u8fd9\u79cd\u65b9\u6cd5\u9002\u7528\u4e8e\u6a21\u677f\u683c\u5f0f\u7684\u65e5\u5fd7\u3002\n\u5206\u5272\u7b26\u89e3\u6790\uff1a\u6839\u636e\u6307\u5b9a\u7684\u5206\u9694\u7b26\u5c06\u65e5\u5fd7\u884c\u5206\u5272\u6210\u591a\u4e2a\u5b57\u6bb5\u3002\u8fd9\u79cd\u65b9\u6cd5\u9002\u7528\u4e8e\u7b80\u5355\u7684\u65e5\u5fd7\u683c\u5f0f\uff0c\u5982\u4ee5\u7a7a\u683c\u6216\u9017\u53f7\u5206\u9694\u7684\u65e5\u5fd7\u884c\u3002\n\u673a\u5668\u5b66\u4e60\u7b97\u6cd5\uff1a\u4f7f\u7528\u673a\u5668\u5b66\u4e60\u7b97\u6cd5\u5bf9\u65e5\u5fd7\u6570\u636e\u8fdb\u884c\u8bad\u7ec3\u548c\u5b66\u4e60\uff0c\u81ea\u52a8\u8bc6\u522b\u548c\u63d0\u53d6\u5b57\u6bb5\u3002\u8fd9\u79cd\u65b9\u6cd5\u9002\u7528\u4e8e\u590d\u6742\u7684\u65e5\u5fd7\u683c\u5f0f\u548c\u4e0d\u89c4\u5219\u7684\u6587\u672c\u6570\u636e\u3002\nNLP\uff08\u81ea\u7136\u8bed\u8a00\u5904\u7406\uff09\u6280\u672f\uff1a\u901a\u8fc7\u81ea\u7136\u8bed\u8a00\u5904\u7406\u6280\u672f\u5bf9\u65e5\u5fd7\u6587\u672c\u8fdb\u884c\u89e3\u6790\u548c\u8bed\u4e49\u7406\u89e3\uff0c\u63d0\u53d6\u6240\u9700\u7684\u5b57\u6bb5\u3002\u8fd9\u79cd\u65b9\u6cd5\u9002\u7528\u4e8e\u5305\u542b\u4eba\u7c7b\u53ef\u8bfb\u4fe1\u606f\u7684\u65e5\u5fd7\u6570\u636e\u3002\n\u6839\u636e\u4e0d\u540c\u7684\u65e5\u5fd7\u683c\u5f0f\u548c\u9700\u6c42\uff0c\u53ef\u4ee5\u9009\u62e9\u9002\u5408\u7684\u65b9\u6cd5\u8fdb\u884c\u5b57\u6bb5\u62bd\u53d6\u3002\u5728\u5b9e\u9645\u5e94\u7528\u4e2d\uff0c\u53ef\u80fd\u9700\u8981\u6839\u636e\u5177\u4f53\u60c5\u51b5\u7ec4\u5408\u4f7f\u7528\u591a\u79cd\u65b9\u6cd5\u3002",
+    "expected_root_cause": "正则表达式解析：使用正则表达式匹配日志行中的特定模式，并提取所需的字段。这种方法通常用于日志格式比较固定、规则明确的情况。\n模板解析：有些日志格式是基于模板生成的，可以根据日志模板的定义来解析日志行，提取所需的字段。这种方法适用于模板格式的日志。\n分割符解析：根据指定的分隔符将日志行分割成多个字段。这种方法适用于简单的日志格式，如以空格或逗号分隔的日志行。\n机器学习算法：使用机器学习算法对日志数据进行训练和学习，自动识别和提取字段。这种方法适用于复杂的日志格式和不规则的文本数据。\nNLP（自然语言处理）技术：通过自然语言处理技术对日志文本进行解析和语义理解，提取所需的字段。这种方法适用于包含人类可读信息的日志数据。\n根据不同的日志格式和需求，可以选择适合的方法进行字段抽取。在实际应用中，可能需要根据具体情况组合使用多种方法。",
     "bert_f1": 0.8445
   },
   {
@@ -5306,11 +5306,11 @@
     "case_id": "RCA_036",
     "task_type": "rca",
     "source": "opseval_Wired Network",
-    "model_response": "{\n    \"root_cause\": \"BGP\u662f\u94fe\u8def\u72b6\u6001\u8def\u7531\u534f\u8bae\uff08\u9009\u98792\uff09\",\n    \"causal_chain\": [\n        \"BGP\u5b9e\u9645\u662f\u8def\u5f84\u5411\u91cf\u534f\u8bae\u800c\u975e\u94fe\u8def\u72b6\u6001\u534f\u8bae\",\n        \"\u94fe\u8def\u72b6\u6001\u534f\u8bae\uff08\u5982OSPF\uff09\u4f7f\u7528Dijkstra\u7b97\u6cd5\u8ba1\u7b97\u6700\u77ed\u8def\u5f84\",\n        \"BGP\u901a\u8fc7\u4ea4\u6362\u8def\u5f84\u4fe1\u606f\u8fdb\u884c\u8def\u7531\u51b3\u7b56\"\n    ],\n    \"impact\": {\n        \"services\": [\"\u7f51\u7edc\u534f\u8bae\u77e5\u8bc6\u51c6\u786e\u6027\"],\n        \"severity\": \"high\",\n        \"users_affected\": \"\u6240\u6709\u7f51\u7edc\u5de5\u7a0b\u5e08\u548c\u76f8\u5173\u6280\u672f\u4eba\u5458\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"BGP\uff08\u8fb9\u754c\u7f51\u5173\u534f\u8bae\uff09\u662f\u7528\u4e8e\u5728\u4e0d\u540c\u81ea\u6cbb\u7cfb\u7edf\uff08AS\uff09\u4e4b\u95f4\u4ea4\u6362\u8def\u7531\u4fe1\u606f\u7684\u8def\u5f84\u5411\u91cf\u534f\u8bae\u3002\u9009\u98792\u9519\u8bef\u5730\u5c06\u5176\u5f52\u7c7b\u4e3a\u94fe\u8def\u72b6\u6001\u534f\u8bae\uff0c\u800c\u94fe\u8def\u72b6\u6001\u534f\u8bae\uff08\u5982OSPF\uff09\u901a\u8fc7\u6cdb\u6d2a\u94fe\u8def\u72b6\u6001\u4fe1\u606f\u6765\u8ba1\u7b97\u6700\u77ed\u8def\u5f84\uff0c\u8fd9\u4e0eBGP\u7684\u5de5\u4f5c\u673a\u5236\u6709\u672c\u8d28\u533a\u522b\u3002BGP\u7684\u6838\u5fc3\u7279\u5f81\u5305\u62ec\u652f\u6301CIDR\u3001\u5728AS\u95f4\u5171\u4eab\u8def\u7531\u4fe1\u606f\uff0c\u4ee5\u53ca\u4f7f\u7528\u8def\u5f84\u5411\u91cf\u8fdb\u884c\u8def\u7531\u51b3\u7b56\u3002\",\n   ",
+    "model_response": "{\n    \"root_cause\": \"BGP是链路状态路由协议（选项2）\",\n    \"causal_chain\": [\n        \"BGP实际是路径向量协议而非链路状态协议\",\n        \"链路状态协议（如OSPF）使用Dijkstra算法计算最短路径\",\n        \"BGP通过交换路径信息进行路由决策\"\n    ],\n    \"impact\": {\n        \"services\": [\"网络协议知识准确性\"],\n        \"severity\": \"high\",\n        \"users_affected\": \"所有网络工程师和相关技术人员\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"BGP（边界网关协议）是用于在不同自治系统（AS）之间交换路由信息的路径向量协议。选项2错误地将其归类为链路状态协议，而链路状态协议（如OSPF）通过泛洪链路状态信息来计算最短路径，这与BGP的工作机制有本质区别。BGP的核心特征包括支持CIDR、在AS间共享路由信息，以及使用路径向量进行路由决策。\",\n   ",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "BGP\u662f\u4e00\u79cd\u94fe\u8def\u72b6\u6001\u8def\u7531\u534f\u8bae\u3002",
+    "expected_root_cause": "BGP是一种链路状态路由协议。",
     "bert_f1": 0.811
   },
   {
@@ -5385,7 +5385,7 @@
     "case_id": "RCA_072",
     "task_type": "rca",
     "source": "opseval_Wired Network",
-    "model_response": "{\n    \"root_cause\": \"The network is a Class B network. The number of host bits in the unsubnetted network is 16.\",\n    \"causal_chain\": [],\n    \"impact\": {\n        \"services\": [],\n        \"severity\": \"low\",\n        \"users_affected\": \"0\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"The IP address 172.16.99.45 belongs to the private IP range 172.16.0.0/12, which is part of the original Class B network (172.16.0.0\u2013172.31.255.255). Class B networks have 16 host bits (32 bits total \u2013 16 network bi",
+    "model_response": "{\n    \"root_cause\": \"The network is a Class B network. The number of host bits in the unsubnetted network is 16.\",\n    \"causal_chain\": [],\n    \"impact\": {\n        \"services\": [],\n        \"severity\": \"low\",\n        \"users_affected\": \"0\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"The IP address 172.16.99.45 belongs to the private IP range 172.16.0.0/12, which is part of the original Class B network (172.16.0.0–172.31.255.255). Class B networks have 16 host bits (32 bits total – 16 network bi",
     "correct": false,
     "rule_score": 0.0,
     "expected_root_cause": "The network is a Class B network.; The number of host bits in the unsubnetted network is 16.",
@@ -5396,11 +5396,11 @@
     "case_id": "RCA_043",
     "task_type": "rca",
     "source": "opseval_Wired Network",
-    "model_response": "{\n    \"root_cause\": \"\u9012\u589e\u7684\",\n    \"causal_chain\": [\"\u589e\u91cf\u5907\u4efd\u4ec5\u8bb0\u5f55\u81ea\u4e0a\u6b21\u5907\u4efd\u4ee5\u6765\u7684\u53d8\u5316\", \"\u6062\u590d\u539f\u59cb\u4f4d\u7f6e\u9700\u8981\u6240\u6709\u4e4b\u524d\u7684\u589e\u91cf\u5907\u4efd\", \"\u82e5\u7f3a\u5c11\u4efb\u4e00\u589e\u91cf\u5907\u4efd\u5219\u65e0\u6cd5\u5b8c\u6574\u6062\u590d\"],\n    \"impact\": {\n        \"services\": [\"\u5907\u4efd\u6062\u590d\u670d\u52a1\"],\n        \"severity\": \"high\",\n        \"users_affected\": \"\u6240\u6709\u4f9d\u8d56\u589e\u91cf\u5907\u4efd\u7684\u7528\u6237\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"\u589e\u91cf\u5907\u4efd\uff08Incremental Backup\uff09\u4ec5\u5b58\u50a8\u81ea\u4e0a\u6b21\u5907\u4efd\u540e\u7684\u6570\u636e\u53d8\u5316\uff0c\u6062\u590d\u65f6\u9700\u8981\u4f9d\u8d56\u6240\u6709\u4e4b\u524d\u7684\u5907\u4efd\u8bb0\u5f55\u3002\u82e5\u4e2d\u95f4\u4efb\u4e00\u5907\u4efd\u7f3a\u5931\uff0c\u5c06\u5bfc\u81f4\u6570\u636e\u6062\u590d\u4e0d\u5b8c\u6574\u3002\u800c\u5b8c\u6574\u5907\u4efd\uff08Full Backup\uff09\u548c\u5dee\u5206\u5907\u4efd\uff08Differential Backup\uff09\u5747\u53ef\u72ec\u7acb\u6062\u590d\u6570\u636e\uff0c\u9644\u52a0\u5907\u4efd\uff08\u5982\u589e\u91cf\u5907\u4efd\u7684\u8865\u5145\u5f62\u5f0f\uff09\u5728\u7279\u5b9a\u573a\u666f\u4e0b\u4ecd\u53ef\u4f7f\u7528\u3002\",\n    \"remediation_steps\": [\n        {\"action\": \"\u4f18\u5148\u4f7f\u7528\u5b8c\u6574\u5907\u4efd\u6216\u5dee\u5206\u5907\u4efd\u8fdb\u884c\u5173\u952e",
+    "model_response": "{\n    \"root_cause\": \"递增的\",\n    \"causal_chain\": [\"增量备份仅记录自上次备份以来的变化\", \"恢复原始位置需要所有之前的增量备份\", \"若缺少任一增量备份则无法完整恢复\"],\n    \"impact\": {\n        \"services\": [\"备份恢复服务\"],\n        \"severity\": \"high\",\n        \"users_affected\": \"所有依赖增量备份的用户\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"增量备份（Incremental Backup）仅存储自上次备份后的数据变化，恢复时需要依赖所有之前的备份记录。若中间任一备份缺失，将导致数据恢复不完整。而完整备份（Full Backup）和差分备份（Differential Backup）均可独立恢复数据，附加备份（如增量备份的补充形式）在特定场景下仍可使用。\",\n    \"remediation_steps\": [\n        {\"action\": \"优先使用完整备份或差分备份进行关键",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u5dee\u5206\u7684\uff1b\u5fae\u5206\u7684\uff1b\u5dee\u5f02\u7684",
+    "expected_root_cause": "差分的；微分的；差异的",
     "bert_f1": 0.0
   },
   {
@@ -5467,7 +5467,7 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u5c06\u60a8\u7684\u8bbe\u5907\u914d\u7f6e\u4e3a\u4f7f\u7528\u9891\u90539\u3002",
+    "expected_root_cause": "将您的设备配置为使用频道9。",
     "bert_f1": 0.0
   },
   {
@@ -5507,7 +5507,7 @@
     "case_id": "RCA_010",
     "task_type": "rca",
     "source": "opseval_Log Analysis",
-    "model_response": "{\n    \"root_cause\": \"A. \u65f6\u95f4\",\n    \"causal_chain\": [],\n    \"impact\": {\n        \"services\": [],\n        \"severity\": \"low\",\n        \"users_affected\": \"0\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"\u5728\u65e5\u5fd7\u8bb0\u5f55\u6807\u51c6\u4e2d\uff0c\u65f6\u95f4\u6233\uff08timestamp\uff09\u662f\u5fc5\u987b\u5b57\u6bb5\uff0c\u7528\u4e8e\u6807\u8bc6\u4e8b\u4ef6\u53d1\u751f\u7684\u65f6\u95f4\u3002IP\u5730\u5740\u3001\u4e3b\u673a\u540d\u548c\u65e5\u5fd7\u7ea7\u522b\uff08\u5982\u4fe1\u606f/\u9519\u8bef\uff09\u867d\u7136\u5e38\u89c1\uff0c\u4f46\u5e76\u975e\u6240\u6709\u65e5\u5fd7\u683c\u5f0f\u5f3a\u5236\u8981\u6c42\u3002\u4f8b\u5982\uff0cRFC 5424\uff08syslog\u6807\u51c6\uff09\u660e\u786e\u8981\u6c42\u65f6\u95f4\u6233\uff0c\u800cIP\u548c\u4e3b\u673a\u540d\u53ef\u80fd\u6839\u636e\u5177\u4f53\u573a\u666f\u53ef\u9009\u3002\",\n    \"remediation_steps\": [],\n    \"prevention\": \"\u786e\u4fdd\u65e5\u5fd7\u683c\u5f0f\u89c4\u8303\u57f9\u8bad\u8986\u76d6\u6838\u5fc3\u5b57\u6bb5\u8981\u6c42\uff0c\u4f7f\u7528\u6807\u51c6\u5316\u65e5\u5fd7\u5e93\uff08\u5982log4j\u3001syslog\uff09\u907f\u514d\u624b\u52a8\u5b9a\u4e49\u5b57\u6bb5\u65f6\u9057\u6f0f\u5173\u952e\u4fe1\u606f\u3002\"\n}",
+    "model_response": "{\n    \"root_cause\": \"A. 时间\",\n    \"causal_chain\": [],\n    \"impact\": {\n        \"services\": [],\n        \"severity\": \"low\",\n        \"users_affected\": \"0\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"在日志记录标准中，时间戳（timestamp）是必须字段，用于标识事件发生的时间。IP地址、主机名和日志级别（如信息/错误）虽然常见，但并非所有日志格式强制要求。例如，RFC 5424（syslog标准）明确要求时间戳，而IP和主机名可能根据具体场景可选。\",\n    \"remediation_steps\": [],\n    \"prevention\": \"确保日志格式规范培训覆盖核心字段要求，使用标准化日志库（如log4j、syslog）避免手动定义字段时遗漏关键信息。\"\n}",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
@@ -5664,11 +5664,11 @@
     "case_id": "RCA_076",
     "task_type": "rca",
     "source": "opseval_Wired Network",
-    "model_response": "{\n    \"root_cause\": \"\u7f51\u7edc\u5206\u6bb5\u7b56\u7565, \u8bbf\u95ee\u63a7\u5236\u7b56\u7565\",\n    \"causal_chain\": [\"SCADA\u7cfb\u7edf\u9700\u8981\u4e25\u683c\u7684\u6d41\u91cf\u63a7\u5236\u4ee5\u786e\u4fdd\u5b89\u5168\u6027\u548c\u53ef\u9760\u6027\", \"\u7f51\u7edc\u5206\u6bb5\u7b56\u7565\u901a\u8fc7\u9694\u79bb\u4e0d\u540c\u7f51\u7edc\u533a\u57df\u9632\u6b62\u672a\u6388\u6743\u8bbf\u95ee\", \"\u8bbf\u95ee\u63a7\u5236\u7b56\u7565\u901a\u8fc7\u5b9a\u4e49\u6743\u9650\u9650\u5236\u6570\u636e\u6d41\u65b9\u5411\u548c\u5185\u5bb9\"],\n    \"impact\": {\n        \"services\": [\"SCADA\u76d1\u63a7\u7cfb\u7edf\", \"\u5de5\u4e1a\u63a7\u5236\u7cfb\u7edf\"],\n        \"severity\": \"high\",\n        \"users_affected\": \"\u5de5\u4e1a\u8bbe\u65bd\u64cd\u4f5c\u4eba\u5458\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"SCADA\u7cfb\u7edf\u4f5c\u4e3a\u5173\u952e\u57fa\u7840\u8bbe\u65bd\uff0c\u5176\u6d41\u91cf\u63a7\u5236\u9700\u517c\u987e\u5b89\u5168\u4e0e\u6548\u7387\u3002\u7f51\u7edc\u5206\u6bb5\u7b56\u7565\u53ef\u7269\u7406\u9694\u79bb\u5173\u952e\u63a7\u5236\u7f51\u7edc\uff0c\u800c\u8bbf\u95ee\u63a7\u5236\u7b56\u7565\u80fd\u9650\u5236\u975e\u6cd5\u8bbf\u95ee\u3002\u67e5\u8be2\u63a7\u5236\u7b56\u7565\u548c\u6587\u4ef6/\u6076\u610f\u8f6f\u4ef6\u7b56\u7565\u867d\u91cd\u8981\uff0c\u4f46\u5c5e\u4e8e\u5b89\u5168\u9632\u62a4\u8303\u7574\u800c\u975e\u76f4\u63a5\u6d41\u91cf\u63a7\u5236\u624b\u6bb5\u3002\",\n    \"remediation_steps\": [\n        {\"action\": \"\u90e8\u7f72VLAN\u5212\u5206SCADA\u4e13\u7528\u7f51\u7edc\u6bb5\", \"risk\": ",
+    "model_response": "{\n    \"root_cause\": \"网络分段策略, 访问控制策略\",\n    \"causal_chain\": [\"SCADA系统需要严格的流量控制以确保安全性和可靠性\", \"网络分段策略通过隔离不同网络区域防止未授权访问\", \"访问控制策略通过定义权限限制数据流方向和内容\"],\n    \"impact\": {\n        \"services\": [\"SCADA监控系统\", \"工业控制系统\"],\n        \"severity\": \"high\",\n        \"users_affected\": \"工业设施操作人员\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"SCADA系统作为关键基础设施，其流量控制需兼顾安全与效率。网络分段策略可物理隔离关键控制网络，而访问控制策略能限制非法访问。查询控制策略和文件/恶意软件策略虽重要，但属于安全防护范畴而非直接流量控制手段。\",\n    \"remediation_steps\": [\n        {\"action\": \"部署VLAN划分SCADA专用网络段\", \"risk\": ",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u7f51\u7edc\u5206\u6790\u7b56\u7565",
+    "expected_root_cause": "网络分析策略",
     "bert_f1": 0.0
   },
   {
@@ -5679,7 +5679,7 @@
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u9009\u62e9\u5408\u9002\u7684\u65e5\u5fd7\u6587\u4ef6\uff1a\u6839\u636e\u9700\u8981\u9009\u62e9\u8981\u5206\u6790\u7684\u65e5\u5fd7\u6587\u4ef6\uff0c\u5982\u9519\u8bef\u65e5\u5fd7\u3001\u67e5\u8be2\u65e5\u5fd7\u3001\u6162\u67e5\u8be2\u65e5\u5fd7\u7b49\u3002\u8fd9\u53d6\u51b3\u4e8e\u4f60\u8981\u89e3\u51b3\u7684\u95ee\u9898\u6216\u5173\u6ce8\u7684\u65b9\u9762\u3002\n\n\u67e5\u770b\u65e5\u5fd7\u6587\u4ef6\uff1a\u4f7f\u7528\u6587\u672c\u7f16\u8f91\u5668\u6216\u547d\u4ee4\u884c\u5de5\u5177\u6253\u5f00\u65e5\u5fd7\u6587\u4ef6\u3002\u6d4f\u89c8\u6587\u4ef6\u5185\u5bb9\uff0c\u67e5\u627e\u5173\u952e\u4fe1\u606f\uff0c\u5982\u9519\u8bef\u6d88\u606f\u3001\u67e5\u8be2\u8bed\u53e5\u3001\u6267\u884c\u65f6\u95f4\u7b49\u3002\n\n\u8fc7\u6ee4\u548c\u641c\u7d22\uff1a\u6839\u636e\u9700\u6c42\u4f7f\u7528\u6587\u672c\u641c\u7d22\u5de5\u5177\uff08\u5982grep\u3001awk\u7b49\uff09\u6216\u65e5\u5fd7\u5206\u6790\u5de5\u5177\u6765\u8fc7\u6ee4\u548c\u641c\u7d22\u65e5\u5fd7\u6587\u4ef6\u3002\u8fd9\u6709\u52a9\u4e8e\u5feb\u901f\u5b9a\u4f4d\u7279\u5b9a\u7c7b\u578b\u7684\u65e5\u5fd7\u6761\u76ee\u6216\u5173\u952e\u5b57\u3002\n\n\u5206\u6790\u65e5\u5fd7\u5185\u5bb9\uff1a\u6839\u636e\u65e5\u5fd7\u6587\u4ef6\u7684\u7c7b\u578b\uff0c\u8fdb\u884c\u76f8\u5e94\u7684\u5206\u6790\u3002\u4f8b\u5982\uff0c\u9519\u8bef\u65e5\u5fd7\u53ef\u4ee5\u5e2e\u52a9\u4f60\u8bc6\u522b\u6570\u636e\u5e93\u670d\u52a1\u5668\u7684\u95ee\u9898\u548c\u5f02\u5e38\u60c5\u51b5\uff1b\u67e5\u8be2\u65e5\u5fd7\u53ef\u4ee5\u7528\u4e8e\u6027\u80fd\u5206\u6790\u548c\u4f18\u5316\uff1b\u6162\u67e5\u8be2\u65e5\u5fd7\u53ef\u4ee5\u5e2e\u52a9\u4f60\u53d1\u73b0\u6027\u80fd\u8f83\u5dee\u7684\u67e5\u8be2\u5e76\u8fdb\u884c\u6539\u8fdb\u7b49\u3002\n\n\u4f7f\u7528\u5de5\u5177\u548c\u811a\u672c\uff1a\u5229\u7528\u5404\u79cd\u53ef\u7528\u7684\u65e5\u5fd7\u5206\u6790\u5de5\u5177\u548c\u811a\u672c\u6765\u66f4\u6df1\u5165\u5730\u5206\u6790\u65e5\u5fd7\u6587\u4ef6\u3002MySQL\u63d0\u4f9b\u4e86\u4e00\u4e9b\u5185\u7f6e\u5de5\u5177\uff0c\u5982mysqldumpslow\u7528\u4e8e\u6162\u67e5\u8be2\u65e5\u5fd7\u5206\u6790\u3002\u6b64\u5916\uff0c\u8fd8\u6709\u7b2c\u4e09\u65b9\u5de5\u5177\u548c\u811a\u672c\u53ef\u7528\u4e8e\u66f4\u9ad8\u7ea7\u7684\u65e5\u5fd7\u5206\u6790\u548c\u53ef\u89c6\u5316\u3002\n\n\u751f\u6210\u62a5\u544a\u548c\u7edf\u8ba1\u6570\u636e\uff1a\u6839\u636e\u65e5\u5fd7\u5206\u6790\u7684\u7ed3\u679c\uff0c\u751f\u6210\u76f8\u5e94\u7684\u62a5\u544a\u548c\u7edf\u8ba1\u6570\u636e\u3002\u8fd9\u53ef\u4ee5\u5e2e\u52a9\u4f60\u7406\u89e3\u6570\u636e\u5e93\u7684\u6027\u80fd\u74f6\u9888\u3001\u67e5\u8be2\u4f18\u5316\u673a\u4f1a\u7b49\uff0c\u5e76\u91c7\u53d6\u76f8\u5e94\u7684\u63aa\u65bd\u6539\u8fdb\u6570\u636e\u5e93\u6027\u80fd\u3002",
+    "expected_root_cause": "选择合适的日志文件：根据需要选择要分析的日志文件，如错误日志、查询日志、慢查询日志等。这取决于你要解决的问题或关注的方面。\n\n查看日志文件：使用文本编辑器或命令行工具打开日志文件。浏览文件内容，查找关键信息，如错误消息、查询语句、执行时间等。\n\n过滤和搜索：根据需求使用文本搜索工具（如grep、awk等）或日志分析工具来过滤和搜索日志文件。这有助于快速定位特定类型的日志条目或关键字。\n\n分析日志内容：根据日志文件的类型，进行相应的分析。例如，错误日志可以帮助你识别数据库服务器的问题和异常情况；查询日志可以用于性能分析和优化；慢查询日志可以帮助你发现性能较差的查询并进行改进等。\n\n使用工具和脚本：利用各种可用的日志分析工具和脚本来更深入地分析日志文件。MySQL提供了一些内置工具，如mysqldumpslow用于慢查询日志分析。此外，还有第三方工具和脚本可用于更高级的日志分析和可视化。\n\n生成报告和统计数据：根据日志分析的结果，生成相应的报告和统计数据。这可以帮助你理解数据库的性能瓶颈、查询优化机会等，并采取相应的措施改进数据库性能。",
     "bert_f1": 0.6967
   },
   {
@@ -5731,22 +5731,22 @@
     "case_id": "RCA_042",
     "task_type": "rca",
     "source": "opseval_Wired Network",
-    "model_response": "{\n    \"root_cause\": \"\u7279\u5b9a\u7684\u7ec4\u64ad\u6d41\u91cf\u5c06\u88ab\u91cd\u5b9a\u5411\u4e3a\u65e0\u7ebf\u8def\u5ba2\u6237\u673a\u7684\u5355\u64ad\u6d41\u91cf\u3002\",\n    \"causal_chain\": [\n        \"Multicast Direct\u529f\u80fd\u88ab\u6fc0\u6d3b\",\n        \"WLC\u68c0\u6d4b\u5230\u7279\u5b9a\u7ec4\u64ad\u6d41\u91cf\u9700\u8981\u5b9a\u5411\u5904\u7406\",\n        \"\u7cfb\u7edf\u5c06\u7ec4\u64ad\u6d41\u91cf\u8f6c\u6362\u4e3a\u5355\u64ad\u6d41\u91cf\u4ee5\u53d1\u9001\u7ed9\u65e0\u7ebf\u5ba2\u6237\u7aef\"\n    ],\n    \"impact\": {\n        \"services\": [\"\u65e0\u7ebf\u7f51\u7edc\u670d\u52a1\", \"\u7ec4\u64ad\u5e94\u7528\u670d\u52a1\"],\n        \"severity\": \"high\",\n        \"users_affected\": \"\u6240\u6709\u4f7f\u7528\u7ec4\u64ad\u670d\u52a1\u7684\u65e0\u7ebf\u5ba2\u6237\u7aef\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"Multicast Direct\u7684\u6838\u5fc3\u7279\u6027\u662f\u5c06\u7ec4\u64ad\u6d41\u91cf\u8f6c\u6362\u4e3a\u5355\u64ad\u6d41\u91cf\u4ee5\u4f18\u5316\u65e0\u7ebf\u7f51\u7edc\u4f20\u8f93\u3002\u9009\u98792\u51c6\u786e\u63cf\u8ff0\u4e86\u8fd9\u4e00\u673a\u5236\uff0c\u800c\u5176\u4ed6\u9009\u9879\u6d89\u53ca\u8def\u7531\u5b9a\u5411\u3001\u96c6\u7ebf\u5668\u63a7\u5236\u5668\u6216Web\u754c\u9762\u7b49\u529f\u80fd\uff0c\u5747\u4e0d\u7b26\u5408Multicast Direct\u7684\u5b9a\u4e49\u3002\u8be5\u7279\u6027\u53ef\u9632\u6b62\u7ec4\u64ad\u6d41\u91cf\u6cdb\u6ee5\uff0c\u63d0\u9ad8\u65e0\u7ebf\u7f51\u7edc\u6548\u7387\u3002\",\n    \"remediat",
+    "model_response": "{\n    \"root_cause\": \"特定的组播流量将被重定向为无线路客户机的单播流量。\",\n    \"causal_chain\": [\n        \"Multicast Direct功能被激活\",\n        \"WLC检测到特定组播流量需要定向处理\",\n        \"系统将组播流量转换为单播流量以发送给无线客户端\"\n    ],\n    \"impact\": {\n        \"services\": [\"无线网络服务\", \"组播应用服务\"],\n        \"severity\": \"high\",\n        \"users_affected\": \"所有使用组播服务的无线客户端\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"Multicast Direct的核心特性是将组播流量转换为单播流量以优化无线网络传输。选项2准确描述了这一机制，而其他选项涉及路由定向、集线器控制器或Web界面等功能，均不符合Multicast Direct的定义。该特性可防止组播流量泛滥，提高无线网络效率。\",\n    \"remediat",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u7279\u5b9a\u7684\u7ec4\u64ad\u6d41\u5c06\u88ab\u91cd\u5b9a\u5411\u4e3a\u65e0\u7ebf\u5ba2\u6237\u7aef\u7684\u5355\u64ad\u6d41\u3002",
+    "expected_root_cause": "特定的组播流将被重定向为无线客户端的单播流。",
     "bert_f1": 0.8312
   },
   {
     "case_id": "RCA_064",
     "task_type": "rca",
     "source": "opseval_Wired Network",
-    "model_response": "{\n    \"root_cause\": \"\u4e00\u4e2a\u7f51\u7edc\u5b89\u5168\u90e8\u7f72\u548c\u7b56\u7565\u7ba1\u7406\u5e73\u53f0\",\n    \"causal_chain\": [],\n    \"impact\": {\n        \"services\": [],\n        \"severity\": \"low\",\n        \"users_affected\": \"0\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"\u601d\u79d1ISE\uff08Identity Services Engine\uff09\u662f\u601d\u79d1\u516c\u53f8\u5f00\u53d1\u7684\u7f51\u7edc\u8bbf\u95ee\u63a7\u5236\uff08NAC\uff09\u89e3\u51b3\u65b9\u6848\uff0c\u4e3b\u8981\u7528\u4e8e\u7f51\u7edc\u5b89\u5168\u90e8\u7f72\u3001\u7b56\u7565\u7ba1\u7406\u548c\u8eab\u4efd\u9a8c\u8bc1\u3002\u9009\u98793\u51c6\u786e\u63cf\u8ff0\u4e86\u5176\u6838\u5fc3\u529f\u80fd\uff0c\u800c\u5176\u4ed6\u9009\u9879\u6d89\u53ca\u8fd0\u52a8\u533b\u5b66\u3001\u7f51\u7edc\u7ba1\u7406\u5e73\u53f0\u548c\u865a\u62df\u5316\u8ba1\u7b97\u7cfb\u7edf\uff0c\u4e0eISE\u7684\u5b9e\u9645\u529f\u80fd\u4e0d\u7b26\u3002\",\n    \"remediation_steps\": [],\n    \"prevention\": \"\u65e0\"\n}",
+    "model_response": "{\n    \"root_cause\": \"一个网络安全部署和策略管理平台\",\n    \"causal_chain\": [],\n    \"impact\": {\n        \"services\": [],\n        \"severity\": \"low\",\n        \"users_affected\": \"0\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"思科ISE（Identity Services Engine）是思科公司开发的网络访问控制（NAC）解决方案，主要用于网络安全部署、策略管理和身份验证。选项3准确描述了其核心功能，而其他选项涉及运动医学、网络管理平台和虚拟化计算系统，与ISE的实际功能不符。\",\n    \"remediation_steps\": [],\n    \"prevention\": \"无\"\n}",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u4e00\u4e2a\u7f51\u7edc\u5b89\u5168\u548c\u7b56\u7565\u5e73\u53f0",
+    "expected_root_cause": "一个网络安全和策略平台",
     "bert_f1": 0.0
   },
   {
@@ -5776,11 +5776,11 @@
     "case_id": "RCA_032",
     "task_type": "rca",
     "source": "opseval_Wired Network",
-    "model_response": "{\n    \"root_cause\": \"\u5c06\u8ba1\u7b97\u8bbe\u5907\u79fb\u8fd1\u63a5\u5165\u70b9\",\n    \"causal_chain\": [\n        \"IEEE 802.11g\u8bbe\u5907\u4e0eIEEE 802.11b/g\u63a5\u5165\u70b9\uff08AP\uff09\u8fde\u63a5\u65f6\u51fa\u73b0\u5e72\u6270\u95ee\u9898\",\n        \"\u5e72\u6270\u53ef\u80fd\u7531\u9891\u9053\u51b2\u7a81\u3001\u4fe1\u53f7\u91cd\u53e0\u6216\u8bbe\u5907\u517c\u5bb9\u6027\u95ee\u9898\u5f15\u8d77\",\n        \"\u79fb\u52a8\u8ba1\u7b97\u8bbe\u5907\u9760\u8fd1AP\u53ef\u80fd\u65e0\u6cd5\u89e3\u51b3\u6839\u672c\u7684\u9891\u9053\u6216\u517c\u5bb9\u6027\u95ee\u9898\"\n    ],\n    \"impact\": {\n        \"services\": [\"\u65e0\u7ebf\u7f51\u7edc\u8fde\u63a5\", \"\u8bbe\u5907\u901a\u4fe1\u7a33\u5b9a\u6027\"],\n        \"severity\": \"high\",\n        \"users_affected\": \"\u53d7\u5f71\u54cd\u7684\u7528\u6237\u6570\u91cf\u53d6\u51b3\u4e8e\u7f51\u7edc\u8986\u76d6\u8303\u56f4\u548c\u8bbe\u5907\u5bc6\u5ea6\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"IEEE 802.11g\u4e0e802.11b/g\u7684\u5e72\u6270\u901a\u5e38\u7531\u9891\u9053\u51b2\u7a81\u6216\u4fe1\u53f7\u91cd\u53e0\u5f15\u8d77\u3002\u89e3\u51b3\u65b9\u6848\u5e94\u9488\u5bf9\u9891\u9053\u8c03\u6574\u3001\u8bbe\u5907\u5347\u7ea7\u6216\u5929\u7ebf\u4f18\u5316\u3002\u79fb\u52a8\u8bbe\u5907\u9760\u8fd1AP\u4ec5\u80fd\u6539\u5584\u5355\u4e2a\u8bbe\u5907\u7684\u4fe1\u53f7\u5f3a\u5ea6\uff0c\u65e0\u6cd5\u89e3\u51b3AP\u95f4\u7684\u5e72\u6270\u95ee\u9898\uff0c\u56e0\u6b64\u4e0d\u5c5e\u4e8e\u6709\u6548\u89e3\u51b3\u65b9\u6848\u3002\",\n    \"re",
+    "model_response": "{\n    \"root_cause\": \"将计算设备移近接入点\",\n    \"causal_chain\": [\n        \"IEEE 802.11g设备与IEEE 802.11b/g接入点（AP）连接时出现干扰问题\",\n        \"干扰可能由频道冲突、信号重叠或设备兼容性问题引起\",\n        \"移动计算设备靠近AP可能无法解决根本的频道或兼容性问题\"\n    ],\n    \"impact\": {\n        \"services\": [\"无线网络连接\", \"设备通信稳定性\"],\n        \"severity\": \"high\",\n        \"users_affected\": \"受影响的用户数量取决于网络覆盖范围和设备密度\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"IEEE 802.11g与802.11b/g的干扰通常由频道冲突或信号重叠引起。解决方案应针对频道调整、设备升级或天线优化。移动设备靠近AP仅能改善单个设备的信号强度，无法解决AP间的干扰问题，因此不属于有效解决方案。\",\n    \"re",
     "correct": null,
     "rule_score": null,
     "skip_reason": "excluded_unevaluable",
-    "expected_root_cause": "\u5c06AP\u66ff\u6362\u4e3a\u652f\u6301802.11n\u7684\u578b\u53f7\u3002",
+    "expected_root_cause": "将AP替换为支持802.11n的型号。",
     "bert_f1": 0.7824
   }
 ]
