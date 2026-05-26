@@ -18,7 +18,7 @@ Every file in this table was copied into `FINAL/` with SHA-256 verification (see
 
 | Paper artifact | FINAL/ path | Number | Verified |
 |---|---|---|---|
-| **Table 2** (system standalone, rich eval) | `main_benchmark/results.json` | Ann 82.6% / RCA 92.5% / Overall 87.5% | ✅ recomputed (rich-eval; not paper-canonical — see §3.3 footnote) |
+| **Table 2** (system standalone, rich eval) | `main_benchmark/results.json` | Ann 82.6% / RCA 91.1% / Overall 86.4% | ✅ recomputed (rich-eval; not paper-canonical — see §3.3 footnote; post-D-1: RCA denom 180, qa_mcq 33 routed separately) |
 | **Table 2** companion (matched eval) ⭐ | `main_benchmark/results_sota_eval_431.json` | Ann 82.6% / RCA 82.0% / Overall 82.4% | ✅ post-D-1 |
 | **Table 2** with BCa CIs (matched eval) | `main_benchmark/phase5_stats.json` | see §3.3 below | ✅ Phase 5 (re-run 2026-05-26) |
 | **Table 5** (Latency) | `main_benchmark/summary.json` | P50 4.1s / P95 48.4s / avg 17.6s | ✅ (unaffected by D-1) |
