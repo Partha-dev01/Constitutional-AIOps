@@ -1,6 +1,6 @@
 # Constitutional AIOps — Agent Handoff Document
 
-**Last updated**: 2026-05-26 (session 23 in progress — Group A audit fixes applied: abstract + §1 + §2 v3.0-numbers rewrite + Table 4 14B refit n=213 + Table 7 Drain row dropped + vLLM+FP8 -> vLLM AWQ + 71-vs-74 exclusion flip (13 files) + MANIFEST SHA refresh + HANDOFF §7 drift fix. PRE-GATE-4 state.)
+**Last updated**: 2026-05-26 (session 23 close — Group A audit fixes complete + Gate 4 + Gate 5 pushed `77f49f9..68b5a58 main -> main`. Group B + C pending for session 24. See `benchmark/final/audit/SESSION_23_HANDOFF.md`.)
 **For**: Next AI agent (Claude Code, Codex, etc.) to resume this work
 **Working directory**: `c:\Users\partha\Downloads\files AIOPS NEW\constitutional-aiops\`
 **Document location** (moved session 22): `constitutional-aiops/benchmark/HANDOFF.md` (was at repo root)
