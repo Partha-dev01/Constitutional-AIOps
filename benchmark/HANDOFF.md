@@ -1,6 +1,6 @@
 # Constitutional AIOps — Agent Handoff Document
 
-**Last updated**: 2026-05-26 (session 26 close — Path B'' Tier 1 + Path F: `peng2025graphragsurvey` bib year 2025→2026 per CrossRef bonus finding (peng was an arXiv preprint year; the ACM TOIS publication is 2026); both PDFs preserved at 16p (+2 B each from digit re-render); camera-ready submission package built at `sandbox-session16/_camera_ready_2026-05-26/` (main PDF + DIFF PDF + LaTeX bundle zip + SHA256SUMS + README). See `benchmark/final/audit/SESSION_26_HANDOFF.md`. AWS work remains optional.)
+**Last updated**: 2026-05-26 (session 26 close + post-close cleanup — Path B'' Tier 1: `peng2025graphragsurvey` bib year 2025→2026 per CrossRef bonus finding (peng was an arXiv preprint year; the ACM TOIS publication is 2026); both PDFs preserved at 16p (+2 B each from digit re-render). Path F: a `_camera_ready_2026-05-26/` folder was built then **deleted post-close** as redundant duplication of `main/sn-article.pdf` + `diff/sn-article-DIFF.pdf` — see SESSION_26_HANDOFF.md §11 for the rationale and live PDF SHA-256 provenance. Submission file is `main/sn-article.pdf` directly. AWS work remains optional.)
 **For**: Next AI agent (Claude Code, Codex, etc.) to resume this work
 **Working directory**: `c:\Users\partha\Downloads\files AIOPS NEW\constitutional-aiops\`
 **Document location** (moved session 22): `constitutional-aiops/benchmark/HANDOFF.md` (was at repo root)
@@ -150,21 +150,19 @@ sn-article-template.v2.sandbox-session16/
 ├── main/
 │   ├── bst/  empty.eps  fig.eps
 │   ├── sn-article.tex                (55,201 B, 789 LF lines — post-session-25 Path C audit fixes)
-│   ├── sn-article.pdf                (467,673 B, 16 pages — post-session-26 peng year 2025→2026)
+│   ├── sn-article.pdf                (467,673 B, 16 pages — post-session-26 peng year 2025→2026; SHA-256 be6c27ab...d9483)
 │   ├── sn-bibliography.bib           (10,129 B, 272 LF lines; 35 entries; 32 cited; 3 retained-orphan — post-session-26 peng year=2026)
 │   ├── sn-jnl.cls  sn-mathphys-num.bst
-├── diff/
-│   ├── bst/  empty.eps  fig.eps
-│   ├── sn-article.tex                (55,201 B — read-only copy = diff target, mirrors main)
-│   ├── sn-article-DIFF.tex           (68,263 B, 830 LF lines — latexdiff-fast INVISIBLE + --no-del + simplified red-text override, listings dep dropped)
-│   ├── sn-article-DIFF.pdf           (469,231 B, 16 pages, 0 undefined refs, plain red highlights — post-session-26 regen)
-│   ├── sn-bibliography.bib  sn-jnl.cls  sn-mathphys-num.bst
-└── _camera_ready_2026-05-26/         (NEW session 26 — submission package, 1,089,410 B total)
-    ├── camera_ready_main.pdf         (467,673 B, SHA-256 be6c27ab...d9483)
-    ├── camera_ready_diff.pdf         (469,231 B, SHA-256 ed09349d...02d67)
-    ├── latex_bundle_main.zip         (152,242 B, SHA-256 38e69421...1b28b — recompile source)
-    ├── SHA256SUMS.txt
-    └── README.txt                    (paste-in submission instructions)
+└── diff/
+    ├── bst/  empty.eps  fig.eps
+    ├── sn-article.tex                (55,201 B — read-only copy = diff target, mirrors main)
+    ├── sn-article-DIFF.tex           (68,263 B, 830 LF lines — latexdiff-fast INVISIBLE + --no-del + simplified red-text override, listings dep dropped)
+    ├── sn-article-DIFF.pdf           (469,231 B, 16 pages, 0 undefined refs, plain red highlights — post-session-26 regen; SHA-256 ed09349d...02d67)
+    ├── sn-bibliography.bib  sn-jnl.cls  sn-mathphys-num.bst
+
+(note: a `_camera_ready_2026-05-26/` package was built at session-26 close
+ then deleted post-close as redundant — main/sn-article.pdf IS the submission
+ file; SHA-256 above is authoritative provenance. See SESSION_26_HANDOFF.md §11.)
 ```
 
 **Recompile main**:

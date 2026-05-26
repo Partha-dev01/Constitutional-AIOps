@@ -6,7 +6,7 @@
 
 ## §0. One-line state
 
-Path B'' Tier 1 + Path F complete: `peng2025graphragsurvey` bib `year="2025"→"2026"` per CrossRef (the ACM TOIS publication date; current bib reflected arXiv preprint). Both PDFs recompiled clean (main 16p/467,673 B; DIFF 16p/469,231 B; +2 B each from the digit change). Camera-ready submission package built at `_camera_ready_2026-05-26/` with main PDF + DIFF PDF + LaTeX bundle zip + SHA256SUMS + README. AWS still stopped. CW alarm armed.
+Path B'' Tier 1 + Path F complete: `peng2025graphragsurvey` bib `year="2025"→"2026"` per CrossRef (the ACM TOIS publication date; current bib reflected arXiv preprint). Both PDFs recompiled clean (main 16p/467,673 B; DIFF 16p/469,231 B; +2 B each from the digit change). A camera-ready submission package was built at `_camera_ready_2026-05-26/` then **deleted post-close** per user review — the duplicate PDFs added no value over the live `main/` + `diff/` files. Provenance preserved: live `main/sn-article.pdf` = SHA-256 `be6c27ab…d9483`; live `diff/sn-article-DIFF.pdf` = SHA-256 `ed09349d…02d67`. AWS still stopped. CW alarm armed. See §11 for the post-close cleanup rationale.
 
 ---
 
@@ -31,14 +31,13 @@ Path B'' Tier 1 + Path F complete: `peng2025graphragsurvey` bib `year="2025"→"
 7. **Tier 1 edit applied**: single Edit on `sn-bibliography.bib` — `  year    = "2025",` → `  year    = "2026",` (uniqueness guaranteed by surrounding `journal = "ACM Trans. Inf. Syst.",` / `doi = "10.1145/3777378"` context lines). Net change: +1 character.
 8. **Main recompile** (pdflatex + bibtex + pdflatex + pdflatex): clean. Final PDF 16p/467,673 B (+2 B from year digit width). 0 undef refs/cites. `.bbl` confirmed renders `\byear{2026}` and `[Peng et~al.}{2026}` cite tag.
 9. **DIFF regen**: `regen_diff_pdf.py` (encoded recipe: Git for Windows perl.exe on PATH, LF write, listings drop). Generated fresh `sn-article-DIFF.tex` (68,263 B, same byte size as session 25). Cleaned stale intermediates, recompiled 4-pass chain. Final DIFF PDF 16p/469,231 B (+2 B parity with main). 0 undef refs/cites. peng entry renders 2026 in DIFF .bbl as well.
-10. **Submission package built** at `sandbox-session16/_camera_ready_2026-05-26/`:
-    - `camera_ready_main.pdf` (467,673 B, SHA-256 `be6c27ab…d9483`)
-    - `camera_ready_diff.pdf` (469,231 B, SHA-256 `ed09349d…02d67`)
-    - `latex_bundle_main.zip` (152,242 B, SHA-256 `38e69421…1b28b`) — contains main/sn-article.tex + sn-bibliography.bib + sn-jnl.cls + sn-mathphys-num.bst + bst/ + empty.eps + fig.eps
-    - `SHA256SUMS.txt` (264 B)
-    - `README.txt` — paste-in description of artifacts + compile recipe + bib provenance + cite-key-as-label convention statement
-    - Package total: 1,089,410 B
-11. **SESSION_26_HANDOFF.md** drafted (this file).
+10. **Submission package initially built** at `sandbox-session16/_camera_ready_2026-05-26/`:
+    - `camera_ready_main.pdf` (byte-identical copy of `main/sn-article.pdf`, SHA-256 `be6c27ab…d9483`)
+    - `camera_ready_diff.pdf` (byte-identical copy of `diff/sn-article-DIFF.pdf`, SHA-256 `ed09349d…02d67`)
+    - `latex_bundle_main.zip` (zipped source from `main/`, SHA-256 `38e69421…1b28b`)
+    - `SHA256SUMS.txt` + `README.txt`
+11. **SESSION_26_HANDOFF.md** drafted, Gate 10 commit `99f03fe` applied, Gate 11 pushed (`618c4cc..99f03fe main -> main`).
+12. **Post-close: package deleted** — user reviewed and observed the two PDFs were duplicates of `main/sn-article.pdf` + `diff/sn-article-DIFF.pdf`. ZIP + manifest also redundant when sandbox `main/` is the canonical source. Folder removed. Live PDF SHA-256s remain documented above as authoritative provenance. See §11 for full rationale + Gate 12/13 follow-up.
 
 ---
 
@@ -55,9 +54,9 @@ Path B'' Tier 1 + Path F complete: `peng2025graphragsurvey` bib `year="2025"→"
 | `main/sn-article.tex` | 55,201 B / 789 LF lines | 55,201 B / 789 LF lines | 0 (no edits this session) |
 | `diff/sn-article.tex`, `.bib` (mirror) | mirror of main | mirror of main (refreshed by regen) | refreshed copies |
 
-### NEW folder: `_camera_ready_2026-05-26/` (sandbox-session16 root)
+### Folder `_camera_ready_2026-05-26/` — built then deleted
 
-5 files, 1,089,410 B total. See §1 step 10 for inventory and SHA-256.
+Created at session-26 close (5 files, 1,089,410 B); removed post-close per user review (§11). Sandbox-session16 root reverts to just `main/` + `diff/`. Live PDF SHA-256s above are authoritative.
 
 ### `constitutional-aiops/` repo
 
@@ -116,8 +115,8 @@ Tier 3 (cite-key renames `zhang2024→zhang2026`, `nvidia2024→nvidia2025`, `pe
 | Active paper `.pdf` | `…sandbox-session16\main\sn-article.pdf` (**16 pages / 467,673 B**) |
 | Active paper `.bib` | `…sandbox-session16\main\sn-bibliography.bib` (10,129 B / 272 LF lines / 35 entries; 32 cited; 3 retained-orphan; peng year 2025→2026 this session) |
 | DIFF `.tex` | `…sandbox-session16\diff\sn-article-DIFF.tex` (68,263 B / 830 LF lines) |
-| DIFF `.pdf` | `…sandbox-session16\diff\sn-article-DIFF.pdf` (**16 pages / 469,231 B**) |
-| 🆕 Camera-ready package | `…sandbox-session16\_camera_ready_2026-05-26\` (5 files / 1,089,410 B) |
+| DIFF `.pdf` | `…sandbox-session16\diff\sn-article-DIFF.pdf` (**16 pages / 469,231 B**) — SHA-256 `ed09349d…02d67` |
+| Live main PDF SHA-256 (authoritative provenance) | `be6c27abb2dcbdc23a0161c0926266bc18312db4c0a9660c289e1e06f78d9483` |
 | v1 paper (READ-ONLY) | `…Final Submission Paper (Accepted v.1)\1ST SUBMISSION\sn-article-template\sn-article.tex` |
 | OLD `sn-article-template.v2/` | **MOVED to `z.Dump Paper Archive/`** — do NOT touch |
 | Project handoff | `constitutional-aiops/benchmark/HANDOFF.md` (Last-updated session 26 close) |
@@ -181,7 +180,7 @@ Stopped, CW alarm enabled, EIP retained, EBS preserved, snapshot held, ~$55/$120
 9. **`benchmark/final/SUMMARY.md`** (canonical results landscape — numbers UNCHANGED)
 10. **All non-MEMORY auto-memory files** (auto-loaded)
 11. **Sandbox `.tex` or `.bib` only when about to edit** — do NOT bulk-read
-12. **`_camera_ready_2026-05-26/README.txt`** if working on submission process
+12. (No package — see §11; the submission file IS `main/sn-article.pdf` directly)
 
 ---
 
@@ -225,7 +224,9 @@ NO data files, NO scripts changed.
    - `git log origin/main -1 --format='%h'` → same (post-Gate-11 push)
    - Sandbox `main/sn-article.pdf` → **16p / 467,673 B**
    - Sandbox `diff/sn-article-DIFF.pdf` → **16p / 469,231 B**
-   - `_camera_ready_2026-05-26/SHA256SUMS.txt` → exists, 3 lines matching artifacts on disk
+   - Sandbox root has only `main/` + `diff/` (no `_camera_ready_*` folder — deleted §11)
+   - Live `main/sn-article.pdf` SHA-256 should match `be6c27abb2dcbdc23a0161c0926266bc18312db4c0a9660c289e1e06f78d9483`
+   - Live `diff/sn-article-DIFF.pdf` SHA-256 should match `ed09349db0479ae7562e5e0709e5d21f50401e974ab8d7947de9e1d408c02d67`
    - AWS `i-091c4de0e95d63154` → `stopped`
    - CW alarm → `ActionsEnabled=True`
 5. **ASK USER**: pick a path —
@@ -276,8 +277,24 @@ curl -s 'https://api.crossref.org/works/<DOI>' | python -m json.tool
 - If reviewer demands 4.5c cold-start curve: re-launch on instance (~$5, ~5h) — patches on laptop, instance needs scp `src/memory/` first
 - If reviewer demands full 431-case latency for Stack B: ~$5, ~3h
 - If reviewer flags year-vs-key mismatch as confusing: apply Tier 3 cite-key renames at all 6 `.tex` sites
-- If submission portal opens for COMSYS 2026 camera-ready: use `_camera_ready_2026-05-26/` package; verify SHA-256 first
+- If submission portal opens for COMSYS 2026 camera-ready: upload `main/sn-article.pdf` directly (16p / 467,673 B / SHA-256 `be6c27ab…d9483`). If a LaTeX source bundle is requested, zip `main/` on the spot. The DIFF PDF is the optional editor-reviewer comparison aid.
 
 ---
 
-*End of handoff. Session 26 close 2026-05-26. Next session = 27.*
+## §11. Post-close cleanup — `_camera_ready_2026-05-26/` deleted
+
+**What was built (session-26 close)**: a `_camera_ready_2026-05-26/` folder containing two PDFs (byte-identical copies of `main/sn-article.pdf` + `diff/sn-article-DIFF.pdf`), a LaTeX source zip, a SHA-256 manifest, and a README. 5 files, 1,089,410 B.
+
+**What user observed (post-close review)**: the two PDFs were pure duplicates of the live `main/` and `diff/` PDFs. The zip + manifest + README added marginal value but didn't justify a separate folder when `main/sn-article.pdf` IS the submission file.
+
+**Decision**: delete the folder. The submission file is `main/sn-article.pdf` directly. If a LaTeX source bundle is requested at upload time, zip `main/` on the spot. SHA-256 provenance is preserved by leaving the hashes in this handoff doc (§4, §1 step 10) where they remain reviewer-verifiable against the live files.
+
+**Verification (pre-delete)**: live `sha256sum main/sn-article.pdf` = `be6c27abb2dcbdc23a0161c0926266bc18312db4c0a9660c289e1e06f78d9483` and live `sha256sum diff/sn-article-DIFF.pdf` = `ed09349db0479ae7562e5e0709e5d21f50401e974ab8d7947de9e1d408c02d67` (both confirmed). The deletion removed only duplicates + a zip that can be rebuilt anytime via `zip -r latex_bundle_main.zip main/`.
+
+**Cost**: 937 KB disk freed; zero loss of provenance or artifact integrity.
+
+**Follow-up commit**: Gate 12 + Gate 13 land this addendum + `benchmark/HANDOFF.md` §5 layout cleanup + MEMORY.md SESSION 27 STARTUP update.
+
+---
+
+*End of handoff. Session 26 close 2026-05-26 (post-cleanup). Next session = 27.*
