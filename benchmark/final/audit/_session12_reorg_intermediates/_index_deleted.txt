@@ -1,0 +1,13 @@
+benchmark/results_aws/FILE_PROVENANCE.md|8190e023697a|9800
+benchmark/results_aws/FINAL/BUG_HISTORY.md|1474cf09fc86|13018
+benchmark/results_aws/FINAL/METHODOLOGY.md|82a17e826d10|17146
+benchmark/results_aws/RESULTS_SUMMARY.md|1cec8db35f3d|5966
+benchmark/results_aws/RUNS_INDEX.md|a3615dcc960e|9783
+benchmark/scripts/__pycache__/__init__.cpython-312.pyc|461d375ca54a|189
+benchmark/scripts/__pycache__/download_datasets.cpython-312.pyc|e1d0ab27b42d|31216
+benchmark/scripts/__pycache__/export_metrics.cpython-311.pyc|2497200db528|25609
+benchmark/scripts/__pycache__/export_metrics.cpython-312.pyc|c612d8fc0058|31576
+benchmark/scripts/__pycache__/prepare_datasets.cpython-312.pyc|e6e56f7f1784|59702
+benchmark/scripts/__pycache__/run_ablation.cpython-311.pyc|a4c365550b96|21175
+benchmark/scripts/__pycache__/run_sota_baselines.cpython-312.pyc|26c44d8732a5|27573
+benchmark/scripts/__pycache__/test_5plus5.cpython-311.pyc|7a7446b20e8b|23845

@@ -1,0 +1,11 @@
+archive/originals_2026-05-19/_REORG_NOTE_2026-05-20.md|1300
+archive/README.md|3270
+final/audit/MASTER_BACKUP_MANIFEST_2026-05-20.json|98726
+final/audit/REORG_PROPOSAL_2026-05-20.md|11133
+final/audit/SESSION_12_HANDOFF.md|13913
+final/audit/SESSION_13_HANDOFF.md|13764
+final/audit/SESSION_14_HANDOFF.md|26073
+final/audit/SESSION_15_HANDOFF.md|26356
+intermediate/README.md|2507
+raw/README.md|1565
+scripts/README.md|13207
