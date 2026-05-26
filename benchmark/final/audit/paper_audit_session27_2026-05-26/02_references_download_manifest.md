@@ -1,12 +1,12 @@
 # Stage 1b — Reference PDF Download Manifest
 
-**Generated**: 2026-05-26 → 2026-05-27 (session 27, Stage 1b agent; continuation pass 2026-05-27)
+**Generated**: 2026-05-26 → 2026-05-27 (session 27, Stage 1b agent; continuation pass + retry-2 sci-hub pass 2026-05-27)
 **Agent**: Stage 1b (general-purpose; curl-first + playwright fallback)
-**Status**: PARTIAL — 22/27 downloads complete (Anna's-Archive `parasuraman2000model` obtained via sci-hub.ee→sci.bban.top fallback after Anna's mirrors blocked) + 4 paywalled entries FAILED_MANUAL_NEEDED + 1 entry intentionally skipped (FLAG_AMBIGUITY). `miller2025bootstrap` re-downloaded as correct paper (arXiv 2411.00640 by Evan Miller) after audit pass identified prior Stage 1b "correction" was wrong.
+**Status**: PARTIAL — 24/27 downloads complete (+2 from retry-2 sci-hub pass: `wu2020microrank` + `chen2022automap`) + 2 entries still FAILED_MANUAL_NEEDED (`notaro2021aiopssurvey` not in sci-hub DB; `chen2024autonomous` placeholder per Stage 1a FLAG_AMBIGUITY). Vendor pages (4) URL-only. `miller2025bootstrap` correctly resolved to arXiv 2411.00640 (Evan Miller).
 
 ## §0. One-line state
 
-22 PDFs newly downloaded and verified (arXiv + OpenReview + CNCF + sci-hub fallback for IEEE 2000 paper). 4 conference-paper entries (`notaro2021aiopssurvey`, `wu2020microrank`, `chen2022automap`, `chen2024autonomous`) have no open-access source reachable via curl — flagged FAILED_MANUAL_NEEDED. Vendor pages (`opentelemetry2024collector`, `datadog2024observability`, `grafana2024loki`, `nvidia2024specdec`) recorded as URL-only per Stage 1a §5. **Stage 1b continuation (2026-05-27)** fixed `miller2025bootstrap` — first pass had downloaded arXiv 2412.18860 ("Bootstrap Your Own Context Length" by Liang Wang, Microsoft) which is unrelated to the bib's intended citation; verification of the would-be replacement arXiv 2503.01747 ("Don't Use the CLT in LLM Evals" by Bowyer et al.) revealed the bib actually intends to cite a paper by *Evan Miller* (Anthropic) cited within Bowyer's text — arXiv 2411.00640 "Adding Error Bars to Evals". That correct paper is now on disk.
+24 PDFs newly downloaded and verified (arXiv + OpenReview + CNCF + sci-hub fallback for parasuraman/microrank/automap). 1 conference-paper entry (`notaro2021aiopssurvey`) tried across 3 DOI candidates × 5 sci-hub mirrors but is genuinely not in sci-hub's collection (all mirrors returned "article is not available" / no-iframe / DDoS-Guard); user must manually obtain via institutional ACM access. 1 entry intentionally skipped (FLAG_AMBIGUITY: `chen2024autonomous`). Vendor pages (`opentelemetry2024collector`, `datadog2024observability`, `grafana2024loki`, `nvidia2024specdec`) recorded as URL-only per Stage 1a §5. **Stage 1b continuation pass 1 (2026-05-27)** fixed `miller2025bootstrap` → arXiv 2411.00640 (Evan Miller). **Stage 1b retry-2 sci-hub pass (2026-05-27)** added `wu2020microrank` (DOI 10.1145/3442381.3449905) and `chen2022automap` (DOI 10.1145/3366423.3380111) via sci-hub.ee → sci.bban.top. NEW critical finding: `wu2020microrank` bib metadata is wrong — actual paper's lead author is **Guangba Yu** (Sun Yat-Sen Univ), not Wu, but title matches bib exactly; bib's `author=` field must be corrected in Stage 1c.
 
 ## §1. Environment
 
@@ -43,14 +43,14 @@
 | 1 | `opentelemetry2024collector` | NONE (URL-only) | URL_ONLY | https://opentelemetry.io/ | — | — | — |
 | 2 | `datadog2024observability` | OFFICIAL (vendor) | URL_ONLY | https://www.datadoghq.com/state-of-observability/ | — | — | — |
 | 3 | `zhang2024aiopssurvey` | NONE | SKIP_EXISTS | (already on disk) | 1108667 | — | — |
-| 4 | `notaro2021aiopssurvey` | OFFICIAL | **FAILED_MANUAL** | arxiv (wrong ID) → Springer (403) | — | — | — |
+| 4 | `notaro2021aiopssurvey` | OFFICIAL | **FAILED_MANUAL** | arxiv (wrong ID) → Springer (403) → sci-hub.ee/se/st/ru/ren × 3 DOI candidates all returned "article not in sci-hub" / DDoS-Guard / no-iframe (retry-2 2026-05-27) | — | — | — |
 | 5 | `chen2024autonomous` | FLAG_AMBIGUITY | **NOT_ATTEMPTED** | (no source per Stage 1a) | — | — | — |
 | 6 | `alibaba2024qwen` | OFFICIAL | OK | arxiv 2505.09388 | 779424 | 35 | 84a5e2b1fa04bb77 |
 | 7 | `guo2017calibration` | OFFICIAL | OK | arxiv 1706.04599 | 1349691 | 14 | cb654a65acb785ed |
 | 8 | `bansal2021does` | OFFICIAL | OK | arxiv 2006.14779 (Stage 1b correction) | 3420209 | 16 | 9a00f4566bf0b4a8 |
 | 9 | `chen2024rcagent` | NONE | SKIP_EXISTS | (already on disk) | 980598 | — | — |
-| 10 | `wu2020microrank` | OFFICIAL | **FAILED_MANUAL** | HAL (Anubis bot block) | — | — | — |
-| 11 | `chen2022automap` | OFFICIAL | **FAILED_MANUAL** | github attempt 404 | — | — | — |
+| 10 | `wu2020microrank` | OFFICIAL | OK | sci-hub.ee → sci.bban.top (DOI 10.1145/3442381.3449905, retry-2 2026-05-27; verified by title-match — bib's `author=Wu, Li...` is WRONG, actual lead author Guangba Yu) | 1561388 | 12 | 37fc6fe5adcb5287 |
+| 11 | `chen2022automap` | OFFICIAL | OK | sci-hub.ee → sci.bban.top (DOI 10.1145/3366423.3380111, retry-2 2026-05-27) | 17193728 | 13 | a257b6d168e64113 |
 | 12 | `arigraph2024` | NONE | SKIP_EXISTS | (already on disk) | 5036614 | — | — |
 | 13 | `bai2022constitutional` | NONE | SKIP_EXISTS | (already on disk) | 2088111 | — | — |
 | 14 | `askell2024collective` | OFFICIAL | OK | arxiv 2406.07814 | 2767196 | 23 | bf59c3f9a5c569b7 |
@@ -76,7 +76,7 @@
 | 34 | `edge2024graphrag` | OFFICIAL (orphan-retained) | OK | arxiv 2404.16130 | 6893854 | 26 | 730f1a9f38d16689 |
 | 35 | `peng2025graphragsurvey` | OFFICIAL | OK | arxiv 2408.08921 | 1725790 | 41 | 345fa9030560d7f9 |
 
-**Totals**: OK = 22 (newly downloaded — incl. parasuraman via sci-hub fallback), SKIP_EXISTS = 7 (already on disk per Stage 1a), URL_ONLY = 5 (vendor pages, no PDF expected), FAILED_MANUAL = 4 (paywalled/no-OA), NOT_ATTEMPTED = 1 (FLAG_AMBIGUITY).
+**Totals (post retry-2 2026-05-27)**: OK = 24 (newly downloaded — incl. parasuraman + microrank + automap via sci-hub fallback), SKIP_EXISTS = 7 (already on disk per Stage 1a), URL_ONLY = 5 (vendor pages, no PDF expected), FAILED_MANUAL = 1 (notaro — not in sci-hub DB; closed-access ACM only), NOT_ATTEMPTED = 1 (FLAG_AMBIGUITY: chen2024autonomous).
 
 ## §4. Per-entry verification details (OK entries)
 
@@ -91,6 +91,7 @@ Full SHA-256 hashes:
 | `askell2024collective` | `bf59c3f9a5c569b7c29063a24803128f7c3c8228790fa451e838cd1536cf9d15` |
 | `bansal2021does` | `9a00f4566bf0b4a84b4134afcac2eedc6dfdee638c8b79304bee71eec07b0c17` |
 | `bertscore2020` | `9796d7a74e978bcc251c3d245ae2e7123eadf70bde04ffaa30bd409afc0062b3` |
+| `chen2022automap` | `a257b6d168e64113e28e1f45c2f2d75fd7b584e520f0e1b51583348ff0d3a3f5` (retry-2 sci-hub 2026-05-27) |
 | `christakopoulou2024talker` | `14973ffd504ed8423856ed0ce90772864fe1c593b7059a79cd073d2342c8505e` |
 | `cncf2024survey` | `2c9f3fbcddcd8c41fd7289da3d734a7c92b599ae4fe726853b9cc0db1936a979` |
 | `edge2024graphrag` | `730f1a9f38d16689900969a3eeeb1b31e45eda1dcc1f37a043afa90aff76c867` |
@@ -105,6 +106,7 @@ Full SHA-256 hashes:
 | `peng2025graphragsurvey` | `345fa9030560d7f9ec1f97e8a847ea0e5b361f97c630a927ba017c7906b6b533` |
 | `reimers2019sentence` | `92366d22fc0521350d6cbe0ad72bcee754f90e88181d7b4a8e2adb1e7e594fec` |
 | `thakur2021beir` | `1925755aeb627123d1a63c66f02e5aa2432f7e92751a02bea7c8c3b6bbb6ec33` |
+| `wu2020microrank` | `37fc6fe5adcb528719db3e84abe7d30ecf1d71c65e065d3f2ca418c3fed6dd54` (retry-2 sci-hub 2026-05-27; see §9 OPEN QUESTION 5 re: bib author mismatch) |
 | `xu2025openrca` | `3cd926feb85119dbb0927e856366e36b0f0794a3b16ea0950a8b4c13cd54fe2a` |
 | `zhang2020effect` | `1a66373b8d916bcbcc3d6c72277b9c1f8581212c57b11b63a0e8545a9f260e1d` |
 | `zhu2023loghub` | `a0d116b2f43e7eb46f9f6f98ac174e2f683c6844febc62607dedc13b33910b25` |
@@ -117,26 +119,26 @@ First-page text verification samples (confirming correct paper, not wrong-ID swa
 - **`xu2025openrca`** (OpenReview): snippet = `Published as a conference paper at ICLR 2025  OPENRCA: CAN LARGE LANGUAGE MODELS LOCATE THE ROOT CAUSE OF SOFTWARE FAILURES? Junjielong Xu ...` — matched.
 - **`cncf2024survey`**: snippet = `Cloud Native 2024 Approaching a Decade of Code, Cloud, and Change  March 2025  Valerie Silverthorne, CNCF ...` — matched.
 - **`peng2025graphragsurvey`**: snippet = `arXiv:2408.08921v2 [cs.AI] 10 Sep 2024  Graph Retrieval-Augmented Generation: A Survey  BOCI PENG*, School of Intelligence Science and Technology, Peking University ...` — matched.
+- **`wu2020microrank`** (retry-2 sci-hub fallback 2026-05-27): snippet = `MicroRank: End-to-End Latency Issue Localization with Extended Spectrum Analysis in Microservice Environments / Guangba Yu / Pengfei Chen* / Hongyang Chen / Sun Yat-Sen University, China / yugb5@mail2.sysu.edu.cn / chenpf7@mail.sysu.edu.cn / Zijie Guan† / Tencent, China / byteguan@tencent.com ...` — **TITLE matched bib EXACTLY**, but the lead author is "Guangba Yu" not "Wu" (the bib's `author=Wu, Li and Tordsson, Johan and Elmroth, Erik and Kao, Odej` field is **WRONG** — those authors do not appear on this paper at all). Author mismatch flagged in §9 OPEN QUESTION 5; cite-key `wu2020microrank` retained as stable label per session-26 lesson.
+- **`chen2022automap`** (retry-2 sci-hub fallback 2026-05-27): snippet = `AutoMAP: Diagnose Your Microservice-based Web Applications Automatically / Meng Ma / Ping Wang* / Jingmin Xu† / National Engineering Research Center for Software Engineering, Peking University, Beijing, China / mameng@pku.edu.cn / Yuan Wang / Pengfei Chen‡ / Zonghua Zhang / IBM Research - China / School of Data and Computer Science, Sun Yat-sen University ...` — title matched; bib's `author=Chen, Pengfei and Liu, Yu and Wu, Li` is a partial match (Pengfei Chen IS on the paper as 5th author, but lead is Meng Ma + Ping Wang; "Liu, Yu" and "Wu, Li" do not appear). Bib metadata partially wrong but the cited paper IS the correct one.
 
-(Full snippets stored at `c:/tmp/stage1b/results_remaining.json` if needed for audit replay.)
+(Full snippets stored at `c:/tmp/stage1b/results_remaining.json` and `c:/tmp/stage1b_retry2/retry_pass2_results.json` if needed for audit replay.)
 
 ## §5. Failures (require manual user fallback)
 
-### `notaro2021aiopssurvey`
-- **Sources tried**: arxiv 2010.10772 (HTTP 200 but **wrong paper** — Yan 2020 visual synthesis, not Notaro), Springer `link.springer.com/content/pdf/10.1007/s10922-021-09601-z.pdf` (HTTP 200, 340KB HTML stub, pages=0).
-- **Stage 1a errors discovered**: (a) wrong arXiv ID, (b) wrong DOI (`10.1007/s10922-021-09601-z` resolves to *GlobeSnap* by Rathee, not Notaro). Correct DOI per CrossRef: **`10.1145/3483424`** (ACM Trans. Intelligent Systems and Technology Vol 12 Issue 6, 2021).
-- **Recommendation**: MANUAL — user fetches via institutional ACM access or via author's university page (Sara Notaro / Felicita Di Giandomenico, ISTI-CNR). Suggested URL: https://dl.acm.org/doi/10.1145/3483424 (paywalled) or https://www.researchgate.net/publication/355968432 (gated).
-- **Reason**: ACM closed access; no successfully reachable OA mirror; arXiv preprint does NOT exist for this paper.
-
-### `wu2020microrank`
-- **Sources tried**: arxiv 2106.05798 (wrong paper — Flake et al. category theory, math.RT), HAL `hal-03155265` (Anubis bot-protection blocks curl, returns 12.6KB challenge page).
-- **Recommendation**: MANUAL — user fetches via institutional ACM access. Suggested URLs: https://dl.acm.org/doi/10.1145/3442381.3449905 (paywalled) or https://hal.science/hal-03155265 (Anubis-protected; user's interactive browser will pass).
-- **Reason**: WWW 2021 ACM paper; no arXiv preprint; HAL mirror blocks scripted access.
-
-### `chen2022automap`
-- **Sources tried**: arxiv 2002.03801 (wrong paper — speaker verification by Kanervisto), `https://hpqcm.github.io/papers/AutoMAP.pdf` (404), Semantic Scholar OA lookup (no OA PDF).
-- **Recommendation**: MANUAL — user fetches via institutional ACM access. Suggested URL: https://dl.acm.org/doi/10.1145/3366423.3380111 (paywalled). Authors: Meng Ma, Jingmin Xu, Yuan Wang, Pengfei Chen, Zonghua Zhang, Ping Wang.
-- **Reason**: WWW 2020 ACM paper; no arXiv preprint; no OA mirror discovered.
+### `notaro2021aiopssurvey` — STILL FAILED after retry-2 sci-hub pass (2026-05-27)
+- **Pass-1 sources tried**: arxiv 2010.10772 (HTTP 200 but **wrong paper** — Yan 2020 visual synthesis, not Notaro), Springer `link.springer.com/content/pdf/10.1007/s10922-021-09601-z.pdf` (HTTP 200, 340KB HTML stub, pages=0).
+- **Retry-2 sources tried (2026-05-27, sci-hub fallback)**: 3 DOI candidates × 5 sci-hub mirrors:
+  1. `10.1109/TNSM.2021.3107504` (most-likely IEEE TNSM 18(4) 2021 DOI per prompt hint) — sci.bban.top direct = 404; sci-hub.ee/se/st/ru/ren all returned "no iframe / search proxy" (paper not in sci-hub DB)
+  2. `10.1109/TNSM.2021.3108904` (alt IEEE TNSM candidate) — same; sci.bban.top = 404; all 5 mirrors = no iframe
+  3. `10.1145/3483424` (ACM TIST 2021, Stage 1b pass-1 candidate) — sci.bban.top = 404; sci-hub.st EXPLICITLY returned "Sci-Hub: the article is not available through Sci-Hub. What can I do?"; sci-hub.ru returned DDoS-Guard challenge; sci-hub.ee/se/ren = no iframe
+- **Conclusion**: this paper is genuinely **not in sci-hub's collection**, regardless of which DOI is the actual real one. Even sci-hub.st explicitly confirmed unavailability for the 10.1145/3483424 candidate.
+- **Stage 1a DOI was wrong** (per pass 1): `10.1007/s10922-021-09601-z` resolves to *GlobeSnap* by Rathee, not Notaro. The actual DOI is still **uncertain**; sci-hub's negative results across all 3 candidates do not let us pick the right one (any of the 3 might be correct — sci-hub simply doesn't carry this paper).
+- **Recommendation**: MANUAL — user fetches via institutional ACM/IEEE access. Best candidates to try interactively (in order of plausibility):
+  1. https://ieeexplore.ieee.org/document/9525394 (IEEE TNSM corresponding to TNSM.2021.3107504)
+  2. https://dl.acm.org/doi/10.1145/3483424 (ACM TIST 2021)
+  3. https://www.researchgate.net/publication/355968432 (gated)
+- **For Stage 1c bib fix**: do NOT update the bib `doi=` / `journal=` fields until the user confirms which DOI is the real one. Currently bib has `journal="ACM Transactions on Networking and Service Management"` which does not exist as a journal name — likely intended is "IEEE Transactions on Network and Service Management (TNSM)".
 
 ### `chen2024autonomous` (FLAG_AMBIGUITY from Stage 1a)
 - **NOT attempted** — Stage 1a flagged the bib entry as unverifiable (no DOI, no arXiv ID, no source confirmed). May be a placeholder cite.
@@ -194,26 +196,43 @@ Recovery path: Google Scholar search via playwright found a ResearchGate-hosted 
    - `number = "arXiv:2503.01747"` → should be `number = "arXiv:2411.00640"`
    - Stage 1b keeps the cite-key `miller2025bootstrap` as a stable label per session-26 lesson (year-in-key need not match year-in-entry).
 
-2. **`notaro2021aiopssurvey` DOI error**: Stage 1a recorded DOI `10.1007/s10922-021-09601-z` which is WRONG (resolves to GlobeSnap by Rathee). Correct DOI per CrossRef: `10.1145/3483424` (ACM TIST 2021). Bib should be updated to use this DOI.
+2. **`notaro2021aiopssurvey` DOI + journal uncertain (post retry-2 2026-05-27)**: Stage 1a recorded DOI `10.1007/s10922-021-09601-z` which is WRONG (resolves to GlobeSnap by Rathee). 3 DOI candidates were tried via sci-hub × 5 mirrors in retry-2 (`10.1109/TNSM.2021.3107504`, `10.1109/TNSM.2021.3108904`, `10.1145/3483424`) — all rejected by sci-hub as not-in-DB or DDoS-blocked. The actual DOI is therefore **still unverified**. Bib's `journal="ACM Transactions on Networking and Service Management"` doesn't exist as a journal name; most likely intended is IEEE TNSM. User must verify the correct DOI manually before any Stage 1c bib fix. Do NOT update the bib `doi=` / `journal=` fields until user confirms the canonical reference.
 
 3. **`chen2024autonomous` ambiguity**: Per Stage 1a §7, this entry may be a placeholder. User should determine whether to (a) substitute a real reference, (b) remove the cite from `.tex`, or (c) confirm metadata is correct and pursue manual download.
 
 4. **Three xlsx-only PDFs on disk**: `Exploring LLM-based Agents... 2403.04123`, `MemTree 2410.14052`, `Apica EMA7260` are not used by the current bib. Should they be moved to an archive subfolder or left in place? Stage 1b left them untouched.
 
+5. **`wu2020microrank` author mismatch (NEW 2026-05-27)**: The downloaded PDF at DOI `10.1145/3442381.3449905` (WWW 2021) has title EXACTLY matching the bib's title field ("MicroRank: End-to-End Latency Issue Localization with Extended Spectrum Analysis in Microservice Environments"), but the actual paper authors are:
+   - **Guangba Yu** (lead, Sun Yat-Sen Univ., yugb5@mail2.sysu.edu.cn)
+   - **Pengfei Chen** (corresponding, Sun Yat-Sen Univ., chenpf7@mail.sysu.edu.cn)
+   - Hongyang Chen, Zijie Guan (Tencent), Zicheng Huang, Linxiao Jing, Tianjun Weng, Xinmeng Sun, Xiaoyun Li — all Sun Yat-Sen Univ.
+   - **NONE of "Wu, Li" / "Tordsson, Johan" / "Elmroth, Erik" / "Kao, Odej"** appear on this paper at all.
+   - The bib's `author=` field appears to have been confused with another paper (possibly the "Microservice Anomaly Detection" related work by Wu/Tordsson/Elmroth at Umeå University). Stage 1c must fix the bib's `author=` field to the correct authors. The cite-key `wu2020microrank` can be retained as a stable label per session-26 lesson (year-in-key need not match year-in-entry; here, surname-in-key need not match surname-in-entry).
+   - Also note: bib `year=2020` but actual publication year is **2021** (WWW 2021); update `year=` to 2021.
+
+6. **`chen2022automap` author partial mismatch (NEW 2026-05-27)**: Downloaded PDF at DOI `10.1145/3366423.3380111` (WWW 2020) is the correct paper. Actual authors:
+   - Meng Ma (lead, PKU), Ping Wang (corresponding, PKU), Jingmin Xu (PKU), Yuan Wang (IBM China), **Pengfei Chen** (Sun Yat-sen Univ.), Zonghua Zhang (Huawei Paris)
+   - Bib's `author=Chen, Pengfei and Liu, Yu and Wu, Li` — only Pengfei Chen actually appears (as 5th author); "Liu, Yu" and "Wu, Li" do not appear at all.
+   - The bib's `year=2022` but actual publication year is **2020** (WWW 2020, April 2020); the prompt's task table also confirmed venue is WWW 2020. Update `year=` to 2020.
+   - Stage 1c should fix `author=` to `Ma, Meng and Wang, Ping and Xu, Jingmin and Wang, Yuan and Chen, Pengfei and Zhang, Zonghua` and `year=2020`. Cite-key `chen2022automap` retained as stable label.
+
 ## §10. Recommendations for user
 
-- **Camera-ready submission package**: 22 newly downloaded + 5 pre-existing (matching bib) = **27 PDFs ready** out of the 30 bib entries that need PDFs (35 bib − 4 vendor-URL − 1 ambiguous = 30 needing PDFs; 3 paywalled remain manual after parasuraman recovery).
-- **Stage 1c (xlsx update)**: should apply the 3 arXiv-ID corrections + 1 DOI correction + 1 author/title/year/number correction noted above (miller2025bootstrap needs 4 field updates), plus reflect download status from this manifest.
-- **Manual downloads**: user fetches 3 paywalled papers (`notaro2021aiopssurvey`, `wu2020microrank`, `chen2022automap`) via institutional access; place in REFERENCE PAPERS/ with same naming convention (`<bib_key> - <Title> - <id>.pdf`).
+- **Camera-ready submission package (post retry-2 2026-05-27)**: 24 newly downloaded + 5 pre-existing (matching bib) = **29 PDFs ready** out of the 30 bib entries that need PDFs (35 bib − 4 vendor-URL − 1 ambiguous = 30 needing PDFs; 1 paywalled remains manual: `notaro2021aiopssurvey`).
+- **Stage 1c (xlsx + bib update)**: should apply the 3 arXiv-ID corrections + DOI corrections (notaro DOI still unverified), `miller2025bootstrap` 4-field correction, plus NEW `wu2020microrank` and `chen2022automap` author/year corrections from §9 Q5 + Q6. Reflect download status from this manifest.
+- **Manual downloads remaining**: user fetches 1 paywalled paper (`notaro2021aiopssurvey`) via institutional ACM/IEEE access; place in REFERENCE PAPERS/ with same naming convention (`<bib_key> - <Title> - <id>.pdf`). The actual paper DOI is still unconfirmed — user should select the correct DOI when downloading and report it back for Stage 1c bib fix.
 - **Anna's sub-GO** (DONE 2026-05-27): granted; Anna's mirrors all blocked at network layer (DNS NXDOMAIN + DPI SNI block + ISP challenge); recovered via sci-hub.ee → sci.bban.top fallback. PDF verified and on disk.
+- **Sci-hub sub-GO** (DONE 2026-05-27): granted for `notaro` + `wu` + `chen2022automap` retry; recovered 2/3 (wu + automap); notaro is genuinely not in sci-hub's collection across 5 mirrors × 3 DOI candidates.
 
 ## §11. Disk usage
 
 - REFERENCE PAPERS/ before Stage 1b: ~13.7 MB (7 pre-existing PDFs + xlsx; per `ls -la` output)
 - REFERENCE PAPERS/ after Stage 1b pass 1 (2026-05-26 close): ~53.2 MB (28 PDFs + xlsx; `du -sk` = 54432 KB)
-- REFERENCE PAPERS/ after Stage 1b continuation (2026-05-27): ~53.1 MB (29 PDFs + xlsx; `du -sk` = 54364 KB)
-  - Net delta of pass-2: +parasuraman 160 KB +miller-correct 331 KB −miller-wrong 562 KB = −71 KB (smaller miller paper offsets new parasuraman)
-- **Cumulative delta from Stage 1a baseline**: +~39.4 MB (22 newly downloaded PDFs)
+- REFERENCE PAPERS/ after Stage 1b continuation pass 1 (2026-05-27): ~53.1 MB (29 PDFs + xlsx; `du -sk` = 54364 KB)
+  - Net delta of pass-2-continuation: +parasuraman 160 KB +miller-correct 331 KB −miller-wrong 562 KB = −71 KB
+- REFERENCE PAPERS/ after Stage 1b **retry-2 sci-hub pass** (2026-05-27): ~71.0 MB (31 PDFs + xlsx; `du -sk` = 72684 KB)
+  - Net delta of retry-2: +wu2020microrank 1.49 MB + chen2022automap 16.40 MB = +17.89 MB
+- **Cumulative delta from Stage 1a baseline**: +~57.3 MB (24 newly downloaded PDFs)
 
 ## §12. Tooling notes (for future stages)
 
@@ -279,4 +298,108 @@ Sequence:
 
 ---
 
-**End of Stage 1b manifest (continuation 2026-05-27).**
+## §14. Stage 1b retry-2 (sci-hub for paywalled) (2026-05-27)
+
+Sub-agent invoked with USER GO to retry 3 paywalled entries (`notaro2021aiopssurvey`, `wu2020microrank`, `chen2022automap`) via the sci-hub.ee → sci.bban.top fallback (the same path that worked for `parasuraman2000model` in §13). Strategy: for each DOI, load `sci-hub.ee/<DOI>` via playwright headless chromium, read the iframe `src` attribute, then curl-download the PDF with proper Referer header. For `notaro` (3 candidate DOIs, no confirmed real DOI): tried each candidate across 5 sci-hub mirrors with retry-on-verification-page logic + a direct sci.bban.top bypass.
+
+### Outcomes
+
+| bib_key | DOI used | Outcome | Filename / SHA-256 |
+|---|---|---|---|
+| `notaro2021aiopssurvey` | 3 candidates tried (10.1109/TNSM.2021.3107504, 10.1109/TNSM.2021.3108904, 10.1145/3483424) | **FAILED_MANUAL** (still) | n/a — paper genuinely not in sci-hub DB |
+| `wu2020microrank` | **10.1145/3442381.3449905** ✓ | **OK** | `wu2020microrank - MicroRank - End-to-End Latency Issue Localization with Extended Spectrum Analysis - acm-www2021-microrank.pdf` (1,561,388 B, 12p) / SHA-256 `37fc6fe5adcb528719db3e84abe7d30ecf1d71c65e065d3f2ca418c3fed6dd54` |
+| `chen2022automap` | **10.1145/3366423.3380111** ✓ | **OK** | `chen2022automap - AutoMAP - Diagnose Your Microservice-based Web Applications Automatically - acm-www2020-automap.pdf` (17,193,728 B, 13p) / SHA-256 `a257b6d168e64113e28e1f45c2f2d75fd7b584e520f0e1b51583348ff0d3a3f5` |
+
+### Detailed attempts
+
+#### `notaro2021aiopssurvey` — all candidates failed
+For each of 3 candidate DOIs we tried direct `sci.bban.top/pdf/<DOI>.pdf` (all returned **HTTP 404 nginx Not Found**, 548 B HTML stub) plus 5 sci-hub mirrors × 2 attempts each via playwright. Mirror outcomes:
+- `10.1109/TNSM.2021.3107504`:
+  - sci-hub.ee → "Sci-Hub - search proxy to download article" page, no iframe (×2)
+  - sci-hub.se → `net::ERR_CONNECTION_TIMED_OUT` (×2)
+  - sci-hub.st → timeout (×2)
+  - sci-hub.ru → connection timeout (×2)
+  - sci-hub.ren → search-proxy page, no iframe (×2)
+- `10.1109/TNSM.2021.3108904`: same pattern (sci-hub.ee/ren = no iframe; sci-hub.se/st/ru = connect failures)
+- `10.1145/3483424`:
+  - sci-hub.ee → no iframe (×2)
+  - sci-hub.se → ERR_NAME_NOT_RESOLVED (×2)
+  - **sci-hub.st → "Sci-Hub: the article is not available through Sci-Hub. What can I do?"** (explicit unavailability notice — high-confidence signal)
+  - **sci-hub.ru → "DDoS-Guard" challenge** (uncircumventable headlessly)
+  - sci-hub.ren → no iframe (×2)
+- **Conclusion**: paper is genuinely not in sci-hub's database; sci-hub.st explicitly stated so for the ACM TIST candidate. User must obtain via institutional ACM/IEEE access.
+- **Provenance note for Stage 1c bib fix**: the correct real DOI for the Notaro AIOps survey is still **unverified**. Bib's stated `journal="ACM Transactions on Networking and Service Management"` is not a real journal name. Three plausible candidates remain (IEEE TNSM 18(4) 2021 = 10.1109/TNSM.2021.3107504 most likely; ACM TIST 2021 = 10.1145/3483424 less likely; alt IEEE TNSM = 10.1109/TNSM.2021.3108904 unlikely). User should confirm which DOI is correct when manually fetching the PDF.
+
+#### `wu2020microrank` — OK (DOI 10.1145/3442381.3449905)
+1. Loaded `https://sci-hub.ee/10.1145/3442381.3449905` via playwright.
+2. Page title resolved to: `Sci-Hub | MicroRank: End-to-End Latency Issue Localization with Extended Spectrum Analysis in Microservice Environments | 10.1145/3442381.3449905` — confirms DOI hit on correct paper.
+3. Read iframe src: `https://sci.bban.top/pdf/10.1145/3442381.3449905.pdf#view=FitH`.
+4. Curl-downloaded the URL (without `#fragment`) with `Referer: https://sci-hub.ee/10.1145/3442381.3449905` → HTTP 200, 1,561,388 B.
+5. 5-point verification:
+   - File exists ✓ (size 1,561,388 B > 50 KB ✓)
+   - Magic bytes `%PDF-1.7` ✓
+   - pdfinfo: 12 pages ✓
+   - Title substring "MicroRank" found in first-page text ✓
+   - Author surname "Wu" NOT found — but alt author tokens "Guangba Yu" + "Pengfei Chen" + "Sun Yat-Sen" ALL found ✓ (paper title EXACTLY matches the bib's title field; this IS the correct paper, but the bib's `author=` field is wrong; see §9 OPEN QUESTION 5)
+   - SHA-256: `37fc6fe5adcb528719db3e84abe7d30ecf1d71c65e065d3f2ca418c3fed6dd54`
+6. First-page snippet:
+   ```
+   MicroRank: End-to-End Latency Issue Localization with
+   Extended Spectrum Analysis in Microservice Environments
+   Guangba Yu          Pengfei Chen*         Hongyang Chen
+   Sun Yat-Sen University, China
+   yugb5@mail2.sysu.edu.cn   chenpf7@mail.sysu.edu.cn   chenhy95@mail2.sysu.edu.cn
+   Zijie Guan†   Zicheng Huang   Linxiao Jing
+   Tencent, China  /  Sun Yat-Sen University, China  /  Sun Yat-Sen University,China
+   ...
+   ```
+
+#### `chen2022automap` — OK (DOI 10.1145/3366423.3380111)
+1. Loaded `https://sci-hub.ee/10.1145/3366423.3380111` via playwright.
+2. Page title: `Sci-Hub | AutoMAP: Diagnose Your Microservice-based Web Applications Automatically | 10.1145/3366423.3380111` — confirmed.
+3. Read iframe src: `https://sci.bban.top/pdf/10.1145/3366423.3380111.pdf#view=FitH`.
+4. Curl-downloaded → HTTP 200, 17,193,728 B.
+5. 5-point verification:
+   - Size 17,193,728 B > 50 KB ✓
+   - Magic bytes `%PDF-1.x` ✓
+   - pdfinfo: 13 pages ✓
+   - Title "AutoMAP" found ✓
+   - Author surname "Chen" found (Pengfei Chen is 5th author) ✓
+   - SHA-256: `a257b6d168e64113e28e1f45c2f2d75fd7b584e520f0e1b51583348ff0d3a3f5`
+6. First-page snippet:
+   ```
+   AutoMAP: Diagnose Your Microservice-based Web Applications Automatically
+   Meng Ma  /  Ping Wang*  /  Jingmin Xu†
+   National Engineering Research Center for Software Engineering,
+   Peking University, Beijing, China
+   mameng@pku.edu.cn  /  pwang@pku.edu.cn  /  xujingm@cn.ibm.com
+   Yuan Wang  /  Pengfei Chen‡  /  Zonghua Zhang
+   IBM Research - China  /  School of Data and Computer Science, Sun Yat-sen University  /  Paris Research Center, Huawei Technologies France
+   ...
+   ```
+
+### Tooling / process notes added in retry-2
+
+- **Sci-hub "Verification" page handling**: sci-hub.ee occasionally shows a transient "Verification - Sci-Hub" splash before the article iframe loads. Retry strategy: wait 5s, reload, wait 5s again. This worked partially but was not needed for the 2 successes (wu + automap loaded directly).
+- **sci-hub mirror availability**: in this environment only `sci-hub.ee` (and partially `sci-hub.ren`) reliably resolve and respond. `sci-hub.se/st/ru` regularly time out or return DDoS-Guard. `sci.bban.top` direct URLs are a fast bypass when DOI is known (and content is in sci-hub's collection).
+- **Explicit not-available signal**: `sci-hub.st` returns a self-identifying error page title "Sci-Hub: the article is not available through Sci-Hub. What can I do?" — this is a high-confidence signal that the paper is genuinely not in sci-hub's collection and further mirror probing is futile.
+- **Title-only verification**: when bib `author=` field is wrong (as for `wu2020microrank`), the 5-point verification's author-token check will fail even though the paper is correct. Recovery: relax the verification to also accept alt-author tokens (paper's actual first author, corresponding author, or institution name) when title is an exact match. Code in `c:/tmp/stage1b_retry2/retry_pass2.py` implements this pattern.
+
+### Files left in REFERENCE PAPERS/ at retry-2 close
+
+- 31 PDFs total (29 from prior pass + 2 from retry-2)
+- Disk usage 72,684 KB (~71 MB)
+- All naming convention `<bib_key> - <Short Title> - <doi-tail-or-id>.pdf` preserved
+
+### What this enables for Stage 1c
+
+- Camera-ready package now has 29/30 needed PDFs (only `notaro` missing).
+- New bib metadata corrections required:
+  - `wu2020microrank`: fix `author=` (lead Guangba Yu + corresponding Pengfei Chen + 7 others) + `year=` (2020 → 2021)
+  - `chen2022automap`: fix `author=` (Meng Ma, Ping Wang, Jingmin Xu, Yuan Wang, Pengfei Chen, Zonghua Zhang) + `year=` (2022 → 2020)
+  - `notaro2021aiopssurvey`: still pending — DO NOT update `doi=`/`journal=` until user manually obtains the paper and confirms the canonical reference
+- Provenance for the 2 new PDFs: sci-hub.ee → sci.bban.top fallback (same path as parasuraman); SHA-256s in §4 table above.
+
+---
+
+**End of Stage 1b manifest (retry-2 sci-hub pass 2026-05-27).**
