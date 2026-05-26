@@ -89,6 +89,7 @@
 - **First appearance:** `MEMORY.md:121`.
 - **Why-lost evidence:** Phase 4.5 is the ONLY work that would need restart, but no answer to: when, GO/NO-GO trigger, budget-burn deadline, EIP retention warrant.
 - **Suggested action:** Set explicit decision date or trigger for Phase 4.5 GO/NO-GO.
+- **☑️ RESOLVED 2026-05-26 (session 18):** MOOT. Phase 4.5 was launched 2026-05-25 (session 17) but crashed on 4 separate bugs (D-13a-d patched + D-15 patched + D-14 worked-around + D-16 still pending). The 4.5 run-status is now tracked via `SESSION_17_HANDOFF.md` §3 (4 paths forward: PATH 1/2/3/4). The instance restart trigger is no longer abstract; it's decision-time on which path to take.
 
 ---
 

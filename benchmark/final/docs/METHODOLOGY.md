@@ -7,21 +7,23 @@
 
 ## 1. Dataset
 
-- **File**: `benchmark/datasets/processed/benchmark_400_seed42.json`
-- **Composition**: 202 annotation + 198 RCA = 400 cases (seed=42 deterministic split)
-- **Sources**: HDFS, BGL, Apache, OpenSSH (annotation) + LEMMA-RCA, OpsEval Wired/Mobile/5G/Log-Analysis, OpsEval-Remine (RCA)
+- **File**: `benchmark/intermediate/datasets/benchmark_431_seed42.json` (post-Stage-B reorg path; pre-reorg the same file lived at `benchmark/datasets/processed/benchmark_431_seed42.json`)
+- **Composition**: 218 annotation + 213 RCA = 431 total `task_type ∈ {annotation, rca}` cases (seed=42 deterministic split). After the 2026-05-26 D-1 re-label, 33 OpsEval-remined cases carry `task_type=qa_mcq` (not counted as RCA); see §2.
+- **Sources**: HDFS, BGL, Apache, OpenSSH (annotation) + LEMMA-RCA, OpsEval Wired/Mobile/5G/Log-Analysis (RCA). OpsEval-remined (33 cases) are present in the dataset but post-hoc reclassified as `qa_mcq` (MCQ knowledge format) and excluded from RCA scoring.
 - The same dataset is used for: ours main benchmark, all SOTA baselines (Llama/DeepSeek/Drain), and all ablation configs. **No dataset shuffling or per-system filtering** so comparisons are paired.
 
 ---
 
-## 2. Excluded RCA cases (71 cases not counted in scores)
+## 2. Excluded RCA cases (74 cases not counted in scores, post 2026-05-26)
 
-Of the 198 RCA cases, **71 are excluded from accuracy computations across all systems** because the expected answer cannot be fairly substring-matched against an English free-text response.
+Of the 213 RCA cases, **74 are excluded from accuracy computations across all systems** because the expected answer cannot be fairly substring-matched against an English free-text response, or because the case was post-hoc identified as MCQ knowledge-format rather than diagnostic RCA.
 
-- **39 Chinese-language expected outputs**: the OpsEval source includes a fraction of original-Chinese cases. Models respond in English; substring matching against Chinese characters would always fail regardless of correctness.
-- **32 bare-letter multiple-choice answers (A/B/C/D)**: expected_root_cause = `"B"` or `"C"`. Substring-matching `"B"` against a verbose English response gives false positives whenever any word contains "B".
+- **41 Chinese-language expected outputs**: the OpsEval source includes a fraction of original-Chinese cases. Models respond in English; substring matching against Chinese characters would always fail regardless of correctness.
+- **33 OpsEval-remined MCQ knowledge cases** (`RCA_OPSEVAL_RM_001..033`): added 2026-05-26 (D-1 re-label). These were over-included during dataset curation when the Stage-2 LLM judge (intended to be Claude Haiku 4.5 via Bedrock) silently fell back to local Qwen3-4B-Instruct due to a Bedrock model-access block. The 4B fallback judge accepted all 33 candidates as `task_type=rca`; post-hoc spot-check (2026-05-25) confirmed all 33 are CompTIA-style multiple-choice knowledge questions (e.g. *"Which command-line utility can you use to see statistics on network interfaces? A. ping B. nbtstat C. nslookup D. netstat"*), not diagnostic RCA scenarios. Their `task_type` was changed to `qa_mcq` and each carries an `excluded_reason` field. Ground-truth labels come from the OpsEval source and are unaffected; only the include-vs-exclude decision changed. The 33 reclassified cases contribute zero `correct=True` counts to any system, so removing them shrinks denominators (142 → 139 evaluable RCA) without changing numerators. See `audit/SESSION_17_AUDIT_TRIAGE.md` (D-1) for the full audit-triage record.
 
-**Exclusion list location**: `benchmark/datasets/processed/excluded_rca_cases.json`
+**Previously**: pre-2026-05-26 the exclusion count was 71 (39 Chinese + 32 bare-letter MCQ heuristic). The current 74 supersedes that count.
+
+**Exclusion list location**: `benchmark/intermediate/datasets/excluded_rca_cases.json` (legacy file; the MCQ exclusion is now declared via `task_type=qa_mcq` on the cases themselves rather than via an external list).
 ```json
 {
   "excluded_ids": [
@@ -33,16 +35,15 @@ Of the 198 RCA cases, **71 are excluded from accuracy computations across all sy
 ```
 
 **How excluded cases are handled in saved JSONL**:
-- Post-fix runs (session 7+): script writes a record `{"case_id": "...", "task_type": "rca", "correct": null, "skip_reason": "excluded_unevaluable", ...}` for each of the 71 IDs. Summary divides by **127 evaluable** (not 198).
-- Pre-fix runs (`*_t0_BAK`, older `_bak`): all 198 cases evaluated; the 71 excluded cases need post-hoc filtering when reading the JSONL.
+- Post-fix runs (session 7+): script writes a record `{"case_id": "...", "task_type": "rca", "correct": null, "skip_reason": "excluded_unevaluable", ...}` for each of the 41 Chinese-language IDs. After D-1 (2026-05-26), the 33 MCQ cases were also re-labeled to `task_type: "qa_mcq"` with `excluded_reason: "MCQ knowledge format ..."`. The Phase 5 stats script filters by `task_type ∈ {annotation, rca}` AND `correct is not None`, so both exclusion mechanisms compose cleanly. Summary divides by **139 evaluable** (= 213 RCA total − 41 Chinese − 33 MCQ-relabeled).
+- Pre-fix runs (`*_t0_BAK`, older `_bak`): all 213 cases evaluated; the 74 excluded cases need post-hoc filtering when reading the JSONL.
 
-**Reproduction snippet** (post-hoc filter for pre-fix files):
+**Reproduction snippet** (filter the canonical 139-evaluable set from any post-D-1 result file):
 ```python
 import json
-excl = {x["id"] for x in json.loads(open("benchmark/datasets/processed/excluded_rca_cases.json").read()).get("excluded_ids", [])}
-recs = [json.loads(l) for l in open(<file>.jsonl) if l.strip()]
-ann = [r for r in recs if r["task_type"]=="annotation"]
-rca_eval = [r for r in recs if r["task_type"]=="rca" and r["case_id"] not in excl]
+recs = [json.loads(l) for l in open(<file>.jsonl) if l.strip()]  # or json.load() for .json
+ann = [r for r in recs if r.get("task_type")=="annotation"]
+rca_eval = [r for r in recs if r.get("task_type")=="rca" and r.get("correct") is not None]
 print(f"Ann: {sum(1 for r in ann if r['correct'])}/{len(ann)}")
 print(f"RCA: {sum(1 for r in rca_eval if r['correct'])}/{len(rca_eval)}")
 ```
@@ -104,20 +105,21 @@ Decision rule: if positive matches AND not negative → anomaly. If negative AND
 
 ## 6. How accuracy numbers compose
 
-For any saved JSONL file:
+For any saved JSONL file (post-D-1, 2026-05-26):
 
 ```
-total_records   = annotation_records + rca_records
-ann_correct     = sum(r["correct"] for r in ann if r["correct"] is True)
-rca_eval        = [r for r in rca if r.get("correct") is not None]    # excludes the 71
-rca_correct     = sum(r["correct"] for r in rca_eval if r["correct"] is True)
+total_records   = annotation_records + rca_records + qa_mcq_records   # 218 + 180 + 33 = 431
+ann             = [r for r in records if r.get("task_type") == "annotation"]
+rca_eval        = [r for r in records if r.get("task_type") == "rca" and r.get("correct") is not None]   # excludes 41 Chinese
+ann_correct     = sum(1 for r in ann if r["correct"])
+rca_correct     = sum(1 for r in rca_eval if r["correct"])
 
-ann_accuracy    = ann_correct / len(ann)                              # /202
-rca_accuracy    = rca_correct / len(rca_eval)                         # /127
-overall         = (ann_correct + rca_correct) / (len(ann) + len(rca_eval))   # /329
+ann_accuracy    = ann_correct / len(ann)                              # /218
+rca_accuracy    = rca_correct / len(rca_eval)                         # /139
+overall         = (ann_correct + rca_correct) / (len(ann) + len(rca_eval))   # /357
 ```
 
-**Important**: never divide RCA by 198 in published numbers — always 127.
+**Important**: never divide RCA by 213 in published numbers — always 139. The 33 `qa_mcq` records and 41 `correct=None` Chinese RCA records are both excluded; they cannot fairly be substring-scored.
 
 ---
 
@@ -241,8 +243,10 @@ The new prompt was tested via a full main re-run on 431 cases (`run_stackA_main4
 |---|---|---|---|
 | Runner.py rich eval — RCA | 94.8% (202/213) | 92.5% (197/213) | **−2.3pp** |
 | Runner.py rich eval — Overall | 88.6% | 87.5% | −1.1pp |
-| SOTA matched eval — RCA | 69.0% (98/142) | **80.3% (114/142)** | **+11.3pp** |
-| SOTA matched eval — Overall | 77.2% | 81.7% | **+4.5pp** |
+| SOTA matched eval — RCA (post D-1, /139) | 70.5% (98/139) | **82.0% (114/139)** | **+11.5pp** |
+| SOTA matched eval — Overall (post D-1, /357) | 78.0% | 82.4% | **+4.4pp** |
+
+_Note: pre-D-1 (2026-05-25 and earlier), the matched-eval denominators were 142 (RCA) and 360 (Overall). The D-1 re-label of 33 OpsEval-remined MCQ cases as `task_type=qa_mcq` shrinks the RCA denominator to 139 (357 overall). Numerators are unchanged because the 3 cases that previously evaluated to `correct=False` continue to be excluded under the new task_type._
 
 Case-level: 21 gains and 5 losses under matched eval (net +16). All 3 known refusal cases (RCA_002/028/067) flipped to correct. The improvement generalizes — 18 additional cases beyond the 3 targeted also improved.
 

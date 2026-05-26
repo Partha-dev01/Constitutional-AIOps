@@ -1,15 +1,17 @@
 # FINAL/ — Audit Report
 
-_Built: 2026-05-19 04:58 UTC_
+_Built: 2026-05-19 04:58 UTC._
 
-Per-file content audit. Looks for:
-- Record count mismatches (expected 218 ann + 213 rca = 431; SOTA Drain = 202 ann; phase46 = 431)
+> **Post-D-1 note (2026-05-26, session 18)**: This report is the 2026-05-19 build snapshot from `benchmark/scripts/ops/build_final_results.py` (preserved verbatim for forensic continuity). It uses the pre-reorg path layout (`benchmark\results_aws\FINAL\...`); current canonical paths are `benchmark/final/...`. The per-file SHA-256s and `task_type` distributions below predate the 2026-05-26 D-1 re-label of 33 OpsEval-remined cases (see `audit/SESSION_17_AUDIT_TRIAGE.md` D-1). Current SHAs are in `MANIFEST.md` "Post-D-1 state" section; current record counts are: 218 annotation + 180 rca + 33 qa_mcq = 431 total, with 74 RCA cases excluded from scoring (41 Chinese + 33 MCQ-relabeled, evaluable RCA = 139). Structural validity of all 15 modified files was re-verified by `benchmark/scripts/_verify_a2_apply.py` — all PASS.
+
+Per-file content audit (original 2026-05-19 audit). Looks for:
+- Record count mismatches (expected 218 ann + 213 rca = 431; SOTA Drain = 202 ann; phase46 = 431). **Post-D-1**: 218 ann + 180 rca + 33 qa_mcq = 431.
 - Missing required fields (`task_type`, `test_id`/`case_id`, `correct`, `expected_output`, `actual_output`)
-- Wrong number of excluded RCA records (should be 71 = 39 Chinese + 32 MC letter)
+- Wrong number of excluded RCA records (was 71 = 39 Chinese + 32 MC letter; **post-D-1 is 74 = 41 Chinese + 33 MCQ-relabeled**)
 - Duplicate test_ids (the bug found in DeepSeek t=0 BAK had 103 dups)
-- BERT-F1 zeros (known limitation from disk-full bug #8 — informational only)
+- BERT-F1 zeros (known limitation from disk-full bug #8 — informational only; recompute pending per D-6)
 
-## Summary
+## Summary (2026-05-19 build)
 
 | Status | Count |
 |---|---|

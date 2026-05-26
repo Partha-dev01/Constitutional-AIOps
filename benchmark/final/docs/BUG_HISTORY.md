@@ -17,6 +17,7 @@
 | 6 | Session 8 (2026-05-15) | High | `src/benchmark/runner.py` missing ablation flags | `no-structured` + `no-constitutional` ablation rows | Fixed session 8 |
 | 7 | Session 8 (2026-05-15) | Low | `run_sota_baselines.py` hardcoded temperature | All earlier SOTA runs at t=0 | Fixed session 8 (added `--temperature`) |
 | 8 | Session 8 (2026-05-15) | Infrastructure | AWS instance root EBS full | Couldn't compute BERTScore, blocked writes | Fixed session 8 (resized 40→80 GB) |
+| 9 | Session 19 (2026-05-26) | High | `run_graph_experiments.py:172,174` `json.dumps(TestCaseResult)` | Phase 4.5 per-case JSONLs empty; 4.5c never ran | Fixed session 20 (D-17 footnote) |
 
 ---
 
@@ -156,5 +157,31 @@ confidence = max(0.0, min(1.0, confidence))
 
 - **74.8% RCA tie between Llama and DeepSeek**: real coincidence at t=0 deterministic sampling, verified via per-case comparison (8 disagreements that cancel). Not a methodology error. Re-running at t=0.05 should naturally break the tie.
 - **`run_stackA_main431/summary.json` vs `results_merged.json`**: the `summary.json` shows lower RCA (79.34%) because it predates the 33-case OpsEval-remine label fix; `results_merged.json` is the post-fix data and is what the paper uses. Both files coexist intentionally for provenance.
-- **OpenSSH annotation 50%**: not a bug. All 20 failures are false positives (single auth events flagged as anomaly), zero false negatives on real brute force. Disclosed in paper Table 4.
+- **OpenSSH annotation 50%**: not a bug. All 20 failures are false positives (single auth events flagged as anomaly), zero false negatives on real brute force. Disclosed in paper Table 4. (Validated 2026-05-25 session 17 by manual inspection of all 40 OpenSSH records against ground-truth labels — claim fully data-backed.)
 - **`benchmark/results/ablation_*_BROKEN/` on AWS**: kept for provenance, NOT to be used. Renamed with `_BROKEN` suffix.
+
+---
+
+## Footnotes (audit-traceability)
+
+### D-4. L5307 fake-graph-context commit (session 12)
+
+The commit at transcript line 5307 replaced `_build_sample_graph_context()` mock data in the with-graph ablation runner with real Neo4j retrieval. All pre-existing "with-graph" smoke results in archived runs (`benchmark/archive/ablation_with_graph_BROKEN/`, `benchmark/archive/with_graph_smoke_*`, and any `with_graph` rows in `benchmark/archive/_archive_originals_2026-05-19/...`) were silently invalidated — those numbers were produced with mock retrieval, not the real graph. The matched-eval `ablation_v4/ablation_with_graph/` numbers in `FINAL/` supersede them and are the canonical numbers cited in the paper. See `audit/SESSION_17_AUDIT_TRIAGE.md` (D-4) for the user-locked decision.
+
+### D-1. OpsEval-remined re-label (session 17, 2026-05-26)
+
+Stage-2 LLM judge for OpsEval-remined candidates silently fell back from Bedrock Claude Haiku 4.5 to local Qwen3-4B-Instruct (Bedrock model-access was payment-blocked at curation time). The 4B fallback accepted 33 MCQ-format candidates that the planned judge would have rejected. Post-hoc audit (session 17) reclassified all 33 as `task_type=qa_mcq` with an `excluded_reason` field; 16 result files were re-synced (`benchmark/scripts/_apply_d1_result_sync.py`); Phase 5 stats were re-run locally (no AWS). RCA denominator shifted 142 → 139; numerators unchanged (all 3 previously-counted reclassified cases were `correct=False`). Headline shift: RCA +1.5–1.8pp across all configs (favorable). See `audit/SESSION_17_AUDIT_TRIAGE.md` (D-1) and `audit/SESSION_17_RECALC_SCOPE.md`.
+
+### D-17. Phase 4.5 `TestCaseResult` JSON-serialize crash — ✅ RESOLVED 2026-05-26, session 20
+
+**Symptom**: Session-19 Phase 4.5 launch on AWS crashed at `run_graph_experiments.py:172` with `TypeError: Object of type TestCaseResult is not JSON serializable`. All 5 LEMMA folds (4.5b) ran to completion in memory (each at no-graph=100%, with-graph=100% — ceiling effect on the homogeneous-cloud distribution). The aggregate summary JSON was written successfully (`exp_4_5b_summary.json`, 757 B), but the per-case JSONL writes failed; control therefore never reached 4.5c (cold-start curve), which did not run in this attempt.
+
+**Root cause**: `wo_all` / `wg_all` in `exp_4_5b()` hold `TestCaseResult` dataclass instances returned by `BenchmarkRunner.run_benchmark().test_results`. The serialisation step `"\n".join(json.dumps(r) for r in wo_all)` at lines 172 + 174 fed those dataclass instances directly to `json.dumps`, which does not handle dataclasses by default. Sister bug to D-16 (`r.correct` not `r.get("correct")`, patched session 17/18) — D-16 was the attribute-access half, D-17 is the file-write half on the same dataclass type. The audit triage caught the attribute-access sites but missed the downstream serialise sites.
+
+**Fix** (`run_graph_experiments.py:31 + 171-176`): imported `dataclasses`; wrapped both writes as `json.dumps(dataclasses.asdict(r), default=str)`. `asdict` recurses through nested dataclasses; `default=str` catches enums / `datetime` / `Path` if present. The aggregate-summary write at line 170 was unaffected (it serialises a plain dict).
+
+**Impact on saved data**: 4.5b summary JSON IS valid and is the data source for the paper. 4.5b per-case JSONL files are empty (0 bytes) — per-case detail lost for this run. 4.5c never ran; the existing `exp_4_5c_summary.json` on disk is stale leftover from a session-17 crash and is ignored. The decision rule locked pre-hibernation fires for **PATH 4**: drop both 4.5b/4.5c rows from sandbox `tab:graphsub`, add a 1-sentence disclosure in §4.5. Forensic log: `benchmark/final/phase45_graph/_failed_run_log.txt`. See `audit/SESSION_20_HANDOFF.md` for the full close-out.
+
+### D-6. BERT-F1 zeros — ✅ RESOLVED 2026-05-26, session 18
+
+Bug #8 documented above. Recomputed in session 18 via `benchmark/scripts/eval/recompute_bert_f1.py` using `roberta-large` on CUDA. 14 of 16 result files updated in place; `drain.jsonl` skipped because its predictions are boolean `predicted_anomaly: true/false` (BERTScore not meaningful on string "True"/"False" pairs). Mean F1 ranges 0.789–0.838 across configs; main re-run = **0.8124**, ablation Full = **0.8126**, Llama SOTA = **0.8269**, DeepSeek SOTA = **0.8264**. Per-file averages and the MIN_TEXT_LEN=15 filter caveat (rejected short Ann outputs in `ablation_no_structured` n=1 and `ablation_no_system_prompt` n=0) documented in `SUMMARY.md §3.5`; full per-record output in `_bert_f1_recompute_summary.json`. Paper integration (BERT-F1 column for Tables 2/7) is the Phase B Option-B target per D-6 user decision in `audit/SESSION_17_AUDIT_TRIAGE.md`; Option-C fallback (1-sentence summary in §5) is held if PDF overflows 16 pages after column addition.
