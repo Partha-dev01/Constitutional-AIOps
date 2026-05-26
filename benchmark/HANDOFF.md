@@ -1,6 +1,6 @@
 # Constitutional AIOps — Agent Handoff Document
 
-**Last updated**: 2026-05-26 (session 24 close — Group B + Group C audit fixes complete + DIFF regen + Gate 6 + Gate 7 pushed `affad56..dd51724 main -> main`. See `benchmark/final/audit/SESSION_24_HANDOFF.md`. Camera-ready prep + AWS work remain optional/deferred.)
+**Last updated**: 2026-05-26 (session 25 close — Path C camera-ready prep complete: I-E line-484 contradiction fixed; I-A/B/C deferred-bib entries resolved (peng DOI + zhang author/year/DOI + nvidia title/year/URL); min-viable trim preserves 16p on both main + DIFF PDFs. See `benchmark/final/audit/SESSION_25_HANDOFF.md`. AWS work + camera-ready window remain optional/deferred.)
 **For**: Next AI agent (Claude Code, Codex, etc.) to resume this work
 **Working directory**: `c:\Users\partha\Downloads\files AIOPS NEW\constitutional-aiops\`
 **Document location** (moved session 22): `constitutional-aiops/benchmark/HANDOFF.md` (was at repo root)
@@ -149,15 +149,15 @@ After session 22 reorganization, the sandbox contains exactly 2 subfolders, each
 sn-article-template.v2.sandbox-session16/
 ├── main/
 │   ├── bst/  empty.eps  fig.eps
-│   ├── sn-article.tex                (55,987 B, 793 lines — post-session-24 Group B + C audit fixes)
-│   ├── sn-article.pdf                (466,286 B, 16 pages)
-│   ├── sn-bibliography.bib           (35 entries; 32 cited; 3 retained-orphan — post-session-24)
+│   ├── sn-article.tex                (55,201 B, 789 LF lines — post-session-25 Path C audit fixes)
+│   ├── sn-article.pdf                (467,671 B, 16 pages)
+│   ├── sn-bibliography.bib           (10,129 B, 272 LF lines; 35 entries; 32 cited; 3 retained-orphan — post-session-25 I-A/B/C resolved)
 │   ├── sn-jnl.cls  sn-mathphys-num.bst
 └── diff/
     ├── bst/  empty.eps  fig.eps
-    ├── sn-article.tex                (54,591 B — read-only copy = diff target, mirrors main)
-    ├── sn-article-DIFF.tex           (68,267 B — latexdiff-fast INVISIBLE + --no-del + simplified red-text override, listings dep dropped)
-    ├── sn-article-DIFF.pdf           (467,840 B, 16 pages, 0 undefined refs, plain red highlights)
+    ├── sn-article.tex                (55,201 B — read-only copy = diff target, mirrors main)
+    ├── sn-article-DIFF.tex           (68,263 B, 830 LF lines — latexdiff-fast INVISIBLE + --no-del + simplified red-text override, listings dep dropped)
+    ├── sn-article-DIFF.pdf           (469,229 B, 16 pages, 0 undefined refs, plain red highlights)
     ├── sn-bibliography.bib  sn-jnl.cls  sn-mathphys-num.bst
 ```
 
