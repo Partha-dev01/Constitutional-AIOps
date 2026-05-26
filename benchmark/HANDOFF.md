@@ -1,6 +1,6 @@
 # Constitutional AIOps — Agent Handoff Document
 
-**Last updated**: 2026-05-26 (session 23 close — Group A audit fixes complete + Gate 4 + Gate 5 pushed `77f49f9..68b5a58 main -> main`. Group B + C pending for session 24. See `benchmark/final/audit/SESSION_23_HANDOFF.md`.)
+**Last updated**: 2026-05-26 (session 24 close — Group B + Group C audit fixes complete + DIFF regen + Gate 6 + Gate 7 pushed `affad56..dd51724 main -> main`. See `benchmark/final/audit/SESSION_24_HANDOFF.md`. Camera-ready prep + AWS work remain optional/deferred.)
 **For**: Next AI agent (Claude Code, Codex, etc.) to resume this work
 **Working directory**: `c:\Users\partha\Downloads\files AIOPS NEW\constitutional-aiops\`
 **Document location** (moved session 22): `constitutional-aiops/benchmark/HANDOFF.md` (was at repo root)
@@ -149,15 +149,15 @@ After session 22 reorganization, the sandbox contains exactly 2 subfolders, each
 sn-article-template.v2.sandbox-session16/
 ├── main/
 │   ├── bst/  empty.eps  fig.eps
-│   ├── sn-article.tex                (54,591 B, 786 lines — post-session-23 audit fixes)
-│   ├── sn-article.pdf                (463,353 B, 16 pages)
-│   ├── sn-bibliography.bib           (31 cited entries)
+│   ├── sn-article.tex                (55,987 B, 793 lines — post-session-24 Group B + C audit fixes)
+│   ├── sn-article.pdf                (466,286 B, 16 pages)
+│   ├── sn-bibliography.bib           (35 entries; 32 cited; 3 retained-orphan — post-session-24)
 │   ├── sn-jnl.cls  sn-mathphys-num.bst
 └── diff/
     ├── bst/  empty.eps  fig.eps
     ├── sn-article.tex                (54,591 B — read-only copy = diff target, mirrors main)
-    ├── sn-article-DIFF.tex           (68,616 B — latexdiff-fast INVISIBLE + --no-del + red text override)
-    ├── sn-article-DIFF.pdf           (464,912 B, 16 pages, 0 undefined refs, plain red highlights)
+    ├── sn-article-DIFF.tex           (68,267 B — latexdiff-fast INVISIBLE + --no-del + simplified red-text override, listings dep dropped)
+    ├── sn-article-DIFF.pdf           (467,840 B, 16 pages, 0 undefined refs, plain red highlights)
     ├── sn-bibliography.bib  sn-jnl.cls  sn-mathphys-num.bst
 ```
 
