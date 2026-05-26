@@ -3793,7 +3793,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_025",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "Dirty optical cables; Excessive cable length",
     "actual_output": "{\n    \"root_cause\": \"B. Dirty optical cables, C. Excessive cable length\",\n    \"causal_chain\": [\n        \"Contamination on optical cable connectors or surfaces causes light scattering/absorption\",\n        \"Excessive cable length increases inherent signal attenuation beyond acceptable thresholds\"\n    ],\n    \"impact\": {\n        \"services\": [\"Wired Network\"],\n        \"severity\": \"medium\",\n        \"users_affected\": \"unknown (depends on affected cable runs)\"\n    },\n    \"confidence\": 0.95,\n    \"reasoni",
@@ -3878,7 +3878,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_006",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "The spooler service is running.",
     "actual_output": "{\n    \"root_cause\": \"The spooler service is not running (Option C).\",\n    \"causal_chain\": [\n        \"The Print Spooler service is responsible for managing print jobs and communicating with printers.\",\n        \"If the service is stopped, the print sub-system becomes unavailable to the user.\",\n        \"This results in the error message 'Print sub-system not available' when attempting to print.\"\n    ],\n    \"impact\": {\n        \"services\": [\"Print Spooler service\", \"Printer communication layer\"],\n   ",
@@ -4082,7 +4082,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_023",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "Client’s MAC address",
     "actual_output": "{\n    \"root_cause\": \"Client’s MAC address\",\n    \"causal_chain\": [\n        \"The Monitor > Clients page requires a unique identifier to isolate a specific wireless client.\",\n        \"SSID, WLC IP address, and AP name are either non-unique or relate to infrastructure components, not the client device.\",\n        \"MAC addresses are globally unique and directly tied to the client’s hardware, enabling precise troubleshooting.\"\n    ],\n    \"impact\": {\n        \"services\": [\"Wireless Network Monitoring\", \"",
@@ -4252,7 +4252,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_020",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "EMI",
     "actual_output": "{\n    \"root_cause\": \"Electromagnetic Interference (EMI) from elevator machinery\",\n    \"causal_chain\": [\n        \"Elevator machinery generates electromagnetic fields\",\n        \"Switch racks are located adjacent to elevator machinery room\",\n        \"EMI induces noise on network cables\",\n        \"Intermittent signal corruption causes slowdowns/outages\"\n    ],\n    \"impact\": {\n        \"services\": [\"Wired Network\"],\n        \"severity\": \"medium\",\n        \"users_affected\": \"All users connected to affect",
@@ -4286,7 +4286,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_014",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "Co-channel interference",
     "actual_output": "{\n    \"root_cause\": \"Co-channel interference\",\n    \"causal_chain\": [\n        \"Two transmitters configured on the same 802.11 channel (channel 11)\",\n        \"Signal collisions and increased error rates due to simultaneous transmission\",\n        \"Degraded signal quality and reduced throughput for connected devices\"\n    ],\n    \"impact\": {\n        \"services\": [\"Wireless network connectivity\"],\n        \"severity\": \"medium\",\n        \"users_affected\": \"Users within overlapping coverage areas of both tr",
@@ -4864,7 +4864,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_005",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "`130.200.130.1`",
     "actual_output": "{\n    \"root_cause\": \"B. 13",
@@ -5000,7 +5000,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_031",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "If necessary, conduct external or internal research based on symptoms.",
     "actual_output": "{\n    \"root_cause\": \"A. Question the user and identify user changes to the computer.\",\n    \"causal_chain\": [\n        \"Erratic behavior observed on desktop computer\",\n        \"Troubleshooting methodology requires establishing a theory of probable cause\",\n        \"User changes are a common root cause for unexpected system behavior\",\n        \"Questioning the user is the first step in the 'Identify the problem' phase of troubleshooting\"\n    ],\n    \"impact\": {\n        \"services\": [\"End-user productiv",
@@ -5119,7 +5119,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_027",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "The CLI is prone to human error and misconfiguration.; The command line is used on a device-by-device basis.",
     "actual_output": "{\n    \"root_cause\": \"A. The CLI is prone to human error and misconfiguration. D. The command line is used on a device-by-device basis.\",\n    \"causal_chain\": [\n        \"Manual configuration via CLI requires individual device interaction\",\n        \"Human error increases with scale and repetitive tasks\",\n        \"Lack of centralized automation leads to inconsistent configurations\"\n    ],\n    \"impact\": {\n        \"services\": [\"Network Configuration Management\"],\n        \"severity\": \"medium\",\n        ",
@@ -5153,7 +5153,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_003",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "Configure his equipment to use channel 9",
     "actual_output": "Okay, let's tackle this problem. Ralph is having issues with his Wi-Fi network, specifically long AP association times and poor performance. He's in a large apartment complex, so there's probably a lot of interference from other networks. The question mentions that many nearby networks are using channels 1, 6, and 11 on the 2.4 GHz band. Since he can't use 5 GHz, he has to stick with 2.4 GHz.\n\nFirst, I remember that the 2.4 GHz band has only three non-overlapping channels: 1, 6, and 11. But in r",
@@ -5238,7 +5238,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_010",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "Check the configuration of the router connecting the Local Area Network (LAN) to the Internet.",
     "actual_output": "{\n    \"root_cause\": \"Option D (Check the user's job title to see if she is an important person in the company) is the least likely first step.\",\n    \"causal_chain\": [\n        \"User reports inability to connect to the Internet\",\n        \"Help desk follows standard troubleshooting protocol\",\n        \"Option D is not a technical diagnostic step and would not be prioritized initially\"\n    ],\n    \"impact\": {\n        \"services\": [\"Help desk support process\"],\n        \"severity\": \"low\",\n        \"users_",
@@ -5374,7 +5374,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_012",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "The connection between the WAP and the router",
     "actual_output": "{\n    \"root_cause\": \"Misconfigured default gateway on the WAP or connected devices, preventing access to external network resources.\",\n    \"causal_chain\": [\n        \"Users connected to the same WAP experience limited connectivity.\",\n        \"They can communicate locally (same subnet) but cannot access printers/servers (external resources).\",\n        \"The default gateway configuration on the WAP or client devices is incorrect or unreachable.\"\n    ],\n    \"impact\": {\n        \"services\": [\"Network c",
@@ -5391,7 +5391,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_001",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "Check the configuration of the router connecting the LAN to the Internet",
     "actual_output": "{\n    \"root_cause\": \"D. Check the user's job title to see if she is an important person in the company\",\n    \"causal_chain\": [\n        \"User reports inability to connect to Internet\",\n        \"Alice follows standard troubleshooting methodology\",\n        \"Option D is not a technical diagnostic step\",\n        \"Option D is unrelated to network connectivity verification\"\n    ],\n    \"impact\": {\n        \"services\": [\"Network connectivity service\"],\n        \"severity\": \"low\",\n        \"users_affected\": ",
@@ -5527,7 +5527,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_016",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "The 5 GHz frequency has more channels than the 2.4 GHz frequency.; The 5 GHz frequency conflicts with fewer common household devices than the 2.4 GHz frequency.; The 5 GHz frequency transmits at faster speeds than the 2.4 GHz frequency.",
     "actual_output": "{\n    \"root_cause\": \"A, C, D\",\n    \"causal_chain\": [],\n    \"impact\": {\n        \"services\": [],\n        \"severity\": \"low\",\n        \"users_affected\": \"0\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"5 GHz performs better due to more channels (A), fewer device conflicts (C), and higher data rates (D). 2.4 GHz has longer range (B is incorrect).\",\n    \"remediation_steps\": [],\n    \"prevention\": \"\"\n}",
@@ -5544,7 +5544,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_022",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "Power cycle the device.; Forget the Wi-Fi network.; Ensure that the correct SSID was entered.",
     "actual_output": "{\n    \"root_cause\": \"The device's Wi-Fi connection failure is likely due to temporary software glitches, incorrect network configuration, or saved network corruption. The recommended steps are power cycling, forgetting the network, and verifying the SSID.\",\n    \"causal_chain\": [\n        \"Device's Wi-Fi configuration may have become corrupted or misaligned with the network's current settings.\",\n        \"Temporary software glitches on the device could disrupt connectivity.\",\n        \"User may have",
@@ -5629,7 +5629,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_004",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "Because the fact that one of your clients has decided to leave your network for an AP you do not manage is suspicious",
     "actual_output": "{\n    \"root_cause\": \"Because a rogue client is sending invalid frames to your network and is a likely sign of an ongoing attack\",\n    \"causal_chain\": [\n        \"A rogue client connects to the network without authorization\",\n        \"The client begins transmitting invalid or malicious frames\",\n        \"These frames are detected by network monitoring systems as anomalous traffic\",\n        \"Alarms are triggered due to the potential security threat\"\n    ],\n    \"impact\": {\n        \"services\": [\"Netwo",
@@ -5663,7 +5663,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_019",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "Change the channel the devices are using",
     "actual_output": "{\n    \"root_cause\": \"Changing the channel the devices are using (Option C)\",\n    \"causal_chain\": [\n        \"Intermittent connection drops on 802.11n network\",\n        \"Channel congestion or interference on current wireless channel\",\n        \"Switching to a less congested channel reduces interference\",\n        \"Improved signal stability and reduced connection drops\"\n    ],\n    \"impact\": {\n        \"services\": [\"Wireless network connectivity\"],\n        \"severity\": \"medium\",\n        \"users_affected\"",
@@ -5782,7 +5782,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_029",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Mobile Communication Network",
     "expected_output": "Check the related system configurations",
     "actual_output": "{\n    \"root_cause\": \"Check the related system configurations\",\n    \"causal_chain\": [\n        \"Multiple system logs show identical error messages\",\n        \"Error messages indicate a recurring issue requiring configuration validation\",\n        \"Configuration review identifies misalignment or incorrect parameters\"\n    ],\n    \"impact\": {\n        \"services\": [\"affected service generating logs\"],\n        \"severity\": \"medium\",\n        \"users_affected\": \"unknown (requires further investigation)\"\n    },",
@@ -6054,7 +6054,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_008",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "Configure your equipment to use channel 9.",
     "actual_output": "{\n    \"root_cause\": \"The wireless network is operating on a congested 2.4 GHz channel (1, 6, or 11), leading to interference from neighboring networks.\",\n    \"causal_chain\": [\n        \"High density of nearby networks using overlapping channels on 2.4 GHz\",\n        \"Congestion on commonly recommended channels (1, 6, 11) causes increased collisions and reduced throughput\",\n        \"User's equipment remains on default or overlapping channels without manual optimization\"\n    ],\n    \"impact\": {\n     ",
@@ -6139,7 +6139,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_011",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "The leaf and spine topology is less expensive to implement than the three-tier topology.",
     "actual_output": "{\n    \"root_cause\": \"C. The leaf and spine topology is less expensive to implement than the three-tier topology.\",\n    \"causal_chain\": [\n        \"Leaf and spine topology requires more switches (each leaf connects to every spine) compared to three-tier topology.\",\n        \"Increased switch count in leaf-spine architecture raises hardware costs.\",\n        \"Three-tier topology uses fewer switches but may require more complex cabling and hierarchical design.\"\n    ],\n    \"impact\": {\n        \"services",
@@ -6173,7 +6173,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_032",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "Speed mismatch; TX/RX reversal; Bad switch port",
     "actual_output": "{\n    \"root_cause\": \"Duplex mismatch, TX/RX reversal, and Bad switch port\",\n    \"causal_chain\": [\n        \"Network devices configured with mismatched duplex settings (half/full)\",\n        \"Physical TX/RX pin reversal on Ethernet cable\",\n        \"Faulty switch port hardware failure\"\n    ],\n    \"impact\": {\n        \"services\": [\"Wired network connectivity\"],\n        \"severity\": \"medium\",\n        \"users_affected\": \"All users connected to affected network segments\"\n    },\n    \"confidence\": 0.95,\n    ",
@@ -6309,7 +6309,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_007",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "The routing table does not specify a default gateway address.",
     "actual_output": "{\n    \"root_cause\": \"The routing table does not specify a default gateway address.\",\n    \"causal_chain\": [\n        \"User's workstation lacks a default gateway entry in the routing table\",\n        \"Traffic destined for external networks (Internet) cannot be routed\",\n        \"User can access local network resources but not Internet\"\n    ],\n    \"impact\": {\n        \"services\": [\"Internet access\"],\n        \"severity\": \"medium\",\n        \"users_affected\": \"1\"\n    },\n    \"confidence\": 0.95,\n    \"reasoni",
@@ -6411,7 +6411,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_009",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "Check the server console for user connections.",
     "actual_output": "{\n    \"root_cause\": \"Check the server console for user connections (Option B)\",\n    \"causal_chain\": [\n        \"Users cannot log in to the server\",\n        \"Checking the server console for user connections identifies whether the server is receiving login attempts\",\n        \"If no connections are logged, the issue is either network-related or workstation-specific\"\n    ],\n    \"impact\": {\n        \"services\": [\"Server authentication service\"],\n        \"severity\": \"medium\",\n        \"users_affected\": \"",
@@ -6428,7 +6428,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_026",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "WAP",
     "actual_output": "{\n    \"root_cause\": \"Wireless Access Point (WAP) failure or misconfiguration\",\n    \"causal_chain\": [\n        \"Laptop users rely on wireless connectivity via WAP\",\n        \"WAP malfunction/misconfiguration disrupts wireless traffic\",\n        \"Desktops use wired Ethernet connections unaffected by WAP issues\"\n    ],\n    \"impact\": {\n        \"services\": [\"Internet connectivity for wireless users\"],\n        \"severity\": \"medium\",\n        \"users_affected\": \"Laptop users only\"\n    },\n    \"confidence\": 0.",
@@ -6547,7 +6547,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_017",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "The DHCPv4 scope is exhausted.",
     "actual_output": "Okay, let's see. The user is having trouble accessing the network. The workstation is connected to a wall plate that should provide access to a DHCP network with 192.168.4.0/24. The ipconfig output shows that the IPv4 address is 169.254.203.42 with a subnet mask of 255.255.0.0. Hmm, 169.254.x.x is part of the link-local range, which is used when a device can't obtain an IP from DHCP. That usually happens if the DHCP server isn't responding.\n\nLooking at the options, A says the subnet mask is inco",
@@ -6581,7 +6581,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_002",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "In a leaf and spine topology, all data flows require the same number of hops.; The leaf and spine arrangement uses a full mesh switching topology.; The leaf and spine topology uses software-defined networking to direct traffic, rather than blocking ports using the spanning tree protocol.",
     "actual_output": "{\n    \"root_cause\": \"B. In a leaf and spine topology, all data flows require the same number of hops. D. The leaf and spine topology uses software-defined networking to direct traffic, rather than blocking ports using the spanning tree protocol.\",\n    \"causal_chain\": [\n        \"Leaf and spine topology design ensures consistent hop counts between any two endpoints.\",\n        \"Software-defined networking (SDN) in leaf and spine eliminates the need for spanning tree protocol (STP) by centrally mana",
@@ -6615,7 +6615,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_033",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "Increase the WAP's power setting.; Choose a different channel.",
     "actual_output": "{\n    \"root_cause\": \"B. Disable SSID broadcast. D. Choose a different channel.\",\n    \"causal_chain\": [\"Wi-Fi interference occurs due to overlapping channels or excessive device probing\", \"Disabling SSID broadcast reduces unnecessary device probing\", \"Changing to a less congested channel minimizes interference\"],\n    \"impact\": {\n        \"services\": [\"Wi-Fi network\"],\n        \"severity\": \"medium\",\n        \"users_affected\": \"all connected users\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"Wi-F",
@@ -6666,7 +6666,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_028",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "Ensure that this computer is set to obtain an IP address automatically.",
     "actual_output": "Okay, let's tackle this problem. The user is having trouble accessing the network because of a duplicate IP error, even though there's a DHCP server. The options given are A to D.\n\nFirst, I need to understand why a duplicate IP would occur with a DHCP server. DHCP is supposed to assign unique IPs, so maybe there's a malfunction. The user might have a static IP that conflicts with a DHCP-assigned one, or maybe the DHCP server is faulty. Alternatively, another device might be using a static IP tha",
@@ -6785,7 +6785,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_013",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "Default gateway down",
     "actual_output": "{\n    \"root_cause\": \"Default gateway down\",\n    \"causal_chain\": [\n        \"Default gateway (router) failure or connectivity loss\",\n        \"Workstations unable to route traffic beyond local subnet\",\n        \"Loss of Internet and corporate server access (external resources)\",\n        \"Printing remains functional (local network communication unaffected)\"\n    ],\n    \"impact\": {\n        \"services\": [\"Internet access\", \"Corporate server access\"],\n        \"severity\": \"medium\",\n        \"users_affected\"",
@@ -7023,7 +7023,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_015",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "`netstat`",
     "actual_output": "{\n    \"root_cause\": \"D. `netstat`\",\n    \"causal_chain\": [],\n    \"impact\": {\n        \"services\": [],\n        \"severity\": \"low\",\n        \"users_affected\": \"0\"\n    },\n    \"confidence\": 0.99,\n    \"reasoning\": \"`netstat` is the standard command-line utility for displaying active TCP connections, including local and remote IP addresses and port numbers. The other options serve different purposes: `ping` tests connectivity, `nbtstat` handles NetBIOS statistics, and `nslookup` resolves DNS queries.\",\n  ",
@@ -7040,7 +7040,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_024",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "Tone generator and probe",
     "actual_output": "{\n    \"root_cause\": \"D. Tone generator and probe\",\n    \"causal_chain\": [\"Network cables suspected of being mislabeled\", \"Need to trace cables to verify labels\", \"Tone generator and probe used to send/receive signals for identification\"],\n    \"impact\": {\n        \"services\": [\"Network infrastructure\"],\n        \"severity\": \"medium\",\n        \"users_affected\": \"unknown (depends on scope of mislabeling)\"\n    },\n    \"confidence\": 0.95,\n    \"reasoning\": \"A tone generator and probe are specifically desig",
@@ -7091,7 +7091,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_018",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "The Cisco router; One of the Linux web servers",
     "actual_output": "{\n    \"root_cause\": \"The traceroute command could be executed on the Linux web servers (B) or the Cisco router (A).\",\n    \"causal_chain\": [\n        \"The user executed the traceroute command to diagnose network communication failure.\",\n        \"Traceroute requires a system with network diagnostic tools and the ability to send/receive ICMP/UDP packets.\",\n        \"Linux web servers and Cisco routers are capable of running traceroute, while CSU/DSU consoles and Windows firewalls are not typical exec",
@@ -7176,7 +7176,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_021",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "Configure a display filter",
     "actual_output": "{\n    \"root_cause\": \"Alice should configure a display filter to filter the captured frames post-capture.\",\n    \"causal_chain\": [\n        \"Alice captured traffic without pre-filtering, resulting in a large buffer.\",\n        \"Excessive frames make it difficult to identify relevant traffic.\",\n        \"Display filters allow post-capture filtering based on specific criteria (e.g., source/destination MAC/IP).\"\n    ],\n    \"impact\": {\n        \"services\": [\"Network troubleshooting tools\"],\n        \"sever",
@@ -7295,7 +7295,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_030",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "The Windows-based firewall; The Cisco router; One of the Linux web servers",
     "actual_output": "{\n    \"root_cause\": \"The systems Ralph might be working on are the Windows-based firewall, the Cisco router, and one of the Linux web servers.\",\n    \"causal_chain\": [\n        \"Ralph executed the ping command to test network connectivity.\",\n        \"The target IP address (192.168.1.76) is a private IP address within the perimeter network.\",\n        \"Only devices with IP interfaces (firewall, router, web servers) can execute ping commands.\",\n        \"The CSU/DSU console lacks an IP interface and c",

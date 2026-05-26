@@ -3793,7 +3793,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_025",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "Dirty optical cables; Excessive cable length",
     "actual_output": "**Root Cause Analysis for Decibel Loss in Fiber-Optic Cable Runs**\n\n**Context Summary:**  \nAlice's company experienced issues with devices connected to a fiber-optic network. A contractor detected significant decibel (dB) loss in some cable runs, indicating potential causes for the problems. The question asks which options (A–D) could contribute to this loss.\n\n---\n\n### **Analysis of Possible Causes:**\n\n**A. Electromagnetic interference (EMI)**  \n- **Verdict:** **Not a likely cause**.  \n- **Reaso",
@@ -3878,7 +3878,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_006",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "The spooler service is running.",
     "actual_output": "**Root Cause Analysis:**\n\nThe error message **\"Print sub-system not available\"** typically indicates a failure in the **Windows Print Spooler service**, which is responsible for managing print jobs and communicating with printers. Here's the breakdown:\n\n1. **Error Context**:  \n   - The error occurs when a user attempts to print, suggesting a **system-level issue** rather than a physical or configuration problem (e.g., missing driver, printer not added, or power issues).\n\n2. **Key Component**:  \n",
@@ -4082,7 +4082,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_023",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "Client’s MAC address",
     "actual_output": "**Root Cause Analysis (RCA) for the Query:**\n\n**Context Summary:**  \nThe query asks which piece of information (WLC IP address, SSID, Client’s MAC address, or AP name) should be input on the **Monitor > Clients** page of a wireless controller (WLC) or PI (Performance Inspector) to obtain the best troubleshooting data for a specific wireless client.\n\n---\n\n### **1. Understanding the Goal**  \nThe objective is to **identify a specific wireless client** on the **Monitor > Clients** page to gather tro",
@@ -4252,7 +4252,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_020",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "EMI",
     "actual_output": "The root cause of the network communication problem is **A. EMI (Electromagnetic Interference)**. \n\n**Analysis:**  \n- The intermittent service slowdowns and outages correlate with the humming noise from the elevator machinery room, which is located adjacent to the network racks.  \n- Elevator machinery (e.g., motors, transformers) generates **electromagnetic interference (EMI)**, which can disrupt unshielded network cables (e.g., Ethernet) by inducing noise into the signals.  \n- **EMI** is a comm",
@@ -4286,7 +4286,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_014",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "Co-channel interference",
     "actual_output": "**Root Cause Analysis:**\n\n**Problem Description:**  \nTwo 802.11 transmitters are configured to broadcast on the **same channel (channel 11)**, leading to signal reception issues.  \n\n**Key Observations:**  \n- Both transmitters are using **identical frequency channels**.  \n- The interference arises from **direct competition for the same spectrum**.  \n\n**Analysis of Interference Types:**  \n- **Path interference** (A): Involves physical obstructions blocking the signal path. Not applicable here.  \n-",
@@ -4864,7 +4864,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_005",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "`130.200.130.1`",
     "actual_output": "Okay, let's see. Dylan is troubleshooting an IPv4 network with a subnet mask of 255.255.192.0. The question is asking which IP address is not on the same network as the others. The options are A through D.\n\nFirst, I need to figure out how the subnet mask divides the network. The subnet mask is 255.255.192.0. Let me convert that to binary to understand the network portion. \n\nBreaking down the subnet mask: 255.255.192.0. Each octet is 8 bits. The first two octets are 255, which is 11111111 in bina",
@@ -5000,7 +5000,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_031",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "If necessary, conduct external or internal research based on symptoms.",
     "actual_output": "**Answer:**  \n**A. Question the user and identify user changes to the computer.**\n\n**Root Cause Analysis (RCA) Explanation:**  \nWhen troubleshooting erratic behavior in a desktop computer, the first step in establishing a theory of probable cause is to gather contextual information. This includes:  \n1. **User Input:** Understanding recent changes (e.g., software installations, hardware modifications, or user actions) helps identify potential triggers for the issue.  \n2. **Symptom Correlation:** ",
@@ -5119,7 +5119,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_027",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "The CLI is prone to human error and misconfiguration.; The command line is used on a device-by-device basis.",
     "actual_output": "**Root Cause Analysis for the Question:**\n\nThe question asks why using the CLI to configure a large number of devices is difficult to scale. The correct answers are **A** and **D**, as explained below:\n\n---\n\n### **1. The CLI is prone to human error and misconfiguration (A)**  \n- **Root Cause:** Manual configuration via CLI requires repetitive, device-specific commands. Human error increases exponentially when scaling to hundreds or thousands of devices. Even minor typos or misconfigurations can ",
@@ -5153,7 +5153,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_003",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "Configure his equipment to use channel 9",
     "actual_output": "Okay, let's see. Ralph is having issues with his home 802.11n wireless network. The problem is long AP association times and poor performance. He lives in a large apartment complex, and his WiFi analyzer shows many networks using channels 1, 6, and 11 on the 2.4 GHz band. He can't use 5 GHz because his equipment doesn't support it. The question is asking what he should do to improve performance, with options A to D suggesting different channels.\n\nFirst, I need to recall how WiFi channels work on",
@@ -5238,7 +5238,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_010",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "Check the configuration of the router connecting the Local Area Network (LAN) to the Internet.",
     "actual_output": "**Root Cause Analysis (RCA) for the Help Desk Scenario:**\n\n**Context Summary:**  \nA user reports an inability to connect to the Internet. The question asks which troubleshooting step is **least likely** to be performed **first**.\n\n---\n\n### **Step-by-Step Analysis:**\n\n1. **Understanding the Problem:**  \n   The user cannot access the Internet. The goal is to identify the root cause efficiently.\n\n2. **Standard Troubleshooting Principles:**  \n   - **Isolate the issue:** Determine if the problem is l",
@@ -5374,7 +5374,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_012",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "The connection between the WAP and the router",
     "actual_output": "**Root Cause Analysis:**\n\n**Problem Summary:**  \nUsers connected to the same WAP can communicate locally (see each other) but cannot access network resources (printers, servers). Other parts of the building are unaffected, and the issue began recently.\n\n**Key Observations:**  \n1. **Local Connectivity Works:** Users can see each other, indicating the WAP and local network (e.g., IP configuration, subnet) are functioning.  \n2. **External Resources Fail:** Inability to access printers/servers sugge",
@@ -5391,7 +5391,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_001",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "Check the configuration of the router connecting the LAN to the Internet",
     "actual_output": "**Root Cause Analysis (RCA) for the Scenario:**\n\n**Problem:** A user reports an inability to connect to the Internet.  \n**Objective:** Identify the least likely first step Alice would take during troubleshooting.\n\n---\n\n### **Step 1: Understand the Context**\n- **User's Issue:** No Internet connectivity.  \n- **Standard Troubleshooting Principles:**  \n  - **Isolation:** Determine if the issue is isolated to the user or affects others.  \n  - **Scope:** Check local vs. external network problems.  \n  ",
@@ -5527,7 +5527,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_016",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "The 5 GHz frequency has more channels than the 2.4 GHz frequency.; The 5 GHz frequency conflicts with fewer common household devices than the 2.4 GHz frequency.; The 5 GHz frequency transmits at faster speeds than the 2.4 GHz frequency.",
     "actual_output": "The possible reasons why the 5 GHz frequency tends to perform better than the 2.4 GHz frequency on a wireless LAN are:\n\n**A. The 5 GHz frequency has more channels than the 2.4 GHz frequency.**  \n- **Correct.** The 5 GHz band supports more non-overlapping channels (e.g., 24-40 channels in the 5 GHz range compared to only 3 in 2.4 GHz), reducing congestion and enabling better performance in dense environments.\n\n**C. The 5 GHz frequency conflicts with fewer common household devices than the 2.4 GHz",
@@ -5544,7 +5544,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_022",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "Power cycle the device.; Forget the Wi-Fi network.; Ensure that the correct SSID was entered.",
     "actual_output": "**Root Cause Analysis and Recommended Course of Action:**\n\nThe customer's mobile device was previously working with Wi-Fi but now cannot connect. This suggests a **recent change** (e.g., network configuration, device settings, or environmental factors) rather than a hardware failure. The best steps to address this are:\n\n### **Top 3 Answers:**\n**A. Power cycle the device**  \n- **Rationale:** Restarting the device can resolve temporary software glitches or connectivity issues caused by background ",
@@ -5629,7 +5629,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_004",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "Because the fact that one of your clients has decided to leave your network for an AP you do not manage is suspicious",
     "actual_output": "**Root Cause Analysis: Why Alarms for Rogue Clients?**\n\n**Context Summary:**  \nThe query focuses on identifying the correct reason to raise alarms about a \"rogue client\" in a wired network context. The options provided (A–D) describe different scenarios, and the analysis must determine which aligns with the definition of a rogue client and its associated risks.\n\n---\n\n### **Key Definitions and Analysis:**\n\n1. **Rogue Client Definition:**  \n   A **rogue client** typically refers to an **unauthoriz",
@@ -5663,7 +5663,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_019",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "Change the channel the devices are using",
     "actual_output": "**Root Cause Analysis (RCA) for Intermittent Wireless Connection Drops on 802.11n Network**\n\n---\n\n### **1. Problem Summary**\nUsers on an 802.11n wireless network experience **intermittent connection drops**. The goal is to identify the **root cause** and determine the most effective resolution from the provided options.\n\n---\n\n### **2. Key Considerations**\n- **802.11n** operates on the **2.4 GHz band**, which is prone to **interference** from other devices (e.g., microwaves, Bluetooth, cordless p",
@@ -5782,7 +5782,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_029",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Mobile Communication Network",
     "expected_output": "Check the related system configurations",
     "actual_output": "**Answer:** B. Check the related system configurations  \n\n**Root Cause Analysis (RCA) Explanation:**  \nWhen multiple system logs show the same error message, the goal is to identify the **underlying cause** rather than addressing symptoms. Here's why **B** is the correct choice:  \n\n1. **Configuration Errors:** Recurring errors often stem from misconfigurations (e.g., incorrect parameters, protocol mismatches, or resource allocation issues). Checking configurations helps validate whether the syst",
@@ -6054,7 +6054,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_008",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "Configure your equipment to use channel 9.",
     "actual_output": "Okay, let's see. The user is having poor performance on their home 802.11n wireless network. They live in a large apartment complex, and the WiFi analyzer shows many networks using channels 1, 6, and 11 on 2.4 GHz. They can't use 5 GHz. The options are to change the channel to 10, 9, 5, or 2.\n\nFirst, I need to recall how WiFi channels work on 2.4 GHz. The 2.4 GHz band has channels 1-13, but in the US, typically 1-11 are used. Channels 1, 6, and 11 are the non-overlapping ones. But since there ar",
@@ -6139,7 +6139,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_011",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "The leaf and spine topology is less expensive to implement than the three-tier topology.",
     "actual_output": "The question asks which option is **not** a reason why the leaf and spine topology is superior to the three-tier topology. Here's the analysis:\n\n### **Key Points of Leaf and Spine vs. Three-Tier Topology**\n1. **Full Mesh Between Leaves and Spines (Option A)**:  \n   - **Correct Reason**: Leaf and spine uses a **partial mesh** (each leaf connects to every spine, but spines do not connect to each other). This design avoids bottlenecks and ensures redundancy, unlike the three-tier topology.  \n   - *",
@@ -6173,7 +6173,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_032",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "Speed mismatch; TX/RX reversal; Bad switch port",
     "actual_output": "**Root Cause Analysis for Wired Network Connection Failure**  \nThe question asks which wired network problems **cause a complete failure** of a network connection. Here's the breakdown of each option:\n\n---\n\n### **Correct Answers (Cause Complete Failure):**  \n**C. Duplex Mismatch**  \n- **Explanation**: A duplex mismatch occurs when one device is configured for full-duplex and the other for half-duplex. This leads to **collisions**, **data corruption**, and **complete loss of communication** becau",
@@ -6309,7 +6309,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_007",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "The routing table does not specify a default gateway address.",
     "actual_output": "**Root Cause Analysis:**\n\nThe user's inability to access the Internet, despite being able to access local network resources, stems from a missing **default gateway** in the routing table. Here's the breakdown:\n\n1. **Routing Table Analysis:**\n   - The routing table includes entries for the local network (`192.168.2.0/24`) and the loopback interface (`127.0.0.0/8`), which are necessary for local communication and loopback testing.\n   - **No default gateway** (`0.0.0.0/0`) is present. This route is",
@@ -6411,7 +6411,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_009",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "Check the server console for user connections.",
     "actual_output": "**Answer:** B. Check the server console for user connections.\n\n**Root Cause Analysis Explanation:**\n\n1. **Objective:** Determine whether the issue lies with the **workstations**, **network**, or **server**.\n2. **Option B (Check server console for user connections):**\n   - **Server-Side Verification:** By examining the server's logs or console, you can confirm if login attempts are being received. If the server is **not logging any connection attempts**, the issue is likely **network** or **works",
@@ -6428,7 +6428,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_026",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "WAP",
     "actual_output": "**Root Cause Analysis:**\n\n**Problem Statement:**  \nLaptop users cannot connect to websites, while desktop users experience no issues.  \n\n**Key Observations:**  \n1. **Device-Specific Issue:** The problem is isolated to laptops, not desktops.  \n2. **Connectivity Scope:** The issue affects **Internet access** (website connectivity), not local network resources.  \n3. **Exclusion of Broad Network Failures:** Since desktops (wired devices) work, the root cause is unlikely to be a router, cable modem, ",
@@ -6547,7 +6547,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_017",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "The DHCPv4 scope is exhausted.",
     "actual_output": "**Root Cause Analysis:**\n\nThe workstation is unable to access the network, and the `ipconfig /all` output reveals that the device has assigned itself a **link-local IPv4 address (169.254.203.42)** with a **subnet mask of 255.255.0.0**. This is a clear indicator of **Automatic Private IP Addressing (APIPA)**, which occurs when a device cannot obtain an IP address from a DHCP server. \n\n### Key Observations:\n1. **Link-local IP Address (169.254.x.x):**  \n   This confirms the device failed to obtain ",
@@ -6581,7 +6581,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_002",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "In a leaf and spine topology, all data flows require the same number of hops.; The leaf and spine arrangement uses a full mesh switching topology.; The leaf and spine topology uses software-defined networking to direct traffic, rather than blocking ports using the spanning tree protocol.",
     "actual_output": "The valid reasons why the leaf and spine topology is superior to the standard three-tier topology are:\n\n**B. In a leaf and spine topology, all data flows require the same number of hops.**  \n- **Explanation**: In a leaf and spine design, all traffic between endpoints traverses exactly two hops (leaf-to-spine-to-leaf), ensuring predictable latency and eliminating the variable hop counts found in three-tier topologies (which may involve multiple hops through access, aggregation, and core layers).\n",
@@ -6615,7 +6615,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_033",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "Increase the WAP's power setting.; Choose a different channel.",
     "actual_output": "**Root Cause Analysis and Correct Answers:**\n\n**Root Cause:**  \nThe Wi-Fi network is experiencing **interference**, likely due to **channel congestion** (e.g., multiple devices or networks using the same channel) or **physical obstructions**. This causes **poor performance and instability**.\n\n---\n\n**Analysis of Options:**\n\n- **A. Enable SSID broadcast**  \n  - **Effect:** Makes the network visible to devices, but **does not address interference**. In fact, it may increase the number of devices at",
@@ -6666,7 +6666,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_028",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "Ensure that this computer is set to obtain an IP address automatically.",
     "actual_output": "**Root Cause Analysis and Recommended Action:**\n\n**Root Cause:**  \nThe duplicate IP error likely stems from a misconfiguration where the affected device is **not properly obtaining an IP address via DHCP**, leading to a conflict with another device (either another client using a static IP or a misconfigured DHCP assignment). This could occur if the device is set to use a **static IP address** instead of relying on the DHCP server, or if the DHCP server is malfunctioning (e.g., lease conflicts, I",
@@ -6785,7 +6785,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_013",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "Default gateway down",
     "actual_output": "**Root Cause Analysis:**\n\n**Problem:** Users cannot access the Internet or a corporate server, but can print locally. Other users in the area experience the same issue. No error messages are reported.\n\n**Key Observations:**\n1. **Local Connectivity Works (Printing):** The ability to print indicates that the local network (e.g., physical connections, switches, and local subnet) is functional. This rules out issues like network card failure or local IP configuration errors that would disrupt all co",
@@ -7023,7 +7023,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_015",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "`netstat`",
     "actual_output": "**Root Cause Analysis (RCA) for the Query:**\n\n**1. Problem Statement:**  \nThe user is troubleshooting a PC and needs to identify active TCP connections and their associated IP addresses. They are unsure which command-line utility to use for this purpose.\n\n**2. Key Observations:**  \n- The question asks for a tool to **view statistics on network interfaces**, specifically **TCP connections and their IP addresses**.  \n- The provided options include utilities with distinct purposes:  \n  - **`ping`**",
@@ -7040,7 +7040,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_024",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "Tone generator and probe",
     "actual_output": "**Root Cause Analysis (RCA) for the Network Connectivity Issue**  \n**Context:** The user is troubleshooting network connectivity issues in a building section and suspects mislabeled network cables in the wiring closet.  \n\n---\n\n### **1. Problem Statement**  \nNetwork connectivity issues in a specific building section are suspected to stem from **mislabeled network cables** in the wiring closet.  \n\n---\n\n### **2. Objective**  \nIdentify the **most appropriate tool** to test the theory of mislabeled c",
@@ -7091,7 +7091,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_018",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "The Cisco router; One of the Linux web servers",
     "actual_output": "**Root Cause Analysis:**\n\nThe issue stems from identifying which systems on the perimeter network can execute the `traceroute` command to diagnose network communication failures. Here's the breakdown:\n\n1. **Understanding `traceroute`:**  \n   The `traceroute` command (or `tracert` on Windows) is executed from a **host** (a device with an IP address and network stack) to trace the path packets take to reach a destination. It requires the system to send and receive ICMP or UDP packets, which is not",
@@ -7176,7 +7176,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_021",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "Configure a display filter",
     "actual_output": "**Root Cause Analysis:**\n\n**Problem:**  \nAlice is overwhelmed by an excessive number of frames (15,000+) in her protocol analyzer's capture buffer, making it difficult to identify frames relevant to the communication issue between two hosts.\n\n**Root Cause:**  \nThe protocol analyzer is capturing **all network traffic** on the network, including irrelevant frames from other devices. This results in a large, unmanageable dataset that obscures the specific traffic between the two hosts Alice is trou",
@@ -7295,7 +7295,7 @@
   {
     "test_id": "RCA_OPSEVAL_RM_030",
     "model": "qwen3:14b",
-    "task_type": "rca",
+    "task_type": "qa_mcq",
     "source": "opseval_remine_Wired Network",
     "expected_output": "The Windows-based firewall; The Cisco router; One of the Linux web servers",
     "actual_output": "**Root Cause Analysis:**\n\n**Question:**  \nWhich systems might Ralph be working on when he executed `ping 192.168.1.76`?\n\n**Context Breakdown:**  \n- **Perimeter Network Components:**  \n  - 5 Linux web servers  \n  - Cisco router  \n  - CSU/DSU (leased line connection)  \n  - Windows-based firewall  \n\n**Key Considerations:**  \n1. **IP Address (192.168.1.76):**  \n   - This is a **private IP** (RFC 1918) typically used within **internal networks** (e.g., LANs, DMZs).  \n   - It is **not a public IP**, s",
