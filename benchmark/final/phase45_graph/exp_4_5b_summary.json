@@ -1,0 +1,43 @@
+{
+  "experiment": "4.5b",
+  "description": "Homogeneous LEMMA 5-fold CV",
+  "n_lemma_cases": 80,
+  "n_folds": 5,
+  "fold_size": 16,
+  "without_graph_acc": 100.0,
+  "with_graph_acc": 100.0,
+  "delta_pp": 0.0,
+  "fold_results": [
+    {
+      "fold": 1,
+      "n": 16,
+      "no_graph": 100.0,
+      "with_graph": 100.0
+    },
+    {
+      "fold": 2,
+      "n": 16,
+      "no_graph": 100.0,
+      "with_graph": 100.0
+    },
+    {
+      "fold": 3,
+      "n": 16,
+      "no_graph": 100.0,
+      "with_graph": 100.0
+    },
+    {
+      "fold": 4,
+      "n": 16,
+      "no_graph": 100.0,
+      "with_graph": 100.0
+    },
+    {
+      "fold": 5,
+      "n": 16,
+      "no_graph": 100.0,
+      "with_graph": 100.0
+    }
+  ],
+  "timestamp": "2026-05-25T22:11:33.599400"
+}

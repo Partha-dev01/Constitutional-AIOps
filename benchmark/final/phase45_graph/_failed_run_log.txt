@@ -1,0 +1,118 @@
+# Phase 4.5 Failed Run — Forensic Log
+
+**Run launched**: 2026-05-25 20:48:02 UTC (session 19, after hibernation)
+**Run crashed**: 2026-05-25 22:11:33 UTC (script touched .FAIL marker)
+**Instance**: i-091c4de0e95d63154 (g6.xlarge, L4 24GB)
+**Tmux session**: `phase45` (gone by session 20 SSH; tee touched .FAIL on exit)
+**Launch script**: `/tmp/launch_phase45.sh` (PYTHONUNBUFFERED=1 + python3 -u + tee + pipe-pane sidecar)
+**Marker file present**: `/mnt/runs/phase45_20260525T204802Z.FAIL` (0 bytes)
+**Log file**: `/mnt/runs/phase45_20260525T204802Z.log` (block-buffered tee output)
+**Pane log**: `/mnt/runs/phase45_pane.log` (unbuffered sidecar via tmux pipe-pane)
+
+## Outcome
+
+- 4.5b (Homogeneous LEMMA 5-fold CV): **COMPLETED** computationally; all 5 folds returned 100/100
+  - Aggregate written to `exp_4_5b_summary.json` (757 bytes — VALID, source of truth for paper)
+  - Per-case JSONLs failed to write (0 bytes each) — see crash below
+- 4.5c (Cold-start curve): **NEVER RAN** — crash in 4.5b post-processing pre-empted control flow
+  - The `exp_4_5c_summary.json` on disk (mtime 2026-05-25 10:06 UTC) is **STALE leftover from session-17 attempt** — all zeros; DO NOT USE
+
+## Decision (locked PATH 4)
+
+- 4.5b |Δ| = 0 pp (fails decision threshold of ≥ 2 pp)
+- 4.5c never ran (cannot satisfy ≥ 3 pp threshold)
+- → PATH 4 fires: drop both rows from sandbox `tab:graphsub`, add 1-sentence disclosure in §4.5 paper prose
+
+## Bug — D-17 (sister of D-16)
+
+Lines 172 + 174 of `benchmark/scripts/run/run_graph_experiments.py` called `json.dumps(r)` on
+`TestCaseResult` dataclass instances (returned from `BenchmarkRunner.run_benchmark().test_results`).
+Dataclasses are not natively JSON-serializable.
+
+**Patched** session 20: imported `dataclasses`, replaced `json.dumps(r)` with
+`json.dumps(dataclasses.asdict(r), default=str)` at both call sites. See BUG_HISTORY.md D-17.
+
+D-16 fixed the dataclass attribute-access issue (`r.correct` not `r.get("correct")`) at 6 sites;
+this site (file-write) was missed because it's downstream of attribute-access.
+
+## Captured log tail (pane.log, last ~50 lines — full log on instance EBS preserved)
+
+```
+  Fold 1/5: 16 test cases (idx 0-16)
+    Running without-graph...
+    Running with-graph...
+    Fold 1: no-graph=100.0%  with-graph=100.0%
+
+  Fold 2/5: 16 test cases (idx 16-32)
+    Running without-graph...
+    Running with-graph...
+    Fold 2: no-graph=100.0%  with-graph=100.0%
+
+  Fold 3/5: 16 test cases (idx 32-48)
+    Running without-graph...
+    Running with-graph...
+    Fold 3: no-graph=100.0%  with-graph=100.0%
+
+  Fold 4/5: 16 test cases (idx 48-64)
+    Running without-graph...
+    Running with-graph...
+    Fold 4: no-graph=100.0%  with-graph=100.0%
+
+  Fold 5/5: 16 test cases (idx 64-80)
+    Running without-graph...
+    Running with-graph...
+    Fold 5: no-graph=100.0%  with-graph=100.0%
+
+  RESULT: no-graph=100.0%  with-graph=100.0%  delta=+0.0pp
+Traceback (most recent call last):
+  File "/mnt/aiops-repo/benchmark/scripts/run/run_graph_experiments.py", line 281, in <module>
+    asyncio.run(main())
+  File "/usr/lib/python3.10/asyncio/runners.py", line 44, in run
+    return loop.run_until_complete(main)
+  File "/usr/lib/python3.10/asyncio/base_events.py", line 649, in run_until_complete
+    return future.result()
+  File "/mnt/aiops-repo/benchmark/scripts/run/run_graph_experiments.py", line 273, in main
+    await exp_4_5b(lemma_cases, args.out)
+  File "/mnt/aiops-repo/benchmark/scripts/run/run_graph_experiments.py", line 172, in exp_4_5b
+    "\n".join(json.dumps(r) for r in wo_all), encoding="utf-8")
+  File "/mnt/aiops-repo/benchmark/scripts/run/run_graph_experiments.py", line 172, in <genexpr>
+    "\n".join(json.dumps(r) for r in wo_all), encoding="utf-8")
+  File "/usr/lib/python3.10/json/__init__.py", line 231, in dumps
+    return _default_encoder.encode(obj)
+  File "/usr/lib/python3.10/json/encoder.py", line 199, in encode
+    chunks = self.iterencode(o, _one_shot=True)
+  File "/usr/lib/python3.10/json/encoder.py", line 257, in iterencode
+    return _iterencode(o, 0)
+  File "/usr/lib/python3.10/json/encoder.py", line 179, in default
+    raise TypeError(f'Object of type {o.__class__.__name__} '
+TypeError: Object of type TestCaseResult is not JSON serializable
+---SCRIPT EXITED code=1 at <timestamp>---
+```
+
+## Sanity-validation (session 20, before AWS wrap)
+
+- 4.5b summary JSON schema: experiment="4.5b", n_folds=5, fold_results length=5, all fold accs in [0,100] ✅
+- Ceiling effect confirmed: all 5 folds = (no_graph=100, with_graph=100), unique values per side = {100.0} ✅
+- 4.5c summary JSON: stale (mtime 2026-05-25 10:06 = session-17), all-zero curve ❌ IGNORE
+- Per-fold JSONL: 0 bytes (crash) — acceptable, summary aggregate is sufficient for the paper
+- Neo4j `_cold_start` episode leftover: 0 ✅ (no cleanup needed; ceiling-effect happened before 4.5c)
+- Neo4j total Episode count: 431 ✅ (graph context was actually injected during with-graph rounds — saturating result is real, not a retrieval bug)
+
+## AWS final state (session 20 wrap)
+
+- Instance i-091c4de0e95d63154: **stopped** at 2026-05-26 05:19:47 GMT (verified via `aws ec2 wait instance-stopped`)
+- CloudWatch alarm `aiops-idle-stop`: re-enabled (ActionsEnabled=True), action `arn:aws:automate:us-east-1:ec2:stop`
+- EIP 44.195.172.165: retained, attached to stopped instance (free)
+- EBS volumes vol-01714af69faebb973 (80GB root) + vol-0ff075a7541026572 (100GB data): preserved, in-use
+- Cost delta this run cycle: instance was on ~8.5h × $0.80/hr ≈ $6.80 extra (CW alarm was disabled pre-launch and never re-armed during the run — would have auto-stopped ~21:00 UTC otherwise)
+- Cumulative AWS spend: ~$48 → ~$55 of $120 ceiling (still 46% used)
+
+## What's preserved on EBS (retrievable on next instance start)
+
+- Full unbuffered pane log: `/mnt/runs/phase45_pane.log`
+- Full buffered tee log: `/mnt/runs/phase45_20260525T204802Z.log`
+- Both summary JSONs (already scp'd to laptop): `/mnt/aiops-repo/benchmark/final/phase45_graph/*`
+- Run script: `/tmp/launch_phase45.sh`
+- Neo4j data (431 episodes, no _cold_start leftover): inside `aiops-neo4j` Docker container volume
+
+No re-run required for the paper (PATH 4 locked). EBS retention is for forensic continuity only.

@@ -1,0 +1,32 @@
+{
+  "experiment": "4.5c",
+  "description": "Cold-start curve on LEMMA-RCA",
+  "test_cases": 20,
+  "curve": [
+    {
+      "n": 0,
+      "acc": 0.0,
+      "correct": 0,
+      "total": 0
+    },
+    {
+      "n": 20,
+      "acc": 0.0,
+      "correct": 0,
+      "total": 0
+    },
+    {
+      "n": 40,
+      "acc": 0.0,
+      "correct": 0,
+      "total": 0
+    },
+    {
+      "n": 60,
+      "acc": 0.0,
+      "correct": 0,
+      "total": 0
+    }
+  ],
+  "timestamp": "2026-05-25T10:06:15.346169"
+}
