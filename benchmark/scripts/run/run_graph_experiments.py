@@ -29,6 +29,7 @@ Requirements:
 from __future__ import annotations
 import argparse
 import asyncio
+import dataclasses
 import json
 import os
 import sys
@@ -42,6 +43,18 @@ LEMMA_SOURCE = "lemma_rca_cloud"
 
 
 def load_lemma_cases(dataset_path: Path) -> list[dict]:
+    # D-14 (2026-05-26): backward-compat fallback to pre-Stage-B-reorg layout
+    # so the script works on instances that still have the old
+    # `benchmark/datasets/processed/<name>.json` path.
+    if not dataset_path.exists():
+        alt = dataset_path.parent.parent / "datasets" / "processed" / dataset_path.name
+        if alt.exists():
+            dataset_path = alt
+        else:
+            raise FileNotFoundError(
+                f"Dataset not found at {dataset_path} or fallback {alt}. "
+                "Pass --dataset explicitly to point at the current canonical file."
+            )
     raw = json.loads(dataset_path.read_text(encoding="utf-8"))
     cases = raw.get("test_cases", raw) if isinstance(raw, dict) else raw
     return [c for c in cases if LEMMA_SOURCE in c.get("source", "")]
@@ -70,7 +83,7 @@ async def run_rca_cases(cases: list[dict], inject_graph: bool, label: str) -> li
     # Write a temp dataset file
     tmp = ROOT / "benchmark" / "results" / f"_tmp_{label}.json"
     tmp.parent.mkdir(parents=True, exist_ok=True)
-    tmp.write_text(json.dumps(cases), encoding="utf-8")
+    tmp.write_text(json.dumps({"test_cases": cases}), encoding="utf-8")
 
     cfg = BenchmarkConfig(
         model_name="constitutional_aiops",
@@ -129,15 +142,15 @@ async def exp_4_5b(lemma_cases: list[dict], out_dir: Path) -> dict:
         wg = await run_rca_cases(test_cases, inject_graph=True, label=f"f{fold_idx}_yes")
         fold_results["with_graph"].extend(wg)
 
-        wo_acc = sum(1 for r in wo if r.get("correct")) / max(len(wo), 1)
-        wg_acc = sum(1 for r in wg if r.get("correct")) / max(len(wg), 1)
+        wo_acc = sum(1 for r in wo if r.correct) / max(len(wo), 1)
+        wg_acc = sum(1 for r in wg if r.correct) / max(len(wg), 1)
         fold_accs.append({"fold": fold_idx+1, "n": len(test_cases), "no_graph": round(wo_acc*100,1), "with_graph": round(wg_acc*100,1)})
         print(f"    Fold {fold_idx+1}: no-graph={wo_acc*100:.1f}%  with-graph={wg_acc*100:.1f}%")
 
     wo_all = fold_results["without_graph"]
     wg_all = fold_results["with_graph"]
-    wo_total = sum(1 for r in wo_all if r.get("correct"))
-    wg_total = sum(1 for r in wg_all if r.get("correct"))
+    wo_total = sum(1 for r in wo_all if r.correct)
+    wg_total = sum(1 for r in wg_all if r.correct)
     n_test = len(wo_all)
 
     summary = {
@@ -156,10 +169,13 @@ async def exp_4_5b(lemma_cases: list[dict], out_dir: Path) -> dict:
 
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "exp_4_5b_summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
+    # D-17 (2026-05-26 session 20): wo_all/wg_all elements are TestCaseResult dataclass
+    # instances, not dicts. json.dumps(r) raises TypeError. Convert via asdict; default=str
+    # handles any nested enum/datetime/Path. Sister bug to D-16 (different call site).
     (out_dir / "exp_4_5b_no_graph.jsonl").write_text(
-        "\n".join(json.dumps(r) for r in wo_all), encoding="utf-8")
+        "\n".join(json.dumps(dataclasses.asdict(r), default=str) for r in wo_all), encoding="utf-8")
     (out_dir / "exp_4_5b_with_graph.jsonl").write_text(
-        "\n".join(json.dumps(r) for r in wg_all), encoding="utf-8")
+        "\n".join(json.dumps(dataclasses.asdict(r), default=str) for r in wg_all), encoding="utf-8")
     print(f"  Saved to {out_dir}/")
     return summary
 
@@ -218,8 +234,8 @@ async def exp_4_5c(lemma_cases: list[dict], out_dir: Path) -> dict:
 
             print(f"    Inserted {n_episodes} cold-start episodes. Running {len(test_cases)} test cases...")
             results = await run_rca_cases(test_cases, inject_graph=True, label=f"cs_n{n_episodes}")
-            acc = sum(1 for r in results if r.get("correct")) / max(len(results), 1)
-            curve.append({"n": n_episodes, "acc": round(acc * 100, 1), "correct": sum(1 for r in results if r.get("correct")), "total": len(results)})
+            acc = sum(1 for r in results if r.correct) / max(len(results), 1)
+            curve.append({"n": n_episodes, "acc": round(acc * 100, 1), "correct": sum(1 for r in results if r.correct), "total": len(results)})
             print(f"    N={n_episodes}: acc={acc*100:.1f}%")
 
         # Clean up temp cold-start nodes

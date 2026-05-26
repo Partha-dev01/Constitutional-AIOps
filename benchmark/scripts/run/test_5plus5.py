@@ -9,7 +9,7 @@ Uses qwen3:4b-instruct for annotation and qwen3:14b for RCA.
 
 Usage:
     python benchmark/scripts/run/test_5plus5.py                       # Default curated_150
-    python benchmark/scripts/run/test_5plus5.py --dataset benchmark_500_seed42.json
+    python benchmark/scripts/run/test_5plus5.py --dataset benchmark/intermediate/datasets/benchmark_431_seed42.json
     python benchmark/scripts/run/test_5plus5.py --dataset latest      # Auto-detect latest
     python benchmark/scripts/run/test_5plus5.py --ann=5 --rca=5       # Quick smoke (equals form)
     python benchmark/scripts/run/test_5plus5.py --ann 5 --rca 5       # Quick smoke (space form)
