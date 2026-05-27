@@ -13,7 +13,7 @@ _Generated: 2026-05-25 (session 16). Baseline: `CV_PASS2_CODEBASE_AUDIT.md` Part
 | `raw/` | Third-party + mining outputs (gitignored mirrors) | 97 | 6.59 MB | `raw/README.md`, `loghub/`, `opseval/`, `lemma_rca/` |
 | `intermediate/` | Processed datasets + candidates (tracked) | 13 | 1.63 MB | `intermediate/README.md`, `datasets/benchmark_431_seed42.json` (canonical paper dataset) |
 | `final/` | Paper-ready results + audit + docs | 64 | 7.59 MB | `final/SUMMARY.md`, `final/MANIFEST.md`, `final/AUDIT_REPORT.md`, `final/audit/`, `final/docs/` |
-| `archive/` | Historical / superseded artifacts | 207 | 21.38 MB | `archive/README.md`, `originals_2026-05-19/`, `v0.9.1_jarvis_baseline/`, `raw_pre_reorg_mirrors/` (session 33) |
+| `archive/` | Historical / superseded artifacts | 233 | 21.71 MB | `archive/README.md`, `originals_2026-05-19/`, `v0.9.1_jarvis_baseline/`, `raw_pre_reorg_mirrors/` (session 33), `really_old_benchmark/` (session 35) |
 | `scripts/` | 34 Python scripts in 5 sub-folders + README | 40 | 427.9 KB | `scripts/README.md`, `prep/`, `run/`, `eval/`, `ops/`, `_dev/` |
 | **TOTAL** | | **422** | **37.62 MB** | |
 
@@ -22,6 +22,8 @@ Walk methodology: `find benchmark -type f` (excluding `__pycache__`, `.git`, `no
 **Session 33 (2026-05-27) — Phase 5 Topology Option A sub-commit A2**: 3 stale raw-mining mirrors (`apache_candidates.jsonl`, `openssh_candidates.jsonl`, `opseval_remine_s2.jsonl`) moved from `raw/` → `archive/raw_pre_reorg_mirrors/` (+1 `_NOTICE.md`). Net: raw 100→97, archive 203→207 (+4). Total count unchanged.
 
 **Session 33 (2026-05-27) — Phase 5 Topology Option A sub-commit A3**: top-level `INDEX_BUILD_REPORT.md` relocated to `final/audit/SESSION_16_INDEX_BUILD_REPORT.md` (R100 git rename) to co-locate with the rest of the session-16 forensic record and match the `SESSION_NN_*.md` audit-dir convention. Net: top-level `.md` count goes from 3 to 2 (`HANDOFF.md` + `INDEX.md` remain); final/ count goes from 64 to 65 (this file). Per-file enumeration in §2.final is intentionally not extended for session-NN audit/handoff docs (consistent with the existing convention there).
+
+**Session 35 (2026-05-27) — Archive long-stale top-level scratch dir**: legacy 25-file `really old benchmark/` (340 KB, all timestamps 2026-02-06; an early N=10 benchmark + ablation scratch from pre-D-1 development) moved from repo root → `archive/really_old_benchmark/` (+1 `_NOTICE.md`). Net: archive 207→233 (+26 — the 25 source files entered git tracking for the first time, plus 1 `_NOTICE.md`). Total `benchmark/` file count grew by 26 since these files were previously untracked at repo root.
 
 ## §2 Per-file index
 

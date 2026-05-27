@@ -1,0 +1,15 @@
+\begin{table}[h]
+\centering
+\caption{Ablation Study: Component Contributions}
+\label{tab:ablation}
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Configuration} & \textbf{Ann Acc} & \textbf{RCA Acc} & \textbf{BERT-F1} & \textbf{Avg Latency} & \textbf{$\Delta$ vs Full} \\
+\midrule
+Full System (Hybrid dual-agent baseline) & 100.0\% & 80.0\% & 0.424 & 8485ms & - \\
+Single Agent - Qwen3-4B for both annotation and RCA & 100.0\% & 80.0\% & 0.425 & 8504ms & +0.0\% \\
+Single Agent - Qwen3-14B for both annotation and RCA & 100.0\% & 80.0\% & 0.417 & 9161ms & +0.0\% \\
+No Structured Output - raw text, no JSON metadata extraction & 100.0\% & 100.0\% & 0.420 & 8444ms & +10.0\% \\
+\bottomrule
+\end{tabular}
+\end{table}

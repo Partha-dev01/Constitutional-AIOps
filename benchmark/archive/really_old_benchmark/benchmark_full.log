@@ -1,0 +1,954 @@
+[INFO] Running on Jarvis Labs - using localhost:6006 Ollama
+======================================================================
+CONSTITUTIONAL AIOPS - BENCHMARK TEST
+======================================================================
+Timestamp: 2026-02-06T12:08:52.726737
+Fast Model:      qwen3:4b-instruct
+Reasoning Model: qwen3:14b
+Endpoint:        http://localhost:6006
+Dataset:         curated 150-sample (seed=42, English only)
+Test counts:     100 annotation + 50 RCA
+======================================================================
+
+[STARTING] 5+5 benchmark...
+   [ANNOTATION] 1/100
+   [ANNOTATION] 2/100
+   [ANNOTATION] 3/100
+   [ANNOTATION] 4/100
+   [ANNOTATION] 5/100
+   [ANNOTATION] 6/100
+   [ANNOTATION] 7/100
+   [ANNOTATION] 8/100
+   [ANNOTATION] 9/100
+   [ANNOTATION] 10/100
+   [ANNOTATION] 11/100
+   [ANNOTATION] 12/100
+   [ANNOTATION] 13/100
+   [ANNOTATION] 14/100
+   [ANNOTATION] 15/100
+   [ANNOTATION] 16/100
+   [ANNOTATION] 17/100
+   [ANNOTATION] 18/100
+   [ANNOTATION] 19/100
+   [ANNOTATION] 20/100
+   [ANNOTATION] 21/100
+   [ANNOTATION] 22/100
+   [ANNOTATION] 23/100
+   [ANNOTATION] 24/100
+   [ANNOTATION] 25/100
+   [ANNOTATION] 26/100
+   [ANNOTATION] 27/100
+   [ANNOTATION] 28/100
+   [ANNOTATION] 29/100
+   [ANNOTATION] 30/100
+   [ANNOTATION] 31/100
+   [ANNOTATION] 32/100
+   [ANNOTATION] 33/100
+   [ANNOTATION] 34/100
+   [ANNOTATION] 35/100
+   [ANNOTATION] 36/100
+   [ANNOTATION] 37/100
+   [ANNOTATION] 38/100
+   [ANNOTATION] 39/100
+   [ANNOTATION] 40/100
+   [ANNOTATION] 41/100
+   [ANNOTATION] 42/100
+   [ANNOTATION] 43/100
+   [ANNOTATION] 44/100
+   [ANNOTATION] 45/100
+   [ANNOTATION] 46/100
+   [ANNOTATION] 47/100
+   [ANNOTATION] 48/100
+   [ANNOTATION] 49/100
+   [ANNOTATION] 50/100
+   [ANNOTATION] 51/100
+   [ANNOTATION] 52/100
+   [ANNOTATION] 53/100
+   [ANNOTATION] 54/100
+   [ANNOTATION] 55/100
+   [ANNOTATION] 56/100
+   [ANNOTATION] 57/100
+   [ANNOTATION] 58/100
+   [ANNOTATION] 59/100
+   [ANNOTATION] 60/100
+   [ANNOTATION] 61/100
+   [ANNOTATION] 62/100
+   [ANNOTATION] 63/100
+   [ANNOTATION] 64/100
+   [ANNOTATION] 65/100
+   [ANNOTATION] 66/100
+   [ANNOTATION] 67/100
+   [ANNOTATION] 68/100
+   [ANNOTATION] 69/100
+   [ANNOTATION] 70/100
+   [ANNOTATION] 71/100
+   [ANNOTATION] 72/100
+   [ANNOTATION] 73/100
+   [ANNOTATION] 74/100
+   [ANNOTATION] 75/100
+   [ANNOTATION] 76/100
+   [ANNOTATION] 77/100
+   [ANNOTATION] 78/100
+   [ANNOTATION] 79/100
+   [ANNOTATION] 80/100
+   [ANNOTATION] 81/100
+   [ANNOTATION] 82/100
+   [ANNOTATION] 83/100
+   [ANNOTATION] 84/100
+   [ANNOTATION] 85/100
+   [ANNOTATION] 86/100
+   [ANNOTATION] 87/100
+   [ANNOTATION] 88/100
+   [ANNOTATION] 89/100
+   [ANNOTATION] 90/100
+   [ANNOTATION] 91/100
+   [ANNOTATION] 92/100
+   [ANNOTATION] 93/100
+   [ANNOTATION] 94/100
+   [ANNOTATION] 95/100
+   [ANNOTATION] 96/100
+   [ANNOTATION] 97/100
+   [ANNOTATION] 98/100
+   [ANNOTATION] 99/100
+   [ANNOTATION] 100/100
+   [RCA] 1/50
+   [RCA] 2/50
+   [RCA] 3/50
+   [RCA] 4/50
+   [RCA] 5/50
+   [RCA] 6/50
+   [RCA] 7/50
+   [RCA] 8/50
+   [RCA] 9/50
+   [RCA] 10/50
+   [RCA] 11/50
+   [RCA] 12/50
+   [RCA] 13/50
+   [RCA] 14/50
+   [RCA] 15/50
+   [RCA] 16/50
+   [RCA] 17/50
+   [RCA] 18/50
+   [RCA] 19/50
+   [RCA] 20/50
+   [RCA] 21/50
+   [RCA] 22/50
+   [RCA] 23/50
+   [RCA] 24/50
+   [RCA] 25/50
+   [RCA] 26/50
+   [RCA] 27/50
+   [RCA] 28/50
+   [RCA] 29/50
+   [RCA] 30/50
+   [RCA] 31/50
+   [RCA] 32/50
+   [RCA] 33/50
+   [RCA] 34/50
+   [RCA] 35/50
+   [RCA] 36/50
+   [RCA] 37/50
+   [RCA] 38/50
+   [RCA] 39/50
+   [RCA] 40/50
+   [RCA] 41/50
+   [RCA] 42/50
+   [RCA] 43/50
+   [RCA] 44/50
+   [RCA] 45/50
+   [RCA] 46/50
+   [RCA] 47/50
+   [RCA] 48/50
+   [RCA] 49/50
+   [RCA] 50/50
+
+======================================================================
+RESULTS SUMMARY
+======================================================================
+Status:              completed
+Total Tests:         150
+Passed:              132
+Annotation Accuracy: 89.00%
+RCA Accuracy:        86.00%
+Avg Latency:         7204.16ms
+P50 Latency:         2857.05ms
+P95 Latency:         22027.79ms
+Network RTT:         2.52ms
+======================================================================
+
+--- ANNOTATION TESTS (89/100 passed) ---
+
+   [PASS] ANN_083 (2188ms)
+         Expected: {"anomaly_detected": true, "severity": "warning", "category": "error", "classification": "warn"}
+         Actual:   A warning was logged in the HDFS DataNode indicating an exception occurred while serving a block to a client, which may indicate a data transfer issue or node instability.
+
+   [PASS] ANN_023 (2102ms)
+         Expected: {"anomaly_detected": false, "severity": "info", "category": "normal", "classification": "info"}
+         Actual:   A block is being marked as invalid in the HDFS NameSystem, which is a normal operational event during block cleanup or recovery.
+
+   [PASS] ANN_007 (1663ms)
+         Expected: {"anomaly_detected": false, "severity": "info", "category": "normal", "classification": "info"}
+         Actual:   Normal HDFS block allocation operation detected in DataNode log. The system is allocating a block for a temporary file during job execution, which is expected behavior in distributed file system opera
+
+   [PASS] ANN_028 (1785ms)
+         Expected: {"anomaly_detected": false, "severity": "info", "category": "normal", "classification": "info"}
+         Actual:   Normal data transfer activity observed between DataNode peers in HDFS. No errors or anomalies detected.
+
+   [PASS] ANN_037 (1983ms)
+         Expected: {"anomaly_detected": false, "severity": "info", "category": "normal", "classification": "info"}
+         Actual:   A block is being marked as invalid in the HDFS NameSystem, which is a normal operational event during block cleanup or recovery.
+
+   [PASS] ANN_168 (1990ms)
+         Expected: {"anomaly_detected": true, "severity": "critical", "category": "error", "classification": "alert"}
+         Actual:   Received unexpected packet type (3) instead of expected type (57) on tree network, indicating a protocol mismatch or hardware-level communication failure in BlueGene/L supercomputer.
+
+   [PASS] ANN_067 (2174ms)
+         Expected: {"anomaly_detected": true, "severity": "warning", "category": "error", "classification": "warn"}
+         Actual:   DataNode encountered an exception while serving a block to a client, indicating a potential data transfer failure in HDFS.
+
+   [PASS] ANN_054 (2092ms)
+         Expected: {"anomaly_detected": true, "severity": "warning", "category": "error", "classification": "warn"}
+         Actual:   A warning exception occurred while serving a block to a DataNode in HDFS, indicating a potential data transfer failure or network issue.
+
+   [PASS] ANN_059 (2272ms)
+         Expected: {"anomaly_detected": true, "severity": "warning", "category": "error", "classification": "warn"}
+         Actual:   DataNode encountered an exception while serving a block to a client, indicating a potential data transfer failure in HDFS.
+
+   [PASS] ANN_077 (2029ms)
+         Expected: {"anomaly_detected": true, "severity": "warning", "category": "error", "classification": "warn"}
+         Actual:   A warning exception occurred while serving a block to a DataNode in HDFS, indicating a potential data transfer issue.
+
+   [PASS] ANN_090 (2068ms)
+         Expected: {"anomaly_detected": true, "severity": "warning", "category": "error", "classification": "warn"}
+         Actual:   DataNode encountered an exception while serving a block to a client, indicating a potential data transfer failure in HDFS.
+
+   [PASS] ANN_100 (4236ms)
+         Expected: {"anomaly_detected": true, "severity": "warning", "category": "error", "classification": "warn"}
+         Actual:   A warning was logged in the HDFS DataNode indicating an exception occurred while serving a block to a client, which may indicate a data transfer issue or node instability.
+
+   [PASS] ANN_086 (3746ms)
+         Expected: {"anomaly_detected": true, "severity": "warning", "category": "error", "classification": "warn"}
+         Actual:   A warning was logged in the HDFS DataNode indicating an exception occurred while serving a block to a client, which may indicate a data transfer issue or node instability.
+
+   [PASS] ANN_171 (3239ms)
+         Expected: {"anomaly_detected": true, "severity": "critical", "category": "error", "classification": "alert"}
+         Actual:   Kernel termination detected with reason 1004 on BlueGene/L supercomputer, indicating a severe system-level failure likely related to hardware or software instability.
+
+   [PASS] ANN_194 (2842ms)
+         Expected: {"anomaly_detected": true, "severity": "critical", "category": "error", "classification": "alert"}
+         Actual:   Lustre mount operation failed on block_id with location details, indicating a potential storage subsystem failure in the BlueGene/L supercomputer.
+
+   [PASS] ANN_024 (4277ms)
+         Expected: {"anomaly_detected": false, "severity": "info", "category": "normal", "classification": "info"}
+         Actual:   A normal block addition event in HDFS DataNode log indicating that a block has been successfully stored in the name system.
+
+   [PASS] ANN_089 (3298ms)
+         Expected: {"anomaly_detected": true, "severity": "warning", "category": "error", "classification": "warn"}
+         Actual:   DataNode encountered an exception while serving a block to a client, indicating a potential data transfer failure in HDFS.
+
+   [PASS] ANN_013 (4175ms)
+         Expected: {"anomaly_detected": false, "severity": "info", "category": "normal", "classification": "info"}
+         Actual:   Normal HDFS block allocation operation detected in DataNode log. This is a standard operation during file write process and indicates healthy data node activity.
+
+   [PASS] ANN_164 (3451ms)
+         Expected: {"anomaly_detected": true, "severity": "critical", "category": "error", "classification": "alert"}
+         Actual:   Lustre mount operation failed on node bglio388 for path /p/gb1, indicating a potential storage access failure on BlueGene/L supercomputer.
+
+   [PASS] ANN_182 (1826ms)
+         Expected: {"anomaly_detected": true, "severity": "critical", "category": "error", "classification": "alert"}
+         Actual:   Lustre mount operation failed on bglio23, affecting storage access at path /p/gb1. This is a critical failure in a BlueGene/L supercomputer's RAS system, likely disrupting data access and service avai
+
+   [PASS] ANN_174 (1985ms)
+         Expected: {"anomaly_detected": true, "severity": "critical", "category": "error", "classification": "alert"}
+         Actual:   A communication link has been severed between the CioStream socket and the host at 172.16.96.116:55929, indicating a loss of connectivity in the BlueGene/L supercomputer's RAS system.
+
+   [PASS] ANN_014 (2051ms)
+         Expected: {"anomaly_detected": false, "severity": "info", "category": "normal", "classification": "info"}
+         Actual:   A normal block addition event recorded in the HDFS DataNode log, indicating that a block has been successfully stored in the name system.
+
+   [PASS] ANN_084 (2004ms)
+         Expected: {"anomaly_detected": true, "severity": "warning", "category": "error", "classification": "warn"}
+         Actual:   A warning exception occurred while serving a block to a DataNode in HDFS, indicating a potential data transfer issue.
+
+   [FAIL] ANN_118 (1850ms)
+         Expected: {"anomaly_detected": false, "severity": "info", "category": "normal", "classification": "info"}
+         Actual:   Memory access violation detected in CE sym 29 at address 0x14123c20, indicating a potential hardware or software fault in the BlueGene/L RAS system.
+
+   [PASS] ANN_079 (1583ms)
+         Expected: {"anomaly_detected": true, "severity": "warning", "category": "error", "classification": "warn"}
+         Actual:   DataNode encountered an exception while serving a block to a client, indicating a potential data transfer failure in HDFS.
+
+   [PASS] ANN_021 (2249ms)
+         Expected: {"anomaly_detected": false, "severity": "info", "category": "normal", "classification": "info"}
+         Actual:   A normal block addition event recorded in the HDFS DataNode log, indicating that a data block has been successfully stored in the NameSystem.
+
+   [PASS] ANN_060 (1946ms)
+         Expected: {"anomaly_detected": true, "severity": "warning", "category": "error", "classification": "warn"}
+         Actual:   A warning was logged in the HDFS DataNode indicating an exception occurred while serving a block to a client. This may indicate a temporary service disruption or data transfer issue.
+
+   [PASS] ANN_022 (1496ms)
+         Expected: {"anomaly_detected": false, "severity": "info", "category": "normal", "classification": "info"}
+         Actual:   Normal HDFS DataNode operation: deletion of a block file from the data directory.
+
+   [PASS] ANN_009 (1480ms)
+         Expected: {"anomaly_detected": false, "severity": "info", "category": "normal", "classification": "info"}
+         Actual:   Normal HDFS DataNode operation: deletion of a data block from the filesystem.
+
+   [PASS] ANN_166 (1902ms)
+         Expected: {"anomaly_detected": true, "severity": "critical", "category": "error", "classification": "alert"}
+         Actual:   A critical communication link failure occurred between the CioStream socket and the remote endpoint 172.16.96.116:47696, indicating a severed connection during message processing.
+
+   [PASS] ANN_179 (1891ms)
+         Expected: {"anomaly_detected": true, "severity": "critical", "category": "error", "classification": "alert"}
+         Actual:   A connection was abruptly reset by the peer during message reading on a CioStream socket, indicating a communication failure between components of the BlueGene/L supercomputer's RAS system.
+
+   [FAIL] ANN_142 (1516ms)
+         Expected: {"anomaly_detected": false, "severity": "info", "category": "normal", "classification": "info"}
+         Actual:   15 floating point alignment exceptions detected in BlueGene/L RAS logs, indicating potential hardware or software instability in memory access patterns.
+
+   [PASS] ANN_030 (1892ms)
+         Expected: {"anomaly_detected": false, "severity": "info", "category": "normal", "classification": "info"}
+         Actual:   Normal data block reception event from DataNode in HDFS. Block of size 67MB received from node 10.251.39.160.
+
+   [PASS] ANN_031 (1924ms)
+         Expected: {"anomaly_detected": false, "severity": "info", "category": "normal", "classification": "info"}
+         Actual:   Normal data block reception event from DataNode in HDFS. Block of size 67MB received from IP address 10.251.123.20.
+
+   [PASS] ANN_020 (1626ms)
+         Expected: {"anomaly_detected": false, "severity": "info", "category": "normal", "classification": "info"}
+         Actual:   Normal data block reception event from DataNode in HDFS. No anomalies detected.
+
+   [PASS] ANN_170 (1891ms)
+         Expected: {"anomaly_detected": true, "severity": "critical", "category": "error", "classification": "alert"}
+         Actual:   A critical communication link failure occurred between the CioStream socket and the remote endpoint 172.16.69.116:37916, indicating a severed connection during message processing.
+
+   [PASS] ANN_151 (2650ms)
+         Expected: {"anomaly_detected": true, "severity": "critical", "category": "error", "classification": "alert"}
+         Actual:   A communication link has been severed between the CioStream socket and the remote endpoint, resulting in an error during message reading. This indicates a loss of connectivity in the data stream, like
+
+   [PASS] ANN_088 (4437ms)
+         Expected: {"anomaly_detected": true, "severity": "warning", "category": "error", "classification": "warn"}
+         Actual:   A warning exception occurred while serving a data block to a DataNode, indicating a potential data transfer issue in HDFS.
+
+   [PASS] ANN_043 (3018ms)
+         Expected: {"anomaly_detected": false, "severity": "info", "category": "normal", "classification": "info"}
+         Actual:   Normal data block reception event from DataNode in HDFS. No anomalies detected.
+
+   [PASS] ANN_057 (4377ms)
+         Expected: {"anomaly_detected": true, "severity": "warning", "category": "error", "classification": "warn"}
+         Actual:   DataNode encountered an exception while serving a block to a client, indicating a potential data transfer failure in HDFS.
+
+   [PASS] ANN_085 (3951ms)
+         Expected: {"anomaly_detected": true, "severity": "warning", "category": "error", "classification": "warn"}
+         Actual:   DataNode encountered an exception while serving a block to another DataNode, indicating a potential data transfer failure in HDFS.
+
+   [PASS] ANN_074 (4433ms)
+         Expected: {"anomaly_detected": true, "severity": "warning", "category": "error", "classification": "warn"}
+         Actual:   DataNode encountered an exception while serving a block to a client, indicating a potential data transfer failure in HDFS.
+
+   [FAIL] ANN_141 (2872ms)
+         Expected: {"anomaly_detected": false, "severity": "info", "category": "normal", "classification": "info"}
+         Actual:   Floating point alignment exceptions detected in BlueGene/L RAS logs, indicating potential hardware or software instability in memory access patterns.
+
+   [PASS] ANN_041 (4126ms)
+         Expected: {"anomaly_detected": false, "severity": "info", "category": "normal", "classification": "info"}
+         Actual:   A block is being marked as invalid in the HDFS NameSystem, which is a normal operational event during block cleanup or recovery.
+
+   [PASS] ANN_046 (1900ms)
+         Expected: {"anomaly_detected": false, "severity": "info", "category": "normal", "classification": "info"}
+         Actual:   Normal HDFS DataNode operation: deletion of a data block from storage.
+
+   [PASS] ANN_065 (1574ms)
+         Expected: {"anomaly_detected": true, "severity": "warning", "category": "error", "classification": "warn"}
+         Actual:   DataNode encountered an exception while serving a block to a client, indicating a potential data transfer failure in HDFS.
+
+   [PASS] ANN_011 (1522ms)
+         Expected: {"anomaly_detected": false, "severity": "info", "category": "normal", "classification": "info"}
+         Actual:   Normal data transfer activity observed between DataNode components within the same node, indicating healthy data reception operation.
+
+   [PASS] ANN_055 (1681ms)
+         Expected: {"anomaly_detected": true, "severity": "warning", "category": "error", "classification": "warn"}
+         Actual:   A warning occurred in the HDFS DataNode while serving a block, indicating a potential data transfer error or network issue during file access.
+
+   [PASS] ANN_003 (1893ms)
+         Expected: {"anomaly_detected": false, "severity": "info", "category": "normal", "classification": "info"}
+         Actual:   Normal HDFS operation: a block was successfully added to the name system with updated block map. This is a routine and expected event in HDFS data node operations.
+
+   [PASS] ANN_092 (1678ms)
+         Expected: {"anomaly_detected": true, "severity": "warning", "category": "error", "classification": "warn"}
+         Actual:   DataNode encountered an exception while serving a block to a client, indicating a potential data transfer failure in HDFS.
+
+   [PASS] ANN_153 (1677ms)
+         Expected: {"anomaly_detected": true, "severity": "critical", "category": "error", "classification": "alert"}
+         Actual:   Kernel termination detected with reason 1003 on BlueGene/L supercomputer, indicating a severe system-level failure in RAS subsystem.
+
+   [PASS] ANN_070 (2155ms)
+         Expected: {"anomaly_detected": true, "severity": "warning", "category": "error", "classification": "warn"}
+         Actual:   A warning occurred in the HDFS DataNode while serving a block, indicating a potential data transfer failure or network issue.
+
+   [PASS] ANN_004 (1665ms)
+         Expected: {"anomaly_detected": false, "severity": "info", "category": "normal", "classification": "info"}
+         Actual:   Normal HDFS DataNode operation: deletion of a data block from storage.
+
+   [PASS] ANN_105 (1387ms)
+         Expected: {"anomaly_detected": false, "severity": "info", "category": "normal", "classification": "info"}
+         Actual:   No significant anomaly detected in RAS telemetry. The rbs signal handler and DDR correctable error metrics show zero time and zero maximum duration, indicating normal baseline behavior for a healthy s
+
+   [PASS] ANN_045 (2062ms)
+         Expected: {"anomaly_detected": false, "severity": "info", "category": "normal", "classification": "info"}
+         Actual:   A block is being marked as invalid in the HDFS NameSystem, which is a normal operational event during block cleanup or recovery.
+
+   [PASS] ANN_015 (1764ms)
+         Expected: {"anomaly_detected": false, "severity": "info", "category": "normal", "classification": "info"}
+         Actual:   Normal data transfer operation detected between DataNode and client in HDFS. No errors or anomalies observed.
+
+   [PASS] ANN_066 (1586ms)
+         Expected: {"anomaly_detected": true, "severity": "warning", "category": "error", "classification": "warn"}
+         Actual:   DataNode encountered an exception while serving a block to another DataNode, indicating a potential data transfer failure in HDFS.
+
+   [FAIL] ANN_135 (1495ms)
+         Expected: {"anomaly_detected": false, "severity": "info", "category": "normal", "classification": "info"}
+         Actual:   5 DDR errors detected and corrected on rank 0, symbol 28, indicating memory subsystem instability in the BlueGene/L supercomputer.
+
+   [FAIL] ANN_119 (1480ms)
+         Expected: {"anomaly_detected": false, "severity": "info", "category": "normal", "classification": "info"}
+         Actual:   Floating point alignment exceptions detected in BlueGene/L RAS logs, indicating potential hardware or software instability in memory access patterns.
+
+   [FAIL] ANN_107 (1664ms)
+         Expected: {"anomaly_detected": false, "severity": "info", "category": "normal", "classification": "info"}
+         Actual:   Machine Check Exception (MCE) detected with read timeout in BlueGene/L supercomputer RAS system, indicating a hardware-level failure or memory access issue.
+
+   [PASS] ANN_010 (1566ms)
+         Expected: {"anomaly_detected": false, "severity": "info", "category": "normal", "classification": "info"}
+         Actual:   Normal data block reception event from DataNode in HDFS. No anomalies detected.
+
+   [FAIL] ANN_121 (1806ms)
+         Expected: {"anomaly_detected": false, "severity": "info", "category": "normal", "classification": "info"}
+         Actual:   A critical input interrupt was detected on tree C1 wire, triggering a warning and suppressing further interrupts of the same type. This indicates a potential hardware-level fault in the BlueGene/L RAS
+
+   [PASS] ANN_169 (1935ms)
+         Expected: {"anomaly_detected": true, "severity": "critical", "category": "error", "classification": "alert"}
+         Actual:   Failed to read message prefix on control stream indicating a communication failure between ciod and the remote endpoint, likely disrupting node coordination in the BlueGene/L supercomputer.
+
+   [PASS] ANN_026 (2447ms)
+         Expected: {"anomaly_detected": false, "severity": "info", "category": "normal", "classification": "info"}
+         Actual:   Normal data transfer activity observed between DataNode peers in HDFS. No errors or anomalies detected.
+
+   [PASS] ANN_068 (2962ms)
+         Expected: {"anomaly_detected": true, "severity": "warning", "category": "error", "classification": "warn"}
+         Actual:   DataNode encountered an exception while serving a block to a client, indicating a potential data transfer failure in HDFS.
+
+   [PASS] ANN_032 (2831ms)
+         Expected: {"anomaly_detected": false, "severity": "info", "category": "normal", "classification": "info"}
+         Actual:   Normal HDFS DataNode operation: deletion of a data block from storage.
+
+   [PASS] ANN_096 (3150ms)
+         Expected: {"anomaly_detected": true, "severity": "warning", "category": "error", "classification": "warn"}
+         Actual:   DataNode encountered an exception while serving a block to a client, indicating a potential data transfer failure in HDFS.
+
+   [PASS] ANN_091 (3898ms)
+         Expected: {"anomaly_detected": true, "severity": "warning", "category": "error", "classification": "warn"}
+         Actual:   DataNode encountered an exception while serving a block to a client, indicating a potential data transfer failure in HDFS.
+
+   [FAIL] ANN_049 (2731ms)
+         Expected: {"anomaly_detected": false, "severity": "info", "category": "normal", "classification": "info"}
+         Actual:   DataNode PacketResponder is terminating, indicating potential instability or shutdown of a data node in HDFS. This may affect data availability or replication.
+
+   [PASS] ANN_044 (4201ms)
+         Expected: {"anomaly_detected": false, "severity": "info", "category": "normal", "classification": "info"}
+         Actual:   A normal block addition event in HDFS DataNode log, indicating successful registration of a data block in the NameSystem.
+
+   [PASS] ANN_155 (4755ms)
+         Expected: {"anomaly_detected": true, "severity": "critical", "category": "error", "classification": "alert"}
+         Actual:   Received unexpected packet type (3) instead of expected type (57) on tree network, indicating a protocol mismatch or hardware-level communication failure in BlueGene/L supercomputer.
+
+   [PASS] ANN_008 (2188ms)
+         Expected: {"anomaly_detected": false, "severity": "info", "category": "normal", "classification": "info"}
+         Actual:   Normal data transfer operation recorded in HDFS DataNode log
+
+   [PASS] ANN_069 (2407ms)
+         Expected: {"anomaly_detected": true, "severity": "warning", "category": "error", "classification": "warn"}
+         Actual:   DataNode encountered an exception while serving a block to a client, indicating a potential data transfer failure in HDFS.
+
+   [PASS] ANN_019 (2080ms)
+         Expected: {"anomaly_detected": false, "severity": "info", "category": "normal", "classification": "info"}
+         Actual:   A block was successfully added to the HDFS NameSystem with normal operation indicators. This is a routine and expected event in HDFS data storage.
+
+   [PASS] ANN_073 (1779ms)
+         Expected: {"anomaly_detected": true, "severity": "warning", "category": "error", "classification": "warn"}
+         Actual:   DataNode encountered an exception while serving a block to another DataNode, indicating a potential data transfer failure in HDFS.
+
+   [PASS] ANN_033 (1899ms)
+         Expected: {"anomaly_detected": false, "severity": "info", "category": "normal", "classification": "info"}
+         Actual:   A block is being marked as invalid in the HDFS NameSystem, which is a normal operational event during block management.
+
+   [FAIL] ANN_034 (1443ms)
+         Expected: {"anomaly_detected": false, "severity": "info", "category": "normal", "classification": "info"}
+         Actual:   A DataNode's PacketResponder is terminating, which may indicate a shutdown or abnormal termination of a data node component in HDFS, potentially affecting data availability or replication.
+
+   [PASS] ANN_005 (2063ms)
+         Expected: {"anomaly_detected": false, "severity": "info", "category": "normal", "classification": "info"}
+         Actual:   Normal data transfer activity observed between DataNode peers in HDFS. No errors or anomalies detected.
+
+   [PASS] ANN_035 (2035ms)
+         Expected: {"anomaly_detected": false, "severity": "info", "category": "normal", "classification": "info"}
+         Actual:   A normal block addition event in HDFS DataNode log, indicating successful registration of a data block in the name system.
+
+   [PASS] ANN_167 (1805ms)
+         Expected: {"anomaly_detected": true, "severity": "critical", "category": "error", "classification": "alert"}
+         Actual:   Failed to read message prefix on control stream indicating a communication failure between ciod and the target node, likely disrupting supercomputer control plane operations.
+
+   [PASS] ANN_192 (1693ms)
+         Expected: {"anomaly_detected": true, "severity": "critical", "category": "error", "classification": "alert"}
+         Actual:   Kernel termination detected with reason 1004 on BlueGene/L supercomputer, indicating a severe system-level failure likely related to hardware or software instability.
+
+   [PASS] ANN_039 (2152ms)
+         Expected: {"anomaly_detected": false, "severity": "info", "category": "normal", "classification": "info"}
+         Actual:   A normal block addition event in HDFS DataNode log, indicating that a data block has been successfully stored in the name system.
+
+   [PASS] ANN_098 (2221ms)
+         Expected: {"anomaly_detected": true, "severity": "warning", "category": "error", "classification": "warn"}
+         Actual:   DataNode encountered an exception while serving a block to a client, indicating a potential data transfer failure in HDFS.
+
+   [PASS] ANN_154 (1919ms)
+         Expected: {"anomaly_detected": true, "severity": "critical", "category": "error", "classification": "alert"}
+         Actual:   A critical communication link failure occurred between the CioStream socket and the remote endpoint 172.16.96.116:42213, indicating a severed connection during message processing.
+
+   [PASS] ANN_081 (1597ms)
+         Expected: {"anomaly_detected": true, "severity": "warning", "category": "error", "classification": "warn"}
+         Actual:   DataNode encountered an exception while serving a block to a client, indicating a potential data transfer failure in HDFS.
+
+   [PASS] ANN_052 (1685ms)
+         Expected: {"anomaly_detected": true, "severity": "warning", "category": "error", "classification": "warn"}
+         Actual:   DataNode encountered an exception while serving a block to a client, indicating a potential data transfer failure in HDFS.
+
+   [PASS] ANN_078 (1557ms)
+         Expected: {"anomaly_detected": true, "severity": "warning", "category": "error", "classification": "warn"}
+         Actual:   DataNode encountered an exception while serving a block to a client, indicating a potential data transfer failure or service instability in HDFS.
+
+   [PASS] ANN_173 (1939ms)
+         Expected: {"anomaly_detected": true, "severity": "critical", "category": "error", "classification": "alert"}
+         Actual:   A link failure occurred on the CioStream socket to 172.16.96.116:47189, indicating a severed connection between components of the BlueGene/L supercomputer's RAS system.
+
+   [PASS] ANN_094 (1864ms)
+         Expected: {"anomaly_detected": true, "severity": "warning", "category": "error", "classification": "warn"}
+         Actual:   A warning exception occurred while serving a data block in HDFS DataNode, indicating a potential data transfer failure or service instability.
+
+   [PASS] ANN_038 (2574ms)
+         Expected: {"anomaly_detected": false, "severity": "info", "category": "normal", "classification": "info"}
+         Actual:   A normal block addition event in HDFS DataNode log, indicating successful registration of a data block in the NameSystem.
+
+   [FAIL] ANN_129 (3070ms)
+         Expected: {"anomaly_detected": false, "severity": "info", "category": "normal", "classification": "info"}
+         Actual:   Failed to load executable program image on BlueGene/L supercomputer due to invalid or missing program file format.
+
+   [PASS] ANN_036 (2678ms)
+         Expected: {"anomaly_detected": false, "severity": "info", "category": "normal", "classification": "info"}
+         Actual:   Normal HDFS DataNode operation: deletion of a data block from storage.
+
+   [PASS] ANN_050 (2966ms)
+         Expected: {"anomaly_detected": false, "severity": "info", "category": "normal", "classification": "info"}
+         Actual:   Normal HDFS DataNode operation: deletion of a block file from the data directory.
+
+   [PASS] ANN_058 (4010ms)
+         Expected: {"anomaly_detected": true, "severity": "warning", "category": "error", "classification": "warn"}
+         Actual:   A warning exception occurred while serving a block to a DataNode in HDFS, indicating a potential data transfer issue.
+
+   [FAIL] ANN_012 (2781ms)
+         Expected: {"anomaly_detected": false, "severity": "info", "category": "normal", "classification": "info"}
+         Actual:   A DataNode PacketResponder is terminating, which may indicate a shutdown or abnormal termination of a data node component in HDFS, potentially affecting data availability or service stability.
+
+   [PASS] ANN_051 (3049ms)
+         Expected: {"anomaly_detected": true, "severity": "warning", "category": "error", "classification": "warn"}
+         Actual:   DataNode encountered an exception while serving a block to a client, indicating a potential I/O or data transfer issue in HDFS.
+
+   [PASS] ANN_156 (3840ms)
+         Expected: {"anomaly_detected": true, "severity": "critical", "category": "error", "classification": "alert"}
+         Actual:   A link severance was detected on the CioStream socket to 172.16.96.116:60243, indicating a loss of communication between components in the BlueGene/L supercomputer system.
+
+   [PASS] ANN_177 (4035ms)
+         Expected: {"anomaly_detected": true, "severity": "critical", "category": "error", "classification": "alert"}
+         Actual:   Connection timeout occurred when attempting to read message prefix from CioStream socket on 172.16.69.116:41554, indicating a network or endpoint failure in the BlueGene/L RAS system.
+
+   [PASS] ANN_001 (2403ms)
+         Expected: {"anomaly_detected": false, "severity": "info", "category": "normal", "classification": "info"}
+         Actual:   Normal HDFS DataNode operation: deletion of a block file from the data directory.
+
+   [PASS] ANN_082 (2280ms)
+         Expected: {"anomaly_detected": true, "severity": "warning", "category": "error", "classification": "warn"}
+         Actual:   A warning exception occurred while serving a data block in HDFS DataNode, indicating a potential data transfer failure or node instability.
+
+--- RCA TESTS (43/50 passed) ---
+
+   [FAIL] RCA_034 (19170ms)
+         Expected: for
+         Actual:   {
+    "root_cause": "The question is not an incident report but a query about Bash scripting syntax, making root cause analysis inapplicable.",
+    "causal_chain": [],
+    "impact": {
+        "service
+
+   [PASS] RCA_155 (13953ms)
+         Expected: loadgenerator_cpu_spike
+         Actual:   {
+    "root_cause": "Unoptimized code or inefficient query handling in a recently deployed service version caused a surge in CPU utilization due to excessive request processing failures.",
+    "causal
+
+   [PASS] RCA_177 (22159ms)
+         Expected: cloudwatch_network_latency
+         Actual:   {
+    "root_cause": "Misconfigured Amazon CloudWatch Agent leading to failed metric collection and increased network latency",
+    "causal_chain": [
+        "EC2 instance detected and initialized netw
+
+   [PASS] RCA_162 (15771ms)
+         Expected: ratings_memory_leak
+         Actual:   {
+    "root_cause": "Deprecated Symfony method usage leading to improper resource management and memory leak",
+    "causal_chain": [
+        "Deprecated KernelEvent::isMasterRequest() method called in
+
+   [PASS] RCA_060 (8854ms)
+         Expected: A device that converts analog signals to digital signals and back again
+         Actual:   {
+    "root_cause": "Misunderstanding of the primary function of a modem",
+    "causal_chain": [
+        "Confusion between modem and router functions",
+        "Ambiguity in question phrasing regardi
+
+   [PASS] RCA_171 (13009ms)
+         Expected: user_disk_io_issue
+         Actual:   {
+    "root_cause": "Disk I/O bottleneck causing excessive latency in health check middleware",
+    "causal_chain": [
+        "Recent deployment introduced unoptimized disk-intensive operation in midd
+
+   [PASS] RCA_082 (14096ms)
+         Expected: Reduce user access volume
+         Actual:   {
+    "root_cause": "Increasing hardware resources is typically not the first choice for addressing system performance bottlenecks.",
+    "causal_chain": [
+        "System performance bottlenecks occu
+
+   [PASS] RCA_122 (21441ms)
+         Expected: chaos-controller_dependency_failure
+         Actual:   {
+    "root_cause": "Failure in leader election process for the 'schedule-cron' controller within Chaos Mesh, causing dependency failure in dependent services.",
+    "causal_chain": [
+        "Leader 
+
+   [FAIL] RCA_002 (15817ms)
+         Expected: TACACS+
+         Actual:   {
+    "root_cause": "The question is a technical inquiry about network device access control protocols, not an incident requiring root cause analysis.",
+    "causal_chain": [],
+    "impact": {
+       
+
+   [PASS] RCA_096 (16756ms)
+         Expected: Control plane
+         Actual:   {
+    "root_cause": "Misidentification of the SDN controller's interface with the switching fabric, leading to potential configuration errors.",
+    "causal_chain": [
+        "Misunderstanding of SDN 
+
+   [PASS] RCA_003 (17897ms)
+         Expected: Short
+         Actual:   {
+    "root_cause": "Short circuit between two conductors in the twisted-pair cable",
+    "causal_chain": [
+        "Tone generator applied to single pin at cable end",
+        "Short circuit allows e
+
+   [FAIL] RCA_040 (12901ms)
+         Expected: A, B, and C
+         Actual:   {
+    "root_cause": "The question is a networking query about routing protocols and VLSM support, not an incident requiring root cause analysis.",
+    "causal_chain": [],
+    "impact": {
+        "serv
+
+   [PASS] RCA_180 (13463ms)
+         Expected: ebs_cpu_spike
+         Actual:   {
+    "root_cause": "Excessive CPU consumption by the EBS CSI driver (ebs.csi.aws.com) due to misconfigured or inefficient volume operations",
+    "causal_chain": [
+        "Recent deployment of updat
+
+   [PASS] RCA_067 (17562ms)
+         Expected: 100MHz
+         Actual:   {
+    "root_cause": "The question contains a misunderstanding of 5G sub-6GHz bandwidth capabilities, specifically the maximum bandwidth supported by the sub-6GHz frequency band.",
+    "causal_chain": 
+
+   [PASS] RCA_139 (25888ms)
+         Expected: carts_memory_leak
+         Actual:   {
+    "root_cause": "Memory leak in the 'carts' service due to improper resource management or unbounded object retention in the application's runtime.",
+    "causal_chain": [
+        "Recent deployme
+
+   [PASS] RCA_170 (19154ms)
+         Expected: catalogue_connection_timeout
+         Actual:   {
+    "root_cause": "Health check endpoint failure due to backend service unavailability or resource exhaustion",
+    "causal_chain": [
+        "Health check endpoint returns non-200 status code (resu
+
+   [PASS] RCA_161 (13685ms)
+         Expected: productpage_memory_leak
+         Actual:   {
+    "root_cause": "Unreleased HTTP connection resources in urllib3 connection pool leading to memory exhaustion",
+    "causal_chain": [
+        "HTTP client initiates new connection to details:9080"
+
+   [PASS] RCA_136 (14686ms)
+         Expected: orders-db_network_latency
+         Actual:   {
+    "root_cause": "Network congestion caused by misconfigured load balancer routing rules, leading to increased latency and connection timeouts.",
+    "causal_chain": [
+        "Recent deployment of
+
+   [PASS] RCA_147 (21868ms)
+         Expected: currencyservice_pod_crash
+         Actual:   {
+    "root_cause": "Uncaught exception in currencyservice-server leading to pod termination",
+    "causal_chain": [
+        "Pod initiated currency conversion request processing",
+        "Unhandled 
+
+   [PASS] RCA_041 (22317ms)
+         Expected: UNIX time
+         Actual:   {
+    "root_cause": "The question contains incorrect multiple-choice options; the correct timestamp format for Cisco DNA Center APIs is not listed.",
+    "causal_chain": [
+        "User asked about Ci
+
+   [PASS] RCA_006 (8919ms)
+         Expected: Underlay network
+         Actual:   {
+    "root_cause": "Misunderstanding of network layer terminology in data center architectures",
+    "causal_chain": [
+        "Question conflates overlay network functions with transport layers",
+  
+
+   [PASS] RCA_091 (15446ms)
+         Expected: Coaxial
+         Actual:   {
+    "root_cause": "The question incorrectly implies a technical incident requiring root cause analysis, but the provided context is a multiple-choice question about cable types and vampire taps, not
+
+   [PASS] RCA_172 (16175ms)
+         Expected: orders-db_memory_leak
+         Actual:   {
+    "root_cause": "Memory leak caused by improper connection resource management in the application",
+    "causal_chain": [
+        "Recent deployment introduced unoptimized connection handling code
+
+   [PASS] RCA_104 (14351ms)
+         Expected: mongodb_disk_io_issue
+         Actual:   {
+    "root_cause": "Disk I/O bottleneck causing WiredTiger storage engine failures in MongoDB",
+    "causal_chain": [
+        "Disk I/O bottleneck due to high write load or failing storage hardware",
+
+   [PASS] RCA_153 (16656ms)
+         Expected: cartservice_network_latency
+         Actual:   {
+    "root_cause": "Network latency caused by congestion in the cloud provider's infrastructure, leading to delayed responses from the GetCartAsync service.",
+    "causal_chain": [
+        "Cloud pro
+
+   [PASS] RCA_022 (10581ms)
+         Expected: REFER
+         Actual:   {
+    "root_cause": "The question is about identifying the correct SIP message for multicast paging, which requires understanding SIP protocol specifics.",
+    "causal_chain": [
+        "The user aske
+
+   [PASS] RCA_149 (20972ms)
+         Expected: catalogue-db_resource_exhaustion
+         Actual:   {
+    "root_cause": "Database connection timeouts caused by resource exhaustion on the 'socksdb' instance",
+    "causal_chain": [
+        "Increased query load on 'socksdb' due to recent deployment of
+
+   [PASS] RCA_181 (12479ms)
+         Expected: productpage_network_latency
+         Actual:   {
+    "root_cause": "Increased latency in the 'reviews' service due to inefficient processing of HTTP requests",
+    "causal_chain": [
+        "Recent deployment of updated request handling logic in r
+
+   [PASS] RCA_160 (12634ms)
+         Expected: prometheus_pod_crash
+         Actual:   {
+    "root_cause": "Use of insecure TLS cipher suite TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256 caused TLS handshake failures, leading to pod crashes.",
+    "causal_chain": [
+        "Pod configured wit
+
+   [PASS] RCA_144 (19873ms)
+         Expected: dashboard_connection_timeout
+         Actual:   {
+    "root_cause": "Network infrastructure failure or misconfigured load balancer causing connection timeouts despite passing health checks",
+    "causal_chain": [
+        "Network latency or routing
+
+   [PASS] RCA_029 (14330ms)
+         Expected: Regularly update security patches
+         Actual:   {
+    "root_cause": "Absence of regular security patch updates, leaving known vulnerabilities unaddressed",
+    "causal_chain": [
+        "Missing security patches in the system",
+        "Unpatched v
+
+   [FAIL] RCA_039 (24184ms)
+         Expected: CCXv3
+         Actual:   {
+    "root_cause": "The question provided is not an incident or telemetry data but a quiz question about CCX versions, making root cause analysis infeasible.",
+    "causal_chain": [],
+    "impact": {
+
+   [FAIL] RCA_095 (13520ms)
+         Expected: 6 dB
+         Actual:   {
+    "root_cause": "The question is based on a fundamental principle of wireless communication propagation loss, specifically the free space path loss model.",
+    "causal_chain": [
+        "The free
+
+   [PASS] RCA_099 (23333ms)
+         Expected: Ring; Mesh
+         Actual:   {
+    "root_cause": "The question contains a misunderstanding of Ethernet network topologies, specifically conflating Token Ring (a separate protocol) with Ethernet and misclassifying mesh as a cablin
+
+   [FAIL] RCA_089 (11989ms)
+         Expected: ISM
+         Actual:   {
+    "root_cause": "The question is a technical quiz about radio frequency allocations, not an actual incident requiring root cause analysis.",
+    "causal_chain": [
+        "User asked a technical q
+
+   [PASS] RCA_046 (13017ms)
+         Expected: False
+         Actual:   {
+    "root_cause": "Misunderstanding of OSPF terminology leading to incorrect configuration of network routing",
+    "causal_chain": [
+        "Incorrect identification of 'virtual link' as equivalen
+
+   [PASS] RCA_130 (15065ms)
+         Expected: emailservice_disk_io_issue
+         Actual:   {
+    "root_cause": "Disk I/O bottleneck caused by excessive logging or temporary storage operations in the emailservice-server",
+    "causal_chain": [
+        "Increased email request volume led to h
+
+   [PASS] RCA_131 (23899ms)
+         Expected: recommendationservice_pod_crash
+         Actual:   {
+    "root_cause": "Pod crash due to unhandled exceptions or resource exhaustion in recommendationservice-server",
+    "causal_chain": [
+        "Recent deployment introduced unoptimized query handli
+
+   [PASS] RCA_037 (17529ms)
+         Expected: Analyze the disk usage of each server and identify the files or directories occupying the most space
+         Actual:   {
+    "root_cause": "Uncontrolled growth of log files or temporary data due to misconfigured services or lack of cleanup processes",
+    "causal_chain": [
+        "Recent deployment introduced a servi
+
+   [PASS] RCA_148 (11615ms)
+         Expected: chaos-controller_config_error
+         Actual:   {
+    "root_cause": "Misconfigured chaos engineering experiment triggered unintended pod termination",
+    "causal_chain": [
+        "Chaos experiment deployed with incorrect parameters targeting crit
+
+   [PASS] RCA_117 (18180ms)
+         Expected: web_resource_exhaustion
+         Actual:   {
+    "root_cause": "Resource exhaustion due to excessive incoming HTTP requests overwhelming the service's capacity",
+    "causal_chain": [
+        "High volume of GET / requests from Apache-HttpClie
+
+   [PASS] RCA_106 (23653ms)
+         Expected: mongodb_pod_crash
+         Actual:   {
+    "root_cause": "WiredTiger storage engine encountered a fatal error, leading to pod crash",
+    "causal_chain": [
+        "WiredTiger storage engine generated repeated fatal error messages (F Wir
+
+   [PASS] RCA_166 (13841ms)
+         Expected: shippingservice_cpu_spike
+         Actual:   {
+    "root_cause": "Unanticipated surge in request volume to the [GetQuote] service leading to CPU resource exhaustion",
+    "causal_chain": [
+        "Recent deployment of a new feature increased re
+
+   [PASS] RCA_132 (13209ms)
+         Expected: orders_dependency_failure
+         Actual:   {
+    "root_cause": "Misconfigured Spring Data REST repository search endpoint mappings leading to HTTP method/produces attribute conflicts",
+    "causal_chain": [
+        "Recent deployment introduce
+
+   [PASS] RCA_143 (19980ms)
+         Expected: user_network_latency
+         Actual:   {
+    "root_cause": "Degraded network performance between service components caused by misconfigured load balancer timeouts",
+    "causal_chain": [
+        "Health check endpoint latency exceeded load
+
+   [PASS] RCA_053 (19048ms)
+         Expected: 80
+         Actual:   {
+    "root_cause": "Unsecured HTTP traffic (port 80) is enabled on the firewall, allowing access to prohibited websites.",
+    "causal_chain": [
+        "Users are browsing prohibited content on unse
+
+   [PASS] RCA_142 (14654ms)
+         Expected: user-db_connection_timeout
+         Actual:   {
+    "root_cause": "Termination signal (SIGTERM) sent to MongoDB process, leading to service shutdown and connection timeouts",
+    "causal_chain": [
+        "MongoDB process received SIGTERM signal"
+
+   [PASS] RCA_119 (15728ms)
+         Expected: adservice_service_degradation
+         Actual:   {
+    "root_cause": "Degradation in AdService due to excessive or malformed ad request processing",
+    "causal_chain": [
+        "Recent deployment introduced inefficient ad request handling logic",
+
+
+   [FAIL] RCA_072 (33512ms)
+         Expected: The network is a Class B network.; The number of host bits in the unsubnetted network is 16.
+         Actual:   {
+    "root_cause": "The question is a networking quiz about IP address classification and subnetting, not an actual incident requiring root cause analysis.",
+    "causal_chain": [],
+    "impact": {
+ 
+
+   [PASS] RCA_068 (11745ms)
+         Expected: VLANs
+         Actual:   {
+    "root_cause": "The question incorrectly implies an incident, but no actual incident occurred. The correct answer to the question is VLANs.",
+    "causal_chain": ["The question was posed about re
+
+======================================================================
+SCORE SUMMARY
+======================================================================
+Annotation: 89/100 = 89.0%
+RCA:        43/50 = 86.0%
+Overall:    132/150 = 88.0%
+
+Annotation Latency: avg=2401ms, min=1387ms, max=4755ms
+RCA Latency:        avg=16811ms, min=8854ms, max=33512ms
+======================================================================
+
+[EVAL] Running multi-metric evaluation (post-processing)...
+neo4j package not installed. Graph memory will be disabled.
+[EVAL] Multi-metric evaluation complete
+
+[SAVED] Per-test results -> /home/constitutional-aiops/benchmark/results/constitutional_aiops/results.json
+[SAVED] Summary -> /home/constitutional-aiops/benchmark/results/constitutional_aiops/summary.json
+[SAVED] API-compatible -> /home/constitutional-aiops/benchmark/results/constitutional_aiops/benchmark_result.json
+[SAVED] Combined results -> /home/constitutional-aiops/benchmark/results/combined_results.json

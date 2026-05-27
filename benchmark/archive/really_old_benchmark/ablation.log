@@ -1,0 +1,132 @@
+[INFO] Running on Jarvis Labs - using localhost:6006 Ollama
+======================================================================
+CONSTITUTIONAL AIOPS - ABLATION STUDY
+======================================================================
+Configs to run: ['full', 'single-4b', 'single-14b', 'no-structured']
+Test counts:    5 annotation + 5 RCA per config
+Endpoint:       http://localhost:6006
+Started:        2026-02-06T12:28:29.197380
+======================================================================
+
+======================================================================
+ABLATION: Full System (Hybrid dual-agent baseline)
+======================================================================
+Config:          full
+Fast Model:      qwen3:4b-instruct
+Reasoning Model: qwen3:14b
+Test counts:     5 annotation + 5 RCA
+Timestamp:       2026-02-06T12:28:29.256269
+======================================================================
+   [ANNOTATION] 1/5
+   [ANNOTATION] 2/5
+   [ANNOTATION] 3/5
+   [ANNOTATION] 4/5
+   [ANNOTATION] 5/5
+   [RCA] 1/5
+   [RCA] 2/5
+   [RCA] 3/5
+   [RCA] 4/5
+   [RCA] 5/5
+
+[EVAL] Running multi-metric evaluation for full...
+neo4j package not installed. Graph memory will be disabled.
+[EVAL] Multi-metric evaluation complete
+
+[SAVED] Results -> /home/constitutional-aiops/benchmark/results/ablation_full/
+   Annotation: 5/5 = 100.0%
+   RCA:        4/5 = 80.0%
+   Overall:    9/10 = 90.0%
+
+======================================================================
+ABLATION: Single Agent - Qwen3-4B for both annotation and RCA
+======================================================================
+Config:          single-4b
+Fast Model:      qwen3:4b-instruct
+Reasoning Model: qwen3:4b-instruct
+Test counts:     5 annotation + 5 RCA
+Timestamp:       2026-02-06T12:30:07.892408
+======================================================================
+   [ANNOTATION] 1/5
+   [ANNOTATION] 2/5
+   [ANNOTATION] 3/5
+   [ANNOTATION] 4/5
+   [ANNOTATION] 5/5
+   [RCA] 1/5
+   [RCA] 2/5
+   [RCA] 3/5
+   [RCA] 4/5
+   [RCA] 5/5
+
+[EVAL] Running multi-metric evaluation for single-4b...
+[EVAL] Multi-metric evaluation complete
+
+[SAVED] Results -> /home/constitutional-aiops/benchmark/results/ablation_single_4b/
+   Annotation: 5/5 = 100.0%
+   RCA:        4/5 = 80.0%
+   Overall:    9/10 = 90.0%
+
+======================================================================
+ABLATION: Single Agent - Qwen3-14B for both annotation and RCA
+======================================================================
+Config:          single-14b
+Fast Model:      qwen3:14b
+Reasoning Model: qwen3:14b
+Test counts:     5 annotation + 5 RCA
+Timestamp:       2026-02-06T12:31:36.955468
+======================================================================
+   [ANNOTATION] 1/5
+   [ANNOTATION] 2/5
+   [ANNOTATION] 3/5
+   [ANNOTATION] 4/5
+   [ANNOTATION] 5/5
+   [RCA] 1/5
+   [RCA] 2/5
+   [RCA] 3/5
+   [RCA] 4/5
+   [RCA] 5/5
+
+[EVAL] Running multi-metric evaluation for single-14b...
+[EVAL] Multi-metric evaluation complete
+
+[SAVED] Results -> /home/constitutional-aiops/benchmark/results/ablation_single_14b/
+   Annotation: 5/5 = 100.0%
+   RCA:        4/5 = 80.0%
+   Overall:    9/10 = 90.0%
+
+======================================================================
+ABLATION: No Structured Output - raw text, no JSON metadata extraction
+======================================================================
+Config:          no-structured
+Fast Model:      qwen3:4b-instruct
+Reasoning Model: qwen3:14b
+Test counts:     5 annotation + 5 RCA
+Timestamp:       2026-02-06T12:33:12.410855
+======================================================================
+   [ANNOTATION] 1/5
+   [ANNOTATION] 2/5
+   [ANNOTATION] 3/5
+   [ANNOTATION] 4/5
+   [ANNOTATION] 5/5
+   [RCA] 1/5
+   [RCA] 2/5
+   [RCA] 3/5
+   [RCA] 4/5
+   [RCA] 5/5
+
+[EVAL] Running multi-metric evaluation for no-structured...
+[EVAL] Multi-metric evaluation complete
+
+[SAVED] Results -> /home/constitutional-aiops/benchmark/results/ablation_no_structured/
+   Annotation: 5/5 = 100.0%
+   RCA:        5/5 = 100.0%
+   Overall:    10/10 = 100.0%
+
+======================================================================
+ABLATION STUDY COMPLETE - GENERATING COMPARISON TABLE
+======================================================================
+
+[SAVED] Ablation table -> /home/constitutional-aiops/benchmark/results/ablation_table.md
+[SAVED] Ablation LaTeX -> /home/constitutional-aiops/benchmark/results/ablation_table.tex
+[SAVED] Ablation JSON  -> /home/constitutional-aiops/benchmark/results/ablation_results.json
+
+[DONE] Completed 4/4 configurations

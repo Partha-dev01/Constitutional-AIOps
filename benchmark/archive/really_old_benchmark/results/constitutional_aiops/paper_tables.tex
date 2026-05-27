@@ -1,0 +1,59 @@
+% Constitutional AIOps - Paper Tables
+% Generated: 2026-02-06 11:00:50 UTC
+% Model: constitutional_aiops
+% Data source: benchmark/results/constitutional_aiops/results.json
+% WARNING: All values are from actual benchmark runs. No fabricated data.
+
+\begin{table}[h]
+\centering
+\caption{Comprehensive Benchmark Results}
+\label{tab:comprehensive-results}
+\begin{tabular}{llccccccc}
+\toprule
+\textbf{Task} & \textbf{Agent} & \textbf{N} & \textbf{Accuracy} & \textbf{BERT-F1} & \textbf{Cos Sim} & \textbf{Term Ov.} & \textbf{P50 (ms)} & \textbf{P95 (ms)} \\
+\midrule
+Annotation & qwen3:4b-instruct & 5 & 60.0\% & 0.000 & 0.000 & 0.000 & 15171 & 24041 \\
+RCA & qwen3:14b & 5 & 80.0\% & 0.000 & 0.000 & 0.000 & 8367 & 58983 \\
+\midrule
+\textbf{Overall} & \textbf{Hybrid} & \textbf{10} & \textbf{70.0\%} & \textbf{0.000} & \textbf{0.000} & \textbf{0.000} & \textbf{14237} & \textbf{48319} \\
+\bottomrule
+\end{tabular}
+\begin{tablenotes}
+\small
+\item Dataset: curated 150-sample (seed=42, English only). Temperature=0.0.
+\item BERT-F1: microsoft/deberta-xlarge-mnli. Cos Sim: all-MiniLM-L6-v2 (384-dim).
+\end{tablenotes}
+\end{table}
+
+
+\begin{table}[h]
+\centering
+\caption{Per-Source Benchmark Breakdown}
+\label{tab:per-source}
+\begin{tabular}{llcccc}
+\toprule
+\textbf{Task} & \textbf{Source} & \textbf{N} & \textbf{Accuracy} & \textbf{BERT-F1} & \textbf{Cos Sim} \\
+\midrule
+Annotation & Unknown & 5 & 60.0\% & 0.000 & 0.000 \\
+Rca & Unknown & 5 & 80.0\% & 0.000 & 0.000 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+\begin{table}[h]
+\centering
+\caption{Error Analysis}
+\label{tab:error-analysis}
+\begin{tabular}{lcp{8cm}}
+\toprule
+\textbf{Failure Mode} & \textbf{Count} & \textbf{Description} \\
+\midrule
+BGL False Positive & 2 & ANN_101, ANN_143 \\
+RCA Incorrect (unknown) & 1 & RCA_111 \\
+\midrule
+\textbf{Total Failures} & \textbf{3} & \textbf{3/10 = 30.0\% error rate} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
