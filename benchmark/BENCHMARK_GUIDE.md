@@ -1013,7 +1013,7 @@ The benchmark dir is **scoped to result-evidence + scripts + audit**. It does NO
 
 | Excluded item | Lives at |
 |---|---|
-| The paper `.tex` / `.bib` / `.pdf` | `c:/Users/partha/Downloads/files AIOPS NEW/PAPER AND FORMAL DOCUMENTATION/PAPER/New Draft Paper (Not Accepted v.2)/sn-article-template.v2.sandbox-session16/{main,diff}/` |
+| The paper `.tex` / `.bib` / `.pdf` (active = v3; v2 sealed) | v3 (active, post-reviewer-fix): `…/sn-article-template.v3.sandbox/{main,diff}/` &nbsp; · &nbsp; v2 (sealed at session-33 close): `…/sn-article-template.v2.sandbox-session16/{main,diff}/` |
 | v1 paper (READ-ONLY reference) | `…/Final Submission Paper (Accepted v.1)/1ST SUBMISSION/sn-article-template/sn-article.tex` |
 | Reference PDFs (34 papers cited) | `…/PAPER/REFERENCE PAPERS/` |
 | Live reference catalog xlsx | `…/PAPER/REFERENCE PAPERS/AIOps_References_Complete.xlsx` (15,272 B / 70 rows × 12 cols) |
