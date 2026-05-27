@@ -191,10 +191,10 @@ Grouped by partition. Within each partition rows are sorted alphabetically by pa
 | `final/audit/FULL_TRANSCRIPT_AUDIT.md` | sessions 1–11 transcript forensic audit | sealed-forensic | 223.3 KB | 2026-05-20 09:59:22 | `f3cfc16435ad` |
 | `final/audit/MASTER_BACKUP_MANIFEST_2026-05-20.json` | pre-zip SHA-256 manifest (493 files, 2026-05-20) | sealed-forensic | 98.7 KB | 2026-05-24 20:01:50 | `[unknown - not in 2026-05-20 manifest]` |
 | `final/audit/REORG_PROPOSAL_2026-05-20.md` | 2026-05-20 4-partition reorg plan | sealed-forensic | 11.1 KB | 2026-05-20 10:10:01 | `[unknown - not in 2026-05-20 manifest]` |
-| `final/audit/SESSION_12_HANDOFF.md` | session handoff doc | sealed-forensic | 13.9 KB | 2026-05-20 15:34:32 | `[unknown - not in 2026-05-20 manifest]` |
-| `final/audit/SESSION_13_HANDOFF.md` | session handoff doc | sealed-forensic | 13.8 KB | 2026-05-24 20:02:07 | `[unknown - not in 2026-05-20 manifest]` |
-| `final/audit/SESSION_14_HANDOFF.md` | session handoff doc | sealed-forensic | 26.1 KB | 2026-05-24 20:39:43 | `[unknown - not in 2026-05-20 manifest]` |
-| `final/audit/SESSION_15_HANDOFF.md` | session handoff doc | sealed-forensic | 26.4 KB | 2026-05-24 21:29:46 | `[unknown - not in 2026-05-20 manifest]` |
+| `final/audit/handoffs/SESSION_12_HANDOFF.md` | session handoff doc (moved session 34) | sealed-forensic | 13.9 KB | 2026-05-20 15:34:32 | `[unknown - not in 2026-05-20 manifest]` |
+| `final/audit/handoffs/SESSION_13_HANDOFF.md` | session handoff doc (moved session 34) | sealed-forensic | 13.8 KB | 2026-05-24 20:02:07 | `[unknown - not in 2026-05-20 manifest]` |
+| `final/audit/handoffs/SESSION_14_HANDOFF.md` | session handoff doc (moved session 34) | sealed-forensic | 26.1 KB | 2026-05-24 20:39:43 | `[unknown - not in 2026-05-20 manifest]` |
+| `final/audit/handoffs/SESSION_15_HANDOFF.md` | session handoff doc (moved session 34) | sealed-forensic | 26.4 KB | 2026-05-24 21:29:46 | `[unknown - not in 2026-05-20 manifest]` |
 | `final/docs/BROKEN_ABLATIONS.md` | active runbook / methodology doc | active | 3.1 KB | 2026-05-16 01:18:31 | `b24e2e3c125a` |
 | `final/docs/BUG_HISTORY.md` | active runbook / methodology doc | active | 13.0 KB | 2026-05-24 19:55:19 | `1474cf09fc86` |
 | `final/docs/CURRENT_RUNS.md` | active runbook / methodology doc | active | 8.9 KB | 2026-05-24 19:56:11 | `b1571b2e54b1` |
@@ -491,10 +491,10 @@ Baseline = `MASTER_BACKUP_MANIFEST_2026-05-20.json` (493 entries, full filesyste
 | `archive/originals_2026-05-19/_REORG_NOTE_2026-05-20.md` | 1.3 KB | archive notice / reorg note |
 | `final/audit/MASTER_BACKUP_MANIFEST_2026-05-20.json` | 98.7 KB | pre-zip SHA-256 manifest (493 files, 2026-05-20) |
 | `final/audit/REORG_PROPOSAL_2026-05-20.md` | 11.1 KB | 2026-05-20 4-partition reorg plan |
-| `final/audit/SESSION_12_HANDOFF.md` | 13.9 KB | session handoff doc |
-| `final/audit/SESSION_13_HANDOFF.md` | 13.8 KB | session handoff doc |
-| `final/audit/SESSION_14_HANDOFF.md` | 26.1 KB | session handoff doc |
-| `final/audit/SESSION_15_HANDOFF.md` | 26.4 KB | session handoff doc |
+| `final/audit/handoffs/SESSION_12_HANDOFF.md` | 13.9 KB | session handoff doc (moved session 34) |
+| `final/audit/handoffs/SESSION_13_HANDOFF.md` | 13.8 KB | session handoff doc (moved session 34) |
+| `final/audit/handoffs/SESSION_14_HANDOFF.md` | 26.1 KB | session handoff doc (moved session 34) |
+| `final/audit/handoffs/SESSION_15_HANDOFF.md` | 26.4 KB | session handoff doc (moved session 34) |
 | `intermediate/README.md` | 2.5 KB | partition/folder README |
 | `raw/README.md` | 1.6 KB | partition/folder README |
 | `scripts/README.md` | 13.2 KB | partition/folder README |
@@ -580,7 +580,7 @@ Baseline = `MASTER_BACKUP_MANIFEST_2026-05-20.json` (493 entries, full filesyste
 - For forensic per-file metadata as of 2026-05-20 (491 git-tracked files with first-add/last-modify commits + flags): see [`final/audit/CV_PASS2_CODEBASE_AUDIT.md`](final/audit/CV_PASS2_CODEBASE_AUDIT.md) Part B
 - For pre-zip SHA-256 manifest of every file at 2026-05-20 (493 files): see [`final/audit/MASTER_BACKUP_MANIFEST_2026-05-20.json`](final/audit/MASTER_BACKUP_MANIFEST_2026-05-20.json)
 - For the 4-partition reorg plan + rationale: see [`final/audit/REORG_PROPOSAL_2026-05-20.md`](final/audit/REORG_PROPOSAL_2026-05-20.md)
-- For session-by-session handoff docs: see [`final/audit/SESSION_12_HANDOFF.md`](final/audit/SESSION_12_HANDOFF.md), [`13`](final/audit/SESSION_13_HANDOFF.md), [`14`](final/audit/SESSION_14_HANDOFF.md), [`15`](final/audit/SESSION_15_HANDOFF.md)
+- For session-by-session handoff docs (all sessions 12-33 folded under `handoffs/` in session 34 reorg): see [`final/audit/handoffs/`](final/audit/handoffs/) — see [`handoffs/README.md`](final/audit/handoffs/README.md) for the index
 - For runbook / methodology / bug history: see [`final/docs/METHODOLOGY.md`](final/docs/METHODOLOGY.md), [`BUG_HISTORY.md`](final/docs/BUG_HISTORY.md), [`BROKEN_ABLATIONS.md`](final/docs/BROKEN_ABLATIONS.md), [`CURRENT_RUNS.md`](final/docs/CURRENT_RUNS.md)
 
 ## §5 Memory-update suggestion

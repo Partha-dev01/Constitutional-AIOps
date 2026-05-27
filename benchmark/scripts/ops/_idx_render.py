@@ -275,7 +275,7 @@ OUT.append('- For canonical results landscape + Phase 5 statistics: see [`final/
 OUT.append('- For forensic per-file metadata as of 2026-05-20 (491 git-tracked files with first-add/last-modify commits + flags): see [`final/audit/CV_PASS2_CODEBASE_AUDIT.md`](final/audit/CV_PASS2_CODEBASE_AUDIT.md) Part B')
 OUT.append('- For pre-zip SHA-256 manifest of every file at 2026-05-20 (493 files): see [`final/audit/MASTER_BACKUP_MANIFEST_2026-05-20.json`](final/audit/MASTER_BACKUP_MANIFEST_2026-05-20.json)')
 OUT.append('- For the 4-partition reorg plan + rationale: see [`final/audit/REORG_PROPOSAL_2026-05-20.md`](final/audit/REORG_PROPOSAL_2026-05-20.md)')
-OUT.append('- For session-by-session handoff docs: see [`final/audit/SESSION_12_HANDOFF.md`](final/audit/SESSION_12_HANDOFF.md), [`13`](final/audit/SESSION_13_HANDOFF.md), [`14`](final/audit/SESSION_14_HANDOFF.md), [`15`](final/audit/SESSION_15_HANDOFF.md)')
+OUT.append('- For session-by-session handoff docs (all sessions 12-33 folded under `handoffs/` in session 34 reorg): see [`final/audit/handoffs/`](final/audit/handoffs/) — see [`handoffs/README.md`](final/audit/handoffs/README.md) for the index')
 OUT.append('- For runbook / methodology / bug history: see [`final/docs/METHODOLOGY.md`](final/docs/METHODOLOGY.md), [`BUG_HISTORY.md`](final/docs/BUG_HISTORY.md), [`BROKEN_ABLATIONS.md`](final/docs/BROKEN_ABLATIONS.md), [`CURRENT_RUNS.md`](final/docs/CURRENT_RUNS.md)')
 OUT.append('')
 

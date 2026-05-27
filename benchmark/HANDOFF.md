@@ -13,10 +13,12 @@
 |----------|------|-----|
 | 1 | **THIS FILE** | Current state, what to do |
 | 2 | `MEMORY.md` SESSION 23 STARTUP block | Live state snapshot, path discipline (auto-loaded) |
-| 3 | `benchmark/final/audit/SESSION_22_HANDOFF.md` | Session 22 close + 5-agent paper audit synthesis (10 CRITICAL + 14 IMPORTANT + 7 MINOR findings) |
-| 4 | `benchmark/final/audit/paper_audit_session22_2026-05-26/00_SUMMARY.md` | Master audit synthesis — file:line citations for every finding |
-| 5 | `benchmark/final/audit/SESSION_21_HANDOFF.md` | Session 21 → 22 handoff (DIFF resume + sandbox polish) |
-| 6 | `benchmark/final/audit/SESSION_20_HANDOFF.md` §6.1 | Gate 1 commit grouping reference |
+| 3 | `benchmark/final/audit/handoffs/SESSION_33_HANDOFF.md` | Latest close-out (session 33 — Phase 5 Topology Option A fully applied + pushed) |
+| 4 | `benchmark/final/audit/handoffs/SESSION_22_HANDOFF.md` | Session 22 close + 5-agent paper audit synthesis (10 CRITICAL + 14 IMPORTANT + 7 MINOR findings) |
+| 5 | `benchmark/final/audit/paper_audit_session22_2026-05-26/00_SUMMARY.md` | Master audit synthesis — file:line citations for every finding |
+| 6 | `benchmark/final/audit/handoffs/SESSION_21_HANDOFF.md` | Session 21 → 22 handoff (DIFF resume + sandbox polish) |
+| 7 | `benchmark/final/audit/handoffs/SESSION_20_HANDOFF.md` §6.1 | Gate 1 commit grouping reference |
+| | _All session-by-session handoffs (12-33)_ | now folded under `benchmark/final/audit/handoffs/` (session-34 reorg) |
 | 7 | `benchmark/final/SUMMARY.md` | Canonical results landscape |
 | 8 | `benchmark/final/docs/METHODOLOGY.md` | Eval methodology + 3-point rubric disclosure |
 
@@ -118,7 +120,7 @@ aws ec2 stop-instances --profile aiops-operator --region us-east-1 --instance-id
 ### Uncommitted local changes
 **45 modified files in working tree** (session 17-22 cumulative — see §10 below for inventory).
 
-**Gate 1**: 7 themed local commits drafted per `benchmark/final/audit/SESSION_20_HANDOFF.md` §6.1, awaiting USER GO. NO commits as of session 22 close.
+**Gate 1**: 7 themed local commits drafted per `benchmark/final/audit/handoffs/SESSION_20_HANDOFF.md` §6.1, awaiting USER GO. NO commits as of session 22 close.
 **Gate 2 (rsync sandbox → real)**: **PERMANENTLY DROPPED** per user decision 2026-05-26. Sandbox IS the final draft location.
 **Gate 3 (push origin/main)**: requires SEPARATE USER GO after Gate 1 lands.
 
@@ -162,7 +164,7 @@ sn-article-template.v2.sandbox-session16/
 
 (note: a `_camera_ready_2026-05-26/` package was built at session-26 close
  then deleted post-close as redundant — main/sn-article.pdf IS the submission
- file; SHA-256 above is authoritative provenance. See SESSION_26_HANDOFF.md §11.)
+ file; SHA-256 above is authoritative provenance. See handoffs/SESSION_26_HANDOFF.md §11.)
 ```
 
 **Recompile main**:
@@ -267,7 +269,7 @@ Source: `benchmark/final/phase45_graph/` (4 scp'd files + `_failed_run_log.txt`)
 
 ### Action 1 — Gate 1: 7 themed local commits (LAPTOP, requires USER GO)
 
-Per `benchmark/final/audit/SESSION_20_HANDOFF.md` §6.1 (commit #6 updated for session-21+22 polish):
+Per `benchmark/final/audit/handoffs/SESSION_20_HANDOFF.md` §6.1 (commit #6 updated for session-21+22 polish):
 
 1. `data(D-1): re-label 33 OpsEval-remined cases as qa_mcq + sync 16 result files + Phase 5 recompute`
 2. `docs: update SUMMARY/METHODOLOGY/MANIFEST/BUG_HISTORY/AUDIT_REPORT for post-D-1 + D-2/D-3/D-5/Conflict-5 disclosures`
@@ -361,9 +363,9 @@ Currently Stack B latency numbers are from 15+15 smoke. Full 431 run would tight
 - `.../sandbox-session16/diff/sn-article-DIFF.tex` + `.pdf` (16p, NEW session 22)
 
 ### Session handoffs (4 new audit docs)
-- `benchmark/final/audit/SESSION_19_HANDOFF.md`
-- `benchmark/final/audit/SESSION_20_HANDOFF.md`
-- `benchmark/final/audit/SESSION_21_HANDOFF.md`
+- `benchmark/final/audit/handoffs/SESSION_19_HANDOFF.md`
+- `benchmark/final/audit/handoffs/SESSION_20_HANDOFF.md`
+- `benchmark/final/audit/handoffs/SESSION_21_HANDOFF.md`
 - `benchmark/HANDOFF.md` ← THIS FILE (moved from `constitutional-aiops/HANDOFF.md` session 22)
 
 ### Sorted-from-root files (session 22 housekeeping)

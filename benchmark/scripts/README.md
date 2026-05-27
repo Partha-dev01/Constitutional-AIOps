@@ -166,7 +166,7 @@ This index was created 2026-05-20 in session 13 as the cap of the 4-partition re
 
 See also:
 - [`benchmark/final/audit/REORG_PROPOSAL_2026-05-20.md`](../final/audit/REORG_PROPOSAL_2026-05-20.md) — original 4-partition reorg plan
-- [`benchmark/final/audit/SESSION_12_HANDOFF.md`](../final/audit/SESSION_12_HANDOFF.md) — session-12 close-out
-- [`benchmark/final/audit/SESSION_13_HANDOFF.md`](../final/audit/SESSION_13_HANDOFF.md) — Stage J broken-state + resume protocol (RESOLVED in session 14)
+- [`benchmark/final/audit/handoffs/SESSION_12_HANDOFF.md`](../final/audit/handoffs/SESSION_12_HANDOFF.md) — session-12 close-out
+- [`benchmark/final/audit/handoffs/SESSION_13_HANDOFF.md`](../final/audit/handoffs/SESSION_13_HANDOFF.md) — Stage J broken-state + resume protocol (RESOLVED in session 14)
 - [`benchmark/final/audit/paper_audit_session27_2026-05-26/07_benchmark_topology_analysis.md`](../final/audit/paper_audit_session27_2026-05-26/07_benchmark_topology_analysis.md) — Stage 5 topology analysis + Option A move plan executed in session 32
 - [`benchmark/final/docs/METHODOLOGY.md`](../final/docs/METHODOLOGY.md) — evaluation methodology authoritative ref

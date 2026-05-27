@@ -180,7 +180,7 @@ Stage-2 LLM judge for OpsEval-remined candidates silently fell back from Bedrock
 
 **Fix** (`run_graph_experiments.py:31 + 171-176`): imported `dataclasses`; wrapped both writes as `json.dumps(dataclasses.asdict(r), default=str)`. `asdict` recurses through nested dataclasses; `default=str` catches enums / `datetime` / `Path` if present. The aggregate-summary write at line 170 was unaffected (it serialises a plain dict).
 
-**Impact on saved data**: 4.5b summary JSON IS valid and is the data source for the paper. 4.5b per-case JSONL files are empty (0 bytes) — per-case detail lost for this run. 4.5c never ran; the existing `exp_4_5c_summary.json` on disk is stale leftover from a session-17 crash and is ignored. The decision rule locked pre-hibernation fires for **PATH 4**: drop both 4.5b/4.5c rows from sandbox `tab:graphsub`, add a 1-sentence disclosure in §4.5. Forensic log: `benchmark/final/phase45_graph/_failed_run_log.txt`. See `audit/SESSION_20_HANDOFF.md` for the full close-out.
+**Impact on saved data**: 4.5b summary JSON IS valid and is the data source for the paper. 4.5b per-case JSONL files are empty (0 bytes) — per-case detail lost for this run. 4.5c never ran; the existing `exp_4_5c_summary.json` on disk is stale leftover from a session-17 crash and is ignored. The decision rule locked pre-hibernation fires for **PATH 4**: drop both 4.5b/4.5c rows from sandbox `tab:graphsub`, add a 1-sentence disclosure in §4.5. Forensic log: `benchmark/final/phase45_graph/_failed_run_log.txt`. See `audit/handoffs/SESSION_20_HANDOFF.md` for the full close-out.
 
 ### D-6. BERT-F1 zeros — ✅ RESOLVED 2026-05-26, session 18
 
