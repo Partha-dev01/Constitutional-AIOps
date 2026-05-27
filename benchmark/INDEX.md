@@ -21,6 +21,8 @@ Walk methodology: `find benchmark -type f` (excluding `__pycache__`, `.git`, `no
 
 **Session 33 (2026-05-27) — Phase 5 Topology Option A sub-commit A2**: 3 stale raw-mining mirrors (`apache_candidates.jsonl`, `openssh_candidates.jsonl`, `opseval_remine_s2.jsonl`) moved from `raw/` → `archive/raw_pre_reorg_mirrors/` (+1 `_NOTICE.md`). Net: raw 100→97, archive 203→207 (+4). Total count unchanged.
 
+**Session 33 (2026-05-27) — Phase 5 Topology Option A sub-commit A3**: top-level `INDEX_BUILD_REPORT.md` relocated to `final/audit/SESSION_16_INDEX_BUILD_REPORT.md` (R100 git rename) to co-locate with the rest of the session-16 forensic record and match the `SESSION_NN_*.md` audit-dir convention. Net: top-level `.md` count goes from 3 to 2 (`HANDOFF.md` + `INDEX.md` remain); final/ count goes from 64 to 65 (this file). Per-file enumeration in §2.final is intentionally not extended for session-NN audit/handoff docs (consistent with the existing convention there).
+
 ## §2 Per-file index
 
 Grouped by partition. Within each partition rows are sorted alphabetically by path. Status legend: `active` = paper-evidence pipeline reads it; `historical` = forensic / superseded; `dev` = smoke / debug; `sealed-forensic` = do-not-modify session-12 forensic; `unknown` = role could not be inferred.
