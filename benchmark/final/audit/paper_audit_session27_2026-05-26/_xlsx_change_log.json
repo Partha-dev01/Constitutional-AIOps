@@ -1,0 +1,182 @@
+[
+  [
+    "header",
+    "",
+    "Added cols Status/Action/Notes",
+    "OK"
+  ],
+  [
+    11,
+    "askell2024collective",
+    "Key->huang2024collective; Authors updated; Status=cited",
+    "OK"
+  ],
+  [
+    12,
+    "chen2024autonomous",
+    "Status=dropped-from-bib + Notes added",
+    "OK"
+  ],
+  [
+    13,
+    "li2024opseval",
+    "Key->liu2024opseval; Authors+Title updated; Status=cited",
+    "OK"
+  ],
+  [
+    14,
+    "chen2024rcagent",
+    "Key->wang2024rcagent; Authors updated; Status=cited",
+    "OK"
+  ],
+  [
+    28,
+    "notaro2021aiopssurvey",
+    "Venue+Primary updated; Status=cited",
+    "OK"
+  ],
+  [
+    42,
+    "wu2020microrank",
+    "Authors updated; Status=cited",
+    "OK"
+  ],
+  [
+    43,
+    "chen2022automap",
+    "Authors + Year + Venue updated; Status=cited",
+    "OK"
+  ],
+  [
+    49,
+    "datadog2024observability",
+    "APPENDED new row #48, status=cited",
+    "OK"
+  ],
+  [
+    50,
+    "guo2017calibration",
+    "APPENDED new row #49, status=cited",
+    "OK"
+  ],
+  [
+    51,
+    "bansal2021does",
+    "APPENDED new row #50, status=cited",
+    "OK"
+  ],
+  [
+    52,
+    "cncf2024survey",
+    "APPENDED new row #51, status=cited",
+    "OK"
+  ],
+  [
+    53,
+    "reimers2019sentence",
+    "APPENDED new row #52, status=cited",
+    "OK"
+  ],
+  [
+    54,
+    "lewis2020retrieval",
+    "APPENDED new row #53, status=cited",
+    "OK"
+  ],
+  [
+    55,
+    "thakur2021beir",
+    "APPENDED new row #54, status=cited",
+    "OK"
+  ],
+  [
+    56,
+    "parasuraman2000model",
+    "APPENDED new row #55, status=cited",
+    "OK"
+  ],
+  [
+    57,
+    "zhang2020effect",
+    "APPENDED new row #56, status=orphan-retained",
+    "OK"
+  ],
+  [
+    58,
+    "zhu2023loghub",
+    "APPENDED new row #57, status=cited",
+    "OK"
+  ],
+  [
+    59,
+    "lemma2024rca",
+    "APPENDED new row #58, status=cited",
+    "OK"
+  ],
+  [
+    60,
+    "bertscore2020",
+    "APPENDED new row #59, status=cited",
+    "OK"
+  ],
+  [
+    61,
+    "christakopoulou2024talker",
+    "APPENDED new row #60, status=cited",
+    "OK"
+  ],
+  [
+    62,
+    "xu2025openrca",
+    "APPENDED new row #61, status=cited",
+    "OK"
+  ],
+  [
+    63,
+    "pei2025flowofaction",
+    "APPENDED new row #62, status=cited",
+    "OK"
+  ],
+  [
+    64,
+    "cui2025logeval",
+    "APPENDED new row #63, status=cited",
+    "OK"
+  ],
+  [
+    65,
+    "miller2025bootstrap",
+    "APPENDED new row #64, status=cited",
+    "OK"
+  ],
+  [
+    66,
+    "nvidia2024specdec",
+    "APPENDED new row #65, status=cited",
+    "OK"
+  ],
+  [
+    67,
+    "adaspec2025",
+    "APPENDED new row #66, status=orphan-retained",
+    "OK"
+  ],
+  [
+    68,
+    "edge2024graphrag",
+    "APPENDED new row #67, status=orphan-retained",
+    "OK"
+  ],
+  [
+    69,
+    "peng2025graphragsurvey",
+    "APPENDED new row #68, status=cited",
+    "OK"
+  ],
+  [
+    70,
+    "leahy2024grandchallenges",
+    "APPENDED new row #69, status=downloaded-not-in-bib",
+    "OK"
+  ]
+]

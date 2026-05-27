@@ -1,0 +1,362 @@
+[
+  {
+    "type": "misc",
+    "key": "opentelemetry2024collector",
+    "fields": {
+      "author": "{OpenTelemetry Community}",
+      "title": "{OpenTelemetry Collector -- v0.131.0}",
+      "year": "2024",
+      "howpublished": "\\url{https://opentelemetry.io/}"
+    }
+  },
+  {
+    "type": "misc",
+    "key": "datadog2024observability",
+    "fields": {
+      "author": "{Datadog}",
+      "title": "{State of Observability 2024}",
+      "year": "2024",
+      "howpublished": "Datadog Technical Report, \\url{https://www.datadoghq.com/state-of-observability/}"
+    }
+  },
+  {
+    "type": "article",
+    "key": "zhang2024aiopssurvey",
+    "fields": {
+      "author": "Zhang, Lingzhe and Jia, Tong and Jia, Mengxi and others",
+      "title": "{A Survey of AIOps in the Era of Large Language Models}",
+      "journal": "ACM Computing Surveys",
+      "year": "2026",
+      "doi": "10.1145/3746635"
+    }
+  },
+  {
+    "type": "article",
+    "key": "notaro2021aiopssurvey",
+    "fields": {
+      "author": "Notaro, Paolo and Cardoso, Jorge and Gerndt, Michael",
+      "title": "{A Survey of AIOps Methods for Failure Management}",
+      "journal": "ACM Transactions on Intelligent Systems and Technology",
+      "year": "2021",
+      "doi": "10.1145/3483424"
+    }
+  },
+  {
+    "type": "misc",
+    "key": "alibaba2024qwen",
+    "fields": {
+      "author": "{Alibaba Cloud}",
+      "title": "{Qwen Technical Report (Qwen3 Series)}",
+      "year": "2025",
+      "note": "Technical Report, Alibaba Cloud"
+    }
+  },
+  {
+    "type": "inproceedings",
+    "key": "guo2017calibration",
+    "fields": {
+      "author": "Guo, Chuan and Pleiss, Geoff and Sun, Yu and Weinberger, Kilian Q.",
+      "title": "{On Calibration of Modern Neural Networks}",
+      "booktitle": "Proceedings of the 34th International Conference on Machine Learning (ICML)",
+      "pages": "1321--1330",
+      "year": "2017"
+    }
+  },
+  {
+    "type": "inproceedings",
+    "key": "bansal2021does",
+    "fields": {
+      "author": "Bansal, Gagan and Wu, Tongshuang and Zhou, Joyce and others",
+      "title": "{Does the Whole Exceed its Parts? The Effect of AI Explanations on Complementary Team Performance}",
+      "booktitle": "Proc. CHI",
+      "pages": "1--16",
+      "year": "2021"
+    }
+  },
+  {
+    "type": "inproceedings",
+    "key": "wang2024rcagent",
+    "fields": {
+      "author": "Wang, Zefan and Liu, Zichuan and Zhang, Yingying",
+      "title": "{RCAgent: Cloud Root Cause Analysis by Autonomous Agents with Tool-Augmented Large Language Models}",
+      "booktitle": "Proc. CIKM",
+      "year": "2024"
+    }
+  },
+  {
+    "type": "inproceedings",
+    "key": "wu2020microrank",
+    "fields": {
+      "author": "Yu, Guangba and Chen, Pengfei and Chen, Hongyang and Guan, Zijie and others",
+      "title": "{MicroRank: End-to-End Latency Issue Localization with Extended Spectrum Analysis in Microservice Environments}",
+      "booktitle": "Proceedings of The Web Conference (WWW)",
+      "year": "2021"
+    }
+  },
+  {
+    "type": "inproceedings",
+    "key": "chen2022automap",
+    "fields": {
+      "author": "Ma, Meng and Wang, Ping and Xu, Jingmin and Wang, Yuan and Chen, Pengfei and Zhang, Zonghua",
+      "title": "{AutoMAP: Diagnose Your Microservice-based Web Applications Automatically}",
+      "booktitle": "Proceedings of The Web Conference (WWW)",
+      "year": "2020"
+    }
+  },
+  {
+    "type": "inproceedings",
+    "key": "arigraph2024",
+    "fields": {
+      "author": "Anokhin, Petr and Semenov, Nikita and Sorokin, Artyom and others",
+      "title": "{AriGraph: Learning Knowledge Graph World Models with Episodic Memory for LLM Agents}",
+      "booktitle": "Proc. IJCAI",
+      "year": "2025",
+      "note": "arXiv:2407.04363"
+    }
+  },
+  {
+    "type": "misc",
+    "key": "bai2022constitutional",
+    "fields": {
+      "author": "Bai, Yuntao and others",
+      "title": "{Constitutional AI: Harmlessness from AI Feedback}",
+      "year": "2022",
+      "note": "Anthropic"
+    }
+  },
+  {
+    "type": "inproceedings",
+    "key": "huang2024collective",
+    "fields": {
+      "author": "Huang, Saffron and Siddarth, Divya and Lovitt, Liane and others",
+      "title": "{Collective Constitutional AI: Aligning a Language Model with Public Input}",
+      "booktitle": "Proceedings of the 2024 ACM Conference on Fairness, Accountability, and Transparency",
+      "year": "2024"
+    }
+  },
+  {
+    "type": "misc",
+    "key": "grafana2024loki",
+    "fields": {
+      "author": "{Grafana Labs}",
+      "title": "{Loki Documentation -- v2.9}",
+      "year": "2024",
+      "howpublished": "\\url{https://grafana.com/docs/loki/latest/}"
+    }
+  },
+  {
+    "type": "misc",
+    "key": "cncf2024survey",
+    "fields": {
+      "author": "{Cloud Native Computing Foundation}",
+      "title": "{CNCF Annual Survey 2024}",
+      "year": "2024",
+      "howpublished": "CNCF, \\url{https://www.cncf.io/reports/}"
+    }
+  },
+  {
+    "type": "inproceedings",
+    "key": "reimers2019sentence",
+    "fields": {
+      "author": "Reimers, Nils and Gurevych, Iryna",
+      "title": "{Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks}",
+      "booktitle": "Proc. EMNLP-IJCNLP",
+      "pages": "3982--3992",
+      "year": "2019"
+    }
+  },
+  {
+    "type": "inproceedings",
+    "key": "lewis2020retrieval",
+    "fields": {
+      "author": "Lewis, Patrick and Perez, Ethan and Piktus, Aleksandra and others",
+      "title": "{Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks}",
+      "booktitle": "Advances in Neural Information Processing Systems (NeurIPS)",
+      "volume": "33",
+      "pages": "9459--9474",
+      "year": "2020"
+    }
+  },
+  {
+    "type": "inproceedings",
+    "key": "thakur2021beir",
+    "fields": {
+      "author": "Thakur, Nandan and Reimers, Nils and R{\\",
+      "title": "{BEIR: A Heterogeneous Benchmark for Zero-shot Evaluation of Information Retrieval Models}",
+      "booktitle": "Proc. NeurIPS",
+      "volume": "34",
+      "pages": "9354--9366",
+      "year": "2021"
+    }
+  },
+  {
+    "type": "article",
+    "key": "parasuraman2000model",
+    "fields": {
+      "author": "Parasuraman, Raja and Sheridan, Thomas B. and Wickens, Christopher D.",
+      "title": "{A Model for Types and Levels of Human Interaction with Automation}",
+      "journal": "IEEE Transactions on Systems, Man, and Cybernetics---Part A: Systems and Humans",
+      "volume": "30",
+      "number": "3",
+      "pages": "286--297",
+      "year": "2000"
+    }
+  },
+  {
+    "type": "inproceedings",
+    "key": "zhang2020effect",
+    "fields": {
+      "author": "Zhang, Yunfeng and Liao, Q. Vera and Bellamy, Rachel K. E.",
+      "title": "{Effect of Confidence and Explanation on Accuracy and Trust Calibration in AI-Assisted Decision Making}",
+      "booktitle": "Proceedings of the 2020 Conference on Fairness, Accountability, and Transparency (FAT*)",
+      "pages": "295--305",
+      "year": "2020"
+    }
+  },
+  {
+    "type": "article",
+    "key": "zhu2023loghub",
+    "fields": {
+      "author": "Zhu, Jieming and He, Shilin and Liu, Jinyang and others",
+      "title": "{Loghub: A Large Collection of System Log Datasets towards Automated Log Analytics}",
+      "journal": "arXiv:2008.06448",
+      "year": "2023"
+    }
+  },
+  {
+    "type": "inproceedings",
+    "key": "liu2024opseval",
+    "fields": {
+      "author": "Liu, Yuhe and Pei, Changhua and Sun, Yongqian and others",
+      "title": "{OpsEval: A Comprehensive Benchmark Suite for Evaluating Large Language Models' Capability in IT Operations Domain}",
+      "booktitle": "Proceedings of the ACM International Conference on the Foundations of Software Engineering (FSE) Companion",
+      "year": "2025"
+    }
+  },
+  {
+    "type": "misc",
+    "key": "lemma2024rca",
+    "fields": {
+      "author": "{LEMMA-RCA}",
+      "title": "{A Large Multi-modal Multi-domain Dataset for Root Cause Analysis}",
+      "year": "2024",
+      "howpublished": "\\url{https://huggingface.co/datasets/LEMMA-RCA}"
+    }
+  },
+  {
+    "type": "inproceedings",
+    "key": "bertscore2020",
+    "fields": {
+      "author": "Zhang, Tianyi and Kishore, Varsha and Wu, Felix and Weinberger, Kilian Q. and Artzi, Yoav",
+      "title": "{BERTScore: Evaluating Text Generation with BERT}",
+      "booktitle": "Proceedings of the International Conference on Learning Representations (ICLR)",
+      "year": "2020"
+    }
+  },
+  {
+    "type": "misc",
+    "key": "christakopoulou2024talker",
+    "fields": {
+      "author": "Christakopoulou, Konstantina and others",
+      "title": "{Talker-Reasoner: A Dual-Process Framework for Conversational Agents}",
+      "year": "2024",
+      "note": "arXiv:2410.08328"
+    }
+  },
+  {
+    "type": "inproceedings",
+    "key": "chen2025aiopslabs",
+    "fields": {
+      "author": "Chen, Yinfang and Shetty, Manish and Ma, Minghua and others",
+      "title": "{{AIOpsLab}: A Holistic Framework to Evaluate {AI} Agents for Enabling Autonomous Clouds}",
+      "booktitle": "Proceedings of Machine Learning and Systems ({MLSys} 2025)",
+      "year": "2025"
+    }
+  },
+  {
+    "type": "inproceedings",
+    "key": "xu2025openrca",
+    "fields": {
+      "author": "Xu, Junjielong and Zhang, Qinan and Zhong, Zhiqing and He, Shilin and others",
+      "title": "{{OpenRCA}: Can Large Language Models Locate the Root Cause of Software Failures?}",
+      "booktitle": "Proceedings of the International Conference on Learning Representations ({ICLR})",
+      "year": "2025"
+    }
+  },
+  {
+    "type": "inproceedings",
+    "key": "pei2025flowofaction",
+    "fields": {
+      "author": "Pei, Changhua and Wang, Zexin and Liu, Fengrui and others",
+      "title": "{Flow-of-Action: {SOP} Enhanced {LLM}-Based Multi-Agent System for Root Cause Analysis}",
+      "booktitle": "Proceedings of The {ACM} Web Conference ({WWW})",
+      "year": "2025"
+    }
+  },
+  {
+    "type": "article",
+    "key": "cui2025logeval",
+    "fields": {
+      "author": "Cui, Tianyu and Ma, Shiyu and Chen, Ziang and others",
+      "title": "{{LogEval}: A Comprehensive Benchmark Suite for Large Language Models in Log Analysis}",
+      "journal": "Empirical Software Engineering",
+      "publisher": "Springer",
+      "year": "2025",
+      "note": "doi:10.1007/s10664-025-10600-0"
+    }
+  },
+  {
+    "type": "techreport",
+    "key": "miller2025bootstrap",
+    "fields": {
+      "author": "Miller, Evan",
+      "title": "Adding Error Bars to Evals: A Statistical Approach to Language Model Evaluations",
+      "institution": "arXiv",
+      "year": "2024",
+      "number": "arXiv:2411.00640"
+    }
+  },
+  {
+    "type": "misc",
+    "key": "nvidia2024specdec",
+    "fields": {
+      "author": "Li, Jamie and Yu, Chenhan and Guo, Hao",
+      "title": "An Introduction to Speculative Decoding for Reducing Latency in {AI} Inference",
+      "year": "2025",
+      "howpublished": "NVIDIA Developer Blog, \\url{https://developer.nvidia.com/blog/an-introduction-to-speculative-decoding-for-reducing-latency-in-ai-inference/}"
+    }
+  },
+  {
+    "type": "techreport",
+    "key": "adaspec2025",
+    "fields": {
+      "author": "Huang, Kaiyu and Wu, Hao and Shi, Zhubo and Zou, Han and Yu, Minchen and Shi, Qingjiang",
+      "title": "{AdaSpec}: Adaptive Speculative Decoding for Efficient Large Language Model Serving",
+      "institution": "arXiv",
+      "year": "2025",
+      "number": "arXiv:2503.05096"
+    }
+  },
+  {
+    "type": "techreport",
+    "key": "edge2024graphrag",
+    "fields": {
+      "author": "Edge, Darren and Trinh, Ha and Cheng, Newman and others",
+      "title": "From Local to Global: {A} {GraphRAG} Approach to Query-Focused Summarization",
+      "institution": "arXiv",
+      "year": "2024",
+      "number": "arXiv:2404.16130"
+    }
+  },
+  {
+    "type": "article",
+    "key": "peng2025graphragsurvey",
+    "fields": {
+      "author": "Peng, Boci and Zhu, Yun and Liu, Yongchao and others",
+      "title": "Graph Retrieval-Augmented Generation: {A} Survey",
+      "journal": "ACM Trans. Inf. Syst.",
+      "year": "2026",
+      "doi": "10.1145/3777378"
+    }
+  }
+]
