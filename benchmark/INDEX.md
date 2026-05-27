@@ -10,14 +10,16 @@ _Generated: 2026-05-25 (session 16). Baseline: `CV_PASS2_CODEBASE_AUDIT.md` Part
 
 | Partition | Role | File count | Total size | Key entry-points |
 |---|---|---:|---:|---|
-| `raw/` | Third-party + mining outputs (gitignored mirrors) | 100 | 6.65 MB | `raw/README.md`, `loghub/`, `opseval/`, `lemma_rca/` |
-| `intermediate/` | Processed datasets + candidates (tracked) | 13 | 1.63 MB | `intermediate/README.md`, `datasets/benchmark_431_seed42.json` |
+| `raw/` | Third-party + mining outputs (gitignored mirrors) | 97 | 6.59 MB | `raw/README.md`, `loghub/`, `opseval/`, `lemma_rca/` |
+| `intermediate/` | Processed datasets + candidates (tracked) | 13 | 1.63 MB | `intermediate/README.md`, `datasets/benchmark_431_seed42.json` (canonical paper dataset) |
 | `final/` | Paper-ready results + audit + docs | 64 | 7.59 MB | `final/SUMMARY.md`, `final/MANIFEST.md`, `final/AUDIT_REPORT.md`, `final/audit/`, `final/docs/` |
-| `archive/` | Historical / superseded artifacts | 203 | 21.32 MB | `archive/README.md`, `originals_2026-05-19/`, `v0.9.1_jarvis_baseline/` |
+| `archive/` | Historical / superseded artifacts | 207 | 21.38 MB | `archive/README.md`, `originals_2026-05-19/`, `v0.9.1_jarvis_baseline/`, `raw_pre_reorg_mirrors/` (session 33) |
 | `scripts/` | 34 Python scripts in 5 sub-folders + README | 40 | 427.9 KB | `scripts/README.md`, `prep/`, `run/`, `eval/`, `ops/`, `_dev/` |
 | **TOTAL** | | **422** | **37.62 MB** | |
 
 Walk methodology: `find benchmark -type f` (excluding `__pycache__`, `.git`, `node_modules`). Files in `raw/` are gitignored but present on disk; counted here.
+
+**Session 33 (2026-05-27) — Phase 5 Topology Option A sub-commit A2**: 3 stale raw-mining mirrors (`apache_candidates.jsonl`, `openssh_candidates.jsonl`, `opseval_remine_s2.jsonl`) moved from `raw/` → `archive/raw_pre_reorg_mirrors/` (+1 `_NOTICE.md`). Net: raw 100→97, archive 203→207 (+4). Total count unchanged.
 
 ## §2 Per-file index
 

@@ -1,6 +1,8 @@
 # `run_stackA_main431_newprompt/` — AUTHORITATIVE main benchmark (v2)
 
 > **Status (2026-05-16 session 9 end)**: This directory contains the AUTHORITATIVE Constitutional AIOps main benchmark results. The previous `run_stackA_main431/` directory is kept for v1-paper reference but is **superseded by these results** for all paper claims.
+>
+> **Canonical paper-source file**: `results_sota_eval_431.json` (matched/strict eval, Table 7 + Phase 5 stats). `results.json` is the runner.py rich-eval provenance copy retained for audit; the paper headline numbers are computed from `results_sota_eval_431.json`.
 > **What changed**: The RCA system prompt in `src/agents/reasoning_agent.py` was extended to explicitly handle knowledge-format queries (no longer refuses with "this is a conceptual inquiry, not an incident"). See `../METHODOLOGY.md` §7 for the diff and rationale.
 
 ---

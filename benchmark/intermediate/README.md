@@ -2,6 +2,8 @@
 
 Processed datasets + mining-output candidates that sit between `benchmark/raw/` (third-party) and `benchmark/final/` (paper-ready). These files ARE tracked in git (small, diffable, paper-relevant).
 
+> **Canonical paper dataset**: `datasets/benchmark_431_seed42.json` (218 annotation + 213 RCA = 431 cases; seed 42). All other JSONs in `datasets/` are historical builds, intermediates, or metadata. See the table below for full provenance.
+
 ## Layout
 
 | Subdir | Contents | Source |
