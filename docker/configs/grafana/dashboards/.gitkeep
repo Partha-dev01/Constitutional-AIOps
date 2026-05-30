@@ -1,0 +1,2 @@
+# Drop Grafana dashboard JSON files here; the provider in
+# ../provisioning/dashboards/dashboards.yaml loads them on a 30s interval.

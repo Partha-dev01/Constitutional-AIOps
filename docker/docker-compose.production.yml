@@ -4,8 +4,6 @@
 # Production deployment on AWS g6.xlarge with NVIDIA L4 24GB GPU
 # Includes security hardening, resource limits, and monitoring
 
-version: "3.9"
-
 services:
   # ==========================================================================
   # LLM Inference (Production - Both models always loaded)
@@ -127,8 +125,10 @@ services:
       args:
         - BUILD_ENV=production
     container_name: aiops-backend
-    ports:
-      - "127.0.0.1:8000:8000"  # Internal only, exposed via reverse proxy
+    # No host port: Caddy reaches the backend at http://backend:8000 on the
+    # aiops-network. !override clears the base file's 0.0.0.0:8000 publish so the
+    # API is never exposed directly and never collides with vLLM on host :8000.
+    ports: !override []
     environment:
       - FAST_AGENT_URL=http://qwen3-4b:8000/v1
       - REASONING_AGENT_URL=http://qwen3-14b:8001/v1
@@ -179,10 +179,12 @@ services:
       dockerfile: docker/Dockerfile.frontend
       args:
         - BUILD_ENV=production
-        - VITE_API_URL=${PUBLIC_API_URL:-http://localhost:8000}
+        # Same-origin: default to relative /api/v1 so the bundle is domain-portable.
+        # Set PUBLIC_API_URL=https://<domain>/api/v1 to hard-code an absolute origin.
+        - VITE_API_URL=${PUBLIC_API_URL:-/api/v1}
     container_name: aiops-frontend
-    ports:
-      - "3000:3000"  # Exposed to public
+    # No host port: Caddy serves the SPA from http://frontend:3000 at "/".
+    ports: !override []
     environment:
       - NODE_ENV=production
     depends_on:
@@ -208,9 +210,9 @@ services:
   neo4j:
     image: neo4j:5.15-community
     container_name: aiops-neo4j
-    ports:
-      - "127.0.0.1:7474:7474"  # Browser (internal only)
-      - "127.0.0.1:7687:7687"  # Bolt (internal only)
+    ports: !override                # !override drops base's 0.0.0.0 publish
+      - "127.0.0.1:7474:7474"  # Browser (loopback only; SSH-tunnel to debug)
+      - "127.0.0.1:7687:7687"  # Bolt (loopback only)
     environment:
       - NEO4J_AUTH=neo4j/${NEO4J_PASSWORD}
       - NEO4J_PLUGINS=["apoc"]
@@ -251,8 +253,8 @@ services:
   loki:
     image: grafana/loki:2.9.3
     container_name: aiops-loki
-    ports:
-      - "127.0.0.1:3100:3100"
+    ports: !override
+      - "127.0.0.1:3100:3100"  # loopback only
     command: -config.file=/etc/loki/local-config.yaml
     volumes:
       - /mnt/data/loki:/loki  # EBS-backed; 30-day log retention
@@ -274,8 +276,8 @@ services:
   prometheus:
     image: prom/prometheus:v2.48.0
     container_name: aiops-prometheus
-    ports:
-      - "127.0.0.1:9090:9090"
+    ports: !override
+      - "127.0.0.1:9090:9090"  # loopback only
     volumes:
       - ./docker/configs/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - /mnt/data/prometheus:/prometheus  # EBS-backed; 30-day metric retention
@@ -301,8 +303,8 @@ services:
   tempo:
     image: grafana/tempo:2.3.1
     container_name: aiops-tempo
-    ports:
-      - "127.0.0.1:3200:3200"
+    ports: !override
+      - "127.0.0.1:3200:3200"  # loopback only
       - "127.0.0.1:4317:4317"
       - "127.0.0.1:4318:4318"
     command: -config.file=/etc/tempo/tempo.yaml
@@ -326,12 +328,14 @@ services:
   grafana:
     image: grafana/grafana:10.2.3
     container_name: aiops-grafana
-    ports:
-      - "3001:3000"  # Exposed to public
+    # No host port: Caddy serves Grafana under https://<domain>/grafana/.
+    ports: !override []
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
       - GF_USERS_ALLOW_SIGN_UP=false
-      - GF_SERVER_ROOT_URL=${GRAFANA_ROOT_URL:-http://localhost:3001}
+      # Sub-path serving so every Grafana asset/redirect URL is /grafana-prefixed.
+      - GF_SERVER_ROOT_URL=https://${APP_DOMAIN}/grafana/
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
       - GF_AUTH_ANONYMOUS_ENABLED=false
     volumes:
       - /mnt/data/grafana:/var/lib/grafana  # EBS-backed; dashboards + Grafana state
@@ -362,8 +366,8 @@ services:
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.91.0
     container_name: aiops-otel-collector
-    ports:
-      - "127.0.0.1:4319:4317"
+    ports: !override
+      - "127.0.0.1:4319:4317"  # loopback only
       - "127.0.0.1:4320:4318"
       - "127.0.0.1:8888:8888"
     volumes:
@@ -388,23 +392,41 @@ services:
         max-file: "3"
 
   # ==========================================================================
-  # Reverse Proxy (Production - Optional, for HTTPS)
+  # Reverse Proxy (Production - HTTPS edge)
   # ==========================================================================
 
-  # Uncomment to use Caddy as reverse proxy with automatic HTTPS
-  # caddy:
-  #   image: caddy:2-alpine
-  #   container_name: aiops-caddy
-  #   ports:
-  #     - "80:80"
-  #     - "443:443"
-  #   volumes:
-  #     - ./docker/configs/Caddyfile:/etc/caddy/Caddyfile:ro
-  #     - caddy-data:/data
-  #     - caddy-config:/config
-  #   networks:
-  #     - aiops-network
-  #   restart: always
+  # Caddy is the ONLY public-facing service (80/443). It terminates TLS with
+  # Let's Encrypt and path-routes to frontend / backend / grafana / ingest on the
+  # internal aiops-network. Config: docker/configs/Caddyfile. Brought up by
+  # aiops-caddy.service. The /ingest/* route + INGEST_BASIC_AUTH_* are added in
+  # Gate 7. NOTE: bcrypt hashes contain '$' — escape each as '$$' in .env.production.
+  caddy:
+    image: caddy:2.8-alpine
+    container_name: aiops-caddy
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - APP_DOMAIN=${APP_DOMAIN}
+      - ACME_EMAIL=${ACME_EMAIL:-admin@example.com}
+      - APP_BASIC_AUTH_USER=${APP_BASIC_AUTH_USER}
+      - APP_BASIC_AUTH_HASH=${APP_BASIC_AUTH_HASH}
+    volumes:
+      - ./docker/configs/Caddyfile:/etc/caddy/Caddyfile:ro
+      - /mnt/data/caddy/data:/data      # EBS-backed: Let's Encrypt certs persist
+      - /mnt/data/caddy/config:/config
+    depends_on:
+      - frontend
+      - backend
+      - grafana
+    networks:
+      - aiops-network
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "3"
 
 networks:
   aiops-network:
