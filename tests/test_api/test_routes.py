@@ -57,16 +57,28 @@ class TestChatRoutes:
         # Clear conversations
         _conversations.clear()
 
-        # Create mock request
+        # The chat endpoint now REQUIRES a reasoning agent (no silent mock fallback).
+        agent_resp = MagicMock()
+        agent_resp.content = "I'm doing well, thank you!"
+        agent_resp.confidence = 0.9
+        agent_resp.metadata = {}
+        reasoning_agent = MagicMock()
+        reasoning_agent.chat = AsyncMock(return_value=agent_resp)
+
         mock_request = MagicMock()
-        mock_request.app.state.reasoning_agent = None  # Use mock response
+        mock_request.app.state.reasoning_agent = reasoning_agent
 
         chat_request = ChatRequest(
             message="Hello, how are you?",
             conversation_id=None,
         )
 
-        response = await chat(mock_request, chat_request)
+        # Isolate the chat logic from the Docker/LGTM runtime-context builder.
+        with patch(
+            "src.api.routes.chat._build_runtime_context",
+            new=AsyncMock(return_value="ctx"),
+        ):
+            response = await chat(mock_request, chat_request)
 
         assert response.conversation_id is not None
         assert response.message.role.value == "assistant"
@@ -91,15 +103,26 @@ class TestChatRoutes:
             ],
         )
 
+        agent_resp = MagicMock()
+        agent_resp.content = "Second response"
+        agent_resp.confidence = 0.85
+        agent_resp.metadata = {}
+        reasoning_agent = MagicMock()
+        reasoning_agent.chat = AsyncMock(return_value=agent_resp)
+
         mock_request = MagicMock()
-        mock_request.app.state.reasoning_agent = None
+        mock_request.app.state.reasoning_agent = reasoning_agent
 
         chat_request = ChatRequest(
             message="Second message",
             conversation_id=conv_id,
         )
 
-        response = await chat(mock_request, chat_request)
+        with patch(
+            "src.api.routes.chat._build_runtime_context",
+            new=AsyncMock(return_value="ctx"),
+        ):
+            response = await chat(mock_request, chat_request)
 
         assert response.conversation_id == conv_id
         assert len(_conversations[conv_id].messages) == 4  # 2 original + 2 new
@@ -170,11 +193,16 @@ class TestIncidentRoutes:
                 ),
             )
 
-        # Filter by severity
+        # Filter by severity (all filter args passed explicitly — calling the route
+        # function directly leaves unset Query(...) defaults as Query objects).
         result = await list_incidents(
             page=1,
             page_size=10,
+            status=None,
             severity=[IncidentSeverity.CRITICAL],
+            category=None,
+            service=None,
+            search=None,
         )
 
         assert result.total == 2
