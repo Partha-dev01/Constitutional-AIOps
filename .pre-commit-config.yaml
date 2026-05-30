@@ -1,0 +1,31 @@
+# Pre-commit hooks for Constitutional AIOps.
+#   install:  pre-commit install
+#   run all:  pre-commit run --all-files
+#
+# Ruff auto-fixes + formats the files you touch, so the lint/format backlog is
+# cleaned incrementally (ratchet). The broader codebase lint/type backlog is run
+# informationally in CI until it is cleared, then flipped to blocking.
+#
+# The paper benchmark and formal-documentation trees are out of scope.
+exclude: '^(benchmark/|src/benchmark/|PAPER AND FORMAL DOCUMENTATION/|.*/__pycache__/)'
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ['--maxkb=1024']
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.8
+    hooks:
+      # Lint (auto-fix) — uses [tool.ruff.lint] in pyproject.toml.
+      - id: ruff
+        args: [--fix]
+      # Format (replaces black + isort for the files you touch).
+      - id: ruff-format

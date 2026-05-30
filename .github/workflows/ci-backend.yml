@@ -1,0 +1,59 @@
+name: ci-backend
+
+# Mocked, no-GPU backend CI. The benchmark tree is intentionally excluded
+# (separate effort) via the path filters below.
+on:
+  push:
+    branches: [main, thread-b-deploy]
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'pyproject.toml'
+      - '.github/workflows/ci-backend.yml'
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'pyproject.toml'
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install app + dev tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      # Lint/type are informational while the backlog is ratcheted down
+      # (see pyproject [tool.ruff.lint]); flip to blocking once clean.
+      - name: Ruff lint (informational)
+        continue-on-error: true
+        run: ruff check src tests
+
+      - name: Mypy (informational)
+        continue-on-error: true
+        run: mypy src
+
+      # Blocking quality gate: tests + coverage floor (fail_under from pyproject).
+      - name: Pytest + coverage
+        env:
+          ENVIRONMENT: local
+          TESTING: 'true'
+        run: pytest tests/ --cov --cov-report=term-missing --cov-report=xml
+
+      - name: Upload coverage.xml
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: coverage.xml
+          if-no-files-found: ignore

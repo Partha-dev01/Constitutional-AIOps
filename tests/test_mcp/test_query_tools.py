@@ -11,7 +11,6 @@ import pytest
 
 from src.mcp.server import MCPActionServer
 
-
 # --- find_similar ---------------------------------------------------------
 
 @pytest.mark.asyncio

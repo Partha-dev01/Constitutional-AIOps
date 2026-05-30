@@ -88,15 +88,32 @@ python_functions = ["test_*"]
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+extend-exclude = ["benchmark", "src/benchmark"]
+
+[tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP"]
+ignore = [
+    "E501",  # line-too-long — large backlog; ratchet on once formatted
+]
 
 [tool.coverage.run]
 source = ["src"]
 branch = true
+omit = [
+    "src/benchmark/*",   # paper benchmark — separate, off-limits effort (not this app's gate)
+    "src/version.py",
+    "src/*/__init__.py",
+    "src/__init__.py",
+]
 
 [tool.coverage.report]
+# Ratchet floor (2026-05-30): measured 28.76% ex-benchmark with the suite green
+# (104 passing). Raise this over subsequent passes toward the ~70% target; never lower it.
+fail_under = 28
+show_missing = true
 exclude_lines = [
     "pragma: no cover",
     "if TYPE_CHECKING:",
     "raise NotImplementedError",
+    "if __name__ == .__main__.:",
 ]
