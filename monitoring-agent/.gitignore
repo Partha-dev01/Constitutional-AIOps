@@ -1,0 +1,2 @@
+# Edge agent secrets — never commit the filled-in credential file.
+.env

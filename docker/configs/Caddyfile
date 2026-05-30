@@ -42,7 +42,31 @@
 		format console
 	}
 
-	# --- Gate 7 inserts the /ingest/* handle here (machine basic_auth) ---
+	# --- Remote telemetry ingestion (Gate 7; SEPARATE machine credential) ---
+	# The edge Alloy agent (monitoring-agent/) pushes here over TLS. handle_path
+	# strips the /ingest/<sig> prefix so each store sees its native API path:
+	#   /ingest/loki/loki/api/v1/push -> loki:3100/loki/api/v1/push
+	#   /ingest/prom/api/v1/write     -> prometheus:9090/api/v1/write
+	#   /ingest/otlp/v1/traces        -> tempo:4318/v1/traces
+	@ingest path /ingest/*
+	handle @ingest {
+		basic_auth {
+			{$INGEST_BASIC_AUTH_USER} {$INGEST_BASIC_AUTH_HASH}
+		}
+		request_body {
+			max_size 10MB
+		}
+		handle_path /ingest/loki/* {
+			reverse_proxy loki:3100
+		}
+		handle_path /ingest/prom/* {
+			reverse_proxy prometheus:9090
+		}
+		handle_path /ingest/otlp/* {
+			reverse_proxy tempo:4318
+		}
+		respond "unknown ingest route" 404
+	}
 
 	# Grafana under /grafana/ (GF_SERVER_SERVE_FROM_SUB_PATH keeps the prefix).
 	@grafana path /grafana /grafana/*
