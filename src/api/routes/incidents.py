@@ -393,8 +393,7 @@ async def find_similar_incidents(
         }
 
     try:
-        # TODO: Implement Neo4j similarity query
-        similar = []  # await neo4j_client.find_similar_incidents(incident_id, limit)
+        similar = await neo4j_client.find_similar_incidents(incident_id, limit)
 
         return {
             "incident_id": incident_id,
