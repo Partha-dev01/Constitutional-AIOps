@@ -1,9 +1,9 @@
 # CLAUDE.md - Constitutional AIOps Development Instructions
 
-> **Version**: 3.1
-> **Last Updated**: 2026-01-03
+> **Version**: 4.0
+> **Last Updated**: 2026-05-30
 > **Architecture**: Simultaneous Dual-Model (24GB VRAM)
-> **Status**: 100% Core Complete
+> **Status**: Core complete; Thread B (AWS deploy + remote-monitoring + test gate) in progress
 
 ---
 
@@ -36,8 +36,9 @@ cat docs/KEY_METRICS.md | head -100
 **If Claude Code context is compacted, this file contains ALL essential information to resume work:**
 
 ### System Status
-- **Implementation**: 100% core complete
-- **Deployment**: Jarvis Labs A5000 24GB (primary)
+- **Implementation**: core complete; Thread B deploy-modernization in progress
+- **Production runtime**: AWS g6.xlarge L4 24GB with **vLLM AWQ-marlin** (Stack B), behind a Caddy/Let's-Encrypt domain
+- **Local dev**: Jarvis Labs / Ollama (OpenAI-compatible) — local defaults unchanged
 - **Research Paper**: `docs/research/# IMP Current Research Documentation/Research_V7.tex`
 
 ### Key Files Inventory
@@ -54,13 +55,14 @@ cat docs/KEY_METRICS.md | head -100
 | Loki | v2.9 | 30 days |
 | Grafana | v10.2 | - |
 | Tempo | v2.3 | 7 days |
-| Mimir | v2.16 | 90 days |
+| Prometheus | v2.48 | 30 days |
 
 ### Models (Always Loaded Simultaneously)
-| Agent | Model | Port | VRAM |
-|-------|-------|------|------|
-| Fast Agent | Qwen3-4B Q4_K_M | 8081 | ~4GB |
-| Reasoning Agent | Qwen3-14B Q4_K_M | 8082 | ~11GB |
+Production runtime is vLLM AWQ-marlin (served-model-name in parens); local dev may use Ollama Q4_K_M.
+| Agent | Model | Served name | Port | VRAM |
+|-------|-------|-------------|------|------|
+| Fast Agent | Qwen3-4B-AWQ | qwen3-4b | 8000 | ~3-4GB |
+| Reasoning Agent | Qwen3-14B-AWQ | qwen3-14b | 8001 | ~15GB |
 
 **⚠️ ALWAYS run session start commands before continuing work!**
 
@@ -315,19 +317,19 @@ constitutional-aiops/
 
 ## 🔧 Technology Stack
 
-### Models (FIXED - Do Not Change)
+### Models (architecture fixed; runtime now vLLM AWQ)
 | Role | Model | Quantization | Port | Context |
 |------|-------|--------------|------|---------|
-| Fast Agent | Qwen3-4B | Q4_K_M | 8081 | 8K |
-| Reasoning Agent | Qwen3-14B | Q4_K_M | 8082 | 4K |
+| Fast Agent | Qwen3-4B | AWQ-marlin (vLLM) / Q4_K_M (Ollama local) | 8000 | 8K |
+| Reasoning Agent | Qwen3-14B | AWQ-marlin (vLLM) / Q4_K_M (Ollama local) | 8001 | 4K |
 
 ### Infrastructure
 | Component | Technology |
 |-----------|------------|
-| LLM Hosting | Jarvis Labs Ollama (A5000 24GB) |
-| LLM Runtime | Ollama with OpenAI-compatible API |
+| LLM Hosting | AWS g6.xlarge L4 24GB (production) / Jarvis Labs A5000 (local-dev) |
+| LLM Runtime | vLLM AWQ-marlin (production) / Ollama (local) — both OpenAI-compatible |
 | Graph Memory | Neo4j 5.x |
-| Observability | LGTM (Loki, Grafana, Tempo, Mimir) |
+| Observability | LGTM (Loki, Grafana, Tempo, Prometheus) + OTel collector |
 | Backend | FastAPI (Python 3.11+) |
 | Frontend | React 18 + TypeScript + Tailwind |
 | Container | Docker Compose |
@@ -338,13 +340,14 @@ constitutional-aiops/
 
 ### Environment Variables
 ```bash
-# LLM Endpoints (Jarvis Labs)
-FAST_AGENT_URL=https://[endpoint].notebooks.jarvislabs.net/v1
-REASONING_AGENT_URL=https://[endpoint].notebooks.jarvislabs.net/v1
+# LLM Endpoints (production vLLM on-VM; colon-free model names auto-disable thinking)
+FAST_AGENT_URL=http://localhost:8000/v1       # FAST_AGENT_MODEL=qwen3-4b
+REASONING_AGENT_URL=http://localhost:8001/v1  # REASONING_AGENT_MODEL=qwen3-14b
+# Local dev may instead point at a Jarvis/Ollama endpoint (model names use a colon)
 
-# Neo4j
+# Neo4j (no hardcoded default in production; set via .env / .env.production)
 NEO4J_URI=bolt://localhost:7687
-NEO4J_PASSWORD=constitutional_aiops_2025
+NEO4J_PASSWORD=<required-in-production>
 
 # Constitutional AI Thresholds
 CONFIDENCE_THRESHOLD_AUTO=0.90
@@ -372,10 +375,10 @@ from src.agents.model_router import ModelRouter
 
 router = ModelRouter()
 
-# Fast agent (always available at :8081)
+# Fast agent (production vLLM at :8000)
 fast_response = await router.fast_completion(prompt)
 
-# Reasoning agent (always available at :8082)
+# Reasoning agent (production vLLM at :8001)
 reasoning_response = await router.reasoning_completion(prompt)
 ```
 
@@ -399,9 +402,9 @@ reasoning_response = await router.reasoning_completion(prompt)
 ## ⚠️ Important Constraints
 
 1. **Architecture is FINALIZED**: 24GB simultaneous dual-model
-2. **Models are FIXED**: Qwen3-4B (fast) + Qwen3-14B (reasoning)
-3. **Hardware**: Jarvis Labs A5000 (primary) / AWS L4 (alternative)
-4. **NO hot-swap**: Both models always loaded, direct port routing
+2. **Models are FIXED**: Qwen3-4B (fast) + Qwen3-14B (reasoning); runtime is vLLM AWQ-marlin
+3. **Hardware**: AWS g6.xlarge L4 24GB (primary, vLLM) / Jarvis Labs A5000 (local-dev, Ollama)
+4. **NO hot-swap**: Both models always loaded, direct port routing (8000 fast / 8001 reasoning)
 5. **Constitutional AI is REQUIRED**: Every action through validator
 6. **Update docs EVERY session**: Maintain continuity
 
@@ -438,4 +441,4 @@ reasoning_response = await router.reasoning_completion(prompt)
 
 ---
 
-**End of CLAUDE.md** | Version 3.0 | 2025-12-30
+**End of CLAUDE.md** | Version 4.0 | 2026-05-30
