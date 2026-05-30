@@ -1,5 +1,6 @@
 import { Routes, Route } from 'react-router-dom'
 import { Layout } from './components/Layout'
+import { Landing } from './pages/Landing'
 import { Dashboard } from './pages/Dashboard'
 import { Agents } from './pages/Agents'
 import { Incidents } from './pages/Incidents'
@@ -10,17 +11,27 @@ import { Settings } from './pages/Settings'
 
 function App() {
   return (
-    <Layout>
-      <Routes>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/agents" element={<Agents />} />
-        <Route path="/incidents" element={<Incidents />} />
-        <Route path="/chat" element={<Chat />} />
-        <Route path="/metrics" element={<Metrics />} />
-        <Route path="/benchmark" element={<Benchmark />} />
-        <Route path="/settings" element={<Settings />} />
-      </Routes>
-    </Layout>
+    <Routes>
+      {/* Public landing page rendered OUTSIDE the sidebar Layout */}
+      <Route path="/welcome" element={<Landing />} />
+      {/* Everything else lives inside the authed app shell */}
+      <Route
+        path="*"
+        element={
+          <Layout>
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/agents" element={<Agents />} />
+              <Route path="/incidents" element={<Incidents />} />
+              <Route path="/chat" element={<Chat />} />
+              <Route path="/metrics" element={<Metrics />} />
+              <Route path="/benchmark" element={<Benchmark />} />
+              <Route path="/settings" element={<Settings />} />
+            </Routes>
+          </Layout>
+        }
+      />
+    </Routes>
   )
 }
 
