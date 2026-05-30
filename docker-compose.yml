@@ -123,7 +123,12 @@ services:
     volumes:
       - ./docker/configs/promtail-config.yaml:/etc/promtail/config.yml:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      # Mount the host's REAL Docker data-root containers dir to where promtail's
+      # config expects it. Defaults to the stock path for local dev; production
+      # sets DOCKER_DATA_ROOT (e.g. /mnt/docker) in .env.production because the
+      # data-root is relocated onto the EBS volume — otherwise this mount is empty
+      # and the Telemetry "Logs" panel stays empty.
+      - ${DOCKER_DATA_ROOT:-/var/lib/docker}/containers:/var/lib/docker/containers:ro
     command: -config.file=/etc/promtail/config.yml
     depends_on:
       loki:
