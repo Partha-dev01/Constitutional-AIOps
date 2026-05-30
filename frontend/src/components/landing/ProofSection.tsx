@@ -12,7 +12,6 @@ const SHOTS: Shot[] = [
   { name: 'graph-explorer', alt: 'Episodic graph explorer' },
   { name: 'chat', alt: 'Reasoning-agent chat' },
   { name: 'metrics', alt: 'Metrics view' },
-  { name: 'benchmark', alt: 'Benchmark results' },
 ]
 
 /**
