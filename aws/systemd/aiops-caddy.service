@@ -1,0 +1,21 @@
+# aiops-caddy.service — public TLS edge (Caddy + Let's Encrypt).
+# Separate unit so the reverse proxy / certs can be restarted independently of the
+# app and GPU tiers. Caddy is the ONLY service bound to public 80/443; everything
+# else listens on 127.0.0.1 or the docker network. See docker/configs/Caddyfile.
+[Unit]
+Description=Constitutional AIOps - Caddy TLS reverse proxy (Let's Encrypt)
+Documentation=file:///opt/aiops/docker/configs/Caddyfile
+Requires=docker.service
+After=docker.service network-online.target aiops-app.service
+Wants=network-online.target aiops-app.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/aiops
+ExecStart=/usr/bin/docker compose -f docker-compose.yml -f docker/docker-compose.production.yml --env-file .env.production up -d caddy
+ExecStop=/usr/bin/docker compose -f docker-compose.yml -f docker/docker-compose.production.yml --env-file .env.production stop caddy
+TimeoutStartSec=300
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,13 @@
+# aiops-idle-check.timer — runs aiops-idle-check.service every 10 minutes.
+# Enable with: sudo systemctl enable --now aiops-idle-check.timer
+[Unit]
+Description=Run the Constitutional AIOps idle-check every 10 minutes
+
+[Timer]
+OnBootSec=15min
+OnUnitActiveSec=10min
+AccuracySec=1min
+Unit=aiops-idle-check.service
+
+[Install]
+WantedBy=timers.target
