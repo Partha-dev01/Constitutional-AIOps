@@ -18,9 +18,12 @@ import {
   Server,
   Box,
   X,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react'
 import api, { HealthResponse, isComponentHealthy } from '../lib/api'
 import { EpisodicGraphExplorer, EpisodicNode, EpisodicLink } from '../components/EpisodicGraphExplorer'
+import { JsonView } from '../components/JsonView'
 
 // Tab type
 type AgentTab = 'fast' | 'reasoning' | 'telemetry' | 'graph' | 'tools' | 'infrastructure'
@@ -110,6 +113,40 @@ export function Agents() {
   const [infrastructureStats, setInfrastructureStats] = useState<{ total: number; healthy: number; unhealthy: number } | null>(null)
   const [selectedContainers, setSelectedContainers] = useState<Set<string>>(new Set())
   const [monitoringStarting, setMonitoringStarting] = useState(false)
+
+  // Activity row expansion (Fast + Reasoning tabs share this set, keyed by activity.id)
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
+  const toggleExpanded = (id: string) => setExpandedIds(prev => {
+    const n = new Set(prev)
+    n.has(id) ? n.delete(id) : n.add(id)
+    return n
+  })
+
+  // Derive a one-line collapsed summary from an activity's output, parsing safely.
+  // Prefers structured fields when output is valid JSON; otherwise first ~120 chars.
+  const outputSummary = (output: string): string => {
+    const trimmed = output.trim()
+    try {
+      const parsed: unknown = JSON.parse(trimmed)
+      if (parsed && typeof parsed === 'object') {
+        const obj = parsed as Record<string, unknown>
+        const pick = (key: string): string | null =>
+          typeof obj[key] === 'string' && (obj[key] as string).trim() ? (obj[key] as string).trim() : null
+        const summary =
+          pick('summary') ??
+          pick('root_cause') ??
+          pick('plan_name') ??
+          pick('reasoning')
+        if (summary) return summary
+        const severity = pick('severity')
+        const category = pick('category')
+        if (severity || category) return [severity, category].filter(Boolean).join(' / ')
+      }
+    } catch {
+      // not JSON (truncated/invalid or plain string) — fall through to raw text
+    }
+    return trimmed.slice(0, 120)
+  }
 
   const tabs = [
     { id: 'fast' as const, label: 'Fast Agent', icon: Zap, description: 'Telemetry annotation' },
@@ -360,8 +397,26 @@ export function Agents() {
           })
         }
 
-        setGraphNodes(nodes)
-        setGraphEdges(links)
+        // Merge by id to preserve node identity (and d3-assigned x/y/vx/vy)
+        // across refetch, so the force simulation does not reheat from random.
+        setGraphNodes(prev => {
+          const byId = new Map(prev.map(n => [n.id, n]))
+          return nodes.map(n => {
+            const old = byId.get(n.id)
+            return old ? Object.assign(old, n) : n
+          })
+        })
+
+        // Reuse the previous edge array reference when the edge key-set is
+        // unchanged, so EpisodicGraphExplorer's memoized links stay stable.
+        setGraphEdges(prev => {
+          const keyOf = (l: EpisodicLink) =>
+            `${typeof l.source === 'string' ? l.source : (l.source as { id: string }).id}|${typeof l.target === 'string' ? l.target : (l.target as { id: string }).id}|${l.type}`
+          const prevKeys = new Set(prev.map(keyOf))
+          const nextKeys = new Set(links.map(keyOf))
+          const same = prevKeys.size === nextKeys.size && [...nextKeys].every(k => prevKeys.has(k))
+          return same ? prev : links
+        })
 
         // Log stats for debugging
         if (data.stats) {
@@ -637,9 +692,13 @@ export function Agents() {
                   </div>
                 ) : fastActivity.length > 0 ? (
                   fastActivity.map((activity) => (
-                    <div key={activity.id} className="p-4 hover:bg-muted/50">
+                    <div
+                      key={activity.id}
+                      onClick={() => toggleExpanded(activity.id)}
+                      className="p-4 hover:bg-muted/50 cursor-pointer"
+                    >
                       <div className="flex items-start justify-between">
-                        <div className="flex-1">
+                        <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
                             <span className={`px-2 py-0.5 rounded text-xs ${
                               activity.type === 'annotation' ? 'bg-blue-500/10 text-blue-500' :
@@ -655,18 +714,34 @@ export function Agents() {
                               {activity.latency_ms}ms
                             </span>
                           </div>
-                          <p className="text-sm font-mono bg-muted/50 p-2 rounded mt-2">
-                            {activity.input.substring(0, 200)}...
-                          </p>
-                          <p className="text-sm text-muted-foreground mt-2">
-                            → {activity.output.substring(0, 100)}...
-                          </p>
+                          {expandedIds.has(activity.id) ? (
+                            <div className="mt-2 space-y-2">
+                              <pre className="text-xs font-mono whitespace-pre-wrap break-words bg-muted/50 p-2 rounded">
+                                {activity.input.trim()}
+                              </pre>
+                              <JsonView raw={activity.output} />
+                            </div>
+                          ) : (
+                            <>
+                              <p className="text-sm font-mono bg-muted/50 p-2 rounded mt-2 truncate">
+                                {activity.input.trim().split('\n')[0].slice(0, 100)}
+                              </p>
+                              <p className="text-sm text-muted-foreground mt-2 truncate">
+                                → {outputSummary(activity.output)}
+                              </p>
+                            </>
+                          )}
                         </div>
-                        <span className={`ml-4 ${
-                          activity.status === 'success' ? 'text-green-500' : 'text-red-500'
-                        }`}>
-                          {activity.status === 'success' ? <CheckCircle className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
-                        </span>
+                        <div className="flex items-center gap-2 ml-4 shrink-0">
+                          <span className={
+                            activity.status === 'success' ? 'text-green-500' : 'text-red-500'
+                          }>
+                            {activity.status === 'success' ? <CheckCircle className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+                          </span>
+                          {expandedIds.has(activity.id)
+                            ? <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                            : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+                        </div>
                       </div>
                     </div>
                   ))
@@ -737,9 +812,13 @@ export function Agents() {
                   </div>
                 ) : reasoningActivity.length > 0 ? (
                   reasoningActivity.map((activity) => (
-                    <div key={activity.id} className="p-4 hover:bg-muted/50">
+                    <div
+                      key={activity.id}
+                      onClick={() => toggleExpanded(activity.id)}
+                      className="p-4 hover:bg-muted/50 cursor-pointer"
+                    >
                       <div className="flex items-start justify-between">
-                        <div className="flex-1">
+                        <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
                             <span className={`px-2 py-0.5 rounded text-xs ${
                               activity.type === 'rca' ? 'bg-orange-500/10 text-orange-500' :
@@ -756,18 +835,34 @@ export function Agents() {
                               {activity.latency_ms}ms
                             </span>
                           </div>
-                          <p className="text-sm font-mono bg-muted/50 p-2 rounded mt-2">
-                            {activity.input.substring(0, 200)}...
-                          </p>
-                          <div className="mt-2 p-3 bg-purple-500/5 border border-purple-500/20 rounded">
-                            <p className="text-sm">{activity.output}</p>
-                          </div>
+                          {expandedIds.has(activity.id) ? (
+                            <div className="mt-2 space-y-2">
+                              <pre className="text-xs font-mono whitespace-pre-wrap break-words bg-muted/50 p-2 rounded">
+                                {activity.input.trim()}
+                              </pre>
+                              <JsonView raw={activity.output} />
+                            </div>
+                          ) : (
+                            <>
+                              <p className="text-sm font-mono bg-muted/50 p-2 rounded mt-2 truncate">
+                                {activity.input.trim().split('\n')[0].slice(0, 100)}
+                              </p>
+                              <p className="text-sm text-muted-foreground mt-2 truncate">
+                                → {outputSummary(activity.output)}
+                              </p>
+                            </>
+                          )}
                         </div>
-                        <span className={`ml-4 ${
-                          activity.status === 'success' ? 'text-green-500' : 'text-red-500'
-                        }`}>
-                          {activity.status === 'success' ? <CheckCircle className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
-                        </span>
+                        <div className="flex items-center gap-2 ml-4 shrink-0">
+                          <span className={
+                            activity.status === 'success' ? 'text-green-500' : 'text-red-500'
+                          }>
+                            {activity.status === 'success' ? <CheckCircle className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+                          </span>
+                          {expandedIds.has(activity.id)
+                            ? <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                            : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+                        </div>
                       </div>
                     </div>
                   ))
