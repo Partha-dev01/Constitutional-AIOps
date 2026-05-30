@@ -1,0 +1,41 @@
+# Constitutional AIOps — remote edge monitoring agent (Grafana Alloy).
+#
+# Deploy this on the REMOTE host whose Docker containers you want the AIOps backend
+# to reason over. ONE container ships logs + metrics + traces to the AWS LGTM stack
+# via https://<APP_DOMAIN>/ingest/* (TLS + basic_auth). Backend needs no changes.
+#
+#   cp .env.example .env   # fill in creds + endpoints + EDGE_LABEL
+#   docker compose up -d
+#
+# Pin `image:` to your preferred Alloy release; bump as needed.
+
+services:
+  alloy:
+    image: grafana/alloy:v1.5.1
+    container_name: aiops-edge-alloy
+    restart: unless-stopped
+    env_file:
+      - .env
+    command:
+      - run
+      - /etc/alloy/config.alloy
+      - --storage.path=/var/lib/alloy/data
+      - --server.http.listen-addr=0.0.0.0:12345
+    ports:
+      - "127.0.0.1:12345:12345"   # Alloy UI (loopback; SSH-tunnel to inspect)
+      - "4317:4317"               # OTLP gRPC in (apps on this host push traces)
+      - "4318:4318"               # OTLP HTTP in
+    volumes:
+      - ./config.alloy:/etc/alloy/config.alloy:ro
+      - alloy-data:/var/lib/alloy/data
+      # --- Docker logs + container discovery ---
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      # --- Host + container metrics (unix exporter + cAdvisor) ---
+      - /:/rootfs:ro
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /dev/disk:/dev/disk:ro
+
+volumes:
+  alloy-data:

@@ -1,0 +1,134 @@
+// Constitutional AIOps — edge monitoring agent (Grafana Alloy).
+//
+// Runs on the REMOTE host whose Docker containers you want observed. Ships three
+// signals to the AWS LGTM stack through the public /ingest/* endpoints, each over
+// TLS + HTTP basic_auth (the same machine credential):
+//
+//   logs    -> Loki        (Docker container stdout/stderr)
+//   metrics -> Prometheus  (host via node/unix exporter + per-container cAdvisor)
+//   traces  -> Tempo       (OTLP received locally, forwarded on)
+//
+// All endpoints + credentials + the edge label come from .env (see README.md).
+// Validate before first run with:  alloy fmt --verify config.alloy
+
+logging {
+	level  = "info"
+	format = "logfmt"
+}
+
+// ===========================================================================
+// LOGS  ->  Loki
+// ===========================================================================
+discovery.docker "containers" {
+	host = "unix:///var/run/docker.sock"
+}
+
+// Turn the noisy "/container-name" meta label into a clean `container` label and
+// stamp every stream with this edge's identity.
+discovery.relabel "containers" {
+	targets = discovery.docker.containers.targets
+
+	rule {
+		source_labels = ["__meta_docker_container_name"]
+		regex         = "/(.*)"
+		target_label  = "container"
+	}
+	rule {
+		target_label = "edge"
+		replacement  = sys.env("EDGE_LABEL")
+	}
+}
+
+loki.source.docker "containers" {
+	host          = "unix:///var/run/docker.sock"
+	targets       = discovery.docker.containers.targets
+	relabel_rules = discovery.relabel.containers.rules
+	forward_to    = [loki.write.aws.receiver]
+}
+
+loki.write "aws" {
+	endpoint {
+		url = sys.env("LOKI_PUSH_URL")
+		basic_auth {
+			username = sys.env("INGEST_USER")
+			password = sys.env("INGEST_PASS")
+		}
+	}
+	external_labels = {
+		edge = sys.env("EDGE_LABEL"),
+	}
+}
+
+// ===========================================================================
+// METRICS  ->  Prometheus (remote_write receiver)
+// ===========================================================================
+// Host metrics. Paths point at the host filesystem bind-mounts (see compose).
+prometheus.exporter.unix "host" {
+	rootfs_path = "/rootfs"
+	procfs_path = "/host/proc"
+	sysfs_path  = "/host/sys"
+}
+
+// Per-container metrics via in-process cAdvisor. Needs the host mounts declared
+// in docker-compose.yml; if it misbehaves on your kernel, comment this block and
+// drop it from the prometheus.scrape targets — logs + host metrics still flow.
+prometheus.exporter.cadvisor "containers" {
+	docker_host = "unix:///var/run/docker.sock"
+	docker_only = true
+}
+
+prometheus.scrape "edge" {
+	targets = concat(
+		prometheus.exporter.unix.host.targets,
+		prometheus.exporter.cadvisor.containers.targets,
+	)
+	forward_to      = [prometheus.remote_write.aws.receiver]
+	scrape_interval = "30s"
+}
+
+prometheus.remote_write "aws" {
+	endpoint {
+		url = sys.env("PROM_RW_URL")
+		basic_auth {
+			username = sys.env("INGEST_USER")
+			password = sys.env("INGEST_PASS")
+		}
+	}
+	external_labels = {
+		edge = sys.env("EDGE_LABEL"),
+	}
+}
+
+// ===========================================================================
+// TRACES  ->  Tempo (OTLP/HTTP)
+// ===========================================================================
+// Local OTLP receiver: point your app's OTEL exporter at this host's :4317/:4318.
+otelcol.receiver.otlp "edge" {
+	grpc {
+		endpoint = "0.0.0.0:4317"
+	}
+	http {
+		endpoint = "0.0.0.0:4318"
+	}
+	output {
+		traces = [otelcol.processor.batch.edge.input]
+	}
+}
+
+otelcol.processor.batch "edge" {
+	output {
+		traces = [otelcol.exporter.otlphttp.aws.input]
+	}
+}
+
+otelcol.auth.basic "aws" {
+	username = sys.env("INGEST_USER")
+	password = sys.env("INGEST_PASS")
+}
+
+otelcol.exporter.otlphttp "aws" {
+	client {
+		endpoint = sys.env("OTLP_HTTP_URL")
+		auth     = otelcol.auth.basic.aws.handler
+	}
+}
