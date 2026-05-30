@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "constitutional-aiops"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Autonomous infrastructure management with Constitutional AI safety"
 readme = "README.md"
 license = {text = "Proprietary"}
@@ -60,6 +60,9 @@ aiops = "src.main:app"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["src*"]
+
+[tool.setuptools.dynamic]
+version = {attr = "src.version.__version__"}
 
 [tool.black]
 line-length = 100
