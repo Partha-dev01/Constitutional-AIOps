@@ -12,6 +12,8 @@ from typing import Any
 from fastapi import APIRouter, Request
 from pydantic import BaseModel, Field
 
+from src.version import __version__
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
@@ -128,7 +130,7 @@ async def health_check(request: Request) -> HealthResponse:
     return HealthResponse(
         status=status,
         timestamp=datetime.utcnow(),
-        version="0.1.0",
+        version=__version__,
         components=components,
         uptime_seconds=uptime,
     )
