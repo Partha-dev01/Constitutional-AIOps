@@ -101,6 +101,7 @@ benchmark/datasets/raw/
 
 # Playwright test artifacts
 frontend/playwright-report/
+frontend/playwright-report-live/
 frontend/test-results/
 .playwright-mcp/
 
