@@ -106,10 +106,15 @@ async def get_logs(
             if service:
                 logql_query = f'{{container="{service}"}}'
             else:
-                logql_query = '{job=~".+"}'  # Match all jobs
+                # Leave None so the collector applies its own correct default
+                # ('{job="containerlogs"}' — how promtail labels Docker logs).
+                logql_query = None
 
         if level:
-            logql_query = f'{logql_query} |~ "(?i){level}"'
+            # If no base query yet (default-summary case), anchor on the
+            # collector's default stream selector before appending the filter.
+            base = logql_query if logql_query is not None else '{job="containerlogs"}'
+            logql_query = f'{base} |~ "(?i){level}"'
 
         # Query Loki via collector
         logs_data = await telemetry_collector.query_logs(
