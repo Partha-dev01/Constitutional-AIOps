@@ -1,0 +1,11 @@
+# Terraform state, locks, plans, and real var files — never commit these.
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+crash.log
+*.tfplan
+terraform.tfvars
+*.auto.tfvars
+override.tf
+override.tf.json
