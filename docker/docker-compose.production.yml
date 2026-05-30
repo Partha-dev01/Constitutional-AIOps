@@ -120,7 +120,7 @@ services:
 
   backend:
     build:
-      context: ..
+      context: .   # repo root (project dir); matches the base file's context
       dockerfile: docker/Dockerfile.backend
       args:
         - BUILD_ENV=production
@@ -175,7 +175,7 @@ services:
 
   frontend:
     build:
-      context: ..
+      context: .   # repo root (project dir); matches the base file's context
       dockerfile: docker/Dockerfile.frontend
       args:
         - BUILD_ENV=production
