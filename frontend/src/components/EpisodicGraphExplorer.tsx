@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import ForceGraph2D, { ForceGraphMethods, NodeObject, LinkObject } from 'react-force-graph-2d'
 import { Loader2, ZoomIn, ZoomOut, Maximize2, Play, Pause, RotateCcw, Filter } from 'lucide-react'
 
@@ -129,6 +129,8 @@ export function EpisodicGraphExplorer({
 }: EpisodicGraphExplorerProps) {
   const graphRef = useRef<ForceGraphMethods>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  // Guards onEngineStop so zoomToFit runs once per topology, not on every micro-stop.
+  const hasFitRef = useRef(false)
 
   const [hoveredNode, setHoveredNode] = useState<EpisodicNode | null>(null)
   const [selectedNode, setSelectedNode] = useState<EpisodicNode | null>(null)
@@ -143,39 +145,46 @@ export function EpisodicGraphExplorer({
 
   // Filter nodes based on type
   // v0.6.0: Also filter entities if showEntities is disabled
-  let filteredNodes = filterType === 'all'
-    ? nodes
-    : nodes.filter(n => n.type === filterType)
+  // Memoized so the force-config effect / ForceGraph don't see new array refs every render.
+  const filteredNodes = useMemo(() => {
+    let result = filterType === 'all'
+      ? nodes
+      : nodes.filter(n => n.type === filterType)
 
-  // v0.6.0: Filter out entity nodes if disabled
-  if (!showEntities) {
-    filteredNodes = filteredNodes.filter(n => n.type !== 'entity')
-  }
-
-  const filteredNodeIds = new Set(filteredNodes.map(n => n.id))
-
-  // v0.6.0: Filter links based on edge visibility toggles
-  const filteredLinks = links.filter(l => {
-    const sourceId = typeof l.source === 'string' ? l.source : l.source?.id
-    const targetId = typeof l.target === 'string' ? l.target : l.target?.id
-
-    // Must connect filtered nodes
-    if (!filteredNodeIds.has(sourceId || '') || !filteredNodeIds.has(targetId || '')) {
-      return false
+    // v0.6.0: Filter out entity nodes if disabled
+    if (!showEntities) {
+      result = result.filter(n => n.type !== 'entity')
     }
 
-    // v0.6.0: Filter out SIMILAR_TO edges if disabled
-    if (!showSimilarTo && l.type?.toLowerCase() === 'similar_to') {
-      return false
-    }
+    return result
+  }, [nodes, filterType, showEntities])
 
-    // v0.6.0: Filter out entity-related edges if entities disabled
-    if (!showEntities && (l.type?.toLowerCase() === 'relates' || l.metadata?.extraction_method === 'llm')) {
-      return false
-    }
+  // v0.6.0: Filter links based on edge visibility toggles (memoized)
+  const filteredLinks = useMemo(() => {
+    const filteredNodeIds = new Set(filteredNodes.map(n => n.id))
 
-    return true
-  })
+    return links.filter(l => {
+      const sourceId = typeof l.source === 'string' ? l.source : l.source?.id
+      const targetId = typeof l.target === 'string' ? l.target : l.target?.id
+
+      // Must connect filtered nodes
+      if (!filteredNodeIds.has(sourceId || '') || !filteredNodeIds.has(targetId || '')) {
+        return false
+      }
+
+      // v0.6.0: Filter out SIMILAR_TO edges if disabled
+      if (!showSimilarTo && l.type?.toLowerCase() === 'similar_to') {
+        return false
+      }
+
+      // v0.6.0: Filter out entity-related edges if entities disabled
+      if (!showEntities && (l.type?.toLowerCase() === 'relates' || l.metadata?.extraction_method === 'llm')) {
+        return false
+      }
+
+      return true
+    })
+  }, [links, filteredNodes, showSimilarTo, showEntities])
 
   // Resize observer
   useEffect(() => {
@@ -233,10 +242,13 @@ export function EpisodicGraphExplorer({
 
       // Note: forceCenter doesn't have strength() method, skip it
 
-      // Reheat simulation to apply new forces
-      fg.d3ReheatSimulation()
+      // No manual reheat: the running sim reads these forces live, and a genuine
+      // topology change reheats on its own. Reheating on every render caused jitter.
     }
-  }, [filteredNodes, filteredLinks])
+
+    // Topology changed — allow onEngineStop to zoom-fit once for this new layout.
+    hasFitRef.current = false
+  }, [filteredNodes.length, filteredLinks.length, layoutMode])
 
   // Handle node click - gentle pan without zoom (v0.6.1 fix)
   const handleNodeClick = useCallback((node: EpisodicNode) => {
@@ -400,14 +412,21 @@ export function EpisodicGraphExplorer({
           nodeId="id"
           linkSource="source"
           linkTarget="target"
-          cooldownTicks={100}
-          d3AlphaDecay={0.02}
-          d3VelocityDecay={0.4}
+          // v0.6.2: Stronger damping + warmup to settle quickly without jitter/reheat
+          warmupTicks={100}
+          cooldownTicks={50}
+          d3AlphaDecay={0.04}
+          d3VelocityDecay={0.6}
           d3AlphaMin={0.01}
           // Node size for force calculation
           nodeRelSize={8}
-          // Auto-fit when simulation stops
-          onEngineStop={() => graphRef.current?.zoomToFit(400, 60)}
+          // Auto-fit ONCE per topology when the simulation stops (not on every micro-stop)
+          onEngineStop={() => {
+            if (!hasFitRef.current) {
+              hasFitRef.current = true
+              graphRef.current?.zoomToFit(400, 60)
+            }
+          }}
           enableNodeDrag={true}
           enableZoomInteraction={true}
           enablePanInteraction={true}
