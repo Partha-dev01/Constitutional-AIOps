@@ -436,17 +436,18 @@ class ModelRouter:
         """
         health = {"fast_agent": False, "reasoning_agent": False}
 
-        # base_url ends in /v1, so an absolute /v1/models hits the OpenAI-style
-        # model list that BOTH vLLM and Ollama return 200 for when ready. (The
-        # old "../" root probe only worked for Ollama; vLLM returns 404 at "/".)
+        # base_url ends in /v1/, and httpx appends relative paths, so the
+        # relative "models" resolves to {base}/v1/models — the OpenAI-style model
+        # list that BOTH vLLM and Ollama return 200 for when ready. (The old
+        # "../" root probe only worked for Ollama; vLLM returns 404 at "/".)
         try:
-            response = await self._fast_client.get("/v1/models")
+            response = await self._fast_client.get("models")
             health["fast_agent"] = response.status_code == 200
         except httpx.HTTPError:
             pass
 
         try:
-            response = await self._reasoning_client.get("/v1/models")
+            response = await self._reasoning_client.get("models")
             health["reasoning_agent"] = response.status_code == 200
         except httpx.HTTPError:
             pass
