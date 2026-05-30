@@ -35,6 +35,11 @@ dependencies = [
     "opentelemetry-api>=1.22.0",
     "opentelemetry-sdk>=1.22.0",
     "opentelemetry-exporter-otlp>=1.22.0",
+    # numpy is imported at module top by src/memory/embedding_service.py and
+    # src/benchmark/evaluator.py, so it is a real package dependency. It lived
+    # only in requirements.txt, which `pip install -e ".[dev]"` (used by CI)
+    # does not read — leaving CI without numpy and failing 4 tests + coverage.
+    "numpy>=1.26.0",
 ]
 
 [project.optional-dependencies]
