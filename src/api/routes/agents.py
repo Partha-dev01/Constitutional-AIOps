@@ -11,6 +11,8 @@ from typing import Any
 from fastapi import APIRouter, Request
 from pydantic import BaseModel, Field
 
+from src.config import config
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
@@ -83,7 +85,7 @@ async def get_fast_agent_activity(
             input=entry.get("input", ""),
             output=entry.get("output", ""),
             latency_ms=entry.get("latency_ms", 0),
-            model="qwen3:4b",
+            model=config.llm.fast_agent_model,
             status=entry.get("status", "success"),
         ))
 
@@ -162,7 +164,7 @@ async def get_reasoning_agent_activity(
             input=entry.get("input", ""),
             output=entry.get("output", ""),
             latency_ms=entry.get("latency_ms", 0),
-            model="qwen3:14b",
+            model=config.llm.reasoning_agent_model,
             status=entry.get("status", "success"),
         ))
 

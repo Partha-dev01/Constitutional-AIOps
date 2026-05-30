@@ -15,29 +15,47 @@ from dotenv import load_dotenv
 load_dotenv()  # Load .env before any os.getenv() calls in dataclass defaults
 
 
+def _require_password(env_var: str, dev_default: str) -> str:
+    """Resolve a secret from the environment.
+
+    In production (``ENVIRONMENT=production``) the variable is mandatory and there
+    is no built-in default; outside production a clearly-marked dev default is used
+    so local ``docker compose up`` keeps working.
+    """
+    value = os.getenv(env_var)
+    if value:
+        return value
+    if os.getenv("ENVIRONMENT", "local").lower() == "production":
+        raise RuntimeError(
+            f"{env_var} must be set in production (no built-in default). "
+            "Provide it via .env.production or a secrets manager."
+        )
+    return dev_default
+
+
 @dataclass
 class LLMConfig:
     """LLM endpoint configuration for simultaneous dual-model setup."""
     
-    # Fast Agent (Qwen3-4B-Instruct) - Always loaded at port 8081
-    # Using instruct variant (no thinking mode) for lower latency (~5-8s vs ~28s)
+    # Fast Agent (Qwen3-4B) - vLLM served as "qwen3-4b" on port 8000.
+    # Colon-free served-model-name triggers ModelRouter's enable_thinking=false path.
     fast_agent_url: str = field(
-        default_factory=lambda: os.getenv("FAST_AGENT_URL", "http://localhost:8081/v1")
+        default_factory=lambda: os.getenv("FAST_AGENT_URL", "http://localhost:8000/v1")
     )
     fast_agent_model: str = field(
-        default_factory=lambda: os.getenv("FAST_AGENT_MODEL", "qwen3:4b-instruct")
+        default_factory=lambda: os.getenv("FAST_AGENT_MODEL", "qwen3-4b")
     )
     fast_agent_context: int = 8192  # 8K context window
     fast_agent_timeout: float = field(
         default_factory=lambda: float(os.getenv("FAST_AGENT_TIMEOUT", "120"))
     )
 
-    # Reasoning Agent (Qwen3-14B) - Always loaded at port 8082
+    # Reasoning Agent (Qwen3-14B) - vLLM served as "qwen3-14b" on port 8001.
     reasoning_agent_url: str = field(
-        default_factory=lambda: os.getenv("REASONING_AGENT_URL", "http://localhost:8082/v1")
+        default_factory=lambda: os.getenv("REASONING_AGENT_URL", "http://localhost:8001/v1")
     )
     reasoning_agent_model: str = field(
-        default_factory=lambda: os.getenv("REASONING_AGENT_MODEL", "qwen3:14b")
+        default_factory=lambda: os.getenv("REASONING_AGENT_MODEL", "qwen3-14b")
     )
     reasoning_agent_context: int = 4096  # 4K context window
     reasoning_agent_timeout: float = field(
@@ -56,7 +74,7 @@ class Neo4jConfig:
         default_factory=lambda: os.getenv("NEO4J_USER", "neo4j")
     )
     password: str = field(
-        default_factory=lambda: os.getenv("NEO4J_PASSWORD", "constitutional_aiops_2025")
+        default_factory=lambda: _require_password("NEO4J_PASSWORD", "devpassword")
     )
     database: str = field(
         default_factory=lambda: os.getenv("NEO4J_DATABASE", "neo4j")
