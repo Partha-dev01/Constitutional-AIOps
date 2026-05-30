@@ -45,10 +45,37 @@ export interface ChatRequest {
 export interface ChatResponse {
   conversation_id: string;
   message: ChatMessage;
+  confidence?: number;
+  suggested_actions?: string[] | null;
+  related_incidents?: string[] | null;
   metadata?: {
     model_used?: string;
     tokens_used?: number;
-  };
+    [key: string]: unknown;
+  } | null;
+}
+
+export interface ConversationSummary {
+  conversation_id: string;
+  created_at: string;
+  updated_at: string;
+  message_count: number;
+  preview: string | null;
+}
+
+export interface ConversationListResponse {
+  items: ConversationSummary[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface ConversationHistory {
+  conversation_id: string;
+  created_at: string;
+  updated_at: string;
+  messages: ChatMessage[];
+  context?: Record<string, unknown> | null;
 }
 
 export type IncidentSeverity = 'critical' | 'high' | 'medium' | 'low' | 'info';
@@ -262,6 +289,13 @@ async function request<T>(
     throw new ApiError(errorMessage, response.status);
   }
 
+  // 204 No Content (and other empty-body responses) have no JSON to parse.
+  // Returning undefined here keeps DELETE-style calls from throwing on an
+  // empty body, while still satisfying the generic Promise<T> contract.
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
   return response.json();
 }
 
@@ -284,10 +318,10 @@ export const api = {
       }),
 
     getConversation: (id: string) =>
-      request<{ messages: ChatMessage[] }>(`/chat/conversations/${id}`),
+      request<ConversationHistory>(`/chat/conversations/${id}`),
 
     listConversations: () =>
-      request<{ conversations: Array<{ id: string; updated_at: string }> }>('/chat/conversations'),
+      request<ConversationListResponse>('/chat/conversations'),
 
     deleteConversation: (id: string) =>
       request<void>(`/chat/conversations/${id}`, { method: 'DELETE' }),
