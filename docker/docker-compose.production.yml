@@ -286,6 +286,7 @@ services:
       - '--storage.tsdb.path=/prometheus'
       - '--storage.tsdb.retention.time=30d'
       - '--web.enable-lifecycle'
+      - '--web.enable-remote-write-receiver'  # accept edge Alloy remote_write (Gate 7)
     deploy:
       resources:
         limits:
@@ -411,6 +412,9 @@ services:
       - ACME_EMAIL=${ACME_EMAIL:-admin@example.com}
       - APP_BASIC_AUTH_USER=${APP_BASIC_AUTH_USER}
       - APP_BASIC_AUTH_HASH=${APP_BASIC_AUTH_HASH}
+      # Separate machine credential for the remote edge agent (Gate 7 /ingest/*).
+      - INGEST_BASIC_AUTH_USER=${INGEST_BASIC_AUTH_USER}
+      - INGEST_BASIC_AUTH_HASH=${INGEST_BASIC_AUTH_HASH}
     volumes:
       - ./docker/configs/Caddyfile:/etc/caddy/Caddyfile:ro
       - /mnt/data/caddy/data:/data      # EBS-backed: Let's Encrypt certs persist
