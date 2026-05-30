@@ -138,6 +138,7 @@ services:
       - NEO4J_PASSWORD=${NEO4J_PASSWORD}
       - LOKI_URL=http://loki:3100
       - PROMETHEUS_URL=http://prometheus:9090
+      - WS_TOKEN=${WS_TOKEN:-}
       - ENVIRONMENT=production
       - DEBUG=false
       - LOG_LEVEL=INFO
@@ -267,6 +268,29 @@ services:
     networks:
       - aiops-network
     restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "3"
+
+  # Ships Docker container JSON logs to Loki (job="containerlogs"). Uses the
+  # static_configs promtail config (scrapes /var/lib/docker/containers/*/*log via
+  # a positions file), so it needs the containers dir mounted read-only — NOT the
+  # docker socket (no docker_sd in promtail-config.yaml). Without this, Loki is
+  # empty and the Telemetry "Logs" panel shows "No logs available".
+  promtail:
+    image: grafana/promtail:2.9.3
+    container_name: aiops-promtail
+    command: -config.file=/etc/promtail/config.yml
+    volumes:
+      - ./docker/configs/promtail-config.yaml:/etc/promtail/config.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    depends_on:
+      - loki
+    networks:
+      - aiops-network
+    restart: unless-stopped
     logging:
       driver: "json-file"
       options:

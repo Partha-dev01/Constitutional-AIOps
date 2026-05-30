@@ -75,10 +75,18 @@
 		reverse_proxy grafana:3000
 	}
 
-	# Backend REST API + WebSocket stream.
-	@backend path /api/* /ws
-	handle @backend {
+	# Backend REST API (human-auth gated).
+	@api path /api/*
+	handle @api {
 		import app_auth
+		reverse_proxy backend:8000
+	}
+
+	# WebSocket stream. HTTP basic_auth cannot ride the WS upgrade handshake, so this
+	# route is NOT basic_auth-gated; the backend guards it with an app-layer token
+	# (WS_TOKEN) validated against the /api/v1/ws/token value the SPA fetches.
+	@ws path /ws
+	handle @ws {
 		reverse_proxy backend:8000
 	}
 

@@ -311,20 +311,27 @@ class TelemetryCollector:
         Returns:
             List of metric points
         """
-        if metrics is None:
-            # Query generic metrics available in Prometheus
-            # These are standard Go/Prometheus metrics that should exist
-            metrics = [
-                'go_goroutines',
-                'go_memstats_alloc_bytes',
-                'process_cpu_seconds_total',
-                'prometheus_http_requests_total',
-                'up',  # Target health metric
+        # default_summary: the Telemetry "Metrics Summary" case (no explicit
+        # query/metric passed). Each entry is an aggregation PromQL that returns a
+        # SINGLE scalar series, paired with a clean human label. We emit only the
+        # latest point per metric so the frontend gets one distinct, labeled value
+        # per metric instead of a long single-metric time series.
+        default_summary = metrics is None
+        if default_summary:
+            metric_defs: list[tuple[str, Optional[str]]] = [
+                ('count(up == 1)', 'Targets Up'),
+                ('sum(process_resident_memory_bytes) / 1024 / 1024', 'Memory (MB)'),
+                ('sum(go_goroutines)', 'Goroutines'),
+                ('rate(process_cpu_seconds_total[5m])', 'CPU (s/s)'),
             ]
+        else:
+            # Explicit single-metric query path: label override is None so the raw
+            # Prometheus __name__ (or the query string) is used, as before.
+            metric_defs = [(metric_query, None) for metric_query in metrics]
 
         all_metrics = []
 
-        for metric_query in metrics:
+        for metric_query, label_override in metric_defs:
             params = {
                 "query": metric_query,
                 "start": start_time.isoformat() + "Z",
@@ -341,10 +348,15 @@ class TelemetryCollector:
                 data = response.json()
 
                 for result in data.get("data", {}).get("result", []):
-                    metric_name = result.get("metric", {}).get("__name__", metric_query)
+                    metric_name = label_override or result.get("metric", {}).get("__name__", metric_query)
                     labels = result.get("metric", {})
 
-                    for timestamp, value in result.get("values", []):
+                    values = result.get("values", [])
+                    if default_summary and values:
+                        # Keep only the latest (max-timestamp) point per metric.
+                        values = [max(values, key=lambda tv: float(tv[0]))]
+
+                    for timestamp, value in values:
                         try:
                             all_metrics.append(MetricPoint(
                                 timestamp=datetime.fromtimestamp(float(timestamp)),

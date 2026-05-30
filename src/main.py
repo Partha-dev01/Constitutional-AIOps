@@ -8,6 +8,7 @@ Architecture: Simultaneous Dual-Model (Qwen3-4B + Qwen3-14B on 24GB VRAM)
 """
 
 import logging
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -318,7 +319,7 @@ app.include_router(benchmark_router, prefix="/api/v1/benchmark", tags=["benchmar
 
 # WebSocket endpoint for real-time updates
 @app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket, client_id: str = None):
+async def websocket_endpoint(websocket: WebSocket, client_id: str = None, token: str = None):
     """
     WebSocket endpoint for real-time event streaming.
 
@@ -343,6 +344,14 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str = None):
         Send: {"type": "subscribe", "payload": {"room": "incident:123"}}
         To subscribe to specific incident updates
     """
+    # App-layer guard: Caddy can't basic_auth the WS upgrade, so when WS_TOKEN is
+    # set the SPA must present the token it fetched from /api/v1/ws/token. An empty
+    # WS_TOKEN (local/dev) allows unauthenticated connections as before.
+    expected = os.getenv("WS_TOKEN", "")
+    if expected and token != expected:
+        await websocket.close(code=1008)
+        return
+
     connection_id = await ws_manager.connect(websocket, client_id)
 
     try:
@@ -366,6 +375,14 @@ async def get_websocket_connections():
         "count": ws_manager.connection_count,
         "connections": ws_manager.connections_info,
     }
+
+
+@app.get("/api/v1/ws/token", tags=["websocket"])
+async def get_ws_token():
+    """Return the app-layer WebSocket token (empty string if unset). This route
+    is gated by Caddy basic_auth like all /api/* paths."""
+    import os
+    return {"token": os.getenv("WS_TOKEN", "")}
 
 
 if __name__ == "__main__":

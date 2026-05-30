@@ -66,6 +66,30 @@ export interface UseWebSocketOptions {
 const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
 const DEFAULT_WS_URL = `${protocol}//${window.location.host}/ws`
 
+// Module-level cache for the app-layer WS token. Caddy basic_auth gates /api/* but
+// cannot ride the WS upgrade handshake, so the SPA fetches this token (same-origin,
+// the browser replays the cached basic-auth credentials) and appends it to the WS
+// URL. Empty string means the backend has no WS_TOKEN set (local/dev) and connects
+// unauthenticated.
+let wsTokenCache: string | undefined
+
+async function getWsToken(): Promise<string> {
+  if (wsTokenCache !== undefined) {
+    return wsTokenCache
+  }
+  let token = ''
+  try {
+    const res = await fetch('/api/v1/ws/token')
+    const data = await res.json()
+    token = typeof data?.token === 'string' ? data.token : ''
+  } catch {
+    // On any failure, treat the token as empty so local/dev still connects.
+    token = ''
+  }
+  wsTokenCache = token
+  return token
+}
+
 /**
  * React hook for WebSocket connection management.
  *
@@ -126,7 +150,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   }, [reconnect, maxReconnectAttempts, reconnectInterval])
 
   // Connect to WebSocket
-  const connect = useCallback(() => {
+  const connect = useCallback(async () => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       console.log('WebSocket already connected')
       return
@@ -135,7 +159,18 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     clearReconnectTimeout()
     setConnectionState('connecting')
 
-    const wsUrl = clientId ? `${url}?client_id=${clientId}` : url
+    // Fetch the app-layer token (cached) before opening the socket. The token
+    // rides as a query param because Caddy basic_auth can't gate the WS upgrade.
+    const token = await getWsToken()
+    const params = new URLSearchParams()
+    if (clientId) {
+      params.set('client_id', clientId)
+    }
+    if (token) {
+      params.set('token', token)
+    }
+    const query = params.toString()
+    const wsUrl = query ? `${url}?${query}` : url
     const ws = new WebSocket(wsUrl)
 
     ws.onopen = () => {
