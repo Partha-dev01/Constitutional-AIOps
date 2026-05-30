@@ -1,125 +1,143 @@
-# Hostinger DNS Setup — point your domain at the AWS deployment
+# Hostinger DNS Setup — point imaginaerium.in at the AWS deployment
 
-> **Goal:** make `https://<your-domain>` (plus `grafana.` and `ingest.` subdomains)
-> resolve to the AWS VM's Elastic IP so Caddy can serve the app and auto-issue
-> Let's Encrypt TLS certificates.
+> **Goal:** make `https://aiops.imaginaerium.in` resolve to the AWS VM's Elastic IP
+> so Caddy can serve the app and auto-issue a Let's Encrypt TLS certificate.
 >
+> **Domain:** `imaginaerium.in` (Hostinger)
+> **App hostname:** `aiops.imaginaerium.in` (single subdomain, **path-based** routing)
 > **Target IP (Elastic IP, fixed):** `203.0.113.10`
 >
-> Do these steps **before** Gate 6 (Domain + TLS). DNS first, then we enable Caddy.
+> Do this step **before** Gate 6 (Domain + TLS). DNS first, then we enable Caddy.
 
 ---
 
-## 0. Decide your hostnames
+## 0. Topology (decided 2026-05-30)
 
-The deployment uses one apex + two subdomains (all pointing at the same IP; Caddy
-routes them by hostname):
+The AIOps app lives on **one** subdomain. Caddy routes everything by **path** on that
+single host, so there is only **one DNS record** and **one TLS certificate**:
 
-| Hostname | Serves | Example |
-|---|---|---|
-| `@` (apex / root) | The app (frontend + API) | `aiops.example.com` |
-| `grafana` | Grafana dashboards | `grafana.aiops.example.com` |
-| `ingest` | Telemetry intake (logs/metrics/traces from your remote agent) | `ingest.aiops.example.com` |
+| URL | Serves |
+|---|---|
+| `https://aiops.imaginaerium.in/` | App UI (frontend) |
+| `https://aiops.imaginaerium.in/api/…` | Backend API |
+| `https://aiops.imaginaerium.in/grafana/` | Grafana (served from sub-path) |
+| `https://aiops.imaginaerium.in/ingest/…` | Telemetry intake from the remote edge agent (basic-auth) |
 
-If you'd rather keep the app on a subdomain (e.g. `app.`) instead of the apex,
-that's fine — just tell me the exact names and I'll match the Caddyfile to them.
+The apex (`@`), `www`, and your existing service records are **left untouched** —
+the AIOps app is fully contained under the `aiops` subdomain.
 
 ---
 
 ## 1. Open the Hostinger DNS editor
 
 1. Log in to **hPanel** (https://hpanel.hostinger.com).
-2. Top menu → **Domains** → click **Manage** on your domain.
+2. Top menu → **Domains** → click **Manage** on `imaginaerium.in`.
 3. Left sidebar → **DNS / Nameservers** → **DNS records** tab.
 
-> **Important:** this only works if the domain uses **Hostinger's nameservers**
+> **Important:** this only works if `imaginaerium.in` uses **Hostinger's nameservers**
 > (`ns1.dns-parking.com` / `ns2.dns-parking.com`, shown on the *Nameservers* tab).
-> If you've pointed the domain at Cloudflare or another DNS provider, add the same
-> A-records there instead — Hostinger's editor won't control DNS in that case.
+> If the domain is pointed at Cloudflare or another DNS provider, add the same
+> A-record there instead — Hostinger's editor won't control DNS in that case.
 
 ---
 
-## 2. Add the A records
+## 2. Add ONE A record
 
-In **DNS records**, add three **A** records (Type = `A`, Points to = `203.0.113.10`):
+Add a single **A** record:
 
-| Type | Name (Host) | Points to | TTL |
+| Type | Name (Host) | Points to / Content | TTL |
 |---|---|---|---|
-| A | `@` | `203.0.113.10` | 300 |
-| A | `grafana` | `203.0.113.10` | 300 |
-| A | `ingest` | `203.0.113.10` | 300 |
+| A | `aiops` | `203.0.113.10` | 300 |
 
-Steps for each:
-1. Set **Type** = `A`.
-2. **Name**: type `@` for the root, or `grafana` / `ingest` for the subdomains
-   (Hostinger auto-appends your domain — do **not** type the full
-   `grafana.example.com`, just `grafana`).
-3. **Points to / Content**: `203.0.113.10`
-4. **TTL**: `300` (5 min — keeps changes fast while we set up; you can raise it to
-   `3600`+ later).
-5. Click **Add Record**. Repeat for all three.
+Steps:
+1. **Type** = `A`.
+2. **Name** = `aiops` (just the label — Hostinger auto-appends `.imaginaerium.in`;
+   do **not** type the full `aiops.imaginaerium.in`).
+3. **Points to / Content** = `203.0.113.10`
+4. **TTL** = `300` (5 min — keeps changes fast during setup; raise to `3600`+ later).
+5. Click **Add Record**.
 
-### Clean up conflicts
-- If an existing **A record for `@`** already exists (Hostinger parking page), **edit
-  it** to `203.0.113.10` rather than adding a duplicate.
-- Remove any **AAAA** (IPv6) record for these names — the VM has no IPv6, and a
-  stray AAAA makes browsers/Let's Encrypt try IPv6 first and fail.
-- A `CNAME` for `www` is optional; if you want `www`, add `CNAME www → @`.
+That is the **only** record you add.
 
 ---
 
-## 3. (Optional) www and email
+## 3. Do NOT touch your existing records
 
-- **www:** add `CNAME` Name=`www`, Target=`@` (or your apex) if you want
-  `www.<domain>` to work.
-- **Email (MX):** leave any existing **MX** / Hostinger email records **untouched** —
-  the A-records above don't affect email.
+Your current zone already has these — **leave them all as-is** (none collide with `aiops`):
+
+| Type | Name | Content | Why it stays |
+|---|---|---|---|
+| A | `@` | `203.0.113.30` | Your main site apex |
+| CNAME | `www` | `imaginaerium.in` | Main site www |
+| A | `auditrail` | `203.0.113.20` | A different existing service (different IP) |
+| CNAME | `autisense` | `d250wxbvstxrnq.cloudfront.net` | CloudFront-fronted service |
+| CNAME | `_769463226f6d485c2bf375eeee3ac2be` | `…acm-validations.aws` | ACM cert validation — required, keep it |
+
+### Only clean up if present
+- Any **AAAA** (IPv6) record **named `aiops`** → delete it (the VM is IPv4-only; a
+  stray AAAA makes browsers/Let's Encrypt try IPv6 first and fail).
+- There is **no** existing `aiops` record, so there's nothing to overwrite — just add.
 
 ---
 
 ## 4. Wait for propagation, then verify
 
-TTL 300 usually propagates in a few minutes (can take up to ~30 min globally).
+TTL 300 usually propagates in a few minutes (up to ~30 min globally).
 
 Verify from your machine (PowerShell):
 
 ```powershell
-nslookup aiops.example.com
-nslookup grafana.aiops.example.com
-nslookup ingest.aiops.example.com
+nslookup aiops.imaginaerium.in
 ```
 
-Each must return **`203.0.113.10`**. (Replace with your real domain.)
+Must return **`203.0.113.10`**.
 
-Or check globally: https://dnschecker.org — search your domain, Type `A`, confirm
-`203.0.113.10` appears in most regions.
+Or check globally: https://dnschecker.org — search `aiops.imaginaerium.in`, Type `A`,
+confirm `203.0.113.10` appears in most regions.
 
 ---
 
 ## 5. What I do next (Gate 6 — on the AWS side)
 
-Once the three names resolve to `203.0.113.10`, I enable Caddy on the VM. Caddy
-then automatically requests Let's Encrypt certificates over the HTTP-01 challenge.
+Once `aiops.imaginaerium.in` resolves to `203.0.113.10`, I enable Caddy on the VM.
+Caddy then automatically requests a Let's Encrypt certificate over the HTTP-01
+challenge and serves all four paths above from the one host.
 
-For that challenge to succeed, the VM's security group must allow inbound **80**
-and **443** from anywhere (`0.0.0.0/0`). The Gate 5 Terraform / `aws/setup-sg.sh`
-change opens exactly those two ports (the model/telemetry ports stay private — they
-are reachable only through Caddy on 443). **You don't need to touch AWS** — I handle
-the security-group + Caddy side; you only do the DNS records above.
+For the challenge to succeed, the VM's security group must allow inbound **80** and
+**443** from anywhere (`0.0.0.0/0`). The Gate 5 Terraform / SG change opens exactly
+those two ports (the model ports 8000/8001 and the LGTM stores stay private — reachable
+only *through* Caddy on 443). **You don't need to touch AWS** — I handle the
+security-group + Caddy side; you only do the one DNS record above.
+
+The values I'll bake into the server config at Gate 6 (for reference):
+
+```
+APP_DOMAIN     = aiops.imaginaerium.in
+PUBLIC_API_URL = https://aiops.imaginaerium.in
+CORS_ORIGINS   = https://aiops.imaginaerium.in
+```
+
+And the remote edge agent (Gate 7) will push telemetry to:
+
+```
+https://aiops.imaginaerium.in/ingest/loki/...    (logs)
+https://aiops.imaginaerium.in/ingest/prom/...    (metrics, remote-write)
+https://aiops.imaginaerium.in/ingest/otlp/...    (traces)
+```
+…all behind Caddy basic-auth + TLS.
 
 ---
 
 ## Quick checklist
 
-- [ ] Domain uses Hostinger nameservers (or you'll add these records at your real DNS host)
-- [ ] A record `@` → `203.0.113.10`
-- [ ] A record `grafana` → `203.0.113.10`
-- [ ] A record `ingest` → `203.0.113.10`
-- [ ] No stray `AAAA` records on those names
-- [ ] `nslookup` returns the EIP for all three
-- [ ] Tell me the final domain so I bake it into the Caddyfile + CORS
+- [ ] `imaginaerium.in` uses Hostinger nameservers (or add the record at your real DNS host)
+- [ ] A record `aiops` → `203.0.113.10` (TTL 300) added
+- [ ] No stray `AAAA` record named `aiops`
+- [ ] Existing records (`@`, `www`, `auditrail`, `autisense`, ACM CNAME) left untouched
+- [ ] `nslookup aiops.imaginaerium.in` returns `203.0.113.10`
 
 ---
 
-_Once DNS resolves, send me the domain name and I'll wire it into the Caddyfile,
-CORS origins, and the remote-monitoring ingest host._
+_Once `aiops.imaginaerium.in` resolves, tell me and I'll wire it into the Caddyfile
+(path-based, Grafana sub-path), CORS origins, and the remote-monitoring ingest host
+at Gate 6/7._
