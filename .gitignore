@@ -82,8 +82,13 @@ frontend/dist/
 
 # Neo4j data
 neo4j_data/
-# Top-level data/ excluded by default (catches downloaded/generated stuff)
-/data/
+# Top-level data/ excluded by default (catches downloaded/generated stuff).
+# NOTE: ignore the *contents* (/data/*), not the dir itself, so a negation can
+# re-include a single subtree without un-ignoring all of data/.
+/data/*
+# ...but DO track the seeded, app-facing benchmark mirror (datasets + results)
+# produced by scripts/seed_benchmark_data.py so it ships in the backend image.
+!/data/benchmark/
 # Note: benchmark/data/ no longer exists (removed at L5222 of session-2 transcript).
 
 # Temporary
