@@ -9,7 +9,8 @@
 //   traces  -> Tempo       (OTLP received locally, forwarded on)
 //
 // All endpoints + credentials + the edge label come from .env (see README.md).
-// Validate before first run with:  alloy fmt --verify config.alloy
+// Check parsing/formatting before first run with:  alloy fmt -t config.alloy
+// (-t / --test exits non-zero if the file fails to parse or needs reformatting).
 
 logging {
 	level  = "info"

@@ -43,8 +43,9 @@ cp .env.example .env
 # edit .env: set EDGE_LABEL, INGEST_USER/INGEST_PASS, and (only if your domain
 # differs) the three *_URL endpoints.
 
-# optional but recommended — validate the config first:
-docker run --rm -v "$PWD/config.alloy:/c.alloy" grafana/alloy:v1.5.1 fmt --verify /c.alloy
+# optional but recommended — check the config parses + is well-formatted first
+# (-t / --test exits non-zero on a parse error or formatting drift):
+docker run --rm -v "$PWD/config.alloy:/c.alloy" grafana/alloy:v1.5.1 fmt -t /c.alloy
 
 docker compose up -d
 docker compose logs -f alloy        # watch for successful pushes
