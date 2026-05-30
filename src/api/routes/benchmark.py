@@ -18,6 +18,27 @@ from src.benchmark.evaluator import BenchmarkEvaluator, EvaluationResult
 
 router = APIRouter()
 
+
+def _repo_root() -> Path:
+    """Repository root (this file is src/api/routes/benchmark.py)."""
+    return Path(__file__).resolve().parents[3]
+
+
+def _data_root() -> Path:
+    """Base path for benchmark datasets + results.
+
+    Prefers the app-facing, container-shipped mirror at ``data/benchmark``
+    (seeded via ``scripts/seed_benchmark_data.py``). Falls back to the
+    read-only research corpus at ``benchmark`` when the mirror is absent, so
+    nothing breaks for the paper/corpus tooling.
+    """
+    root = _repo_root()
+    seeded = root / "data" / "benchmark"
+    if seeded.exists():
+        return seeded
+    return root / "benchmark"
+
+
 # Global benchmark runner instance
 _benchmark_runner: Optional[BenchmarkRunner] = None
 _current_progress: dict = {}
@@ -63,7 +84,7 @@ async def get_available_models():
 @router.get("/datasets")
 async def get_datasets():
     """Get information about available benchmark datasets."""
-    base_path = Path(__file__).parent.parent.parent.parent / "benchmark" / "intermediate" / "datasets"
+    base_path = _data_root() / "intermediate" / "datasets"
 
     datasets = []
 
@@ -107,7 +128,7 @@ async def preview_dataset(
     limit: int = Query(default=5, le=20),
 ):
     """Preview test cases from a dataset."""
-    base_path = Path(__file__).parent.parent.parent.parent / "benchmark" / "intermediate" / "datasets"
+    base_path = _data_root() / "intermediate" / "datasets"
 
     if dataset_name == "annotation":
         path = base_path / "annotation_test.json"
@@ -204,7 +225,7 @@ async def run_benchmark(
 @router.get("/results")
 async def get_results():
     """Get all benchmark results."""
-    results_dir = Path(__file__).parent.parent.parent.parent / "benchmark" / "results"
+    results_dir = _data_root() / "results"
 
     if not results_dir.exists():
         return {"results": [], "count": 0}
@@ -227,7 +248,7 @@ async def get_results():
 @router.get("/results/{model_name}")
 async def get_model_results(model_name: str):
     """Get benchmark results for a specific model."""
-    results_dir = Path(__file__).parent.parent.parent.parent / "benchmark" / "results" / model_name
+    results_dir = _data_root() / "results" / model_name
 
     if not results_dir.exists():
         raise HTTPException(status_code=404, detail=f"No results found for model: {model_name}")
@@ -245,7 +266,7 @@ async def get_model_results(model_name: str):
 @router.get("/compare")
 async def compare_models():
     """Compare results across all benchmarked models."""
-    results_dir = Path(__file__).parent.parent.parent.parent / "benchmark" / "results"
+    results_dir = _data_root() / "results"
 
     if not results_dir.exists():
         return {"comparison": [], "summary": {}}
@@ -307,7 +328,7 @@ async def cancel_benchmark():
 @router.get("/export")
 async def export_results(format: str = Query(default="json", regex="^(json|csv|latex)$")):
     """Export benchmark results in various formats."""
-    results_dir = Path(__file__).parent.parent.parent.parent / "benchmark" / "results"
+    results_dir = _data_root() / "results"
 
     if not results_dir.exists():
         raise HTTPException(status_code=404, detail="No benchmark results found")
