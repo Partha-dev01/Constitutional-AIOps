@@ -36,6 +36,9 @@ yarn-error.log*
 .env.*.local
 !.env.example
 
+# Quickstart operator secrets (never commit real credentials)
+quickstart/secrets.local.ps1
+
 # IDE
 .idea/
 .vscode/
