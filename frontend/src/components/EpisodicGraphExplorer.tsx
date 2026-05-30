@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import ForceGraph2D, { ForceGraphMethods, NodeObject, LinkObject } from 'react-force-graph-2d'
 import { Loader2, ZoomIn, ZoomOut, Maximize2, Play, Pause, RotateCcw, Filter } from 'lucide-react'
+import { useResizeObserver } from '../hooks/useResizeObserver'
 
 // Graph node with episodic memory data
 interface EpisodicNode extends NodeObject {
@@ -128,15 +129,19 @@ export function EpisodicGraphExplorer({
   width = 800,
 }: EpisodicGraphExplorerProps) {
   const graphRef = useRef<ForceGraphMethods>(null)
-  const containerRef = useRef<HTMLDivElement>(null)
+  // Measure the canvas host element (NOT the overlay wrapper); width flows from
+  // the observer, height is fixed by the `height` prop — never fed back in.
+  const { ref: canvasHostRef, size: graphDimensions } = useResizeObserver<HTMLDivElement>({ width, height })
   // Guards onEngineStop so zoomToFit runs once per topology, not on every micro-stop.
   const hasFitRef = useRef(false)
+  // True once the user pans/zooms/clicks a node — suppresses auto zoom-to-fit so
+  // background count drift (30s refetch) doesn't fight the user's view.
+  const hasInteractedRef = useRef(false)
 
   const [hoveredNode, setHoveredNode] = useState<EpisodicNode | null>(null)
   const [selectedNode, setSelectedNode] = useState<EpisodicNode | null>(null)
   const [isPlaying, setIsPlaying] = useState(true)
   const [filterType, setFilterType] = useState<string>('all')
-  const [graphDimensions, setGraphDimensions] = useState({ width, height })
 
   // v0.6.0: Visualization controls to prevent hairball
   const [showSimilarTo, setShowSimilarTo] = useState(true)
@@ -186,23 +191,6 @@ export function EpisodicGraphExplorer({
     })
   }, [links, filteredNodes, showSimilarTo, showEntities])
 
-  // Resize observer
-  useEffect(() => {
-    if (!containerRef.current) return
-
-    const resizeObserver = new ResizeObserver(entries => {
-      for (const entry of entries) {
-        setGraphDimensions({
-          width: entry.contentRect.width || width,
-          height: entry.contentRect.height || height,
-        })
-      }
-    })
-
-    resizeObserver.observe(containerRef.current)
-    return () => resizeObserver.disconnect()
-  }, [width, height])
-
   // Configure d3 forces for better node separation
   // v0.6.1: Stable physics to prevent clumping without instability
   useEffect(() => {
@@ -246,12 +234,28 @@ export function EpisodicGraphExplorer({
       // topology change reheats on its own. Reheating on every render caused jitter.
     }
 
-    // Topology changed — allow onEngineStop to zoom-fit once for this new layout.
+    // Layout changed — allow onEngineStop to zoom-fit once for the new layout.
     hasFitRef.current = false
-  }, [filteredNodes.length, filteredLinks.length, layoutMode])
+    // Deps narrowed to [layoutMode]: the 30s background refetch changes node/link
+    // COUNTS, which previously re-ran this effect and re-fit over the user's view.
+  }, [layoutMode])
+
+  // User-driven filter/layout changes should re-fit ONCE; background count drift
+  // must NOT. Resetting both refs lets onEngineStop fit again for this new view.
+  useEffect(() => {
+    hasFitRef.current = false
+    hasInteractedRef.current = false
+  }, [filterType, showSimilarTo, showEntities, layoutMode])
+
+  // Pin a node where the user drops it so it doesn't drift back (RC-2).
+  const handleNodeDragEnd = useCallback((node: EpisodicNode) => {
+    node.fx = node.x
+    node.fy = node.y
+  }, [])
 
   // Handle node click - gentle pan without zoom (v0.6.1 fix)
   const handleNodeClick = useCallback((node: EpisodicNode) => {
+    hasInteractedRef.current = true
     setSelectedNode(node)
     onNodeClick?.(node)
 
@@ -366,11 +370,21 @@ export function EpisodicGraphExplorer({
     }
   }, [])
 
-  // Zoom controls
-  const handleZoomIn = () => graphRef.current?.zoom(graphRef.current.zoom() * 1.5, 300)
-  const handleZoomOut = () => graphRef.current?.zoom(graphRef.current.zoom() / 1.5, 300)
+  // Zoom controls (any manual zoom counts as a user interaction → no auto re-fit).
+  const handleZoomIn = () => {
+    hasInteractedRef.current = true
+    graphRef.current?.zoom((graphRef.current?.zoom() ?? 1) * 1.5, 300)
+  }
+  const handleZoomOut = () => {
+    hasInteractedRef.current = true
+    graphRef.current?.zoom((graphRef.current?.zoom() ?? 1) / 1.5, 300)
+  }
   const handleFit = () => graphRef.current?.zoomToFit(400, 50)
   const handleReset = () => {
+    // Unpin dragged nodes and clear the interaction lock so the view re-fits.
+    filteredNodes.forEach(n => { n.fx = null; n.fy = null })
+    hasInteractedRef.current = false
+    hasFitRef.current = false
     graphRef.current?.zoomToFit(400, 50)
     setSelectedNode(null)
     setHoveredNode(null)
@@ -397,9 +411,15 @@ export function EpisodicGraphExplorer({
   }
 
   return (
-    <div className="relative" ref={containerRef}>
-      {/* Graph Container */}
-      <div className="bg-gradient-to-br from-slate-900/80 to-slate-800/80 rounded-lg overflow-hidden">
+    <div className="relative">
+      {/* Graph Container — this is the MEASURED host. Height is fixed by the
+          `height` prop so the canvas can grow; only width flows from the observer
+          (feeding observed height back here would re-create the resize loop). */}
+      <div
+        ref={canvasHostRef}
+        className="bg-gradient-to-br from-slate-900/80 to-slate-800/80 rounded-lg overflow-hidden"
+        style={{ height }}
+      >
         <ForceGraph2D
           ref={graphRef}
           graphData={{ nodes: filteredNodes as NodeObject[], links: filteredLinks as LinkObject[] }}
@@ -409,6 +429,9 @@ export function EpisodicGraphExplorer({
           linkCanvasObject={(link, ctx, globalScale) => linkCanvasObject(link as EpisodicLink, ctx, globalScale)}
           onNodeClick={(node) => handleNodeClick(node as EpisodicNode)}
           onNodeHover={(node) => setHoveredNode(node as EpisodicNode | null)}
+          onNodeDragEnd={(node) => handleNodeDragEnd(node as EpisodicNode)}
+          // Any user-initiated zoom/pan marks interaction so auto-fit stands down.
+          onZoom={() => { hasInteractedRef.current = true }}
           nodeId="id"
           linkSource="source"
           linkTarget="target"
@@ -420,9 +443,10 @@ export function EpisodicGraphExplorer({
           d3AlphaMin={0.01}
           // Node size for force calculation
           nodeRelSize={8}
-          // Auto-fit ONCE per topology when the simulation stops (not on every micro-stop)
+          // Auto-fit ONCE per layout when the sim stops — but never over the user's
+          // own pan/zoom (hasInteractedRef) so the 30s refetch can't yank the view.
           onEngineStop={() => {
-            if (!hasFitRef.current) {
+            if (!hasFitRef.current && !hasInteractedRef.current) {
               hasFitRef.current = true
               graphRef.current?.zoomToFit(400, 60)
             }

@@ -9,7 +9,8 @@ import {
   Shield,
   Cpu,
   BarChart3,
-  FlaskConical
+  FlaskConical,
+  Server
 } from 'lucide-react'
 import { cn } from '../lib/utils'
 import api, { HealthResponse, isComponentHealthy } from '../lib/api'
@@ -21,6 +22,7 @@ interface LayoutProps {
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Agents', href: '/agents', icon: Cpu },
+  { name: 'Infrastructure', href: '/infrastructure', icon: Server },
   { name: 'Incidents', href: '/incidents', icon: AlertTriangle },
   { name: 'Chat', href: '/chat', icon: MessageSquare },
   { name: 'Metrics', href: '/metrics', icon: BarChart3 },
