@@ -1,0 +1,55 @@
+# Constitutional AIOps — Loki single-binary config (filesystem storage on EBS).
+#
+# Mounted read-only at /etc/loki/local-config.yaml in the aiops-loki container.
+# The /loki data dir is bind-mounted to /mnt/data/loki on the EBS data volume
+# (see aws/EBS_PERSISTENCE.md), so ingested logs survive instance stop/start.
+#
+# Tuned for a single-node deployment (replication_factor 1, inmemory ring) with
+# the 30-day retention quoted in CLAUDE.md. Pinned to the grafana/loki:2.9.3
+# schema (tsdb + v13 + filesystem object store).
+
+auth_enabled: false
+
+server:
+  http_listen_port: 3100
+  grpc_listen_port: 9096
+  log_level: info
+
+common:
+  instance_addr: 127.0.0.1
+  path_prefix: /loki
+  storage:
+    filesystem:
+      chunks_directory: /loki/chunks
+      rules_directory: /loki/rules
+  replication_factor: 1
+  ring:
+    kvstore:
+      store: inmemory
+
+schema_config:
+  configs:
+    - from: 2024-01-01
+      store: tsdb
+      object_store: filesystem
+      schema: v13
+      index:
+        prefix: index_
+        period: 24h
+
+limits_config:
+  retention_period: 720h            # 30 days
+  reject_old_samples: true
+  reject_old_samples_max_age: 168h  # 7 days
+  ingestion_rate_mb: 16
+  ingestion_burst_size_mb: 32
+  max_query_series: 5000
+
+compactor:
+  working_directory: /loki/compactor
+  shared_store: filesystem
+  retention_enabled: true
+  compaction_interval: 10m
+
+analytics:
+  reporting_enabled: false

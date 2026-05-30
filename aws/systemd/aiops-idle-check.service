@@ -1,0 +1,12 @@
+# aiops-idle-check.service — one-shot invoked by aiops-idle-check.timer.
+# Replaces the old crontab entry for aws/idle-check.sh. Belt-and-suspenders backup
+# to the CloudWatch idle-CPU alarm: stops the instance if no vLLM request hit
+# either port in the last 30 min, so an idle GPU box does not keep billing.
+[Unit]
+Description=Constitutional AIOps - idle GPU auto-stop check
+After=docker.service aiops-vllm.service
+ConditionPathExists=/opt/aiops/aws/idle-check.sh
+
+[Service]
+Type=oneshot
+ExecStart=/opt/aiops/aws/idle-check.sh

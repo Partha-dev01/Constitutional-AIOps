@@ -1,0 +1,28 @@
+# aiops-vllm.service — GPU inference tier (vLLM AWQ-marlin dual model).
+# Brings up qwen3-4b (:8000) + qwen3-14b (:8001) only. Kept as a SEPARATE unit
+# from the app so the expensive GPU containers can be stopped/started on their own
+# (e.g. the idle-stop path) without disturbing Neo4j / the observability stack.
+#
+# Install on the VM (repo checked out at /opt/aiops):
+#     sudo cp aws/systemd/aiops-*.service aws/systemd/aiops-*.timer /etc/systemd/system/
+#     sudo systemctl daemon-reload
+#     sudo systemctl enable --now aiops-vllm aiops-app aiops-caddy aiops-idle-check.timer
+#
+# See aws/EBS_PERSISTENCE.md for the full bring-up runbook.
+[Unit]
+Description=Constitutional AIOps - vLLM inference (qwen3-4b :8000 + qwen3-14b :8001)
+Documentation=file:///opt/aiops/aws/EBS_PERSISTENCE.md
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/aiops
+ExecStart=/usr/bin/docker compose -f docker-compose.yml -f docker/docker-compose.production.yml --env-file .env.production up -d qwen3-4b qwen3-14b
+ExecStop=/usr/bin/docker compose -f docker-compose.yml -f docker/docker-compose.production.yml --env-file .env.production stop qwen3-4b qwen3-14b
+TimeoutStartSec=900
+
+[Install]
+WantedBy=multi-user.target

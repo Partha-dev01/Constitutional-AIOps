@@ -1,0 +1,27 @@
+# aiops-app.service — application + observability tier.
+# Brings up Neo4j, the LGTM stack (loki/promtail/prometheus/tempo/grafana),
+# the OTel collector, the FastAPI backend and the React frontend.
+#
+# Deliberately does NOT start the `nextcloud` demo target from the base compose:
+# in production the monitored workload runs on a REMOTE host and ships telemetry
+# in via the Grafana Alloy edge agent (see monitoring-agent/ + Gate 7).
+#
+# ExecStartPre prepares the EBS bind-mount ownership (idempotent).
+[Unit]
+Description=Constitutional AIOps - application + observability stack
+Documentation=file:///opt/aiops/aws/EBS_PERSISTENCE.md
+Requires=docker.service
+After=docker.service network-online.target aiops-vllm.service
+Wants=network-online.target aiops-vllm.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/aiops
+ExecStartPre=/opt/aiops/aws/init-data-dirs.sh
+ExecStart=/usr/bin/docker compose -f docker-compose.yml -f docker/docker-compose.production.yml --env-file .env.production up -d neo4j loki promtail prometheus tempo grafana otel-collector backend frontend
+ExecStop=/usr/bin/docker compose -f docker-compose.yml -f docker/docker-compose.production.yml --env-file .env.production stop backend frontend otel-collector grafana tempo prometheus promtail loki neo4j
+TimeoutStartSec=600
+
+[Install]
+WantedBy=multi-user.target

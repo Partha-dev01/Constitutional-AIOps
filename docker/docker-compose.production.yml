@@ -219,8 +219,10 @@ services:
       - NEO4J_dbms_memory_pagecache_size=512m
       - NEO4J_dbms_security_procedures_unrestricted=apoc.*
     volumes:
-      - neo4j-data:/data
-      - neo4j-logs:/logs
+      # EBS-backed bind-mounts (data volume vol-0ff075a7541026572 -> /mnt/data).
+      # Survive instance stop/start so incident history + graph memory persist.
+      - /mnt/data/neo4j/data:/data
+      - /mnt/data/neo4j/logs:/logs
       - ./docker/configs/neo4j-backup.sh:/scripts/backup.sh:ro
     deploy:
       resources:
@@ -253,7 +255,7 @@ services:
       - "127.0.0.1:3100:3100"
     command: -config.file=/etc/loki/local-config.yaml
     volumes:
-      - loki-data:/loki
+      - /mnt/data/loki:/loki  # EBS-backed; 30-day log retention
       - ./docker/configs/loki-config.yaml:/etc/loki/local-config.yaml:ro
     deploy:
       resources:
@@ -276,8 +278,7 @@ services:
       - "127.0.0.1:9090:9090"
     volumes:
       - ./docker/configs/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ./docker/configs/alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
-      - prometheus-data:/prometheus
+      - /mnt/data/prometheus:/prometheus  # EBS-backed; 30-day metric retention
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
@@ -307,7 +308,7 @@ services:
     command: -config.file=/etc/tempo/tempo.yaml
     volumes:
       - ./docker/configs/tempo-config.yaml:/etc/tempo/tempo.yaml:ro
-      - tempo-data:/tmp/tempo
+      - /mnt/data/tempo:/tmp/tempo  # EBS-backed; trace blocks + WAL
     deploy:
       resources:
         limits:
@@ -333,7 +334,7 @@ services:
       - GF_SERVER_ROOT_URL=${GRAFANA_ROOT_URL:-http://localhost:3001}
       - GF_AUTH_ANONYMOUS_ENABLED=false
     volumes:
-      - grafana-data:/var/lib/grafana
+      - /mnt/data/grafana:/var/lib/grafana  # EBS-backed; dashboards + Grafana state
       - ./docker/configs/grafana/provisioning:/etc/grafana/provisioning:ro
       - ./docker/configs/grafana/dashboards:/var/lib/grafana/dashboards:ro
     depends_on:
@@ -412,20 +413,7 @@ networks:
       config:
         - subnet: 172.28.0.0/16
 
-volumes:
-  neo4j-data:
-    driver: local
-  neo4j-logs:
-    driver: local
-  loki-data:
-    driver: local
-  prometheus-data:
-    driver: local
-  tempo-data:
-    driver: local
-  grafana-data:
-    driver: local
-  # caddy-data:
-  #   driver: local
-  # caddy-config:
-  #   driver: local
+# No top-level named volumes in production: every stateful service binds to the
+# EBS data volume under /mnt/data so all data survives instance stop/start.
+# Run aws/init-data-dirs.sh once (it is also an ExecStartPre of aiops-app.service)
+# to create + chown those directories. See aws/EBS_PERSISTENCE.md.
