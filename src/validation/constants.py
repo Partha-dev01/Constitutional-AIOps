@@ -8,7 +8,7 @@ This module centralizes all performance targets, accuracy metrics, and
 configuration constants from the research paper for validation purposes.
 """
 
-__version__ = "0.4.0"
+from src.version import __version__
 
 
 class PerformanceTargets:
