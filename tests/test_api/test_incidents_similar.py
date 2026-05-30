@@ -11,7 +11,7 @@ import pytest
 
 async def _seed_incident(title: str):
     """Create an incident in the in-memory store and return it."""
-    from src.api.routes.incidents import create_incident, _incidents
+    from src.api.routes.incidents import _incidents, create_incident
     from src.api.schemas.incident import IncidentCreate, IncidentSeverity, ServiceInfo
 
     _incidents.clear()
@@ -69,8 +69,9 @@ async def test_similar_returns_empty_when_graph_unavailable() -> None:
 
 @pytest.mark.asyncio
 async def test_similar_unknown_incident_raises_404() -> None:
-    from src.api.routes.incidents import find_similar_incidents, _incidents
     from fastapi import HTTPException
+
+    from src.api.routes.incidents import _incidents, find_similar_incidents
 
     _incidents.clear()
     req = MagicMock()

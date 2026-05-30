@@ -26,11 +26,11 @@ class TestPrinciples:
     """Tests for constitutional principles definitions."""
     
     def test_all_principles_count(self):
-        """Test that we have all 11 principles."""
-        assert len(ALL_PRINCIPLES) == 11
+        """Test that we have all 12 principles (4 per tier)."""
+        assert len(ALL_PRINCIPLES) == 12
         assert len(TIER_1_PRINCIPLES) == 4
         assert len(TIER_2_PRINCIPLES) == 4
-        assert len(TIER_3_PRINCIPLES) == 3
+        assert len(TIER_3_PRINCIPLES) == 4
     
     def test_principle_tiers(self):
         """Test that principles are in correct tiers."""
