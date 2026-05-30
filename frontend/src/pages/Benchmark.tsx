@@ -1,11 +1,7 @@
 import { useState, useEffect } from 'react'
 import {
   Play,
-  RefreshCw,
-  Download,
-  BarChart3,
   Database,
-  Clock,
   CheckCircle2,
   XCircle,
   Loader2,
