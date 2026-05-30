@@ -11,7 +11,9 @@ test('the welcome hero renders without the app sidebar', async ({ page }) => {
   await page.goto('/welcome')
 
   // Hero heading is visible (split across nodes: "Constitutional" + "AIOps").
-  await expect(page.getByRole('heading', { name: /Constitutional/ })).toBeVisible()
+  // Scope to the H1 hero — a feature card lower on the page is an <h3>
+  // "Constitutional AI Safety", so an unscoped match is ambiguous.
+  await expect(page.getByRole('heading', { level: 1, name: /Constitutional/ })).toBeVisible()
 
   // The Layout (sidebar) is absent on /welcome: the sidebar renders the app
   // navigation inside a <nav>, and the only <nav> in the app lives in Layout.
