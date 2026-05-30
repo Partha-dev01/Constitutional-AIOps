@@ -298,16 +298,28 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     []
   )
 
-  // Auto-connect on mount
+  // Keep the latest connect/disconnect in refs so the mount effect runs ONCE
+  // instead of re-subscribing every render. Consumers pass inline callbacks
+  // (e.g. onConnect), which change `connect`/`disconnect` identity on every
+  // render; depending on them here previously tore down and reopened the socket
+  // each render. Each teardown closed with code 1006 and triggered a reconnect,
+  // compounding into a storm that Chrome throttled ("Insufficient resources") —
+  // leaving the live-status badge stuck on "Offline".
+  const connectRef = useRef(connect)
+  const disconnectRef = useRef(disconnect)
+  connectRef.current = connect
+  disconnectRef.current = disconnect
+
+  // Auto-connect on mount (and only when autoConnect itself changes).
   useEffect(() => {
     if (autoConnect) {
-      connect()
+      connectRef.current()
     }
 
     return () => {
-      disconnect()
+      disconnectRef.current()
     }
-  }, [autoConnect, connect, disconnect])
+  }, [autoConnect])
 
   return {
     // State
