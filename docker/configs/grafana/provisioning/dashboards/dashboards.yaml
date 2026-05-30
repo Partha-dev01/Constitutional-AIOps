@@ -1,0 +1,15 @@
+# Grafana dashboard provider — loads any JSON dashboards dropped into
+# /var/lib/grafana/dashboards (bind-mounted from docker/configs/grafana/dashboards).
+apiVersion: 1
+
+providers:
+  - name: aiops
+    orgId: 1
+    folder: ''
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: true
