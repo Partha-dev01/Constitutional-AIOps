@@ -1,0 +1,17 @@
+# Copy to terraform.tfvars (gitignored) or let ./discover.sh generate it.
+# The known IDs are defaults in variables.tf; you only MUST provide the three
+# looked-up values (instance_ami, availability_zone, eip_allocation_id).
+
+region              = "us-east-1"
+instance_id         = "i-091c4de0e95d63154"
+instance_type       = "g6.xlarge"
+instance_ami        = "ami-xxxxxxxxxxxxxxxxx"   # discover.sh
+availability_zone   = "us-east-1a"              # discover.sh
+eip_allocation_id   = "eipalloc-xxxxxxxxxxxxxxxxx"  # discover.sh (for EIP 44.195.172.165)
+root_volume_id      = "vol-01714af69faebb973"
+data_volume_id      = "vol-0ff075a7541026572"
+root_volume_size    = 100   # GiB — frozen by ignore_changes; set to actual if known
+data_volume_size    = 200   # GiB — frozen by ignore_changes; set to actual if known
+security_group_name = "aiops-vllm-sg"
+app_domain          = "aiops.imaginaerium.in"
+manage_caddy_ports  = true
