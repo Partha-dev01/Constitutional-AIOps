@@ -1,0 +1,2311 @@
+{
+  "version": "2.0-clean",
+  "created": "2026-02-01T14:13:54.697696",
+  "source": "Loghub (HDFS + BGL) - REAL DATA",
+  "description": "Cleaned annotation dataset - removed 62 bogus BGL entries",
+  "original_total": 200,
+  "removed_ids": [
+    "ANN_199",
+    "ANN_180",
+    "ANN_147",
+    "ANN_111",
+    "ANN_108",
+    "ANN_128",
+    "ANN_113",
+    "ANN_115",
+    "ANN_117",
+    "ANN_148",
+    "ANN_152",
+    "ANN_101",
+    "ANN_165",
+    "ANN_109",
+    "ANN_143",
+    "ANN_137",
+    "ANN_103",
+    "ANN_110",
+    "ANN_133",
+    "ANN_134",
+    "ANN_104",
+    "ANN_188",
+    "ANN_120",
+    "ANN_160",
+    "ANN_139",
+    "ANN_193",
+    "ANN_185",
+    "ANN_178",
+    "ANN_126",
+    "ANN_187",
+    "ANN_159",
+    "ANN_161",
+    "ANN_163",
+    "ANN_197",
+    "ANN_132",
+    "ANN_145",
+    "ANN_157",
+    "ANN_183",
+    "ANN_127",
+    "ANN_124",
+    "ANN_106",
+    "ANN_112",
+    "ANN_172",
+    "ANN_102",
+    "ANN_191",
+    "ANN_144",
+    "ANN_181",
+    "ANN_158",
+    "ANN_190",
+    "ANN_175",
+    "ANN_150",
+    "ANN_195",
+    "ANN_125",
+    "ANN_140",
+    "ANN_136",
+    "ANN_186",
+    "ANN_200",
+    "ANN_131",
+    "ANN_138",
+    "ANN_116",
+    "ANN_162",
+    "ANN_196"
+  ],
+  "total_cases": 138,
+  "distribution": {
+    "hdfs": 100,
+    "bgl": 38,
+    "normal": 65,
+    "anomaly": 73
+  },
+  "test_cases": [
+    {
+      "id": "ANN_166",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "ciod: Error reading message prefix after LOAD_MESSAGE on CioStream socket to 172.16.96.116:47696: Link has been severed",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "critical",
+        "category": "error",
+        "classification": "alert"
+      },
+      "ground_truth_label": "alert",
+      "alert_category": "APPSEV"
+    },
+    {
+      "id": "ANN_048",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 150238 31 INFO dfs.FSNamesystem: BLOCK* NameSystem.addStoredBlock: blockMap updated: 10.251.38.197:50010 is added to blk_-5427918313707752877 size 67108864",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_082",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081109 222342 3462 WARN dfs.DataNode$DataXceiver: 10.251.74.79:50010:Got exception while serving blk_2244903517044280975 to /10.251.74.134:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly"
+    },
+    {
+      "id": "ANN_089",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 082737 8341 WARN dfs.DataNode$DataXceiver: 10.250.19.227:50010:Got exception while serving blk_-7372087176866857012 to /10.251.110.68:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly"
+    },
+    {
+      "id": "ANN_098",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 135429 12030 WARN dfs.DataNode$DataXceiver: 10.251.70.37:50010:Got exception while serving blk_1646534811870220828 to /10.250.11.100:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly"
+    },
+    {
+      "id": "ANN_092",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 081643 8247 WARN dfs.DataNode$DataXceiver: 10.250.17.225:50010:Got exception while serving blk_-5935642747315643391 to /10.251.199.150:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly"
+    },
+    {
+      "id": "ANN_023",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 231241 26 INFO dfs.FSNamesystem: BLOCK* NameSystem.delete: blk_-1335063409877429524 is added to invalidSet of 10.251.107.196:50010",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_090",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 135653 12034 WARN dfs.DataNode$DataXceiver: 10.251.214.130:50010:Got exception while serving blk_424461424221613461 to /10.251.71.193:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly"
+    },
+    {
+      "id": "ANN_077",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 131041 11754 WARN dfs.DataNode$DataXceiver: 10.251.122.38:50010:Got exception while serving blk_7489155602821840025 to /10.251.26.8:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly"
+    },
+    {
+      "id": "ANN_029",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081111 044759 19 INFO dfs.FSDataset: Deleting block blk_-1368324087589035770 file /mnt/hadoop/dfs/data/current/blk_-1368324087589035770",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_045",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 103027 34 INFO dfs.FSNamesystem: BLOCK* NameSystem.delete: blk_-8026264173633579073 is added to invalidSet of 10.251.214.18:50010",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_100",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 071657 7700 WARN dfs.DataNode$DataXceiver: 10.251.38.214:50010:Got exception while serving blk_5547569777499890340 to /10.251.195.52:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly"
+    },
+    {
+      "id": "ANN_046",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 103735 19 INFO dfs.FSDataset: Deleting block blk_7519257846502835091 file /mnt/hadoop/dfs/data/current/subdir15/blk_7519257846502835091",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_074",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081109 224234 3638 WARN dfs.DataNode$DataXceiver: 10.251.73.220:50010:Got exception while serving blk_4934527196392001803 to /10.251.203.246:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly"
+    },
+    {
+      "id": "ANN_051",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081109 222041 3390 WARN dfs.DataNode$DataXceiver: 10.251.67.113:50010:Got exception while serving blk_-62891505109755100 to /10.250.7.96:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly"
+    },
+    {
+      "id": "ANN_004",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081111 065504 18 INFO dfs.FSDataset: Deleting block blk_3336810835691486095 file /mnt/hadoop/dfs/data/current/subdir11/blk_3336810835691486095",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_149",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "ciod: In packet from node 91.0 (R62-M1-Nf-C:J03-U11), message code 2 is not 3 or 4294967295 (softheader=003b005b 00030000 00000001 00000000)",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_035",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 115737 27 INFO dfs.FSNamesystem: BLOCK* NameSystem.addStoredBlock: blockMap updated: 10.251.195.33:50010 is added to blk_512039711533506696 size 67108864",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_198",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "Lustre mount FAILED : bglio617 : block_id : location",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "critical",
+        "category": "error",
+        "classification": "alert"
+      },
+      "ground_truth_label": "alert",
+      "alert_category": "KERNMNTF"
+    },
+    {
+      "id": "ANN_088",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081109 215136 2868 WARN dfs.DataNode$DataXceiver: 10.251.199.19:50010:Got exception while serving blk_8466246428293623262 to /10.251.106.37:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly"
+    },
+    {
+      "id": "ANN_030",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081111 061857 17075 INFO dfs.DataNode$PacketResponder: Received block blk_3961831045048378097 of size 67108864 from /10.251.39.160",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_042",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081111 061534 21779 INFO dfs.DataNode$PacketResponder: PacketResponder 2 for block blk_-615578808743808725 terminating",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_054",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 081515 8312 WARN dfs.DataNode$DataXceiver: 10.251.31.5:50010:Got exception while serving blk_6332892729727950039 to /10.251.123.1:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly"
+    },
+    {
+      "id": "ANN_047",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081111 071904 22560 INFO dfs.DataNode$DataXceiver: Receiving block blk_-7646004878694144580 src: /10.251.202.181:47130 dest: /10.251.202.181:50010",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_121",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "critical input interrupt (unit=0x0b bit=0x17): warning for tree C1 wire, suppressing further interrupts of same type",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_164",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "Lustre mount FAILED : bglio388 : point /p/gb1",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "critical",
+        "category": "error",
+        "classification": "alert"
+      },
+      "ground_truth_label": "alert",
+      "alert_category": "KERNMNTF"
+    },
+    {
+      "id": "ANN_067",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 192015 14269 WARN dfs.DataNode$DataXceiver: 10.250.10.223:50010:Got exception while serving blk_9095955277706686312 to /10.250.5.161:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly"
+    },
+    {
+      "id": "ANN_086",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 091657 8720 WARN dfs.DataNode$DataXceiver: 10.251.70.211:50010:Got exception while serving blk_424255210146453297 to /10.251.203.179:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly"
+    },
+    {
+      "id": "ANN_083",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 091550 8683 WARN dfs.DataNode$DataXceiver: 10.251.111.209:50010:Got exception while serving blk_7505828172725463922 to /10.251.111.209:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly"
+    },
+    {
+      "id": "ANN_171",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "rts: kernel terminated for reason 1004",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "critical",
+        "category": "error",
+        "classification": "alert"
+      },
+      "ground_truth_label": "alert",
+      "alert_category": "KERNTERM"
+    },
+    {
+      "id": "ANN_184",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "rts: kernel terminated for reason 1004",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "critical",
+        "category": "error",
+        "classification": "alert"
+      },
+      "ground_truth_label": "alert",
+      "alert_category": "KERNTERM"
+    },
+    {
+      "id": "ANN_027",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 103533 19 INFO dfs.FSDataset: Deleting block blk_-3437475890798229344 file /mnt/hadoop/dfs/data/current/subdir57/blk_-3437475890798229344",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_040",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081111 075809 23659 INFO dfs.DataNode$PacketResponder: PacketResponder 0 for block blk_-4582442491366282435 terminating",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_003",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081109 211528 29 INFO dfs.FSNamesystem: BLOCK* NameSystem.addStoredBlock: blockMap updated: 10.251.110.8:50010 is added to blk_-1661553043410372067 size 67108864",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_078",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 030942 6646 WARN dfs.DataNode$DataXceiver: 10.251.31.5:50010:Got exception while serving blk_-1367876730256254709 to /10.251.67.225:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly"
+    },
+    {
+      "id": "ANN_168",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "Error receiving packet on tree network, expecting type 57 instead of type 3 (softheader=00ce22e8 e6200003 00000002 00000000) PSR0=00001f01 PSR1=00000000 PRXF=00000002 PIXF=00000007",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "critical",
+        "category": "error",
+        "classification": "alert"
+      },
+      "ground_truth_label": "alert",
+      "alert_category": "KERNREC"
+    },
+    {
+      "id": "ANN_123",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "8 floating point alignment exceptions",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_066",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 080847 8088 WARN dfs.DataNode$DataXceiver: 10.251.26.8:50010:Got exception while serving blk_-8522942048313632858 to /10.251.31.85:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly"
+    },
+    {
+      "id": "ANN_154",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "ciod: Error reading message prefix after LOAD_MESSAGE on CioStream socket to 172.16.96.116:42213: Link has been severed",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "critical",
+        "category": "error",
+        "classification": "alert"
+      },
+      "ground_truth_label": "alert",
+      "alert_category": "APPSEV"
+    },
+    {
+      "id": "ANN_056",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 133657 11701 WARN dfs.DataNode$DataXceiver: 10.251.123.132:50010:Got exception while serving blk_4048438071314937575 to /10.251.194.213:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly"
+    },
+    {
+      "id": "ANN_081",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 030331 6561 WARN dfs.DataNode$DataXceiver: 10.251.42.191:50010:Got exception while serving blk_-8023826090828946372 to /10.251.214.130:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly"
+    },
+    {
+      "id": "ANN_039",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081111 071042 31 INFO dfs.FSNamesystem: BLOCK* NameSystem.addStoredBlock: blockMap updated: 10.251.30.134:50010 is added to blk_-5214060566378896158 size 67108864",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_005",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 115226 10579 INFO dfs.DataNode$DataXceiver: Receiving block blk_8992894896370738220 src: /10.251.43.210:54766 dest: /10.251.43.210:50010",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_170",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "ciod: Error reading message prefix after LOAD_MESSAGE on CioStream socket to 172.16.96.116:37916: Link has been severed",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "critical",
+        "category": "error",
+        "classification": "alert"
+      },
+      "ground_truth_label": "alert",
+      "alert_category": "APPSEV"
+    },
+    {
+      "id": "ANN_011",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081111 052812 21102 INFO dfs.DataNode$DataXceiver: Receiving block blk_-7228803354694123939 src: /10.251.195.70:50389 dest: /10.251.195.70:50010",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_065",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 233954 17191 WARN dfs.DataNode$DataXceiver: 10.250.7.230:50010:Got exception while serving blk_-7029628814943626474 to /10.251.38.197:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly"
+    },
+    {
+      "id": "ANN_107",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "MACHINE CHECK DCR read timeout (mc=e08x iar 0x00000000 lr 0xc00045a4)",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_073",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 175934 12298 WARN dfs.DataNode$DataXceiver: 10.251.107.50:50010:Got exception while serving blk_-4737948505610037427 to /10.251.75.79:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly"
+    },
+    {
+      "id": "ANN_041",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 103035 34 INFO dfs.FSNamesystem: BLOCK* NameSystem.delete: blk_9111860234027679206 is added to invalidSet of 10.251.39.209:50010",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_076",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 083045 8495 WARN dfs.DataNode$DataXceiver: 10.251.215.16:50010:Got exception while serving blk_-4590972095204776122 to /10.251.30.6:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly"
+    },
+    {
+      "id": "ANN_075",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 170322 13709 WARN dfs.DataNode$DataXceiver: 10.251.195.33:50010:Got exception while serving blk_6702054389824523327 to /10.251.195.33:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly"
+    },
+    {
+      "id": "ANN_093",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 194735 14044 WARN dfs.DataNode$DataXceiver: 10.251.127.243:50010:Got exception while serving blk_7760079751081658559 to /10.251.215.70:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly"
+    },
+    {
+      "id": "ANN_038",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081109 204908 31 INFO dfs.FSNamesystem: BLOCK* NameSystem.addStoredBlock: blockMap updated: 10.251.110.8:50010 is added to blk_8015913224713045110 size 67108864",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_118",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "CE sym 29, at 0x14123c20, mask 0x08",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_020",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 012357 5523 INFO dfs.DataNode$PacketResponder: Received block blk_6534693994677948144 of size 67108864 from /10.251.201.204",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_095",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 133946 11947 WARN dfs.DataNode$DataXceiver: 10.251.126.255:50010:Got exception while serving blk_1910039736720341651 to /10.251.31.85:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly"
+    },
+    {
+      "id": "ANN_114",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "CE sym 15, at 0x06a72120, mask 0x04",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_037",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081111 085924 27 INFO dfs.FSNamesystem: BLOCK* NameSystem.delete: blk_-793506372912437289 is added to invalidSet of 10.250.17.225:50010",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_153",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "rts: kernel terminated for reason 1003",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "critical",
+        "category": "error",
+        "classification": "alert"
+      },
+      "ground_truth_label": "alert",
+      "alert_category": "KERNTERM"
+    },
+    {
+      "id": "ANN_050",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 210354 19 INFO dfs.FSDataset: Deleting block blk_-6901909114834172466 file /mnt/hadoop/dfs/data/current/subdir57/blk_-6901909114834172466",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_001",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081111 044556 19 INFO dfs.FSDataset: Deleting block blk_-5429042599096020592 file /mnt/hadoop/dfs/data/current/subdir34/blk_-5429042599096020592",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_099",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081109 230110 3647 WARN dfs.DataNode$DataXceiver: 10.251.90.134:50010:Got exception while serving blk_7154985168984871115 to /10.251.110.160:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly"
+    },
+    {
+      "id": "ANN_028",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081111 063859 22169 INFO dfs.DataNode$DataXceiver: Receiving block blk_1606295458729964667 src: /10.251.214.32:47910 dest: /10.251.214.32:50010",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_053",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 092151 8601 WARN dfs.DataNode$DataXceiver: 10.251.126.22:50010:Got exception while serving blk_1686195200514944346 to /10.250.6.223:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly"
+    },
+    {
+      "id": "ANN_194",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "Lustre mount FAILED : bglio78 : block_id : location",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "critical",
+        "category": "error",
+        "classification": "alert"
+      },
+      "ground_truth_label": "alert",
+      "alert_category": "KERNMNTF"
+    },
+    {
+      "id": "ANN_173",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "ciod: Error reading message prefix on CioStream socket to 172.16.96.116:47189, Link has been severed",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "critical",
+        "category": "error",
+        "classification": "alert"
+      },
+      "ground_truth_label": "alert",
+      "alert_category": "APPSEV"
+    },
+    {
+      "id": "ANN_097",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 231904 17028 WARN dfs.DataNode$DataXceiver: 10.251.75.143:50010:Got exception while serving blk_2262752117989012641 to /10.250.13.188:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly"
+    },
+    {
+      "id": "ANN_012",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081111 065500 22388 INFO dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_-352190670750948803 terminating",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_070",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081109 222650 3459 WARN dfs.DataNode$DataXceiver: 10.251.214.112:50010:Got exception while serving blk_5905933788014151041 to /10.251.214.112:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly"
+    },
+    {
+      "id": "ANN_084",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 131950 11797 WARN dfs.DataNode$DataXceiver: 10.251.30.85:50010:Got exception while serving blk_8059204889272489644 to /10.250.7.96:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly"
+    },
+    {
+      "id": "ANN_007",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 104224 34 INFO dfs.FSNamesystem: BLOCK* NameSystem.allocateBlock: /user/root/rand/_temporary/_task_200811101024_0001_m_000346_0/part-00346. blk_-2016403519138424998",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_013",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081111 092311 35 INFO dfs.FSNamesystem: BLOCK* NameSystem.allocateBlock: /user/root/rand8/_temporary/_task_200811101024_0015_m_000882_0/part-00882. blk_-3152434225121092058",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_071",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 131806 11757 WARN dfs.DataNode$DataXceiver: 10.251.26.177:50010:Got exception while serving blk_3848747149919646864 to /10.251.125.174:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly"
+    },
+    {
+      "id": "ANN_010",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 013559 5614 INFO dfs.DataNode$PacketResponder: Received block blk_7736147489540456118 of size 67108864 from /10.251.74.227",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_130",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "New ido chip inserted into the database: FF:F2:9F:16:BF:6C:00:0D:60:E9:40:93 ip=10.5.0.46 v=13 t=4",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_060",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081109 221151 3361 WARN dfs.DataNode$DataXceiver: 10.250.10.144:50010:Got exception while serving blk_5126469776250053435 to /10.250.11.100:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly"
+    },
+    {
+      "id": "ANN_036",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081111 075854 19 INFO dfs.FSDataset: Deleting block blk_5806397523737304814 file /mnt/hadoop/dfs/data/current/subdir34/blk_5806397523737304814",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_024",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081111 041004 30 INFO dfs.FSNamesystem: BLOCK* NameSystem.addStoredBlock: blockMap updated: 10.251.71.240:50010 is added to blk_-5580048401594934039 size 67108864",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_069",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 131233 11867 WARN dfs.DataNode$DataXceiver: 10.251.197.226:50010:Got exception while serving blk_2101007907134483259 to /10.251.31.242:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly"
+    },
+    {
+      "id": "ANN_119",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "5 floating point alignment exceptions",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_135",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "5 ddr error(s) detected and corrected on rank 0, symbol 28 over 2946 seconds",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_032",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 103840 19 INFO dfs.FSDataset: Deleting block blk_6497260538939100482 file /mnt/hadoop/dfs/data/current/subdir46/blk_6497260538939100482",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_129",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "ciod: Error loading /bgl/apps/scaletest/performance/MINIBEN/mb_243_0810/allreduce.rts: invalid or missing program image, Exec format error",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_174",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "ciod: Error reading message prefix on CioStream socket to 172.16.96.116:55929, Link has been severed",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "critical",
+        "category": "error",
+        "classification": "alert"
+      },
+      "ground_truth_label": "alert",
+      "alert_category": "APPSEV"
+    },
+    {
+      "id": "ANN_044",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 150600 35 INFO dfs.FSNamesystem: BLOCK* NameSystem.addStoredBlock: blockMap updated: 10.251.73.220:50010 is added to blk_578261619176233743 size 67108864",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_094",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 082954 8543 WARN dfs.DataNode$DataXceiver: 10.251.70.112:50010:Got exception while serving blk_4357276972386184626 to /10.251.74.79:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly"
+    },
+    {
+      "id": "ANN_176",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "rts: kernel terminated for reason 1004",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "critical",
+        "category": "error",
+        "classification": "alert"
+      },
+      "ground_truth_label": "alert",
+      "alert_category": "KERNTERM"
+    },
+    {
+      "id": "ANN_008",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 070347 7574 INFO dfs.DataNode$DataXceiver: 10.250.10.6:50010 Served block blk_1598414622053793245 to /10.251.90.239",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_026",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081111 031257 18567 INFO dfs.DataNode$DataXceiver: Receiving block blk_-6380328072112550668 src: /10.250.6.191:37701 dest: /10.250.6.191:50010",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_014",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081111 025424 26 INFO dfs.FSNamesystem: BLOCK* NameSystem.addStoredBlock: blockMap updated: 10.251.110.160:50010 is added to blk_-1675768179383804109 size 67108864",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_091",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 125920 11517 WARN dfs.DataNode$DataXceiver: 10.251.42.16:50010:Got exception while serving blk_4963214289850966664 to /10.251.202.181:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly"
+    },
+    {
+      "id": "ANN_182",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "Lustre mount FAILED : bglio23 : point /p/gb1",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "critical",
+        "category": "error",
+        "classification": "alert"
+      },
+      "ground_truth_label": "alert",
+      "alert_category": "KERNMNTF"
+    },
+    {
+      "id": "ANN_025",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081109 212029 1814 INFO dfs.DataNode$PacketResponder: Received block blk_-2452477352812192142 of size 67108864 from /10.250.7.244",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_049",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 012245 5396 INFO dfs.DataNode$PacketResponder: PacketResponder 0 for block blk_-9161369067334198861 terminating",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_105",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "0 microseconds spent in the rbs signal handler during 0 calls. 0 microseconds was the maximum time for a single instance of a correctable ddr.",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_063",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 032126 6555 WARN dfs.DataNode$DataXceiver: 10.251.26.8:50010:Got exception while serving blk_-7983508786213002472 to /10.251.38.197:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly"
+    },
+    {
+      "id": "ANN_034",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081111 035417 19387 INFO dfs.DataNode$PacketResponder: PacketResponder 2 for block blk_-633826175832239328 terminating",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_179",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "ciod: Error reading message prefix on CioStream socket to 172.16.96.116:52930, Connection reset by peer",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "critical",
+        "category": "error",
+        "classification": "alert"
+      },
+      "ground_truth_label": "alert",
+      "alert_category": "APPRES"
+    },
+    {
+      "id": "ANN_192",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "rts: kernel terminated for reason 1004",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "critical",
+        "category": "error",
+        "classification": "alert"
+      },
+      "ground_truth_label": "alert",
+      "alert_category": "KERNTERM"
+    },
+    {
+      "id": "ANN_072",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081109 215702 3022 WARN dfs.DataNode$DataXceiver: 10.251.202.134:50010:Got exception while serving blk_3441699978641526775 to /10.251.126.5:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly"
+    },
+    {
+      "id": "ANN_061",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 082706 8552 WARN dfs.DataNode$DataXceiver: 10.251.198.33:50010:Got exception while serving blk_-8495670552887053546 to /10.250.10.223:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly"
+    },
+    {
+      "id": "ANN_155",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "Error receiving packet on tree network, expecting type 57 instead of type 3 (softheader=00589370 90990003 00000002 00000000) PSR0=00001f01 PSR1=00000000 PRXF=00000002 PIXF=00000007",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "critical",
+        "category": "error",
+        "classification": "alert"
+      },
+      "ground_truth_label": "alert",
+      "alert_category": "KERNREC"
+    },
+    {
+      "id": "ANN_085",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081111 011254 17716 WARN dfs.DataNode$DataXceiver: 10.251.39.144:50010:Got exception while serving blk_-8083036675630459841 to /10.251.39.209:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly"
+    },
+    {
+      "id": "ANN_009",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081111 065435 19 INFO dfs.FSDataset: Deleting block blk_1587615395786683981 file /mnt/hadoop/dfs/data/current/subdir14/blk_1587615395786683981",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_016",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081111 035834 19205 INFO dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_4638603954320058978 terminating",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_019",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081109 212440 31 INFO dfs.FSNamesystem: BLOCK* NameSystem.addStoredBlock: blockMap updated: 10.251.198.196:50010 is added to blk_427714267500527780 size 67108864",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_002",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 014519 32 INFO dfs.FSNamesystem: BLOCK* NameSystem.allocateBlock: /user/root/randtxt/_temporary/_task_200811092030_0003_m_001506_0/part-01506. blk_1104376461837247304",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_057",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 191403 14120 WARN dfs.DataNode$DataXceiver: 10.250.14.196:50010:Got exception while serving blk_2967299761311489673 to /10.251.89.155:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly"
+    },
+    {
+      "id": "ANN_059",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 124817 11533 WARN dfs.DataNode$DataXceiver: 10.251.74.79:50010:Got exception while serving blk_2139707931694085102 to /10.251.111.228:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly"
+    },
+    {
+      "id": "ANN_142",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "15 floating point alignment exceptions",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_151",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "ciod: Error reading message prefix after LOAD_MESSAGE on CioStream socket to 172.16.96.116:45713: Link has been severed",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "critical",
+        "category": "error",
+        "classification": "alert"
+      },
+      "ground_truth_label": "alert",
+      "alert_category": "APPSEV"
+    },
+    {
+      "id": "ANN_006",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 111043 30 INFO dfs.FSNamesystem: BLOCK* NameSystem.allocateBlock: /user/root/rand/_temporary/_task_200811101024_0001_m_001353_0/part-01353. blk_5782729236964719738",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_087",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 091216 7593 WARN dfs.DataNode$DataXceiver: 10.251.107.50:50010:Got exception while serving blk_4524198807982839635 to /10.251.122.79:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly"
+    },
+    {
+      "id": "ANN_017",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 213351 15202 INFO dfs.DataNode$DataXceiver: Receiving block blk_-2901266958756042716 src: /10.251.110.160:35787 dest: /10.251.110.160:50010",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_058",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081109 223910 3540 WARN dfs.DataNode$DataXceiver: 10.251.43.210:50010:Got exception while serving blk_2969087638814291714 to /10.251.199.86:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly"
+    },
+    {
+      "id": "ANN_064",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081109 220403 3148 WARN dfs.DataNode$DataXceiver: 10.251.107.227:50010:Got exception while serving blk_-6290631608800952376 to /10.251.109.209:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly"
+    },
+    {
+      "id": "ANN_031",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 212942 15258 INFO dfs.DataNode$PacketResponder: Received block blk_-2242088550278361724 of size 67108864 from /10.251.123.20",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_096",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 132523 11832 WARN dfs.DataNode$DataXceiver: 10.251.39.179:50010:Got exception while serving blk_1683075246463470765 to /10.250.14.38:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly"
+    },
+    {
+      "id": "ANN_167",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "ciod: failed to read message prefix on control stream (CioStream socket to 172.16.96.116:33569",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "critical",
+        "category": "error",
+        "classification": "alert"
+      },
+      "ground_truth_label": "alert",
+      "alert_category": "APPREAD"
+    },
+    {
+      "id": "ANN_080",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 130315 11823 WARN dfs.DataNode$DataXceiver: 10.251.71.240:50010:Got exception while serving blk_-8082428389627750477 to /10.251.71.97:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly"
+    },
+    {
+      "id": "ANN_052",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 093020 8827 WARN dfs.DataNode$DataXceiver: 10.251.70.211:50010:Got exception while serving blk_-667933171485085225 to /10.251.203.246:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly"
+    },
+    {
+      "id": "ANN_177",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "ciod: Error reading message prefix on CioStream socket to 172.16.96.116:41554, Connection timed out",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "critical",
+        "category": "error",
+        "classification": "alert"
+      },
+      "ground_truth_label": "alert",
+      "alert_category": "APPTO"
+    },
+    {
+      "id": "ANN_055",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081109 215259 2934 WARN dfs.DataNode$DataXceiver: 10.250.9.207:50010:Got exception while serving blk_-3140754468249228022 to /10.250.9.207:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly"
+    },
+    {
+      "id": "ANN_156",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "ciod: Error reading message prefix on CioStream socket to 172.16.96.116:60243, Link has been severed",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "critical",
+        "category": "error",
+        "classification": "alert"
+      },
+      "ground_truth_label": "alert",
+      "alert_category": "APPSEV"
+    },
+    {
+      "id": "ANN_068",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 175354 14021 WARN dfs.DataNode$DataXceiver: 10.250.11.53:50010:Got exception while serving blk_-7125370327234065733 to /10.250.15.240:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly"
+    },
+    {
+      "id": "ANN_043",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 213423 14805 INFO dfs.DataNode$PacketResponder: Received block blk_6323743466920239525 of size 67108864 from /10.250.15.67",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_141",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "5 floating point alignment exceptions",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_122",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "idoproxydb hit ASSERT condition: ASSERT expression=0 Source file=idotransportmgr.cpp Source line=1043 Function=int IdoTransportMgr::SendPacket(IdoUdpMgr*, BglCtlPavTrace*)",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_169",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "ciod: failed to read message prefix on control stream (CioStream socket to 172.16.96.116:51706",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "critical",
+        "category": "error",
+        "classification": "alert"
+      },
+      "ground_truth_label": "alert",
+      "alert_category": "APPREAD"
+    },
+    {
+      "id": "ANN_189",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "ciod: LOGIN chdir(/p/gb1/stella/RAPTOR/2183) failed: Input/output error",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "critical",
+        "category": "error",
+        "classification": "alert"
+      },
+      "ground_truth_label": "alert",
+      "alert_category": "APPOUT"
+    },
+    {
+      "id": "ANN_033",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 220651 32 INFO dfs.FSNamesystem: BLOCK* NameSystem.delete: blk_1714886759174770356 is added to invalidSet of 10.251.31.5:50010",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_018",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081109 213009 2207 INFO dfs.DataNode$PacketResponder: Received block blk_7577595658377008671 of size 67108864 from /10.251.71.97",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_022",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 105345 19 INFO dfs.FSDataset: Deleting block blk_-4304240611296196935 file /mnt/hadoop/dfs/data/current/subdir55/blk_-4304240611296196935",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_021",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 103818 35 INFO dfs.FSNamesystem: BLOCK* NameSystem.addStoredBlock: blockMap updated: 10.251.194.147:50010 is added to blk_5277338321835341602 size 67108864",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_146",
+      "source": "loghub_bgl",
+      "input": {
+        "telemetry_type": "log",
+        "content": "10668 total interrupts. 0 critical input interrupts. 0 microseconds total spent on critical input interrupts, 0 microseconds max time in a critical input interrupt.",
+        "context": "BlueGene/L supercomputer RAS (Reliability, Availability, Serviceability) log"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_015",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 011406 5296 INFO dfs.DataNode$DataXceiver: Receiving block blk_5760391051658436046 src: /10.251.42.84:59752 dest: /10.251.42.84:50010",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "info"
+      },
+      "ground_truth_label": "normal"
+    },
+    {
+      "id": "ANN_062",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 094019 8808 WARN dfs.DataNode$DataXceiver: 10.251.125.193:50010:Got exception while serving blk_3790492230047189408 to /10.251.199.159:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly"
+    },
+    {
+      "id": "ANN_079",
+      "source": "loghub_hdfs",
+      "input": {
+        "telemetry_type": "log",
+        "content": "081110 193334 14294 WARN dfs.DataNode$DataXceiver: 10.251.39.179:50010:Got exception while serving blk_-8558281124275910849 to /10.251.30.134:",
+        "context": "HDFS DataNode log from Hadoop distributed file system"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "error",
+        "classification": "warn"
+      },
+      "ground_truth_label": "anomaly"
+    }
+  ]
+}

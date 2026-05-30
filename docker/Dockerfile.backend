@@ -17,6 +17,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY src/ ./src/
 COPY configs/ ./configs/
+# Seeded benchmark datasets + results (app-facing mirror of the research corpus,
+# produced by scripts/seed_benchmark_data.py). Ships so the Benchmark page is
+# populated; the read-only benchmark/ corpus itself is intentionally NOT copied.
+COPY data/ ./data/
 
 # Set environment variables
 ENV PYTHONPATH=/app
