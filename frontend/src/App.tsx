@@ -3,6 +3,7 @@ import { Layout } from './components/Layout'
 import { Landing } from './pages/Landing'
 import { Dashboard } from './pages/Dashboard'
 import { Agents } from './pages/Agents'
+import { Infrastructure } from './pages/Infrastructure'
 import { Incidents } from './pages/Incidents'
 import { Chat } from './pages/Chat'
 import { Metrics } from './pages/Metrics'
@@ -22,6 +23,7 @@ function App() {
             <Routes>
               <Route path="/" element={<Dashboard />} />
               <Route path="/agents" element={<Agents />} />
+              <Route path="/infrastructure" element={<Infrastructure />} />
               <Route path="/incidents" element={<Incidents />} />
               <Route path="/chat" element={<Chat />} />
               <Route path="/metrics" element={<Metrics />} />
