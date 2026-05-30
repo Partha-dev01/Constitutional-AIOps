@@ -374,32 +374,11 @@ class MCPActionServer:
         limit = params.get("limit", 5)
 
         if not self.episode_store:
-            # Return mock data for development
+            # Production: no silent mock fallback — surface the missing dependency.
             return ToolResult(
-                success=True,
-                data={
-                    "similar_incidents": [
-                        {
-                            "incident_id": "INC-2025-0042",
-                            "title": "Database connection timeout",
-                            "similarity_score": 0.87,
-                            "root_cause": "Connection pool exhaustion",
-                            "resolution": "Increased pool size from 10 to 50",
-                            "resolution_time_minutes": 15,
-                        },
-                        {
-                            "incident_id": "INC-2025-0038",
-                            "title": "API latency spike",
-                            "similarity_score": 0.72,
-                            "root_cause": "Database slow queries",
-                            "resolution": "Added missing index on user_id column",
-                            "resolution_time_minutes": 25,
-                        },
-                    ],
-                    "total_searched": 150,
-                    "query_time_ms": 45.2,
-                },
-                metadata={"source": "mock"},
+                success=False,
+                data=None,
+                error="Episode store unavailable: similarity search requires a connected episode store",
             )
 
         try:
@@ -456,46 +435,11 @@ class MCPActionServer:
         depth = params.get("depth", 2)
 
         if not self.neo4j_client:
-            # Return mock data for development
-            mock_deps = {
-                "api-gateway": {
-                    "upstream": ["load-balancer", "cdn"],
-                    "downstream": ["user-service", "order-service", "payment-service"],
-                },
-                "user-service": {
-                    "upstream": ["api-gateway"],
-                    "downstream": ["postgres-primary", "redis-cache"],
-                },
-                "order-service": {
-                    "upstream": ["api-gateway"],
-                    "downstream": ["postgres-primary", "payment-service", "inventory-service"],
-                },
-                "payment-service": {
-                    "upstream": ["api-gateway", "order-service"],
-                    "downstream": ["stripe-gateway", "postgres-primary"],
-                },
-            }
-
-            service_deps = mock_deps.get(service_name, {
-                "upstream": [],
-                "downstream": ["database", "cache"],
-            })
-
-            result_deps = {}
-            if direction in ["upstream", "both"]:
-                result_deps["upstream"] = service_deps.get("upstream", [])
-            if direction in ["downstream", "both"]:
-                result_deps["downstream"] = service_deps.get("downstream", [])
-
+            # Production: no silent mock fallback — surface the missing dependency.
             return ToolResult(
-                success=True,
-                data={
-                    "service": service_name,
-                    "dependencies": result_deps,
-                    "depth": depth,
-                    "total_dependencies": sum(len(v) for v in result_deps.values()),
-                },
-                metadata={"source": "mock"},
+                success=False,
+                data=None,
+                error="Neo4j client unavailable: dependency lookup requires a connected graph store",
             )
 
         try:
