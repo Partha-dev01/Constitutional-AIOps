@@ -267,6 +267,124 @@ class MCPActionServer:
             handler=self._analyze_logs
         )
 
+        # 6. Query Recent Logs — wraps TelemetryCollector.query_logs
+        self._tools["query_recent_logs"] = ToolDefinition(
+            name="query_recent_logs",
+            description="Query recent log entries from Loki for a service within a time window",
+            category=ToolCategory.QUERY,
+            parameters={
+                "type": "object",
+                "properties": {
+                    "service": {
+                        "type": "string",
+                        "description": "Service name to query logs for (use 'all' for all services)"
+                    },
+                    "time_range_minutes": {
+                        "type": "integer",
+                        "default": 15,
+                        "description": "How many minutes back to query"
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "default": 50,
+                        "description": "Maximum number of log entries to return"
+                    },
+                    "query": {
+                        "type": "string",
+                        "description": "Optional LogQL query override (e.g. '{job=\"containerlogs\"} |= \"error\"')"
+                    }
+                },
+                "required": ["service"]
+            },
+            requires_approval=False,
+            risk_level="low",
+            handler=self._query_recent_logs
+        )
+
+        # 7. Query Metric — wraps TelemetryCollector.query_metrics
+        self._tools["query_metric"] = ToolDefinition(
+            name="query_metric",
+            description="Query Prometheus metrics for a service over a time range",
+            category=ToolCategory.QUERY,
+            parameters={
+                "type": "object",
+                "properties": {
+                    "service": {
+                        "type": "string",
+                        "description": "Service name to query metrics for"
+                    },
+                    "time_range_minutes": {
+                        "type": "integer",
+                        "default": 30,
+                        "description": "Time range in minutes to query"
+                    },
+                    "metrics": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Optional list of specific PromQL metric names/queries to fetch (defaults to summary metrics)"
+                    }
+                },
+                "required": ["service"]
+            },
+            requires_approval=False,
+            risk_level="low",
+            handler=self._query_metric
+        )
+
+        # 8. List Containers — read-only Docker container list
+        self._tools["list_containers"] = ToolDefinition(
+            name="list_containers",
+            description="List Docker containers and their status (running, stopped, health)",
+            category=ToolCategory.QUERY,
+            parameters={
+                "type": "object",
+                "properties": {
+                    "all_containers": {
+                        "type": "boolean",
+                        "default": False,
+                        "description": "Include stopped containers (default: running only)"
+                    },
+                    "name_filter": {
+                        "type": "string",
+                        "description": "Optional substring filter on container name"
+                    }
+                },
+                "required": []
+            },
+            requires_approval=False,
+            risk_level="low",
+            handler=self._list_containers
+        )
+
+        # 9. Analyze Time Series Anomaly — statistical Z-score analysis
+        self._tools["analyze_time_series_anomaly"] = ToolDefinition(
+            name="analyze_time_series_anomaly",
+            description="Statistical Z-score anomaly detection on Prometheus metric time series for a service",
+            category=ToolCategory.ANALYSIS,
+            parameters={
+                "type": "object",
+                "properties": {
+                    "service_name": {
+                        "type": "string",
+                        "description": "Service to analyze metrics for"
+                    },
+                    "metric_name": {
+                        "type": "string",
+                        "description": "Specific PromQL metric name to analyze (optional; defaults to all summary metrics)"
+                    },
+                    "time_range_minutes": {
+                        "type": "integer",
+                        "default": 60,
+                        "description": "Time range in minutes for the analysis window"
+                    }
+                },
+                "required": ["service_name"]
+            },
+            requires_approval=False,
+            risk_level="low",
+            handler=self._analyze_time_series_anomaly
+        )
+
     def list_tools(self) -> list[dict[str, Any]]:
         """List all available tools with their definitions."""
         return [
@@ -556,6 +674,248 @@ class MCPActionServer:
                 "mock": True,
             },
         )
+
+    # ------------------------------------------------------------------ #
+    # Phase-2 READ-ONLY handlers (appended; existing handlers untouched)  #
+    # ------------------------------------------------------------------ #
+
+    async def _query_recent_logs(
+        self,
+        params: dict[str, Any],
+        context: Optional[dict[str, Any]] = None,
+    ) -> ToolResult:
+        """Query recent logs via TelemetryCollector.query_logs."""
+        service = params.get("service", "")
+        time_range = params.get("time_range_minutes", 15)
+        limit = params.get("limit", 50)
+        query_override = params.get("query")
+
+        if not self.telemetry_collector:
+            return ToolResult(
+                success=False,
+                data=None,
+                error="Telemetry collector unavailable: log query requires a connected telemetry collector",
+            )
+
+        try:
+            from datetime import timedelta
+
+            end_time = datetime.utcnow()
+            start_time = end_time - timedelta(minutes=time_range)
+
+            logs = await self.telemetry_collector.query_logs(
+                service=service,
+                start_time=start_time,
+                end_time=end_time,
+                query=query_override,
+                limit=limit,
+            )
+
+            entries = []
+            for log in logs:
+                entries.append({
+                    "timestamp": log.timestamp.isoformat() if log.timestamp else None,
+                    "level": log.level,
+                    "message": log.message[:300],
+                    "service": log.service,
+                })
+
+            return ToolResult(
+                success=True,
+                data={
+                    "service": service,
+                    "time_range_minutes": time_range,
+                    "total_entries": len(entries),
+                    "entries": entries,
+                },
+            )
+
+        except Exception as e:
+            return ToolResult(success=False, data=None, error=str(e))
+
+    async def _query_metric(
+        self,
+        params: dict[str, Any],
+        context: Optional[dict[str, Any]] = None,
+    ) -> ToolResult:
+        """Query Prometheus metrics via TelemetryCollector.query_metrics."""
+        service = params.get("service", "")
+        time_range = params.get("time_range_minutes", 30)
+        metrics_list: Optional[list[str]] = params.get("metrics") or None
+
+        if not self.telemetry_collector:
+            return ToolResult(
+                success=False,
+                data=None,
+                error="Telemetry collector unavailable: metrics query requires a connected telemetry collector",
+            )
+
+        try:
+            from datetime import timedelta
+
+            end_time = datetime.utcnow()
+            start_time = end_time - timedelta(minutes=time_range)
+
+            metric_points = await self.telemetry_collector.query_metrics(
+                service=service,
+                start_time=start_time,
+                end_time=end_time,
+                metrics=metrics_list,
+            )
+
+            points = []
+            for mp in metric_points:
+                points.append({
+                    "timestamp": mp.timestamp.isoformat() if mp.timestamp else None,
+                    "name": mp.name,
+                    "value": mp.value,
+                })
+
+            return ToolResult(
+                success=True,
+                data={
+                    "service": service,
+                    "time_range_minutes": time_range,
+                    "total_points": len(points),
+                    "metrics": points,
+                },
+            )
+
+        except Exception as e:
+            return ToolResult(success=False, data=None, error=str(e))
+
+    async def _list_containers(
+        self,
+        params: dict[str, Any],
+        context: Optional[dict[str, Any]] = None,
+    ) -> ToolResult:
+        """List Docker containers (read-only). Reuses Docker SDK logic from infrastructure route."""
+        include_all = params.get("all_containers", False)
+        name_filter = params.get("name_filter", "")
+
+        try:
+            import docker  # type: ignore[import]
+
+            client = docker.from_env()
+            raw = client.containers.list(all=include_all)
+
+            containers = []
+            for c in raw:
+                name: str = c.name
+                if name_filter and name_filter.lower() not in name.lower():
+                    continue
+                state = c.attrs.get("State", {})
+                health_state = state.get("Health", {})
+                health = health_state.get("Status") if health_state else None
+                image = c.image.tags[0] if c.image.tags else str(c.image.id)[:12]
+                containers.append({
+                    "name": name,
+                    "status": c.status,
+                    "health": health,
+                    "image": image,
+                })
+
+            client.close()
+
+            return ToolResult(
+                success=True,
+                data={
+                    "total": len(containers),
+                    "containers": containers,
+                    "include_stopped": include_all,
+                },
+            )
+
+        except ImportError:
+            return ToolResult(
+                success=False,
+                data=None,
+                error="Docker SDK not available",
+            )
+        except Exception as e:
+            return ToolResult(success=False, data=None, error=str(e))
+
+    async def _analyze_time_series_anomaly(
+        self,
+        params: dict[str, Any],
+        context: Optional[dict[str, Any]] = None,
+    ) -> ToolResult:
+        """Z-score anomaly detection on metric time series via TelemetryCollector.query_metrics."""
+        service_name = params.get("service_name", "")
+        metric_name: Optional[str] = params.get("metric_name")
+        time_range = params.get("time_range_minutes", 60)
+
+        if not self.telemetry_collector:
+            return ToolResult(
+                success=False,
+                data=None,
+                error="Telemetry collector unavailable: anomaly detection requires a connected telemetry collector",
+            )
+
+        try:
+            from datetime import timedelta
+
+            end_time = datetime.utcnow()
+            start_time = end_time - timedelta(minutes=time_range)
+
+            metrics_filter = [metric_name] if metric_name else None
+            metric_points = await self.telemetry_collector.query_metrics(
+                service=service_name,
+                start_time=start_time,
+                end_time=end_time,
+                metrics=metrics_filter,
+            )
+
+            if not metric_points:
+                return ToolResult(
+                    success=True,
+                    data={
+                        "service": service_name,
+                        "anomalies_detected": 0,
+                        "message": "No metrics data available for anomaly analysis",
+                    },
+                )
+
+            # Group by metric name
+            groups: dict[str, list[float]] = {}
+            for mp in metric_points:
+                groups.setdefault(mp.name, []).append(mp.value)
+
+            anomalies = []
+            for name, values in groups.items():
+                if len(values) < 3:
+                    continue
+                mean_val = sum(values) / len(values)
+                variance = sum((x - mean_val) ** 2 for x in values) / len(values)
+                std_val = variance ** 0.5 if variance > 0 else 0
+                if std_val > 0:
+                    for val in values:
+                        z_score = (val - mean_val) / std_val
+                        if abs(z_score) > 2:
+                            anomalies.append({
+                                "metric": name,
+                                "value": round(val, 3),
+                                "z_score": round(z_score, 3),
+                                "mean": round(mean_val, 3),
+                                "std": round(std_val, 3),
+                            })
+
+            return ToolResult(
+                success=True,
+                data={
+                    "service": service_name,
+                    "time_range_minutes": time_range,
+                    "metrics_analyzed": len(groups),
+                    "anomalies_detected": len(anomalies),
+                    "anomalies": anomalies[:10],
+                },
+                metadata={"method": "z_score"},
+            )
+
+        except Exception as e:
+            return ToolResult(success=False, data=None, error=str(e))
+
+    # ---- pre-existing _analyze_logs (unchanged below) ---- #
 
     async def _analyze_logs(
         self,
