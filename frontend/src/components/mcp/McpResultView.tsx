@@ -148,6 +148,175 @@ function AnalyzeLogsView({ data }: { data: Record<string, unknown> }) {
   )
 }
 
+// query_recent_logs → timestamped log entries table.
+function QueryRecentLogsView({ data }: { data: Record<string, unknown> }) {
+  const entries = asArray(data.entries)
+  const total = typeof data.total_entries === 'number' ? data.total_entries : entries.length
+  return (
+    <div className="space-y-3 text-sm">
+      <div className="flex items-center gap-3">
+        <span className="text-xs text-muted-foreground">Service: <span className="font-medium">{asString(data.service)}</span></span>
+        <span className="px-2 py-0.5 rounded text-xs bg-blue-500/10 text-blue-500">{total} entries</span>
+      </div>
+      {entries.length === 0 ? (
+        <p className="text-xs text-muted-foreground">No log entries found in the time window.</p>
+      ) : (
+        <div className="rounded-lg border border-border divide-y divide-border max-h-[300px] overflow-y-auto">
+          {entries.map((raw, i) => {
+            const e = isObject(raw) ? raw : {}
+            const level = asString(e.level).toUpperCase()
+            return (
+              <div key={i} className="flex items-start gap-2 px-3 py-1.5 text-xs font-mono">
+                <span className={`shrink-0 px-1 rounded ${
+                  level === 'ERROR' || level === 'FATAL' || level === 'CRITICAL' ? 'bg-red-500/10 text-red-500' :
+                  level === 'WARN' || level === 'WARNING' ? 'bg-yellow-500/10 text-yellow-500' :
+                  'bg-blue-500/10 text-blue-500'
+                }`}>{level || 'INFO'}</span>
+                <span className="text-muted-foreground shrink-0">{asString(e.timestamp).slice(11, 19)}</span>
+                <span className="flex-1 break-all">{asString(e.message)}</span>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// query_metric → metric data points table.
+function QueryMetricView({ data }: { data: Record<string, unknown> }) {
+  const points = asArray(data.metrics)
+  const total = typeof data.total_points === 'number' ? data.total_points : points.length
+  // Deduplicate metric names for a summary row
+  const names = [...new Set(points.map(p => isObject(p) ? asString(p.name) : '').filter(Boolean))]
+  return (
+    <div className="space-y-3 text-sm">
+      <div className="flex items-center gap-3">
+        <span className="text-xs text-muted-foreground">Service: <span className="font-medium">{asString(data.service)}</span></span>
+        <span className="px-2 py-0.5 rounded text-xs bg-purple-500/10 text-purple-500">{total} data points</span>
+      </div>
+      {names.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {names.slice(0, 8).map((n, i) => (
+            <span key={`${n}-${i}`} className="px-2 py-0.5 rounded bg-muted text-xs font-mono">{n}</span>
+          ))}
+          {names.length > 8 && <span className="text-xs text-muted-foreground">+{names.length - 8} more</span>}
+        </div>
+      )}
+      {points.length === 0 ? (
+        <p className="text-xs text-muted-foreground">No metric data found in the time window.</p>
+      ) : (
+        <div className="rounded-lg border border-border divide-y divide-border max-h-[240px] overflow-y-auto">
+          {points.slice(0, 50).map((raw, i) => {
+            const p = isObject(raw) ? raw : {}
+            const val = typeof p.value === 'number' ? p.value : parseFloat(asString(p.value))
+            return (
+              <div key={i} className="flex items-center gap-3 px-3 py-1.5 text-xs font-mono">
+                <span className="text-muted-foreground shrink-0">{asString(p.timestamp).slice(11, 19)}</span>
+                <span className="flex-1 text-foreground">{asString(p.name)}</span>
+                <span className="font-bold shrink-0">{Number.isNaN(val) ? asString(p.value) : val.toFixed(3)}</span>
+              </div>
+            )
+          })}
+          {points.length > 50 && (
+            <div className="px-3 py-1.5 text-xs text-muted-foreground text-center">
+              {points.length - 50} more rows not shown
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// list_containers → container status grid.
+function ListContainersView({ data }: { data: Record<string, unknown> }) {
+  const containers = asArray(data.containers)
+  const total = typeof data.total === 'number' ? data.total : containers.length
+  return (
+    <div className="space-y-3 text-sm">
+      <div className="flex items-center gap-3">
+        <span className="px-2 py-0.5 rounded text-xs bg-green-500/10 text-green-500">{total} containers</span>
+        {data.include_stopped === true && (
+          <span className="text-xs text-muted-foreground">including stopped</span>
+        )}
+      </div>
+      {containers.length === 0 ? (
+        <p className="text-xs text-muted-foreground">No containers found.</p>
+      ) : (
+        <div className="rounded-lg border border-border divide-y divide-border">
+          {containers.map((raw, i) => {
+            const c = isObject(raw) ? raw : {}
+            const status = asString(c.status)
+            const health = asString(c.health)
+            const running = status === 'running'
+            return (
+              <div key={i} className="flex items-center gap-3 px-3 py-2">
+                <span className={`w-2 h-2 rounded-full shrink-0 ${running ? 'bg-green-500' : 'bg-red-400'}`} />
+                <span className="flex-1 font-mono text-xs">{asString(c.name)}</span>
+                <span className={`px-2 py-0.5 rounded text-xs shrink-0 ${running ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
+                  {status}
+                </span>
+                {health && health !== 'null' && (
+                  <span className={`px-2 py-0.5 rounded text-xs shrink-0 ${
+                    health === 'healthy' ? 'bg-green-500/10 text-green-500' :
+                    health === 'unhealthy' ? 'bg-red-500/10 text-red-500' :
+                    'bg-yellow-500/10 text-yellow-500'
+                  }`}>{health}</span>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// analyze_time_series_anomaly → anomaly count + anomaly rows.
+function AnomalyView({ data }: { data: Record<string, unknown> }) {
+  const anomalies = asArray(data.anomalies)
+  const detected = typeof data.anomalies_detected === 'number' ? data.anomalies_detected : anomalies.length
+  const analyzed = typeof data.metrics_analyzed === 'number' ? data.metrics_analyzed : null
+  return (
+    <div className="space-y-3 text-sm">
+      <div className="flex items-center gap-3">
+        <span className="text-xs text-muted-foreground">Service: <span className="font-medium">{asString(data.service)}</span></span>
+        {analyzed !== null && (
+          <span className="text-xs text-muted-foreground">{analyzed} metrics analyzed</span>
+        )}
+        <span className={`px-2 py-0.5 rounded text-xs ${
+          detected === 0 ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'
+        }`}>
+          {detected} anomaly{detected !== 1 ? 'ies' : 'y'} detected
+        </span>
+      </div>
+      {anomalies.length > 0 ? (
+        <div className="rounded-lg border border-border divide-y divide-border">
+          {anomalies.map((raw, i) => {
+            const a = isObject(raw) ? raw : {}
+            return (
+              <div key={i} className="px-3 py-2 text-xs">
+                <div className="flex items-center justify-between mb-0.5">
+                  <span className="font-mono font-medium">{asString(a.metric)}</span>
+                  <span className="text-red-500 font-bold">z={typeof a.z_score === 'number' ? a.z_score.toFixed(2) : asString(a.z_score)}</span>
+                </div>
+                <div className="flex gap-4 text-muted-foreground">
+                  <span>value={typeof a.value === 'number' ? a.value.toFixed(3) : asString(a.value)}</span>
+                  <span>mean={typeof a.mean === 'number' ? a.mean.toFixed(3) : asString(a.mean)}</span>
+                  <span>std={typeof a.std === 'number' ? a.std.toFixed(3) : asString(a.std)}</span>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      ) : (
+        <p className="text-xs text-muted-foreground">No statistical anomalies detected (|z| ≤ 2).</p>
+      )}
+    </div>
+  )
+}
+
 export function McpResultView({ toolName, result }: McpResultViewProps) {
   if (!result.success) {
     return (
@@ -169,6 +338,19 @@ export function McpResultView({ toolName, result }: McpResultViewProps) {
     }
     if (toolName === 'analyze_logs' && 'summary' in data) {
       return <AnalyzeLogsView data={data} />
+    }
+    // Phase-2 tool shape formatters
+    if (toolName === 'query_recent_logs' && 'entries' in data) {
+      return <QueryRecentLogsView data={data} />
+    }
+    if (toolName === 'query_metric' && 'metrics' in data) {
+      return <QueryMetricView data={data} />
+    }
+    if (toolName === 'list_containers' && 'containers' in data) {
+      return <ListContainersView data={data} />
+    }
+    if (toolName === 'analyze_time_series_anomaly' && 'anomalies_detected' in data) {
+      return <AnomalyView data={data} />
     }
     // Generic key/value table for other flat objects, raw JSON otherwise.
     const hasNested = Object.values(data).some(v => isObject(v) || Array.isArray(v))
