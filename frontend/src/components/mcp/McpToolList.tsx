@@ -12,8 +12,11 @@ interface McpToolListProps {
 export function McpToolList({ tools, loading, selectedTool, onSelect }: McpToolListProps) {
   return (
     <div className="bg-card rounded-lg border border-border">
-      <div className="p-4 border-b border-border">
+      <div className="p-4 border-b border-border flex items-center justify-between">
         <h3 className="font-semibold">Available Tools</h3>
+        {!loading && tools.length > 0 && (
+          <span className="text-xs text-muted-foreground">{tools.length} tools</span>
+        )}
       </div>
       <div className="divide-y divide-border max-h-[480px] overflow-y-auto">
         {loading ? (
