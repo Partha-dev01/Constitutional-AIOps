@@ -276,7 +276,7 @@ export function Dashboard() {
             </span>
           )}
         </div>
-        <div className="space-y-4">
+        <div className="space-y-3">
           {services.length > 0 ? (
             services.map((service) => (
               <div key={service.name} className="space-y-2">
@@ -303,14 +303,14 @@ export function Dashboard() {
                   </span>
                 </div>
                 {/* Uptime bar visualization */}
-                <div className="flex gap-0.5">
+                <div className="flex gap-[3px] items-center">
                   {service.uptimeHistory.map((status, i) => (
                     <div
                       key={i}
-                      className={`h-6 flex-1 rounded-sm ${
-                        status === 'up' ? 'bg-green-500/80' :
-                        status === 'down' ? 'bg-red-500/80' :
-                        'bg-muted'
+                      className={`h-2.5 flex-1 rounded-full transition-all duration-150 hover:h-3.5 ${
+                        status === 'up' ? 'bg-green-500/70 hover:bg-green-500' :
+                        status === 'down' ? 'bg-red-500/70 hover:bg-red-500' :
+                        'bg-muted hover:bg-muted-foreground/40'
                       }`}
                       title={`${status === 'up' ? 'Up' : status === 'down' ? 'Down' : 'Unknown'}`}
                     />
