@@ -293,12 +293,18 @@ class TelemetryCollector:
             List of log entries
         """
         if query is None:
-            # Use job="containerlogs" which is how promtail labels Docker logs
-            # Filter by container name pattern if service specified
+            # Select streams by the `container` label, which BOTH the local
+            # promtail (job="containerlogs") and the remote Alloy edge agents
+            # stamp on every Docker log stream. The previous job="containerlogs"
+            # selector silently dropped edge-agent logs — those streams carry
+            # `edge=`/`container=` but no `job` label — so remotely-monitored
+            # hosts always reported zero logs. The substring match also absorbs
+            # the local `aiops-` container-name prefix (service "neo4j" matches
+            # container "aiops-neo4j").
             if service and service != "all":
-                query = f'{{job="containerlogs"}} |~ "{service}"'
+                query = f'{{container=~"(?i).*{service}.*"}}'
             else:
-                query = '{job="containerlogs"}'
+                query = '{container=~".+"}'
 
         # Ensure naive datetimes are treated as UTC (not local time)
         # datetime.utcnow() returns naive datetimes; .timestamp() wrongly
@@ -514,7 +520,10 @@ class TelemetryCollector:
         end_time = datetime.utcnow()
         start_time = end_time - timedelta(minutes=duration_minutes)
 
-        query = f'{{service="{service}"}} |= "error" or |= "ERROR" or |= "Error"'
+        # Match on the `container` label (the only service-identifying label that
+        # both local promtail and remote Alloy streams share — there is no
+        # `service` label in this stack), then line-filter for error markers.
+        query = f'{{container=~"(?i).*{service}.*"}} |~ "(?i)error"'
 
         return await self.query_logs(
             service=service,
