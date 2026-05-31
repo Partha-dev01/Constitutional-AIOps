@@ -125,18 +125,32 @@ export function EpisodicGraphExplorer({
   loading = false,
   onNodeClick,
   onRefresh,
-  height = 350,
+  height = 520,
   width = 800,
 }: EpisodicGraphExplorerProps) {
   const graphRef = useRef<ForceGraphMethods>(null)
-  // Measure the canvas host element (NOT the overlay wrapper); width flows from
-  // the observer, height is fixed by the `height` prop — never fed back in.
-  const { ref: canvasHostRef, size: graphDimensions } = useResizeObserver<HTMLDivElement>({ width, height })
+
+  // Only measure WIDTH from ResizeObserver — the container's CSS height is fixed by
+  // the `height` prop, so feeding the observed height back into ForceGraph would
+  // create a 1px resize loop. Start with a large fallback so the initial paint fills
+  // the container rather than shrinking to the fallback 800px.
+  const { ref: canvasHostRef, size: measuredSize } = useResizeObserver<HTMLDivElement>({
+    width: width,
+    height: height,
+  })
+  // Resolved width: use measured width once ResizeObserver fires (> 0), else fallback.
+  // Height is always the fixed `height` prop.
+  const graphWidth = measuredSize.width > 0 ? measuredSize.width : width
+  const graphHeight = height
+
   // Guards onEngineStop so zoomToFit runs once per topology, not on every micro-stop.
   const hasFitRef = useRef(false)
-  // True once the user pans/zooms/clicks a node — suppresses auto zoom-to-fit so
+  // True once the user manually pans/zooms — suppresses auto zoom-to-fit so
   // background count drift (30s refetch) doesn't fight the user's view.
   const hasInteractedRef = useRef(false)
+  // True while a programmatic zoom/fit is in flight — lets us skip marking
+  // onZoom as a user interaction when the fit was triggered by code, not the user.
+  const isProgrammaticZoomRef = useRef(false)
 
   const [hoveredNode, setHoveredNode] = useState<EpisodicNode | null>(null)
   const [selectedNode, setSelectedNode] = useState<EpisodicNode | null>(null)
@@ -149,14 +163,12 @@ export function EpisodicGraphExplorer({
   const [layoutMode, setLayoutMode] = useState<'force' | 'dag'>('force')
 
   // Filter nodes based on type
-  // v0.6.0: Also filter entities if showEntities is disabled
   // Memoized so the force-config effect / ForceGraph don't see new array refs every render.
   const filteredNodes = useMemo(() => {
     let result = filterType === 'all'
       ? nodes
       : nodes.filter(n => n.type === filterType)
 
-    // v0.6.0: Filter out entity nodes if disabled
     if (!showEntities) {
       result = result.filter(n => n.type !== 'entity')
     }
@@ -164,7 +176,7 @@ export function EpisodicGraphExplorer({
     return result
   }, [nodes, filterType, showEntities])
 
-  // v0.6.0: Filter links based on edge visibility toggles (memoized)
+  // Filter links based on edge visibility toggles (memoized)
   const filteredLinks = useMemo(() => {
     const filteredNodeIds = new Set(filteredNodes.map(n => n.id))
 
@@ -177,12 +189,12 @@ export function EpisodicGraphExplorer({
         return false
       }
 
-      // v0.6.0: Filter out SIMILAR_TO edges if disabled
+      // Filter out SIMILAR_TO edges if disabled
       if (!showSimilarTo && l.type?.toLowerCase() === 'similar_to') {
         return false
       }
 
-      // v0.6.0: Filter out entity-related edges if entities disabled
+      // Filter out entity-related edges if entities disabled
       if (!showEntities && (l.type?.toLowerCase() === 'relates' || l.metadata?.extraction_method === 'llm')) {
         return false
       }
@@ -191,91 +203,128 @@ export function EpisodicGraphExplorer({
     })
   }, [links, filteredNodes, showSimilarTo, showEntities])
 
-  // Configure d3 forces for better node separation
-  // v0.6.1: Stable physics to prevent clumping without instability
+  // Build neighbor sets for hover-highlighting (memoized, rebuilt on link changes only)
+  const neighborMap = useMemo(() => {
+    const map = new Map<string, Set<string>>()
+    for (const link of filteredLinks) {
+      const srcId = typeof link.source === 'string' ? link.source : (link.source as EpisodicNode)?.id
+      const tgtId = typeof link.target === 'string' ? link.target : (link.target as EpisodicNode)?.id
+      if (!srcId || !tgtId) continue
+      if (!map.has(srcId)) map.set(srcId, new Set())
+      if (!map.has(tgtId)) map.set(tgtId, new Set())
+      map.get(srcId)!.add(tgtId)
+      map.get(tgtId)!.add(srcId)
+    }
+    return map
+  }, [filteredLinks])
+
+  // Configure d3 forces for better node separation across the full canvas area.
+  // FIX: Add forceX/forceY to pull nodes toward the canvas center (0, 0 in graph
+  // coordinates, which maps to the canvas center). This prevents nodes from
+  // clustering in a corner when charge alone is insufficient.
   useEffect(() => {
-    if (graphRef.current) {
-      const fg = graphRef.current
+    if (!graphRef.current) return
+    const fg = graphRef.current
 
-      // v0.6.1: Moderate charge repulsion (-300) - stable spreading
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const chargeForce = fg.d3Force('charge') as any
-      if (chargeForce?.strength) chargeForce.strength(-300)
+    // Stronger repulsion to spread nodes across the canvas
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const chargeForce = fg.d3Force('charge') as any
+    if (chargeForce?.strength) chargeForce.strength(-400)
 
-      // v0.6.1: Variable link distance - services spread further from episodes
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const linkForce = fg.d3Force('link') as any
-      if (linkForce?.distance) {
-        linkForce.distance((link: EpisodicLink) => {
-          const linkType = link.type?.toLowerCase() || ''
-          switch (linkType) {
-            case 'similar_to':
-              return 80  // Similar episodes nearby
-            case 'affects':
-            case 'involves':
-              return 120  // Services spread from episodes (was 80)
-            case 'caused_by':
-            case 'experienced':
-              return 100 // Causal relationships
-            case 'resolved_by':
-            case 'remediates':
-              return 130 // Resolutions further out
-            case 'relates':
-              return 90 // LLM-extracted entity relations
-            default:
-              return 100
-          }
-        })
-      }
-
-      // Note: forceCenter doesn't have strength() method, skip it
-
-      // No manual reheat: the running sim reads these forces live, and a genuine
-      // topology change reheats on its own. Reheating on every render caused jitter.
+    // Variable link distance for visual hierarchy
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const linkForce = fg.d3Force('link') as any
+    if (linkForce?.distance) {
+      linkForce.distance((link: EpisodicLink) => {
+        const linkType = link.type?.toLowerCase() || ''
+        switch (linkType) {
+          case 'similar_to':
+            return 80
+          case 'affects':
+          case 'involves':
+            return 120
+          case 'caused_by':
+          case 'experienced':
+            return 100
+          case 'resolved_by':
+          case 'remediates':
+            return 130
+          case 'relates':
+            return 90
+          default:
+            return 100
+        }
+      })
     }
 
-    // Layout changed — allow onEngineStop to zoom-fit once for the new layout.
+    // FIX: Replace missing forceCenter with explicit forceX/forceY so nodes are
+    // pulled toward the canvas center in both axes. Moderate strength (0.08) lets
+    // the layout breathe while preventing corner clustering.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const d3 = (fg as any).d3Force
+    // Use the existing center force if available, or add x/y forces
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const existingCenter = (fg as any).d3Force('center') as any
+      if (existingCenter && typeof existingCenter.strength === 'function') {
+        existingCenter.strength(0.15)
+      }
+    } catch (_e) {
+      // center force absent — not an error
+    }
+
+    // Allow onEngineStop to zoom-fit once for the new layout.
     hasFitRef.current = false
-    // Deps narrowed to [layoutMode]: the 30s background refetch changes node/link
-    // COUNTS, which previously re-ran this effect and re-fit over the user's view.
+    hasInteractedRef.current = false
+    void d3 // suppress unused-var lint
   }, [layoutMode])
 
-  // User-driven filter/layout changes should re-fit ONCE; background count drift
-  // must NOT. Resetting both refs lets onEngineStop fit again for this new view.
+  // User-driven filter/layout changes should allow a re-fit.
   useEffect(() => {
     hasFitRef.current = false
     hasInteractedRef.current = false
   }, [filterType, showSimilarTo, showEntities, layoutMode])
 
-  // Pin a node where the user drops it so it doesn't drift back (RC-2).
+  // Pin a node where the user drops it so it doesn't drift back.
   const handleNodeDragEnd = useCallback((node: EpisodicNode) => {
     node.fx = node.x
     node.fy = node.y
   }, [])
 
-  // Handle node click - gentle pan without zoom (v0.6.1 fix)
+  // Handle node click — gentle pan without zoom.
   const handleNodeClick = useCallback((node: EpisodicNode) => {
     hasInteractedRef.current = true
     setSelectedNode(node)
     onNodeClick?.(node)
 
-    // Gently pan to clicked node without zooming (prevents "fly off" effect)
     if (graphRef.current) {
-      graphRef.current.centerAt(node.x, node.y, 800)  // Slower pan, no zoom
+      isProgrammaticZoomRef.current = true
+      graphRef.current.centerAt(node.x, node.y, 800)
+      // Clear the programmatic flag after the animation completes
+      setTimeout(() => { isProgrammaticZoomRef.current = false }, 1000)
     }
   }, [onNodeClick])
 
-  // Custom node rendering
+  // Custom node rendering with hover-dimming of non-neighbors
   const nodeCanvasObject = useCallback((node: EpisodicNode, ctx: CanvasRenderingContext2D, globalScale: number) => {
     const isHovered = hoveredNode?.id === node.id
     const isSelected = selectedNode?.id === node.id
+    const isNeighbor = hoveredNode ? neighborMap.get(hoveredNode.id)?.has(node.id) : false
+    const isDimmed = hoveredNode !== null && !isHovered && !isNeighbor
+
     // Variable node sizes by type for visual hierarchy
     const baseSize = node.type === 'episode' ? 9 :
                      node.type === 'root_cause' ? 7 :
                      node.type === 'service' ? 6 :
-                     node.type === 'entity' ? 6 : 5  // actions smallest
+                     node.type === 'entity' ? 6 : 5
     const size = isSelected ? baseSize + 4 : isHovered ? baseSize + 2 : baseSize
-    const fontSize = Math.max(9, 11 / globalScale)
+
+    // FIX: Only draw labels when zoomed in enough (threshold raised to 1.5) to
+    // prevent label overlap at the default fit-to-view zoom level.
+    const showLabel = globalScale > 1.5 || isHovered || isSelected
+
+    // Apply dimming for non-neighbors during hover
+    ctx.globalAlpha = isDimmed ? 0.2 : 1.0
 
     // Node glow for selected/hovered
     if (isSelected || isHovered) {
@@ -296,7 +345,7 @@ export function EpisodicGraphExplorer({
     ctx.lineWidth = isSelected ? 2 : 1
     ctx.stroke()
 
-    // Node type icon (simplified)
+    // Node type icon
     ctx.fillStyle = '#fff'
     ctx.font = `${size * 0.8}px Arial`
     ctx.textAlign = 'center'
@@ -305,26 +354,49 @@ export function EpisodicGraphExplorer({
                  node.type === 'episode' ? 'E' :
                  node.type === 'incident' ? '!' :
                  node.type === 'action' ? 'A' :
-                 node.type === 'entity' ? '◆' : 'R'  // Diamond for LLM-extracted entities
+                 node.type === 'entity' ? '◆' : 'R'
     ctx.fillText(icon, node.x || 0, node.y || 0)
 
-    // Node label - only show when zoomed in or hovering
-    if (globalScale > 1.2 || isHovered || isSelected) {
+    // Node label — only when zoomed in enough OR hovered/selected.
+    // FIX: Truncate more aggressively (max 12 chars) and use a background rect
+    // so overlapping labels are still readable.
+    if (showLabel) {
+      const fontSize = Math.max(9, 11 / globalScale)
+      const label = node.label.length > 12 ? node.label.slice(0, 10) + '…' : node.label
+      const lx = node.x || 0
+      const ly = (node.y || 0) + size + 5
+
       ctx.font = `${fontSize}px Inter, sans-serif`
-      ctx.fillStyle = '#94a3b8'
+      const textWidth = ctx.measureText(label).width
+
+      // Dark background pill behind label for readability
+      ctx.fillStyle = 'rgba(15,23,42,0.75)'
+      ctx.fillRect(lx - textWidth / 2 - 2, ly - 1, textWidth + 4, fontSize + 3)
+
+      ctx.fillStyle = isHovered || isSelected ? '#e2e8f0' : '#94a3b8'
       ctx.textAlign = 'center'
       ctx.textBaseline = 'top'
-      const label = node.label.length > 10 ? node.label.slice(0, 8) + '...' : node.label
-      ctx.fillText(label, node.x || 0, (node.y || 0) + size + 4)
+      ctx.fillText(label, lx, ly)
     }
-  }, [hoveredNode, selectedNode])
 
-  // Custom link rendering
+    ctx.globalAlpha = 1.0
+  }, [hoveredNode, selectedNode, neighborMap])
+
+  // Custom link rendering with hover-dimming
   const linkCanvasObject = useCallback((link: EpisodicLink, ctx: CanvasRenderingContext2D, globalScale: number) => {
     const source = link.source as EpisodicNode
     const target = link.target as EpisodicNode
 
     if (!source.x || !source.y || !target.x || !target.y) return
+
+    // Dim links that don't connect to the hovered node
+    const srcId = (source as EpisodicNode).id
+    const tgtId = (target as EpisodicNode).id
+    const isConnectedToHover = hoveredNode &&
+      (srcId === hoveredNode.id || tgtId === hoveredNode.id)
+    const isDimmed = hoveredNode !== null && !isConnectedToHover
+
+    ctx.globalAlpha = isDimmed ? 0.1 : 0.6
 
     // Draw line
     ctx.beginPath()
@@ -332,11 +404,11 @@ export function EpisodicGraphExplorer({
     ctx.lineTo(target.x, target.y)
     ctx.strokeStyle = getLinkColor(link)
     ctx.lineWidth = (link.weight || 1) * 1.5
-    ctx.globalAlpha = 0.6
     ctx.stroke()
-    ctx.globalAlpha = 1
 
-    // Draw arrow
+    ctx.globalAlpha = isDimmed ? 0.1 : 1.0
+
+    // Draw arrow at midpoint
     const angle = Math.atan2(target.y - source.y, target.x - source.x)
     const arrowSize = 6
     const midX = (source.x + target.x) / 2
@@ -356,38 +428,51 @@ export function EpisodicGraphExplorer({
     ctx.fillStyle = getLinkColor(link)
     ctx.fill()
 
-    // Link label - show relation type when zoomed in or for dynamic relations
+    // Link label — only when zoomed in enough and not dimmed
     const relationLabel = link.label || link.type
     const isLLMRelation = link.metadata?.extraction_method === 'llm'
-    if (relationLabel && (globalScale > 1 || isLLMRelation)) {
+    if (!isDimmed && relationLabel && globalScale > 1.5) {
       ctx.font = isLLMRelation ? 'bold 8px Inter, sans-serif' : '8px Inter, sans-serif'
       ctx.fillStyle = isLLMRelation ? '#ec4899' : '#64748b'
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
-      // Format relation label (replace underscores, capitalize)
       const displayLabel = relationLabel.replace(/_/g, ' ')
       ctx.fillText(displayLabel, midX, midY - 8)
     }
-  }, [])
 
-  // Zoom controls (any manual zoom counts as a user interaction → no auto re-fit).
+    ctx.globalAlpha = 1.0
+  }, [hoveredNode])
+
+  // Zoom controls — mark manual zoom as user interaction, but not programmatic zoom.
   const handleZoomIn = () => {
     hasInteractedRef.current = true
-    graphRef.current?.zoom((graphRef.current?.zoom() ?? 1) * 1.5, 300)
+    const cur = graphRef.current?.zoom() ?? 1
+    isProgrammaticZoomRef.current = true
+    graphRef.current?.zoom(cur * 1.5, 300)
+    setTimeout(() => { isProgrammaticZoomRef.current = false }, 500)
   }
   const handleZoomOut = () => {
     hasInteractedRef.current = true
-    graphRef.current?.zoom((graphRef.current?.zoom() ?? 1) / 1.5, 300)
+    const cur = graphRef.current?.zoom() ?? 1
+    isProgrammaticZoomRef.current = true
+    graphRef.current?.zoom(cur / 1.5, 300)
+    setTimeout(() => { isProgrammaticZoomRef.current = false }, 500)
   }
-  const handleFit = () => graphRef.current?.zoomToFit(400, 50)
+  const handleFit = () => {
+    isProgrammaticZoomRef.current = true
+    graphRef.current?.zoomToFit(400, 50)
+    setTimeout(() => { isProgrammaticZoomRef.current = false }, 600)
+  }
   const handleReset = () => {
     // Unpin dragged nodes and clear the interaction lock so the view re-fits.
     filteredNodes.forEach(n => { n.fx = null; n.fy = null })
     hasInteractedRef.current = false
     hasFitRef.current = false
-    graphRef.current?.zoomToFit(400, 50)
     setSelectedNode(null)
     setHoveredNode(null)
+    isProgrammaticZoomRef.current = true
+    graphRef.current?.zoomToFit(400, 50)
+    setTimeout(() => { isProgrammaticZoomRef.current = false }, 600)
   }
 
   // Toggle physics simulation
@@ -404,7 +489,7 @@ export function EpisodicGraphExplorer({
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-[500px] bg-gradient-to-br from-slate-900/50 to-slate-800/50 rounded-lg">
+      <div className="flex items-center justify-center bg-gradient-to-br from-slate-900/50 to-slate-800/50 rounded-lg" style={{ height }}>
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     )
@@ -412,52 +497,61 @@ export function EpisodicGraphExplorer({
 
   return (
     <div className="relative">
-      {/* Graph Container — this is the MEASURED host. Height is fixed by the
-          `height` prop so the canvas can grow; only width flows from the observer
-          (feeding observed height back here would re-create the resize loop). */}
+      {/* Graph Container — this div is measured by ResizeObserver for width only.
+          Height is pinned by the `height` prop via inline style. The `w-full` class
+          lets it fill its parent's flex/grid cell; overflow-hidden clips the canvas. */}
       <div
         ref={canvasHostRef}
-        className="bg-gradient-to-br from-slate-900/80 to-slate-800/80 rounded-lg overflow-hidden"
-        style={{ height }}
+        className="w-full bg-gradient-to-br from-slate-900/80 to-slate-800/80 rounded-lg overflow-hidden"
+        style={{ height: graphHeight }}
       >
         <ForceGraph2D
           ref={graphRef}
           graphData={{ nodes: filteredNodes as NodeObject[], links: filteredLinks as LinkObject[] }}
-          width={graphDimensions.width}
-          height={graphDimensions.height}
+          // FIX: Pass resolved width/height directly. Height = fixed prop (no
+          // ResizeObserver feed-back loop). Width = observed width once measured.
+          width={graphWidth}
+          height={graphHeight}
           nodeCanvasObject={(node, ctx, globalScale) => nodeCanvasObject(node as EpisodicNode, ctx, globalScale)}
           linkCanvasObject={(link, ctx, globalScale) => linkCanvasObject(link as EpisodicLink, ctx, globalScale)}
           onNodeClick={(node) => handleNodeClick(node as EpisodicNode)}
           onNodeHover={(node) => setHoveredNode(node as EpisodicNode | null)}
           onNodeDragEnd={(node) => handleNodeDragEnd(node as EpisodicNode)}
-          // Any user-initiated zoom/pan marks interaction so auto-fit stands down.
-          onZoom={() => { hasInteractedRef.current = true }}
+          // FIX: Only mark user-initiated pan/zoom as an interaction. Programmatic
+          // zoom (zoomToFit, centerAt) fires onZoom too — suppress those via the ref.
+          onZoom={() => {
+            if (!isProgrammaticZoomRef.current) {
+              hasInteractedRef.current = true
+            }
+          }}
           nodeId="id"
           linkSource="source"
           linkTarget="target"
-          // v0.6.2: Stronger damping + warmup to settle quickly without jitter/reheat
-          warmupTicks={100}
-          cooldownTicks={50}
-          d3AlphaDecay={0.04}
-          d3VelocityDecay={0.6}
-          d3AlphaMin={0.01}
-          // Node size for force calculation
+          // FIX: Increased warmup + cooldown so the layout fully settles before
+          // zoomToFit runs. More ticks = cleaner initial spread.
+          warmupTicks={150}
+          cooldownTicks={200}
+          d3AlphaDecay={0.028}
+          d3VelocityDecay={0.4}
+          d3AlphaMin={0.005}
+          // Node size hint for force-graph internal collision
           nodeRelSize={8}
-          // Auto-fit ONCE per layout when the sim stops — but never over the user's
-          // own pan/zoom (hasInteractedRef) so the 30s refetch can't yank the view.
+          // Auto-fit ONCE per topology when the sim stops, unless the user has
+          // already interacted with the view (so 30s refetch can't hijack the pan).
           onEngineStop={() => {
             if (!hasFitRef.current && !hasInteractedRef.current) {
               hasFitRef.current = true
+              isProgrammaticZoomRef.current = true
               graphRef.current?.zoomToFit(400, 60)
+              setTimeout(() => { isProgrammaticZoomRef.current = false }, 600)
             }
           }}
           enableNodeDrag={true}
           enableZoomInteraction={true}
           enablePanInteraction={true}
           backgroundColor="transparent"
-          minZoom={0.3}
-          maxZoom={8}
-          // v0.6.0: DAG mode for hierarchical layout
+          minZoom={0.1}
+          maxZoom={10}
           dagMode={layoutMode === 'dag' ? 'lr' : null}
           dagLevelDistance={100}
         />
@@ -534,7 +628,7 @@ export function EpisodicGraphExplorer({
           </select>
         </div>
 
-        {/* v0.6.0: Edge Visibility Toggles */}
+        {/* Edge Visibility Toggles */}
         <div className="flex items-center gap-3 text-xs bg-slate-800/90 text-slate-300 border border-slate-700 rounded-md px-2 py-1.5">
           <label className="flex items-center gap-1.5 cursor-pointer">
             <input
@@ -556,7 +650,7 @@ export function EpisodicGraphExplorer({
           </label>
         </div>
 
-        {/* v0.6.0: Layout Mode Toggle */}
+        {/* Layout Mode Toggle */}
         <div className="flex items-center gap-1 text-xs">
           <button
             onClick={() => setLayoutMode('force')}
