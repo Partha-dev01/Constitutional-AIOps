@@ -1,24 +1,30 @@
 /**
- * Playwright config for LOCAL dev (no Docker, no live site).
+ * Playwright config for LOCAL testing (no Docker, no live site).
  *
- * Starts `vite preview` (or `vite dev`) on port 4173 so tests
- * work without needing Docker or the live backend.
- * API calls are intercepted by page.route() in the specs.
+ * Starts `vite preview` on port 4173. The specs targeted here mock every API
+ * call via page.route(), so no live backend is required. Run headed by adding
+ * `--headed` (e.g. for the Settings param sweep).
+ *
+ * Scope: the mock-based local specs only. The graph explorer has its own config
+ * (playwright.config.graph.ts) and the live e2e suite uses playwright.config.live.ts.
  *
  * Usage:
- *   npx playwright test --config=playwright.config.local.ts --headed
  *   npx playwright test --config=playwright.config.local.ts
+ *   npx playwright test --config=playwright.config.local.ts --headed
  */
-
-import { defineConfig, devices } from '@playwright/test';
+import { defineConfig, devices } from '@playwright/test'
 
 export default defineConfig({
   testDir: './e2e',
-  // Only run the settings spec in local mode (graph-explorer needs Docker)
-  testMatch: ['**/settings.spec.ts'],
+  testMatch: [
+    '**/settings.spec.ts',
+    '**/infrastructure-split.spec.ts',
+    '**/chat-tool-detail.spec.ts',
+    '**/mcp-tools.spec.ts',
+  ],
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
-  retries: 0,
+  retries: process.env.CI ? 2 : 0,
   workers: 1,
   reporter: [
     ['html', { outputFolder: 'playwright-report-local', open: 'never' }],
@@ -29,7 +35,6 @@ export default defineConfig({
     trace: 'on-first-retry',
     screenshot: 'on',
     video: 'on-first-retry',
-    headless: false,  // override with --headed / PWHEADLESS=false
   },
   projects: [
     {
@@ -45,4 +50,4 @@ export default defineConfig({
     stdout: 'pipe',
     stderr: 'pipe',
   },
-});
+})
