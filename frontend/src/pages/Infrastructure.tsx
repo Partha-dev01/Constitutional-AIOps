@@ -16,6 +16,7 @@ import {
   Wifi,
   WifiOff,
   HelpCircle,
+  Trash2,
 } from 'lucide-react'
 
 // Container info type (moved from Agents.tsx)
@@ -141,6 +142,31 @@ export function Infrastructure() {
       setRemoteHosts([])
     } finally {
       setRemoteHostsLoading(false)
+    }
+  }, [])
+
+  const dismissRemoteHost = useCallback(async (edgeLabel: string) => {
+    if (
+      !window.confirm(
+        `Remove "${edgeLabel}" from the monitored hosts list?\n\n` +
+          'The list is auto-derived from live telemetry. If this host keeps shipping ' +
+          'it will stay hidden until restored.'
+      )
+    ) {
+      return
+    }
+    try {
+      const response = await fetch(
+        `/api/v1/infrastructure/remote-hosts/${encodeURIComponent(edgeLabel)}`,
+        { method: 'DELETE' }
+      )
+      if (response.ok) {
+        setRemoteHosts((prev) => prev.filter((h) => h.edge_label !== edgeLabel))
+      } else {
+        console.error('Failed to dismiss host:', response.status)
+      }
+    } catch (err) {
+      console.error('Failed to dismiss host:', err)
     }
   }, [])
 
@@ -547,6 +573,15 @@ export function Infrastructure() {
                       </div>
                     </div>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => dismissRemoteHost(host.edge_label)}
+                    title="Remove from monitored hosts"
+                    aria-label={`Remove ${host.edge_label} from monitored hosts`}
+                    className="shrink-0 p-2 rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
                 </div>
               ))
             ) : (

@@ -28,12 +28,13 @@ test('chat refuses an off-domain prompt and renders cleanly', async ({ page }) =
   // ambiguously also hit.
   await expect(page.getByText('Thinking...', { exact: true })).toBeVisible({ timeout: 20_000 })
 
-  // The scoped agent must decline with its fixed redirect rather than answering
-  // the geography question. Scope the assertion to the assistant message body
-  // (.prose) — the revamped chat's conversation sidebar also lists past chats
-  // whose titles contain this same text, which a page-wide match would hit.
+  // The scoped agent must decline rather than answering the geography question.
+  // The refusal is phrased by the model in its own words (the canned redirect
+  // was removed), so match the refusal INTENT, not a fixed phrase. Scope to the
+  // assistant message body (.prose) — the conversation sidebar also lists past
+  // chats whose titles a page-wide match would hit.
   await expect(page.locator('.prose').last()).toContainText(
-    /can only help with infrastructure operations/i,
+    /cannot (answer|help|assist|provide)|unrelated to|not related to|outside.*(scope|domain)|only (help|assist).*(infrastructure|operations|IT)/i,
     { timeout: 120_000 }
   )
 

@@ -929,57 +929,12 @@ class MCPActionServer:
         include_patterns = params.get("include_patterns", True)
 
         if not self.telemetry_collector:
-            # Return mock analysis
+            # Production: no silent mock fallback — surface the missing dependency
+            # like the sibling handlers (A5). Fabricated data must never reach the UI.
             return ToolResult(
-                success=True,
-                data={
-                    "service": service_name,
-                    "time_range_minutes": time_range,
-                    "summary": {
-                        "total_logs": 1542,
-                        "error_count": 87,
-                        "warning_count": 234,
-                        "info_count": 1221,
-                    },
-                    "top_errors": [
-                        {
-                            "pattern": "Connection refused to database:5432",
-                            "count": 45,
-                            "first_seen": "2025-12-15T10:23:00Z",
-                            "last_seen": "2025-12-15T10:45:00Z",
-                        },
-                        {
-                            "pattern": "Timeout waiting for response",
-                            "count": 28,
-                            "first_seen": "2025-12-15T10:25:00Z",
-                            "last_seen": "2025-12-15T10:48:00Z",
-                        },
-                        {
-                            "pattern": "Out of memory error",
-                            "count": 14,
-                            "first_seen": "2025-12-15T10:30:00Z",
-                            "last_seen": "2025-12-15T10:42:00Z",
-                        },
-                    ],
-                    "anomalies": [
-                        {
-                            "type": "spike",
-                            "metric": "error_rate",
-                            "timestamp": "2025-12-15T10:35:00Z",
-                            "value": 15.5,
-                            "baseline": 2.1,
-                            "severity": "high",
-                        },
-                    ],
-                    "patterns": [
-                        {
-                            "name": "cascading_failure",
-                            "confidence": 0.85,
-                            "description": "Database connection errors leading to service timeouts",
-                        },
-                    ] if include_patterns else [],
-                },
-                metadata={"source": "mock"},
+                success=False,
+                data=None,
+                error="Telemetry collector unavailable: log analysis requires a connected telemetry collector",
             )
 
         try:

@@ -16,6 +16,23 @@ export function formatDate(date: Date | string): string {
   })
 }
 
+/**
+ * Strip common inline markdown markers (bold/italic/code/heading/list) from a
+ * string for plain-text contexts like sidebar titles, where raw `**` would
+ * otherwise leak. Not a full parser — just the markers that show up in
+ * model-generated previews.
+ */
+export function stripMarkdown(text: string): string {
+  return text
+    .replace(/^\s*#{1,6}\s*/g, '')        // heading markers
+    .replace(/^\s*([-*+]|\d+[.)])\s+/g, '') // leading bullet / number
+    .replace(/\*\*|__/g, '')               // bold
+    .replace(/`+/g, '')                    // inline code
+    .replace(/(?<!\*)\*(?!\*)/g, '')       // stray single-* italics
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 export function formatRelativeTime(date: Date | string): string {
   const now = new Date()
   const d = new Date(date)

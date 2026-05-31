@@ -684,20 +684,20 @@ export function Settings() {
               <div className="space-y-4">
                 <ModelStatusCard
                   name="Fast Agent"
-                  model="Qwen3-4B Q4_K_M"
-                  port={8081}
+                  model="Qwen3-4B-AWQ"
+                  port={8000}
                   status={isComponentHealthy(health, 'fast_agent') ? 'online' : 'offline'}
                   purpose="Telemetry annotation, classification"
-                  context="8K tokens"
+                  context="4K tokens"
                   latency="<100ms P95"
                 />
                 <ModelStatusCard
                   name="Reasoning Agent"
-                  model="Qwen3-14B Q4_K_M"
-                  port={8082}
+                  model="Qwen3-14B-AWQ"
+                  port={8001}
                   status={isComponentHealthy(health, 'reasoning_agent') ? 'online' : 'offline'}
                   purpose="RCA, remediation planning, human chat"
-                  context="4K tokens"
+                  context="8K tokens"
                   latency="200-500ms P95"
                 />
               </div>
