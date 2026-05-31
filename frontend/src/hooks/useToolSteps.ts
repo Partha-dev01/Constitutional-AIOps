@@ -13,11 +13,37 @@ import type { LucideIcon } from 'lucide-react'
 
 export type ToolStepStatus = 'pending' | 'running' | 'done'
 
+/**
+ * Static detail captured at derive-time (known before the response arrives).
+ * All fields are strings so they render directly in the dropdown.
+ */
+export interface ToolStepDetailStatic {
+  /** The name of the service being operated on, if any. */
+  service: string | null
+  /** Human-readable description of the store / data source being hit. */
+  store: string
+  /** What the step is querying / doing. */
+  query: string
+}
+
+/**
+ * Dynamic detail filled in by `enrichToolStepWithResponse` once the backend
+ * response arrives. `null` means "not yet available".
+ */
+export interface ToolStepDetailDynamic {
+  /** Raw result data — stringified JSON or human-readable text. */
+  result: string | null
+}
+
+export interface ToolStepDetail extends ToolStepDetailStatic, ToolStepDetailDynamic {}
+
 export interface ToolStep {
   id: string
   label: string
   icon: LucideIcon
   status: ToolStepStatus
+  /** Detail payload for the expandable dropdown. Always present post-derive. */
+  detail: ToolStepDetail
 }
 
 // Mirrors KNOWN_SERVICES in src/api/routes/chat.py (~line 32).
@@ -73,6 +99,12 @@ export function deriveToolSteps(message: string): ToolStep[] {
       label: `Reading ${service} telemetry`,
       icon: FileText,
       status: 'pending',
+      detail: {
+        service,
+        store: 'Loki (logs) + Prometheus (metrics)',
+        query: `Last 15 minutes of logs and metrics for service "${service}"`,
+        result: null,
+      },
     })
   }
 
@@ -83,6 +115,12 @@ export function deriveToolSteps(message: string): ToolStep[] {
       label: 'Searching similar incidents',
       icon: Search,
       status: 'pending',
+      detail: {
+        service,
+        store: 'Neo4j graph memory (find_similar MCP tool)',
+        query: `Vector + graph similarity search: "${message.slice(0, 120)}${message.length > 120 ? '…' : ''}"`,
+        result: null,
+      },
     })
   }
 
@@ -93,6 +131,12 @@ export function deriveToolSteps(message: string): ToolStep[] {
       label: 'Fetching service dependencies',
       icon: GitBranch,
       status: 'pending',
+      detail: {
+        service,
+        store: 'Neo4j graph memory (get_dependencies MCP tool)',
+        query: `Upstream + downstream dependency graph for "${service}" (depth 2)`,
+        result: null,
+      },
     })
   }
 
@@ -103,6 +147,12 @@ export function deriveToolSteps(message: string): ToolStep[] {
       label: 'Analyzing logs',
       icon: FileText,
       status: 'pending',
+      detail: {
+        service,
+        store: 'Loki log store (analyze_logs MCP tool)',
+        query: `Error/warn pattern analysis for "${service}" logs`,
+        result: null,
+      },
     })
   }
 
@@ -112,7 +162,121 @@ export function deriveToolSteps(message: string): ToolStep[] {
     label: 'Reasoning with Qwen3-14B',
     icon: Brain,
     status: 'pending',
+    detail: {
+      service,
+      store: 'vLLM (Qwen3-14B-AWQ, constitutional reasoning agent)',
+      query: 'Synthesise telemetry + tool results → root-cause analysis and response',
+      result: null,
+    },
   })
 
   return steps
+}
+
+/**
+ * Subset of ChatResponse fields used for enrichment.
+ * Typed locally so this hook has no direct dependency on api.ts.
+ */
+export interface ToolStepResponseData {
+  confidence?: number | null
+  related_incidents?: string[] | null
+  suggested_actions?: string[] | null
+  metadata?: {
+    model_used?: string
+    tokens_used?: number
+    [key: string]: unknown
+  } | null
+}
+
+/**
+ * Attach concrete backend results to the relevant derived steps.
+ *
+ * Called once the `POST /api/v1/chat/` response arrives. Returns a new steps
+ * array (immutable update) with `detail.result` filled in for each step whose
+ * data is available in the response.
+ *
+ * Mapping:
+ *  - "similar"      → related_incidents list
+ *  - "dependencies" → service name (no dedicated output field; note it ran)
+ *  - "telemetry"    → confidence + model from metadata
+ *  - "logs"         → confidence + metadata
+ *  - "reasoning"    → model_used, tokens_used, confidence, suggested_actions
+ */
+export function enrichToolStepsWithResponse(
+  steps: ToolStep[],
+  data: ToolStepResponseData,
+): ToolStep[] {
+  return steps.map((step) => {
+    let result: string | null = null
+
+    switch (step.id) {
+      case 'similar': {
+        const incidents = data.related_incidents
+        if (incidents && incidents.length > 0) {
+          result = JSON.stringify({ similar_incidents: incidents }, null, 2)
+        } else {
+          result = 'No similar incidents found in Neo4j graph memory.'
+        }
+        break
+      }
+
+      case 'dependencies': {
+        // The dependency data is fed into the LLM context string, not returned
+        // as a structured field. Surface what we do know: the service queried.
+        result = JSON.stringify(
+          {
+            note: 'Dependency graph was fetched and injected into the reasoning context.',
+            service_queried: step.detail.service,
+            store: 'Neo4j get_dependencies (depth 2)',
+          },
+          null,
+          2,
+        )
+        break
+      }
+
+      case 'telemetry': {
+        result = JSON.stringify(
+          {
+            note: 'Telemetry context was built from Loki + Prometheus and injected into the reasoning prompt.',
+            service: step.detail.service,
+            confidence_after_reasoning: data.confidence ?? null,
+            model: data.metadata?.model_used ?? 'qwen3-14b',
+          },
+          null,
+          2,
+        )
+        break
+      }
+
+      case 'logs': {
+        result = JSON.stringify(
+          {
+            note: 'Log analysis was performed and included in the reasoning context.',
+            service: step.detail.service,
+            confidence_after_reasoning: data.confidence ?? null,
+          },
+          null,
+          2,
+        )
+        break
+      }
+
+      case 'reasoning': {
+        result = JSON.stringify(
+          {
+            model: data.metadata?.model_used ?? 'qwen3-14b',
+            tokens_used: data.metadata?.tokens_used ?? null,
+            confidence: data.confidence ?? null,
+            suggested_actions: data.suggested_actions ?? [],
+          },
+          null,
+          2,
+        )
+        break
+      }
+    }
+
+    return { ...step, detail: { ...step.detail, result } }
+  })
 }

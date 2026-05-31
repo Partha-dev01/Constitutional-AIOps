@@ -7,7 +7,7 @@ import type { MessageInsights } from '../components/chat/InsightCards'
 import { ConversationSidebar } from '../components/chat/ConversationSidebar'
 import { SuggestedPrompts } from '../components/chat/SuggestedPrompts'
 import { ToolCallTimeline } from '../components/chat/ToolCallTimeline'
-import { deriveToolSteps } from '../hooks/useToolSteps'
+import { deriveToolSteps, enrichToolStepsWithResponse } from '../hooks/useToolSteps'
 import type { ToolStep } from '../hooks/useToolSteps'
 import { useConversationHistory } from '../hooks/useConversationHistory'
 import { selectPrompts, pushRecentPrompt, getRecentPrompts } from '../lib/suggestedPrompts'
@@ -48,6 +48,8 @@ export function Chat() {
   const inputRef = useRef<HTMLInputElement>(null)
   const typingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const stepTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  /** Cancellable timer for clearing the enriched step timeline after response. */
+  const stepClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const history = useConversationHistory()
 
@@ -64,6 +66,7 @@ export function Chat() {
     return () => {
       if (typingIntervalRef.current) clearInterval(typingIntervalRef.current)
       if (stepTimerRef.current) clearInterval(stepTimerRef.current)
+      if (stepClearTimerRef.current) clearTimeout(stepClearTimerRef.current)
     }
   }, [])
 
@@ -105,6 +108,11 @@ export function Chat() {
    */
   const startToolSteps = useCallback((message: string) => {
     if (stepTimerRef.current) clearInterval(stepTimerRef.current)
+    // Cancel any pending clear-timer from a previous response.
+    if (stepClearTimerRef.current) {
+      clearTimeout(stepClearTimerRef.current)
+      stepClearTimerRef.current = null
+    }
 
     const derived = deriveToolSteps(message)
     const lastIndex = derived.length - 1
@@ -143,16 +151,29 @@ export function Chat() {
     }, STEP_DURATION_MS)
   }, [])
 
-  /** Mark every derived step done (response arrived) and stop the timer. */
-  const finishToolSteps = useCallback(() => {
-    if (stepTimerRef.current) {
-      clearInterval(stepTimerRef.current)
-      stepTimerRef.current = null
-    }
-    setToolSteps((prev) => prev.map((s) => ({ ...s, status: 'done' as const })))
-    // Clear the timeline shortly after so it doesn't linger above the answer.
-    window.setTimeout(() => setToolSteps([]), 400)
-  }, [])
+  /**
+   * Mark every derived step done (response arrived), enrich detail payloads
+   * with concrete response data, then clear the timeline shortly after.
+   */
+  const finishToolSteps = useCallback(
+    (responseData?: Parameters<typeof enrichToolStepsWithResponse>[1]) => {
+      if (stepTimerRef.current) {
+        clearInterval(stepTimerRef.current)
+        stepTimerRef.current = null
+      }
+      setToolSteps((prev) => {
+        const done = prev.map((s) => ({ ...s, status: 'done' as const }))
+        return responseData ? enrichToolStepsWithResponse(done, responseData) : done
+      })
+      // Clear the timeline after a short pause so users have time to read
+      // the enriched step details before the timeline disappears.
+      stepClearTimerRef.current = window.setTimeout(() => {
+        stepClearTimerRef.current = null
+        setToolSteps([])
+      }, 3_000)
+    },
+    [],
+  )
 
   const sendMessage = useCallback(
     async (text: string) => {
@@ -203,7 +224,12 @@ export function Chat() {
           },
         }))
 
-        finishToolSteps()
+        finishToolSteps({
+          confidence: response.confidence,
+          related_incidents: response.related_incidents,
+          suggested_actions: response.suggested_actions,
+          metadata: response.metadata,
+        })
         setMessages((prev) => [...prev, assistantMessage])
         startTypewriter(messageId, response.message.content)
 
