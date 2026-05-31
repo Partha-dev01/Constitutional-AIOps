@@ -58,6 +58,10 @@ export const READ_ONLY_TOOLS: ReadonlySet<string> = new Set([
   'get_dependencies',
   'analyze_logs',
   'analyze_time_series_anomaly',
+  // Phase-2 tools
+  'query_recent_logs',
+  'query_metric',
+  'list_containers',
 ])
 
 export const DISABLED_TOOLS: ReadonlySet<string> = new Set([
