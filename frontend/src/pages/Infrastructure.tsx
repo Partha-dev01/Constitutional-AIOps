@@ -13,6 +13,9 @@ import {
   Link2,
   ExternalLink,
   Search,
+  Wifi,
+  WifiOff,
+  HelpCircle,
 } from 'lucide-react'
 
 // Container info type (moved from Agents.tsx)
@@ -33,12 +36,33 @@ interface InfrastructureStats {
   unhealthy: number
 }
 
+// Remote host (edge agent) types
+interface RemoteHost {
+  edge_label: string
+  status: 'up' | 'down' | 'unknown'
+  targets_up: number
+  targets_total: number
+  recent_log_lines: number
+  last_seen: string | null
+}
+
+interface RemoteHostsResponse {
+  hosts: RemoteHost[]
+  total: number
+  source: string
+}
+
 // Telemetry "verify" response (best-effort). Never `any`.
 interface TelemetryLogsResponse {
   logs?: unknown[]
 }
 
 type VerifyState = 'idle' | 'checking' | 'seen' | 'not-yet'
+
+/** Returns true when the container is part of our own aiops platform stack. */
+function isPlatformContainer(name: string): boolean {
+  return name.startsWith('aiops-')
+}
 
 export function Infrastructure() {
   // --- Local container monitoring state (moved from Agents.tsx) ---
@@ -47,6 +71,10 @@ export function Infrastructure() {
   const [infrastructureStats, setInfrastructureStats] = useState<InfrastructureStats | null>(null)
   const [selectedContainers, setSelectedContainers] = useState<Set<string>>(new Set())
   const [monitoringStarting, setMonitoringStarting] = useState(false)
+
+  // --- Remote (edge) host state ---
+  const [remoteHosts, setRemoteHosts] = useState<RemoteHost[]>([])
+  const [remoteHostsLoading, setRemoteHostsLoading] = useState(false)
 
   // --- Guided edge onboarding state (NEW, frontend-only, no persisted secrets) ---
   const origin = typeof window !== 'undefined' ? window.location.origin : ''
@@ -98,9 +126,28 @@ export function Infrastructure() {
     }
   }, [])
 
+  const fetchRemoteHosts = useCallback(async () => {
+    setRemoteHostsLoading(true)
+    try {
+      const response = await fetch('/api/v1/infrastructure/remote-hosts')
+      if (response.ok) {
+        const data: RemoteHostsResponse = await response.json()
+        setRemoteHosts(data.hosts || [])
+      } else {
+        setRemoteHosts([])
+      }
+    } catch (err) {
+      console.error('Failed to fetch remote hosts:', err)
+      setRemoteHosts([])
+    } finally {
+      setRemoteHostsLoading(false)
+    }
+  }, [])
+
   useEffect(() => {
     fetchContainers()
-  }, [fetchContainers])
+    fetchRemoteHosts()
+  }, [fetchContainers, fetchRemoteHosts])
 
   // --- Selection + monitoring handlers (moved verbatim) ---
   const toggleContainerSelection = (containerName: string) => {
@@ -238,11 +285,11 @@ export function Infrastructure() {
           </p>
         </div>
         <button
-          onClick={fetchContainers}
-          disabled={containersLoading}
+          onClick={() => { fetchContainers(); fetchRemoteHosts() }}
+          disabled={containersLoading || remoteHostsLoading}
           className="flex items-center gap-2 px-3 py-1.5 bg-muted rounded-lg text-sm hover:bg-muted/80 disabled:opacity-50"
         >
-          {containersLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+          {(containersLoading || remoteHostsLoading) ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
           Refresh
         </button>
       </div>
@@ -267,7 +314,7 @@ export function Infrastructure() {
           </div>
         )}
 
-        {/* Container List */}
+        {/* Container List — split into Platform (aiops-*) vs Client/other */}
         <div className="bg-card rounded-lg border border-border">
           <div className="p-4 border-b border-border">
             <div className="flex items-center justify-between">
@@ -296,13 +343,17 @@ export function Infrastructure() {
               </div>
             </div>
           </div>
-          <div className="divide-y divide-border">
-            {containersLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : containers.length > 0 ? (
-              containers.map((container) => (
+
+          {containersLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : containers.length > 0 ? (
+            (() => {
+              const platformContainers = containers.filter(c => isPlatformContainer(c.name))
+              const clientContainers = containers.filter(c => !isPlatformContainer(c.name))
+
+              const renderContainer = (container: ContainerInfo) => (
                 <div
                   key={container.name}
                   className={`p-4 hover:bg-muted/50 cursor-pointer ${
@@ -369,15 +420,55 @@ export function Infrastructure() {
                     <span>Service: {container.service}</span>
                   </div>
                 </div>
-              ))
-            ) : (
-              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                <Server className="h-8 w-8 mb-2 opacity-50" />
-                <p className="text-sm">No containers found</p>
-                <p className="text-xs mt-1">Start the infrastructure to view containers</p>
-              </div>
-            )}
-          </div>
+              )
+
+              return (
+                <>
+                  {/* Platform (this stack) */}
+                  {platformContainers.length > 0 && (
+                    <div>
+                      <div className="px-4 py-2 bg-muted/30 border-b border-border flex items-center gap-2">
+                        <Server className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                          Platform (this stack)
+                        </span>
+                        <span className="ml-auto px-1.5 py-0.5 bg-purple-500/10 text-purple-500 rounded text-xs">
+                          {platformContainers.length}
+                        </span>
+                      </div>
+                      <div className="divide-y divide-border">
+                        {platformContainers.map(renderContainer)}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Client / other local containers */}
+                  {clientContainers.length > 0 && (
+                    <div>
+                      <div className="px-4 py-2 bg-muted/30 border-b border-border flex items-center gap-2">
+                        <Box className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                          Other local containers
+                        </span>
+                        <span className="ml-auto px-1.5 py-0.5 bg-blue-500/10 text-blue-500 rounded text-xs">
+                          {clientContainers.length}
+                        </span>
+                      </div>
+                      <div className="divide-y divide-border">
+                        {clientContainers.map(renderContainer)}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )
+            })()
+          ) : (
+            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+              <Server className="h-8 w-8 mb-2 opacity-50" />
+              <p className="text-sm">No containers found</p>
+              <p className="text-xs mt-1">Start the infrastructure to view containers</p>
+            </div>
+          )}
 
           {/* Start Monitoring Button */}
           {containers.length > 0 && (
@@ -403,6 +494,72 @@ export function Infrastructure() {
               </div>
             </div>
           )}
+        </div>
+
+        {/* Monitored Remote Hosts (from edge agents) */}
+        <div className="bg-card rounded-lg border border-border">
+          <div className="p-4 border-b border-border flex items-center justify-between">
+            <h3 className="font-semibold flex items-center gap-2">
+              <Radio className="h-4 w-4 text-blue-500" />
+              Monitored remote hosts
+              <span className="text-xs text-muted-foreground font-normal">(via Grafana Alloy edge agent)</span>
+            </h3>
+            {remoteHostsLoading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+          </div>
+          <div className="divide-y divide-border">
+            {remoteHostsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : remoteHosts.length > 0 ? (
+              remoteHosts.map((host) => (
+                <div key={host.edge_label} className="p-4 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={`p-2 rounded-lg shrink-0 ${
+                      host.status === 'up' ? 'bg-green-500/10' :
+                      host.status === 'down' ? 'bg-red-500/10' :
+                      'bg-yellow-500/10'
+                    }`}>
+                      {host.status === 'up'
+                        ? <Wifi className="h-5 w-5 text-green-500" />
+                        : host.status === 'down'
+                          ? <WifiOff className="h-5 w-5 text-red-500" />
+                          : <HelpCircle className="h-5 w-5 text-yellow-500" />
+                      }
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h4 className="font-semibold font-mono text-sm">{host.edge_label}</h4>
+                        <span className={`px-2 py-0.5 rounded-full text-xs ${
+                          host.status === 'up' ? 'bg-green-500/10 text-green-500' :
+                          host.status === 'down' ? 'bg-red-500/10 text-red-500' :
+                          'bg-yellow-500/10 text-yellow-600'
+                        }`}>
+                          {host.status}
+                        </span>
+                      </div>
+                      <div className="mt-1 flex flex-wrap gap-3 text-xs text-muted-foreground">
+                        <span>Targets up: {host.targets_up}/{Math.max(host.targets_total, host.targets_up)}</span>
+                        <span>Recent logs (15 min): {host.recent_log_lines}</span>
+                        {host.last_seen && (
+                          <span>Last seen: {new Date(host.last_seen).toLocaleString()}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
+                <Radio className="h-8 w-8 mb-2 opacity-40" />
+                <p className="text-sm">No remote hosts detected yet</p>
+                <p className="text-xs mt-1 max-w-xs text-center">
+                  Once a Grafana Alloy edge agent is running on a remote Linux host and shipping
+                  telemetry here, it will appear automatically. Use the onboarding guide below.
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
