@@ -34,6 +34,7 @@ discovery.relabel "containers" {
 		regex         = "/(.*)"
 		target_label  = "container"
 	}
+
 	rule {
 		target_label = "edge"
 		replacement  = sys.env("EDGE_LABEL")
@@ -50,6 +51,7 @@ loki.source.docker "containers" {
 loki.write "aws" {
 	endpoint {
 		url = sys.env("LOKI_PUSH_URL")
+
 		basic_auth {
 			username = sys.env("INGEST_USER")
 			password = sys.env("INGEST_PASS")
@@ -90,6 +92,7 @@ prometheus.scrape "edge" {
 prometheus.remote_write "aws" {
 	endpoint {
 		url = sys.env("PROM_RW_URL")
+
 		basic_auth {
 			username = sys.env("INGEST_USER")
 			password = sys.env("INGEST_PASS")
@@ -108,9 +111,11 @@ otelcol.receiver.otlp "edge" {
 	grpc {
 		endpoint = "0.0.0.0:4317"
 	}
+
 	http {
 		endpoint = "0.0.0.0:4318"
 	}
+
 	output {
 		traces = [otelcol.processor.batch.edge.input]
 	}
