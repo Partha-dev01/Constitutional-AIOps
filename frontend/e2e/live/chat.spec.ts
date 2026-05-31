@@ -22,15 +22,20 @@ test('chat refuses an off-domain prompt and renders cleanly', async ({ page }) =
   await input.fill('In one short sentence, what is the capital of France?')
   await page.locator('form button[type="submit"]').click()
 
-  // The "Thinking..." indicator appears while the request is in flight.
-  await expect(page.getByText('Thinking...')).toBeVisible({ timeout: 20_000 })
+  // The "Thinking..." indicator appears while the request is in flight. Use an
+  // exact match: the revamped chat also renders an sr-only "Thinking... running
+  // tools and reasoning." live-region for a11y, which a substring match would
+  // ambiguously also hit.
+  await expect(page.getByText('Thinking...', { exact: true })).toBeVisible({ timeout: 20_000 })
 
   // The scoped agent must decline with its fixed redirect rather than answering
-  // the geography question. Waiting for it also waits for the loading state to
-  // clear and the typewriter to render the text.
-  await expect(
-    page.getByText(/can only help with infrastructure operations/i)
-  ).toBeVisible({ timeout: 120_000 })
+  // the geography question. Scope the assertion to the assistant message body
+  // (.prose) — the revamped chat's conversation sidebar also lists past chats
+  // whose titles contain this same text, which a page-wide match would hit.
+  await expect(page.locator('.prose').last()).toContainText(
+    /can only help with infrastructure operations/i,
+    { timeout: 120_000 }
+  )
 
   // It must NOT have actually answered the off-topic question.
   await expect(page.getByText(/\bParis\b/i)).toHaveCount(0)
