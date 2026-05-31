@@ -527,4 +527,195 @@ async def _get_static_containers(request: Request) -> InfrastructureResponse:
     )
 
 
+class RemoteHost(BaseModel):
+    """Remote/edge host monitored via Grafana Alloy edge agent."""
+    edge_label: str = Field(..., description="The 'edge' label value set in the agent .env")
+    status: str = Field(..., description="up, down, or unknown")
+    targets_up: int = Field(0, description="Number of Prometheus scrape targets reporting up=1")
+    targets_total: int = Field(0, description="Total Prometheus scrape targets seen")
+    recent_log_lines: int = Field(0, description="Log lines seen in Loki in the last 15 minutes (0 = no data or Loki unreachable)")
+    last_seen: str | None = Field(None, description="ISO timestamp of most recent metric/log activity")
+
+
+class RemoteHostsResponse(BaseModel):
+    """Response containing all known remote/edge hosts."""
+    hosts: list[RemoteHost]
+    total: int
+    source: str = Field(..., description="Which telemetry store was queried: prometheus, loki, both, or none")
+
+
+@router.get(
+    "/remote-hosts",
+    response_model=RemoteHostsResponse,
+    summary="Get Remote Edge Hosts",
+    description=(
+        "Return all remote hosts that are shipping telemetry via a Grafana Alloy edge agent. "
+        "Queries Prometheus for distinct 'edge' label values (up metric) and Loki for recent "
+        "log volume per edge label. Read-only — does not modify monitoring state."
+    ),
+)
+async def get_remote_hosts(request: Request) -> RemoteHostsResponse:
+    """
+    Surface remote/edge hosts as first-class entries.
+
+    Data sources:
+    - Prometheus: ``count by (edge) (up)`` to find active edge labels + scrape-target counts.
+    - Loki: label-values for ``edge`` + last-15-min log volume per label.
+    """
+    telemetry_collector = getattr(request.app.state, "telemetry_collector", None)
+
+    if telemetry_collector is None:
+        return RemoteHostsResponse(hosts=[], total=0, source="none")
+
+    hosts_map: dict[str, dict] = {}
+    sources_used: list[str] = []
+
+    # ── Prometheus: discover edge labels via `count by (edge) (up)` ──────────
+    try:
+        prom_url = telemetry_collector.prometheus_url
+        response = await telemetry_collector._client.get(
+            f"{prom_url}/api/v1/query",
+            params={"query": "count by (edge) (up)"},
+        )
+        if response.status_code == 200:
+            data = response.json()
+            sources_used.append("prometheus")
+            for result in data.get("data", {}).get("result", []):
+                edge = result.get("metric", {}).get("edge", "")
+                if not edge:
+                    continue
+                targets_up = int(float(result.get("value", [0, "0"])[1]))
+                hosts_map.setdefault(edge, {
+                    "targets_up": 0,
+                    "targets_total": 0,
+                    "recent_log_lines": 0,
+                    "last_seen": None,
+                })
+                hosts_map[edge]["targets_up"] = targets_up
+
+            # Second pass: total targets per edge (up + down)
+            total_resp = await telemetry_collector._client.get(
+                f"{prom_url}/api/v1/query",
+                params={"query": "count by (edge) (up or vector(0))"},
+            )
+            if total_resp.status_code == 200:
+                total_data = total_resp.json()
+                for result in total_data.get("data", {}).get("result", []):
+                    edge = result.get("metric", {}).get("edge", "")
+                    if edge and edge in hosts_map:
+                        hosts_map[edge]["targets_total"] = int(float(result.get("value", [0, "0"])[1]))
+
+            # Get last-seen timestamp for each edge (max timestamp of any `up` series)
+            ts_resp = await telemetry_collector._client.get(
+                f"{prom_url}/api/v1/query",
+                params={"query": "max by (edge) (timestamp(up))"},
+            )
+            if ts_resp.status_code == 200:
+                ts_data = ts_resp.json()
+                for result in ts_data.get("data", {}).get("result", []):
+                    edge = result.get("metric", {}).get("edge", "")
+                    ts_val = result.get("value", [0, "0"])[1]
+                    if edge and edge in hosts_map:
+                        try:
+                            hosts_map[edge]["last_seen"] = datetime.utcfromtimestamp(
+                                float(ts_val)
+                            ).isoformat() + "Z"
+                        except (ValueError, TypeError):
+                            pass
+
+    except Exception as e:
+        logger.debug(f"Prometheus remote-hosts query failed: {e}")
+
+    # ── Loki: label-values for 'edge' + recent log volume ────────────────────
+    try:
+        loki_url = telemetry_collector.loki_url
+        # Get all known edge label values from Loki
+        lv_resp = await telemetry_collector._client.get(
+            f"{loki_url}/loki/api/v1/label/edge/values",
+        )
+        if lv_resp.status_code == 200:
+            lv_data = lv_resp.json()
+            sources_used.append("loki")
+            for edge in lv_data.get("data", []):
+                if not edge:
+                    continue
+                hosts_map.setdefault(edge, {
+                    "targets_up": 0,
+                    "targets_total": 0,
+                    "recent_log_lines": 0,
+                    "last_seen": None,
+                })
+
+        # Count recent log lines per edge label (last 15 minutes)
+        from datetime import timezone as _tz
+        now = datetime.now(_tz.utc)
+        start_ns = int((now.timestamp() - 15 * 60) * 1e9)
+        end_ns = int(now.timestamp() * 1e9)
+
+        for edge in list(hosts_map.keys()):
+            try:
+                q_resp = await telemetry_collector._client.get(
+                    f"{loki_url}/loki/api/v1/query_range",
+                    params={
+                        "query": f'{{edge="{edge}"}}',
+                        "start": str(start_ns),
+                        "end": str(end_ns),
+                        "limit": 200,
+                    },
+                )
+                if q_resp.status_code == 200:
+                    q_data = q_resp.json()
+                    line_count = sum(
+                        len(stream.get("values", []))
+                        for stream in q_data.get("data", {}).get("result", [])
+                    )
+                    hosts_map[edge]["recent_log_lines"] = line_count
+                    # Update last_seen from Loki if we have log data and no prom timestamp yet
+                    if line_count > 0 and hosts_map[edge]["last_seen"] is None:
+                        # Find the most recent timestamp across all streams
+                        latest_ns: int | None = None
+                        for stream in q_data.get("data", {}).get("result", []):
+                            for val in stream.get("values", []):
+                                try:
+                                    ts = int(val[0])
+                                    if latest_ns is None or ts > latest_ns:
+                                        latest_ns = ts
+                                except (ValueError, TypeError):
+                                    pass
+                        if latest_ns is not None:
+                            hosts_map[edge]["last_seen"] = (
+                                datetime.utcfromtimestamp(latest_ns / 1e9).isoformat() + "Z"
+                            )
+            except Exception as e:
+                logger.debug(f"Loki log-count query failed for edge={edge!r}: {e}")
+
+    except Exception as e:
+        logger.debug(f"Loki remote-hosts label query failed: {e}")
+
+    # ── Build response ────────────────────────────────────────────────────────
+    hosts: list[RemoteHost] = []
+    for edge, info in sorted(hosts_map.items()):
+        targets_up = info["targets_up"]
+        targets_total = info["targets_total"] or targets_up  # fallback: assume all up
+        if targets_up > 0:
+            host_status = "up"
+        elif targets_total > 0:
+            host_status = "down"
+        else:
+            # Only Loki data — consider "up" if logs arrived recently
+            host_status = "up" if info["recent_log_lines"] > 0 else "unknown"
+
+        hosts.append(RemoteHost(
+            edge_label=edge,
+            status=host_status,
+            targets_up=targets_up,
+            targets_total=targets_total,
+            recent_log_lines=info["recent_log_lines"],
+            last_seen=info["last_seen"],
+        ))
+
+    source = "+".join(sources_used) if sources_used else "none"
+    return RemoteHostsResponse(hosts=hosts, total=len(hosts), source=source)
+
+
 __all__ = ["router"]
