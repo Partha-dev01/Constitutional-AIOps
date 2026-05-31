@@ -143,6 +143,9 @@ services:
       - DEBUG=false
       - LOG_LEVEL=INFO
       - API_WORKERS=4
+      - AIOPS_DATA_DIR=/app/data
+    volumes:
+      - /mnt/data/app:/app/data  # EBS-backed; persists user settings (settings.json) across rebuilds + stop/start
     depends_on:
       qwen3-4b:
         condition: service_healthy
