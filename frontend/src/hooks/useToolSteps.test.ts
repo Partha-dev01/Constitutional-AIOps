@@ -73,39 +73,124 @@ describe('deriveToolSteps', () => {
 // ---------------------------------------------------------------------------
 
 describe('enrichToolStepsWithResponse', () => {
+  // Mirrors the real backend ChatResponse.metadata shape: per-tool structured
+  // results live under metadata.tools, keyed by step id.
+  const TELEMETRY = {
+    service: 'nextcloud',
+    log_count: 1280,
+    error_count: 12,
+    metrics: [
+      { name: 'cpu_usage', value: 0.74 },
+      { name: 'mem_usage', value: 0.61 },
+    ],
+    sample_logs: ['ERROR db connection refused', 'WARN slow query 1.2s'],
+  }
+  const SIMILAR = {
+    count: 2,
+    incidents: [
+      { id: 'INC-2024-001', summary: 'nextcloud db outage', score: 0.91 },
+      { id: 'INC-2024-042', summary: 'nextcloud disk full', score: null },
+    ],
+  }
+  const DEPENDENCIES = {
+    upstream: ['postgres', 'redis'],
+    downstream: ['frontend'],
+  }
+  const LOGS = {
+    total_logs: 4000,
+    error_count: 12,
+    warning_count: 30,
+    top_errors: [{ pattern: 'connection refused', count: 9 }],
+  }
+
   const BASE_DATA = {
     confidence: 0.87,
     related_incidents: ['INC-2024-001', 'INC-2024-042'],
     suggested_actions: ['Restart nextcloud', 'Check loki'],
-    metadata: { model_used: 'qwen3-14b', tokens_used: 412 },
+    metadata: {
+      model_used: 'qwen3-14b',
+      tokens_used: 412,
+      tools: {
+        telemetry: TELEMETRY,
+        similar: SIMILAR,
+        dependencies: DEPENDENCIES,
+        logs: LOGS,
+      },
+    },
   }
 
   function doneSteps(message: string) {
     return deriveToolSteps(message).map((s) => ({ ...s, status: 'done' as const }))
   }
 
-  it('sets result on the similar step from related_incidents', () => {
+  it('renders REAL telemetry data from metadata.tools.telemetry', () => {
+    const steps = doneSteps('nextcloud cpu high')
+    const enriched = enrichToolStepsWithResponse(steps, BASE_DATA)
+    const telemetry = enriched.find((s) => s.id === 'telemetry')
+    expect(telemetry!.detail.result).not.toBeNull()
+    const parsed = JSON.parse(telemetry!.detail.result!)
+    expect(parsed.service).toBe('nextcloud')
+    expect(parsed.log_count).toBe(1280)
+    expect(parsed.error_count).toBe(12)
+    expect(parsed.metrics).toEqual(TELEMETRY.metrics)
+    expect(parsed.sample_logs).toEqual(TELEMETRY.sample_logs)
+  })
+
+  it('renders REAL similar-incident data from metadata.tools.similar', () => {
     const steps = doneSteps('show similar nextcloud incidents')
     const enriched = enrichToolStepsWithResponse(steps, BASE_DATA)
     const similar = enriched.find((s) => s.id === 'similar')
     expect(similar).toBeDefined()
     expect(similar!.detail.result).not.toBeNull()
     const parsed = JSON.parse(similar!.detail.result!)
-    expect(parsed.similar_incidents).toEqual(['INC-2024-001', 'INC-2024-042'])
+    expect(parsed.count).toBe(2)
+    expect(parsed.incidents).toEqual(SIMILAR.incidents)
   })
 
-  it('reports "no similar incidents" when related_incidents is empty', () => {
-    const steps = doneSteps('show similar nextcloud incidents')
-    const enriched = enrichToolStepsWithResponse(steps, { ...BASE_DATA, related_incidents: [] })
-    const similar = enriched.find((s) => s.id === 'similar')
-    expect(similar!.detail.result).toContain('No similar incidents')
+  it('renders REAL dependency data from metadata.tools.dependencies', () => {
+    const steps = doneSteps('nextcloud dependencies upstream')
+    const enriched = enrichToolStepsWithResponse(steps, BASE_DATA)
+    const deps = enriched.find((s) => s.id === 'dependencies')
+    expect(deps!.detail.result).not.toBeNull()
+    const parsed = JSON.parse(deps!.detail.result!)
+    expect(parsed.upstream).toEqual(['postgres', 'redis'])
+    expect(parsed.downstream).toEqual(['frontend'])
   })
 
-  it('reports "no similar incidents" when related_incidents is null', () => {
-    const steps = doneSteps('show similar nextcloud incidents')
-    const enriched = enrichToolStepsWithResponse(steps, { ...BASE_DATA, related_incidents: null })
-    const similar = enriched.find((s) => s.id === 'similar')
-    expect(similar!.detail.result).toContain('No similar incidents')
+  it('renders REAL log analysis from metadata.tools.logs', () => {
+    const steps = doneSteps('nextcloud error logs pattern')
+    const enriched = enrichToolStepsWithResponse(steps, BASE_DATA)
+    const logs = enriched.find((s) => s.id === 'logs')
+    expect(logs!.detail.result).not.toBeNull()
+    const parsed = JSON.parse(logs!.detail.result!)
+    expect(parsed.total_logs).toBe(4000)
+    expect(parsed.top_errors).toEqual(LOGS.top_errors)
+  })
+
+  it('shows a truthful "No X returned" line when a tool did not run', () => {
+    // Steps are derived, but metadata.tools is empty -> no fabricated prose.
+    const steps = doneSteps('show similar nextcloud incidents with errors and dependencies')
+    const enriched = enrichToolStepsWithResponse(steps, {
+      ...BASE_DATA,
+      metadata: { model_used: 'qwen3-14b', tokens_used: 0, tools: {} },
+    })
+    expect(enriched.find((s) => s.id === 'telemetry')!.detail.result).toBe('No telemetry returned.')
+    expect(enriched.find((s) => s.id === 'similar')!.detail.result).toBe(
+      'No similar incidents returned.',
+    )
+    expect(enriched.find((s) => s.id === 'dependencies')!.detail.result).toBe(
+      'No dependencies returned.',
+    )
+    expect(enriched.find((s) => s.id === 'logs')!.detail.result).toBe('No log analysis returned.')
+  })
+
+  it('never fabricates a "note" string', () => {
+    const steps = doneSteps('show similar nextcloud incidents with errors and dependencies')
+    const enriched = enrichToolStepsWithResponse(steps, BASE_DATA)
+    for (const step of enriched) {
+      // No canned note prose anywhere in the rendered results.
+      expect(step.detail.result).not.toContain('injected into the reasoning')
+    }
   })
 
   it('sets result on the reasoning step with model and confidence', () => {
@@ -119,6 +204,27 @@ describe('enrichToolStepsWithResponse', () => {
     expect(parsed.tokens_used).toBe(412)
   })
 
+  it('attaches a concise at-a-glance summary per enriched step', () => {
+    const steps = doneSteps('show similar nextcloud incidents with errors and dependencies')
+    const enriched = enrichToolStepsWithResponse(steps, BASE_DATA)
+    const summaryOf = (id: string) => enriched.find((s) => s.id === id)!.detail.summary
+    expect(summaryOf('telemetry')).toBe('1280 logs · 12 errors · 2 metrics')
+    expect(summaryOf('similar')).toBe('2 similar incidents')
+    expect(summaryOf('dependencies')).toBe('2 upstream · 1 downstream')
+    expect(summaryOf('logs')).toBe('4000 logs · 12 errors · 30 warnings')
+    expect(summaryOf('reasoning')).toBe('qwen3-14b · 412 tokens')
+  })
+
+  it('leaves summary null when a tool returned no data', () => {
+    const steps = doneSteps('check nextcloud logs')
+    const enriched = enrichToolStepsWithResponse(steps, {
+      ...BASE_DATA,
+      metadata: { model_used: 'qwen3-14b', tokens_used: 0, tools: {} },
+    })
+    expect(enriched.find((s) => s.id === 'telemetry')!.detail.summary).toBeNull()
+    expect(enriched.find((s) => s.id === 'logs')!.detail.summary).toBeNull()
+  })
+
   it('reasoning result includes suggested_actions', () => {
     const steps = doneSteps('nextcloud status')
     const enriched = enrichToolStepsWithResponse(steps, BASE_DATA)
@@ -127,41 +233,20 @@ describe('enrichToolStepsWithResponse', () => {
     expect(parsed.suggested_actions).toEqual(['Restart nextcloud', 'Check loki'])
   })
 
-  it('sets result on the telemetry step', () => {
-    const steps = doneSteps('nextcloud cpu high')
-    const enriched = enrichToolStepsWithResponse(steps, BASE_DATA)
-    const telemetry = enriched.find((s) => s.id === 'telemetry')
-    expect(telemetry!.detail.result).not.toBeNull()
-    const parsed = JSON.parse(telemetry!.detail.result!)
-    expect(parsed.service).toBe('nextcloud')
-    expect(parsed.confidence_after_reasoning).toBe(0.87)
-  })
-
-  it('sets result on the dependencies step', () => {
-    const steps = doneSteps('nextcloud dependencies upstream')
-    const enriched = enrichToolStepsWithResponse(steps, BASE_DATA)
-    const deps = enriched.find((s) => s.id === 'dependencies')
-    expect(deps!.detail.result).not.toBeNull()
-    const parsed = JSON.parse(deps!.detail.result!)
-    expect(parsed.service_queried).toBe('nextcloud')
-  })
-
-  it('sets result on the logs step', () => {
-    const steps = doneSteps('nextcloud error logs pattern')
-    const enriched = enrichToolStepsWithResponse(steps, BASE_DATA)
-    const logs = enriched.find((s) => s.id === 'logs')
-    expect(logs!.detail.result).not.toBeNull()
-    const parsed = JSON.parse(logs!.detail.result!)
-    expect(parsed.service).toBe('nextcloud')
-  })
-
-  it('handles missing metadata gracefully', () => {
+  it('reasoning model is null (not a fake fallback) when metadata is missing', () => {
     const steps = doneSteps('nextcloud status')
     const enriched = enrichToolStepsWithResponse(steps, { ...BASE_DATA, metadata: null })
     const reasoning = enriched.find((s) => s.id === 'reasoning')
     const parsed = JSON.parse(reasoning!.detail.result!)
-    expect(parsed.model).toBe('qwen3-14b') // fallback
+    expect(parsed.model).toBeNull() // no fabricated 'qwen3-14b'
     expect(parsed.tokens_used).toBeNull()
+  })
+
+  it('shows "No similar incidents returned." when tools.similar is absent', () => {
+    const steps = doneSteps('show similar nextcloud incidents')
+    const enriched = enrichToolStepsWithResponse(steps, { ...BASE_DATA, metadata: null })
+    const similar = enriched.find((s) => s.id === 'similar')
+    expect(similar!.detail.result).toBe('No similar incidents returned.')
   })
 
   it('does not mutate original steps', () => {

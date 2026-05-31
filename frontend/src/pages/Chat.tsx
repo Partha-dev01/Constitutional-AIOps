@@ -40,6 +40,10 @@ export function Chat() {
   const [typingMessageId, setTypingMessageId] = useState<string | null>(null)
   const [displayedContent, setDisplayedContent] = useState('')
   const [toolSteps, setToolSteps] = useState<ToolStep[]>([])
+  /** Finished, enriched tool timelines kept per assistant message id so the
+   *  checkmark steps + searched-data dropdowns PERSIST after the answer (they
+   *  no longer vanish when loading ends). */
+  const [toolStepsById, setToolStepsById] = useState<Record<string, ToolStep[]>>({})
   const [insightsById, setInsightsById] = useState<Record<string, MessageInsights>>({})
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [prompts, setPrompts] = useState<string[]>(() => selectPrompts())
@@ -48,8 +52,10 @@ export function Chat() {
   const inputRef = useRef<HTMLInputElement>(null)
   const typingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const stepTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  /** Cancellable timer for clearing the enriched step timeline after response. */
-  const stepClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  /** Mirror of the live `toolSteps` so the async send handler can read the
+   *  latest step states (e.g. which had completed) when committing on finish
+   *  or failure, without adding them to its dependency array. */
+  const liveStepsRef = useRef<ToolStep[]>([])
 
   const history = useConversationHistory()
 
@@ -61,12 +67,16 @@ export function Chat() {
     scrollToBottom()
   }, [messages, displayedContent, toolSteps, scrollToBottom])
 
+  // Keep the live-steps ref in sync with state for the async send handler.
+  useEffect(() => {
+    liveStepsRef.current = toolSteps
+  }, [toolSteps])
+
   // Cleanup timers on unmount.
   useEffect(() => {
     return () => {
       if (typingIntervalRef.current) clearInterval(typingIntervalRef.current)
       if (stepTimerRef.current) clearInterval(stepTimerRef.current)
-      if (stepClearTimerRef.current) clearTimeout(stepClearTimerRef.current)
     }
   }, [])
 
@@ -103,16 +113,11 @@ export function Chat() {
   /**
    * Animate the derived tool-call checklist: each non-final step runs then
    * completes on a timer; the final "Reasoning" step stays running until the
-   * real response lands (see finishToolSteps). Reduced motion snaps all but
+   * real response lands (see commitToolSteps). Reduced motion snaps all but
    * the reasoning step to done immediately.
    */
   const startToolSteps = useCallback((message: string) => {
     if (stepTimerRef.current) clearInterval(stepTimerRef.current)
-    // Cancel any pending clear-timer from a previous response.
-    if (stepClearTimerRef.current) {
-      clearTimeout(stepClearTimerRef.current)
-      stepClearTimerRef.current = null
-    }
 
     const derived = deriveToolSteps(message)
     const lastIndex = derived.length - 1
@@ -132,7 +137,7 @@ export function Chat() {
       setToolSteps((prev) => {
         if (prev.length === 0) return prev
         // Don't auto-advance past the last step — it represents the live wait
-        // on the reasoning model and is resolved by finishToolSteps().
+        // on the reasoning model and is resolved by commitToolSteps().
         if (running >= lastIndex) {
           if (stepTimerRef.current) {
             clearInterval(stepTimerRef.current)
@@ -152,25 +157,40 @@ export function Chat() {
   }, [])
 
   /**
-   * Mark every derived step done (response arrived), enrich detail payloads
-   * with concrete response data, then clear the timeline shortly after.
+   * The response (or failure) for `messageId` has arrived. Stop the live
+   * animation and PERSIST the finished timeline against that assistant message
+   * so its checkmark steps + searched-data dropdowns stay visible in the
+   * conversation (they used to vanish the instant loading ended / after 3s).
+   *
+   * On success: every step is marked done and enriched with the real data.
+   * On failure: steps that hadn't completed are marked errored (never falsely
+   * green), so the user can see WHERE it failed.
    */
-  const finishToolSteps = useCallback(
-    (responseData?: Parameters<typeof enrichToolStepsWithResponse>[1]) => {
+  const commitToolSteps = useCallback(
+    (
+      messageId: string,
+      outcome: 'done' | 'error',
+      responseData?: Parameters<typeof enrichToolStepsWithResponse>[1],
+    ) => {
       if (stepTimerRef.current) {
         clearInterval(stepTimerRef.current)
         stepTimerRef.current = null
       }
-      setToolSteps((prev) => {
-        const done = prev.map((s) => ({ ...s, status: 'done' as const }))
-        return responseData ? enrichToolStepsWithResponse(done, responseData) : done
-      })
-      // Clear the timeline after a short pause so users have time to read
-      // the enriched step details before the timeline disappears.
-      stepClearTimerRef.current = window.setTimeout(() => {
-        stepClearTimerRef.current = null
-        setToolSteps([])
-      }, 3_000)
+      const live = liveStepsRef.current
+      let finished: ToolStep[]
+      if (outcome === 'done') {
+        const done = live.map((s) => ({ ...s, status: 'done' as const }))
+        finished = responseData ? enrichToolStepsWithResponse(done, responseData) : done
+      } else {
+        finished = live.map((s) =>
+          s.status === 'done' ? s : { ...s, status: 'error' as const },
+        )
+      }
+      if (finished.length > 0) {
+        setToolStepsById((prev) => ({ ...prev, [messageId]: finished }))
+      }
+      // Retire the live (ephemeral) timeline; the persisted one takes over.
+      setToolSteps([])
     },
     [],
   )
@@ -224,7 +244,7 @@ export function Chat() {
           },
         }))
 
-        finishToolSteps({
+        commitToolSteps(messageId, 'done', {
           confidence: response.confidence,
           related_incidents: response.related_incidents,
           suggested_actions: response.suggested_actions,
@@ -239,10 +259,12 @@ export function Chat() {
         console.error('Chat error:', err)
         const errorMessage = err instanceof Error ? err.message : 'Failed to send message'
         setError(errorMessage)
-        finishToolSteps()
+
+        const errorMessageId = (Date.now() + 1).toString()
+        commitToolSteps(errorMessageId, 'error')
 
         const errorAssistantMessage: ChatMessageData = {
-          id: (Date.now() + 1).toString(),
+          id: errorMessageId,
           role: 'assistant',
           content: `I'm sorry, I couldn't process your request. Error: ${errorMessage}\n\nPlease check that the backend and LLM servers are running.`,
           timestamp: new Date(),
@@ -252,7 +274,14 @@ export function Chat() {
         setIsLoading(false)
       }
     },
-    [conversationId, isLoading, startToolSteps, finishToolSteps, startTypewriter, history],
+    [
+      conversationId,
+      isLoading,
+      startToolSteps,
+      commitToolSteps,
+      startTypewriter,
+      history,
+    ],
   )
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -271,6 +300,7 @@ export function Chat() {
     setMessages([welcomeMessage()])
     setInsightsById({})
     setToolSteps([])
+    setToolStepsById({})
     setError(null)
     setSidebarOpen(false)
     setPrompts(selectPrompts(getRecentPrompts()))
@@ -282,6 +312,7 @@ export function Chat() {
       if (id === conversationId) return
       setError(null)
       setToolSteps([])
+      setToolStepsById({})
       try {
         const conv = await api.chat.getConversation(id)
         const loaded: ChatMessageData[] = conv.messages
@@ -366,16 +397,25 @@ export function Chat() {
         {/* Messages */}
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto rounded-lg border border-border bg-card p-4">
           {messages.map((message) => (
-            <ChatMessage
-              key={message.id}
-              message={message}
-              isTyping={typingMessageId === message.id}
-              displayedContent={displayedContent}
-              insights={insightsById[message.id]}
-            />
+            <div key={message.id} className="space-y-4">
+              {/* Persisted tool-call timeline for this answer: the checkmark
+                  steps + searched-data dropdowns stay visible above the reply. */}
+              {message.role === 'assistant' && toolStepsById[message.id]?.length > 0 && (
+                <ToolCallTimeline steps={toolStepsById[message.id]} />
+              )}
+              <ChatMessage
+                message={message}
+                isTyping={typingMessageId === message.id}
+                displayedContent={displayedContent}
+                insights={insightsById[message.id]}
+              />
+            </div>
           ))}
 
-          {isLoading && toolSteps.length > 0 && (
+          {/* Live animated timeline while a request is in flight. On completion
+              (success or failure) it is retired and re-rendered, persisted,
+              above its assistant message (see toolStepsById). */}
+          {toolSteps.length > 0 && isLoading && (
             <ToolCallTimeline
               steps={toolSteps}
               reducedMotionFallbackText="Thinking... running tools and reasoning."

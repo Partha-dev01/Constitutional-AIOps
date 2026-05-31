@@ -209,16 +209,16 @@ export function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <ModelCard
           name="Fast Agent"
-          model="Qwen3-4B Q4_K_M"
-          port={8081}
+          model="Qwen3-4B-AWQ"
+          port={8000}
           status={isComponentHealthy(health, 'fast_agent') ? 'online' : 'offline'}
           latency="<100ms P95"
           requests={1247}
         />
         <ModelCard
           name="Reasoning Agent"
-          model="Qwen3-14B Q4_K_M"
-          port={8082}
+          model="Qwen3-14B-AWQ"
+          port={8001}
           status={isComponentHealthy(health, 'reasoning_agent') ? 'online' : 'offline'}
           latency="200-500ms P95"
           requests={89}

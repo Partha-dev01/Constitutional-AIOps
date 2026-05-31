@@ -36,6 +36,16 @@ logger = logging.getLogger(__name__)
 MAX_ACTIVITY_LOG_SIZE = 50
 
 
+def _cfg_reasoning_model() -> Optional[str]:
+    """Return the configured reasoning-agent model name (e.g. "qwen3-14b").
+
+    Imported lazily so tests/config reloads pick up the current value.
+    """
+    from src import config as _cfg_module
+
+    return _cfg_module.config.llm.reasoning_agent_model
+
+
 # System prompts for different modes
 RCA_SYSTEM_PROMPT = """You are an expert Site Reliability Engineer performing root cause analysis.
 
@@ -111,12 +121,10 @@ When a request is ambiguous, assume it is in-scope and help.
 ONLY refuse when a request is CLEARLY unrelated to IT / operations — e.g. general
 knowledge, geography, history, trivia, math or word puzzles, current events,
 entertainment, shopping, personal or medical advice, creative writing, or programming
-help unrelated to operating this system. For those, refuse in ONE sentence, do not answer
-even partially, and never attach a confidence score. Reply with exactly this and nothing
-else:
-"I'm the Constitutional AIOps Reasoning Agent — I can only help with infrastructure
-operations, observability, and incident response. Try asking about a service, an
-incident, logs or metrics, service dependencies, or a root-cause question."
+help unrelated to operating this system. For those, decline in ONE brief sentence written
+in your own words, do not answer even partially, and never attach a confidence score. Do
+NOT use this refusal wording for any request that touches a monitored service, telemetry,
+or operations — those you MUST answer.
 
 ## System Architecture
 You are part of a dual-agent architecture:
@@ -318,6 +326,12 @@ class ReasoningAgent(BaseAgent):
             reasoning_trace = response["choices"][0]["message"].get("_original_reasoning") or ""
             latency_ms = (time.perf_counter() - start_time) * 1000
 
+            # Capture token usage from the model response (A3/C6) when available.
+            # ModelRouter passes the raw OpenAI-compatible payload through, which
+            # carries usage.completion_tokens.
+            usage = response.get("usage") if isinstance(response, dict) else None
+            tokens_used = usage.get("completion_tokens") if isinstance(usage, dict) else None
+
             # Parse based on mode
             if mode in ("rca", "planning"):
                 parsed = self._parse_json_response(content)
@@ -332,15 +346,25 @@ class ReasoningAgent(BaseAgent):
                     metadata=parsed,
                 )
             else:
-                # Chat mode - return as-is
+                # Chat mode - return as-is. Confidence here is a neutral placeholder;
+                # the chat route (chat.py) computes the authoritative evidence-based
+                # confidence from the telemetry/tool data it gathered.
+                try:
+                    model_used = _cfg_reasoning_model()
+                except Exception:
+                    model_used = None
                 result = AgentResponse(
                     content=content,
-                    confidence=0.8,  # Default confidence for chat
-                    confidence_level=self.calculate_confidence_level(0.8),
+                    confidence=0.5,  # Neutral placeholder; chat.py recomputes evidence-based
+                    confidence_level=self.calculate_confidence_level(0.5),
                     reasoning=None,
                     reasoning_trace=reasoning_trace,
                     suggested_action=None,
-                    metadata={"mode": "chat"},
+                    metadata={
+                        "mode": "chat",
+                        "model_used": model_used,
+                        "tokens_used": tokens_used,
+                    },
                 )
 
             # Log successful activity
@@ -436,6 +460,7 @@ class ReasoningAgent(BaseAgent):
         message: str,
         conversation_history: Optional[list[dict]] = None,
         runtime_context: Optional[str] = None,
+        enable_thinking: bool = False,
     ) -> AgentResponse:
         """
         Handle chat interaction with operator.
@@ -444,6 +469,8 @@ class ReasoningAgent(BaseAgent):
             message: User's message
             conversation_history: Previous messages in conversation
             runtime_context: Runtime system context (containers, agents, etc.)
+            enable_thinking: Enable extended thinking mode (B5: threaded from
+                ChatRequest.enable_thinking; defaults to False).
 
         Returns:
             AgentResponse with chat reply
@@ -460,7 +487,7 @@ class ReasoningAgent(BaseAgent):
             "query": message,
             "context": context,
             "runtime_context": runtime_context,
-            "enable_thinking": False,  # Chat doesn't need thinking mode
+            "enable_thinking": enable_thinking,
         })
     
     def _build_prompt(

@@ -5,6 +5,7 @@ Graph database client for episodic memory storage.
 Stores incidents, actions, and their relationships for pattern learning.
 """
 
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 from datetime import datetime
@@ -62,9 +63,19 @@ class Neo4jClient:
 
         logger.info(f"Neo4jClient initialized (uri: {self.uri})")
 
-    async def connect(self) -> bool:
+    async def connect(self, max_attempts: int = 8, base_delay: float = 3.0) -> bool:
         """
-        Establish connection to Neo4j.
+        Establish connection to Neo4j, retrying while it comes up.
+
+        Neo4j's bolt port can take 30-40s to accept connections, and on a host
+        reboot Docker's restart policy starts every container in parallel
+        (``depends_on`` ordering is NOT honored on auto-restart), so the backend
+        can race ahead of Neo4j. Retrying with backoff makes the one-shot startup
+        connect resilient to that race instead of permanently disabling memory.
+
+        Args:
+            max_attempts: Total connection attempts before giving up.
+            base_delay: Base seconds between attempts (grows linearly, capped 15s).
 
         Returns:
             True if connection successful, False otherwise
@@ -73,25 +84,45 @@ class Neo4jClient:
             logger.warning("Neo4j driver not available, skipping connection")
             return False
 
-        try:
-            self._driver = AsyncGraphDatabase.driver(
-                self.uri,
-                auth=(self.user, self.password),
-            )
-            # Verify connectivity
-            await self._driver.verify_connectivity()
-            self._connected = True
-            logger.info("Connected to Neo4j successfully")
+        last_error: Optional[Exception] = None
+        for attempt in range(1, max_attempts + 1):
+            try:
+                self._driver = AsyncGraphDatabase.driver(
+                    self.uri,
+                    auth=(self.user, self.password),
+                )
+                # Verify connectivity
+                await self._driver.verify_connectivity()
+                self._connected = True
+                logger.info(f"Connected to Neo4j successfully (attempt {attempt})")
 
-            # Initialize schema
-            await self._initialize_schema()
+                # Initialize schema
+                await self._initialize_schema()
 
-            return True
+                return True
 
-        except Exception as e:
-            logger.error(f"Failed to connect to Neo4j: {e}")
-            self._connected = False
-            return False
+            except Exception as e:
+                last_error = e
+                # Discard the half-open driver before retrying.
+                if self._driver is not None:
+                    try:
+                        await self._driver.close()
+                    except Exception:
+                        pass
+                    self._driver = None
+                if attempt < max_attempts:
+                    delay = min(base_delay * attempt, 15.0)
+                    logger.warning(
+                        f"Neo4j connect attempt {attempt}/{max_attempts} failed "
+                        f"({e}); retrying in {delay:.0f}s"
+                    )
+                    await asyncio.sleep(delay)
+
+        logger.error(
+            f"Failed to connect to Neo4j after {max_attempts} attempts: {last_error}"
+        )
+        self._connected = False
+        return False
 
     async def close(self) -> None:
         """Close Neo4j connection."""

@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { Sparkles, Loader2, CheckCircle2, ChevronDown, ChevronRight } from 'lucide-react'
+import { Sparkles, Loader2, CheckCircle2, XCircle, ChevronDown, ChevronRight } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { JsonView } from '../JsonView'
 import type { ToolStep } from '../../hooks/useToolSteps'
@@ -20,7 +20,12 @@ interface ToolCallTimelineProps {
  * concrete result for that step.
  */
 export function ToolCallTimeline({ steps, reducedMotionFallbackText }: ToolCallTimelineProps) {
-  const anyRunning = steps.some((s) => s.status !== 'done')
+  const anyError = steps.some((s) => s.status === 'error')
+  // "Thinking..." should show ONLY while work is genuinely in flight, i.e. some
+  // step is still pending/running and nothing has errored. (Relied on by the
+  // live e2e test, which expects "Thinking..." while a response loads.)
+  const anyRunning =
+    !anyError && steps.some((s) => s.status === 'pending' || s.status === 'running')
   // Track which step ids are expanded.
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
 
@@ -43,8 +48,18 @@ export function ToolCallTimeline({ steps, reducedMotionFallbackText }: ToolCallT
       </div>
       <div className="flex-1 rounded-lg border border-border bg-muted/30 p-3 min-w-[220px] max-w-[70%]">
         <div className="flex items-center gap-2 text-sm font-medium">
-          <Sparkles className="h-4 w-4 text-primary" />
-          {anyRunning ? <span>Thinking...</span> : <span>Done</span>}
+          {anyError ? (
+            <XCircle className="h-4 w-4 text-red-500" />
+          ) : (
+            <Sparkles className="h-4 w-4 text-primary" />
+          )}
+          {anyRunning ? (
+            <span>Thinking...</span>
+          ) : anyError ? (
+            <span className="text-red-600 dark:text-red-400">Request failed</span>
+          ) : (
+            <span>Done</span>
+          )}
         </div>
 
         {reducedMotionFallbackText && (
@@ -76,6 +91,8 @@ export function ToolCallTimeline({ steps, reducedMotionFallbackText }: ToolCallT
                 <span className="relative z-10 mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center">
                   {step.status === 'done' ? (
                     <CheckCircle2 className="h-5 w-5 text-green-500 tool-check" />
+                  ) : step.status === 'error' ? (
+                    <XCircle className="h-5 w-5 text-red-500" />
                   ) : step.status === 'running' ? (
                     <span className="flex h-5 w-5 items-center justify-center">
                       <span className="absolute h-2.5 w-2.5 rounded-full bg-primary tool-node-running" />
@@ -94,9 +111,11 @@ export function ToolCallTimeline({ steps, reducedMotionFallbackText }: ToolCallT
                         'flex items-center gap-1.5 text-sm leading-6',
                         step.status === 'done'
                           ? 'text-foreground'
-                          : step.status === 'running'
-                            ? 'text-foreground font-medium'
-                            : 'text-muted-foreground',
+                          : step.status === 'error'
+                            ? 'text-red-600 dark:text-red-400 font-medium'
+                            : step.status === 'running'
+                              ? 'text-foreground font-medium'
+                              : 'text-muted-foreground',
                       )}
                     >
                       <Icon className="h-3.5 w-3.5 opacity-70" />
@@ -122,6 +141,17 @@ export function ToolCallTimeline({ steps, reducedMotionFallbackText }: ToolCallT
                       )}
                     </button>
                   </div>
+
+                  {/* At-a-glance result summary (visible without expanding). */}
+                  {detail.summary && (
+                    <p
+                      className="text-xs text-muted-foreground/90 leading-5 truncate"
+                      data-testid={`step-summary-${step.id}`}
+                      title={detail.summary}
+                    >
+                      {detail.summary}
+                    </p>
+                  )}
 
                   {/* Collapsible detail region. */}
                   {isExpanded && (
@@ -153,12 +183,12 @@ export function ToolCallTimeline({ steps, reducedMotionFallbackText }: ToolCallT
                           <p className="font-medium text-foreground mb-1">Result:</p>
                           <JsonView raw={detail.result} />
                         </div>
-                      ) : (
-                        <p className="text-muted-foreground italic">
-                          {step.status === 'done'
-                            ? 'Result data not available.'
-                            : 'Waiting for response…'}
+                      ) : step.status === 'error' ? (
+                        <p className="text-red-600 dark:text-red-400 italic">
+                          This step did not complete — the request failed or timed out.
                         </p>
+                      ) : (
+                        <p className="text-muted-foreground italic">Waiting for response…</p>
                       )}
                     </div>
                   )}
