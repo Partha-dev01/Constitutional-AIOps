@@ -186,7 +186,7 @@ async def lifespan(app: FastAPI):
         telemetry_collector=app.state.telemetry_collector,
         validator=app.state.validator,
     )
-    logger.info("MCP Action Server initialized with 5 tools")
+    logger.info("MCP Action Server initialized with 9 tools")
 
     # Initialize WebSocket manager
     app.state.ws_manager = ws_manager

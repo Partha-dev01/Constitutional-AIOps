@@ -195,6 +195,55 @@ async def list_tools(request: Request) -> ToolListResponse:
                 requires_approval=False,
                 risk_level="low",
             ),
+            # Phase-2 tools
+            ToolInfo(
+                name="query_recent_logs",
+                description="Query recent log entries from Loki for a service within a time window",
+                category="query",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "service": {"type": "string", "description": "Service name (use 'all' for all)"},
+                        "time_range_minutes": {"type": "integer", "default": 15},
+                        "limit": {"type": "integer", "default": 50},
+                        "query": {"type": "string", "description": "Optional LogQL query override"},
+                    },
+                    "required": ["service"],
+                },
+                requires_approval=False,
+                risk_level="low",
+            ),
+            ToolInfo(
+                name="query_metric",
+                description="Query Prometheus metrics for a service over a time range",
+                category="query",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "service": {"type": "string", "description": "Service name"},
+                        "time_range_minutes": {"type": "integer", "default": 30},
+                        "metrics": {"type": "array", "items": {"type": "string"}, "description": "Optional PromQL queries"},
+                    },
+                    "required": ["service"],
+                },
+                requires_approval=False,
+                risk_level="low",
+            ),
+            ToolInfo(
+                name="list_containers",
+                description="List Docker containers and their status (running, stopped, health)",
+                category="query",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "all_containers": {"type": "boolean", "default": False, "description": "Include stopped containers"},
+                        "name_filter": {"type": "string", "description": "Optional substring filter on container name"},
+                    },
+                    "required": [],
+                },
+                requires_approval=False,
+                risk_level="low",
+            ),
         ]
         return ToolListResponse(tools=default_tools, total=len(default_tools))
 
@@ -322,6 +371,55 @@ async def get_tool(request: Request, tool_name: str) -> ToolInfo:
                 requires_approval=False,
                 risk_level="low",
             ),
+            # Phase-2 tools
+            "query_recent_logs": ToolInfo(
+                name="query_recent_logs",
+                description="Query recent log entries from Loki for a service within a time window",
+                category="query",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "service": {"type": "string", "description": "Service name (use 'all' for all)"},
+                        "time_range_minutes": {"type": "integer", "default": 15},
+                        "limit": {"type": "integer", "default": 50},
+                        "query": {"type": "string", "description": "Optional LogQL query override"},
+                    },
+                    "required": ["service"],
+                },
+                requires_approval=False,
+                risk_level="low",
+            ),
+            "query_metric": ToolInfo(
+                name="query_metric",
+                description="Query Prometheus metrics for a service over a time range",
+                category="query",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "service": {"type": "string", "description": "Service name"},
+                        "time_range_minutes": {"type": "integer", "default": 30},
+                        "metrics": {"type": "array", "items": {"type": "string"}, "description": "Optional PromQL queries"},
+                    },
+                    "required": ["service"],
+                },
+                requires_approval=False,
+                risk_level="low",
+            ),
+            "list_containers": ToolInfo(
+                name="list_containers",
+                description="List Docker containers and their status (running, stopped, health)",
+                category="query",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "all_containers": {"type": "boolean", "default": False, "description": "Include stopped containers"},
+                        "name_filter": {"type": "string", "description": "Optional substring filter on container name"},
+                    },
+                    "required": [],
+                },
+                requires_approval=False,
+                risk_level="low",
+            ),
         }
 
         if tool_name not in tool_definitions:
@@ -411,6 +509,30 @@ async def call_tool(
         elif tool_call.tool_name == "scale_service":
             return await _execute_scale_service(
                 tool_call.parameters, start_time
+            )
+
+        # ==================== query_recent_logs ====================
+        elif tool_call.tool_name == "query_recent_logs":
+            return await _execute_query_recent_logs(
+                telemetry_collector, tool_call.parameters, start_time
+            )
+
+        # ==================== query_metric ====================
+        elif tool_call.tool_name == "query_metric":
+            return await _execute_query_metric(
+                telemetry_collector, tool_call.parameters, start_time
+            )
+
+        # ==================== list_containers ====================
+        elif tool_call.tool_name == "list_containers":
+            return await _execute_list_containers(
+                tool_call.parameters, start_time
+            )
+
+        # ==================== analyze_time_series_anomaly ====================
+        elif tool_call.tool_name == "analyze_time_series_anomaly":
+            return await _execute_analyze_time_series(
+                telemetry_collector, tool_call.parameters, start_time
             )
 
         else:
@@ -890,6 +1012,203 @@ async def _execute_scale_service(
         )
 
 
+async def _execute_query_recent_logs(
+    telemetry_collector: Any,
+    params: dict,
+    start_time: float,
+) -> ToolCallResponse:
+    """Query recent logs from Loki via TelemetryCollector.query_logs."""
+    service = params.get("service", "")
+    if not service:
+        return ToolCallResponse(
+            success=False,
+            data=None,
+            error="service parameter required",
+            execution_time_ms=(time.time() - start_time) * 1000,
+        )
+
+    if telemetry_collector is None:
+        return ToolCallResponse(
+            success=False,
+            data=None,
+            error="Telemetry collector not available",
+            execution_time_ms=(time.time() - start_time) * 1000,
+        )
+
+    try:
+        duration = params.get("time_range_minutes", 15)
+        limit = params.get("limit", 50)
+        query_override = params.get("query")
+
+        end_dt = datetime.utcnow()
+        start_dt = end_dt - timedelta(minutes=duration)
+
+        logs = await telemetry_collector.query_logs(
+            service=service,
+            start_time=start_dt,
+            end_time=end_dt,
+            query=query_override,
+            limit=limit,
+        )
+
+        entries = []
+        for log in (logs or []):
+            entries.append({
+                "timestamp": log.timestamp.isoformat() if log.timestamp else None,
+                "level": log.level,
+                "message": log.message[:300],
+                "service": log.service,
+            })
+
+        return ToolCallResponse(
+            success=True,
+            data={
+                "service": service,
+                "time_range_minutes": duration,
+                "total_entries": len(entries),
+                "entries": entries,
+            },
+            execution_time_ms=(time.time() - start_time) * 1000,
+            metadata={"source": "loki"},
+        )
+
+    except Exception as e:
+        logger.error(f"query_recent_logs failed: {e}")
+        return ToolCallResponse(
+            success=False,
+            data=None,
+            error=f"Log query failed: {str(e)}",
+            execution_time_ms=(time.time() - start_time) * 1000,
+        )
+
+
+async def _execute_query_metric(
+    telemetry_collector: Any,
+    params: dict,
+    start_time: float,
+) -> ToolCallResponse:
+    """Query Prometheus metrics via TelemetryCollector.query_metrics."""
+    service = params.get("service", "")
+    if not service:
+        return ToolCallResponse(
+            success=False,
+            data=None,
+            error="service parameter required",
+            execution_time_ms=(time.time() - start_time) * 1000,
+        )
+
+    if telemetry_collector is None:
+        return ToolCallResponse(
+            success=False,
+            data=None,
+            error="Telemetry collector not available",
+            execution_time_ms=(time.time() - start_time) * 1000,
+        )
+
+    try:
+        duration = params.get("time_range_minutes", 30)
+        metrics_list = params.get("metrics") or None
+
+        end_dt = datetime.utcnow()
+        start_dt = end_dt - timedelta(minutes=duration)
+
+        metric_points = await telemetry_collector.query_metrics(
+            service=service,
+            start_time=start_dt,
+            end_time=end_dt,
+            metrics=metrics_list,
+        )
+
+        points = []
+        for mp in (metric_points or []):
+            points.append({
+                "timestamp": mp.timestamp.isoformat() if mp.timestamp else None,
+                "name": mp.name,
+                "value": mp.value,
+            })
+
+        return ToolCallResponse(
+            success=True,
+            data={
+                "service": service,
+                "time_range_minutes": duration,
+                "total_points": len(points),
+                "metrics": points,
+            },
+            execution_time_ms=(time.time() - start_time) * 1000,
+            metadata={"source": "prometheus"},
+        )
+
+    except Exception as e:
+        logger.error(f"query_metric failed: {e}")
+        return ToolCallResponse(
+            success=False,
+            data=None,
+            error=f"Metric query failed: {str(e)}",
+            execution_time_ms=(time.time() - start_time) * 1000,
+        )
+
+
+async def _execute_list_containers(
+    params: dict,
+    start_time: float,
+) -> ToolCallResponse:
+    """List Docker containers (read-only). Mirrors logic from infrastructure route."""
+    include_all = params.get("all_containers", False)
+    name_filter = params.get("name_filter", "")
+
+    try:
+        import docker  # type: ignore[import]
+
+        client = docker.from_env()
+        raw = client.containers.list(all=include_all)
+
+        containers = []
+        for c in raw:
+            name: str = c.name
+            if name_filter and name_filter.lower() not in name.lower():
+                continue
+            state = c.attrs.get("State", {})
+            health_state = state.get("Health", {})
+            health = health_state.get("Status") if health_state else None
+            image = c.image.tags[0] if c.image.tags else str(c.image.id)[:12]
+            containers.append({
+                "name": name,
+                "status": c.status,
+                "health": health,
+                "image": image,
+            })
+
+        client.close()
+
+        return ToolCallResponse(
+            success=True,
+            data={
+                "total": len(containers),
+                "containers": containers,
+                "include_stopped": include_all,
+            },
+            execution_time_ms=(time.time() - start_time) * 1000,
+            metadata={"source": "docker"},
+        )
+
+    except ImportError:
+        return ToolCallResponse(
+            success=False,
+            data=None,
+            error="Docker SDK not available",
+            execution_time_ms=(time.time() - start_time) * 1000,
+        )
+    except Exception as e:
+        logger.error(f"list_containers failed: {e}")
+        return ToolCallResponse(
+            success=False,
+            data=None,
+            error=f"Container list failed: {str(e)}",
+            execution_time_ms=(time.time() - start_time) * 1000,
+        )
+
+
 async def execute_tool_call(
     request: Any,
     tool_name: str,
@@ -926,6 +1245,12 @@ async def execute_tool_call(
             result = await _execute_restart_service(parameters, start_time)
         elif tool_name == "scale_service":
             result = await _execute_scale_service(parameters, start_time)
+        elif tool_name == "query_recent_logs":
+            result = await _execute_query_recent_logs(telemetry_collector, parameters, start_time)
+        elif tool_name == "query_metric":
+            result = await _execute_query_metric(telemetry_collector, parameters, start_time)
+        elif tool_name == "list_containers":
+            result = await _execute_list_containers(parameters, start_time)
         else:
             return {"success": False, "error": f"Unknown tool: {tool_name}"}
 
