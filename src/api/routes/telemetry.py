@@ -100,20 +100,19 @@ async def get_logs(
         end_time = datetime.utcnow()
         start_time = end_time - timedelta(minutes=since_minutes)
 
-        # Build LogQL query
+        # Build LogQL query. Select by the `container` label, which both the local
+        # promtail and the remote Alloy edge streams carry; a substring match lets a
+        # service name also resolve the local `aiops-` container-name prefix and the
+        # remote container name alike. (When service is None the collector applies
+        # its own '{container=~".+"}' default.)
         logql_query = query
-        if logql_query is None:
-            if service:
-                logql_query = f'{{container="{service}"}}'
-            else:
-                # Leave None so the collector applies its own correct default
-                # ('{job="containerlogs"}' — how promtail labels Docker logs).
-                logql_query = None
+        if logql_query is None and service:
+            logql_query = f'{{container=~"(?i).*{service}.*"}}'
 
         if level:
-            # If no base query yet (default-summary case), anchor on the
-            # collector's default stream selector before appending the filter.
-            base = logql_query if logql_query is not None else '{job="containerlogs"}'
+            # Anchor on a stream selector before appending the level line-filter;
+            # match every container stream when no service was specified.
+            base = logql_query if logql_query is not None else '{container=~".+"}'
             logql_query = f'{base} |~ "(?i){level}"'
 
         # Query Loki via collector
