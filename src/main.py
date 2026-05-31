@@ -32,6 +32,7 @@ from src.api.routes.infrastructure import router as infrastructure_router
 from src.api.routes.demo import router as demo_router
 from src.api.routes.metrics import router as metrics_router
 from src.api.routes.benchmark import router as benchmark_router
+from src.api.routes.settings import router as settings_router
 
 # Import core components
 from src.agents.model_router import ModelRouter
@@ -315,6 +316,7 @@ app.include_router(infrastructure_router, prefix="/api/v1/infrastructure", tags=
 app.include_router(demo_router, prefix="/api/v1/demo", tags=["demo"])
 app.include_router(metrics_router, prefix="/api/v1/metrics", tags=["metrics"])
 app.include_router(benchmark_router, prefix="/api/v1/benchmark", tags=["benchmark"])
+app.include_router(settings_router, prefix="/api/v1/settings", tags=["settings"])
 
 
 # WebSocket endpoint for real-time updates

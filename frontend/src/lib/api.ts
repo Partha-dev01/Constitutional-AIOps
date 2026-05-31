@@ -55,6 +55,43 @@ export interface ChatResponse {
   } | null;
 }
 
+// ---- Settings types ----
+export interface ConstitutionalSettings {
+  autoThreshold: number;
+  approvalThreshold: number;
+  maxActionsPerMinute: number;
+  enableAuditLog: boolean;
+  enableLearning: boolean;
+  strictTier1: boolean;
+}
+
+export interface NotificationSettings {
+  emailEnabled: boolean;
+  slackEnabled: boolean;
+  webhookEnabled: boolean;
+  webhookUrl: string;
+  notifyOnCritical: boolean;
+  notifyOnApproval: boolean;
+  notifyOnResolution: boolean;
+}
+
+export interface TelemetrySettings {
+  lokiEnabled: boolean;
+  lokiUrl: string;
+  prometheusEnabled: boolean;
+  prometheusUrl: string;
+  tempoEnabled: boolean;
+  tempoUrl: string;
+  retentionDays: number;
+}
+
+export interface AllSettings {
+  constitutional: ConstitutionalSettings;
+  notifications: NotificationSettings;
+  telemetry: TelemetrySettings;
+}
+// ---- end Settings types ----
+
 export interface ConversationSummary {
   conversation_id: string;
   created_at: string;
@@ -484,6 +521,17 @@ export const api = {
         },
       };
     },
+  },
+  // Settings
+  settings: {
+    get: () => request<AllSettings>('/settings/'),
+    save: (body: AllSettings) =>
+      request<AllSettings>('/settings/', {
+        method: 'PUT',
+        body: JSON.stringify(body),
+      }),
+    reset: () =>
+      request<AllSettings>('/settings/reset', { method: 'POST' }),
   },
 };
 
