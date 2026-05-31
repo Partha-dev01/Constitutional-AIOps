@@ -6,6 +6,7 @@ Provides unified interface for accessing logs, metrics, and traces.
 """
 
 import logging
+import re
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
@@ -15,6 +16,54 @@ import httpx
 from src.config import config
 
 logger = logging.getLogger(__name__)
+
+# Regex to extract log level from common log-line formats.
+# Examples: "ERROR [api] ...", "2025-01-01 WARN ...", "[WARNING] ...", "level=debug ..."
+_LEVEL_RE = re.compile(
+    r'\b(ERROR|FATAL|CRITICAL|WARN(?:ING)?|DEBUG|INFO)\b',
+    re.IGNORECASE,
+)
+
+_LEVEL_NORMALISE: dict[str, str] = {
+    "fatal": "ERROR",
+    "critical": "ERROR",
+    "warning": "WARN",
+    "warn": "WARN",
+    "error": "ERROR",
+    "debug": "DEBUG",
+    "info": "INFO",
+}
+
+
+def _parse_log_level(stream_labels: dict[str, str], message: str) -> str:
+    """
+    Determine the log level for a Loki log entry.
+
+    Strategy (in priority order):
+    1. Use the ``level`` stream label if present and not the default ``"info"``
+       placeholder that promtail emits when it cannot detect a level.
+    2. Regex-scan the log message for a case-insensitive level keyword.
+    3. Fall back to ``"INFO"``.
+
+    Returns the level as uppercase, normalised to one of: INFO, WARN, ERROR, DEBUG.
+    """
+    raw = stream_labels.get("level", "")
+    # Trust the label when it's something other than the generic "info" default
+    # or when the label is explicitly set by a structured logger.
+    detected_level = raw.strip().lower()
+    if detected_level and detected_level != "info":
+        return _LEVEL_NORMALISE.get(detected_level, detected_level.upper())
+
+    # Try to extract from the message body.
+    m = _LEVEL_RE.search(message)
+    if m:
+        return _LEVEL_NORMALISE.get(m.group(1).lower(), m.group(1).upper())
+
+    # If the label explicitly said "info" (structured logger), honour it.
+    if detected_level == "info":
+        return "INFO"
+
+    return "INFO"
 
 
 @dataclass
@@ -279,9 +328,9 @@ class TelemetryCollector:
                     timestamp_ns, message = value
                     logs.append(LogEntry(
                         timestamp=datetime.fromtimestamp(int(timestamp_ns) / 1e9),
-                        level=labels.get("level", "info"),
+                        level=_parse_log_level(labels, message),
                         message=message,
-                        service=labels.get("service", service),
+                        service=labels.get("container", labels.get("service", service)),
                         labels=labels,
                         trace_id=labels.get("trace_id"),
                     ))
@@ -525,4 +574,5 @@ __all__ = [
     "TraceSpan",
     "TelemetryWindow",
     "TelemetryCollector",
+    "_parse_log_level",
 ]
