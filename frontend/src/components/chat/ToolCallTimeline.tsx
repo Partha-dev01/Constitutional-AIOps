@@ -1,5 +1,7 @@
-import { Sparkles, Loader2, CheckCircle2 } from 'lucide-react'
+import { useState, useCallback } from 'react'
+import { Sparkles, Loader2, CheckCircle2, ChevronDown, ChevronRight } from 'lucide-react'
 import { cn } from '../../lib/utils'
+import { JsonView } from '../JsonView'
 import type { ToolStep } from '../../hooks/useToolSteps'
 
 interface ToolCallTimelineProps {
@@ -12,9 +14,27 @@ interface ToolCallTimelineProps {
  * Presentational vertical timeline of derived tool-call steps, shown while a
  * chat request is in flight. Header always renders the literal "Thinking..."
  * label while any step is not yet done (relied on by the live e2e test).
+ *
+ * Each step has an expandable detail dropdown (button type="button") that
+ * shows the service/store/query and — once the response arrives — the
+ * concrete result for that step.
  */
 export function ToolCallTimeline({ steps, reducedMotionFallbackText }: ToolCallTimelineProps) {
   const anyRunning = steps.some((s) => s.status !== 'done')
+  // Track which step ids are expanded.
+  const [expanded, setExpanded] = useState<Set<string>>(new Set())
+
+  const toggle = useCallback((id: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }, [])
 
   return (
     <div className="flex gap-3" aria-live="polite">
@@ -36,6 +56,9 @@ export function ToolCallTimeline({ steps, reducedMotionFallbackText }: ToolCallT
             const Icon = step.icon
             const isLast = i === steps.length - 1
             const lineActive = step.status === 'done' || step.status === 'running'
+            const isExpanded = expanded.has(step.id)
+            const { detail } = step
+
             return (
               <li key={step.id} className="relative flex gap-3 pb-3 last:pb-0">
                 {/* Connector line to the next node. */}
@@ -63,19 +86,83 @@ export function ToolCallTimeline({ steps, reducedMotionFallbackText }: ToolCallT
                   )}
                 </span>
 
-                <span
-                  className={cn(
-                    'flex items-center gap-1.5 text-sm leading-6',
-                    step.status === 'done'
-                      ? 'text-foreground'
-                      : step.status === 'running'
-                        ? 'text-foreground font-medium'
-                        : 'text-muted-foreground',
+                {/* Label row + expand toggle. */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1">
+                    <span
+                      className={cn(
+                        'flex items-center gap-1.5 text-sm leading-6',
+                        step.status === 'done'
+                          ? 'text-foreground'
+                          : step.status === 'running'
+                            ? 'text-foreground font-medium'
+                            : 'text-muted-foreground',
+                      )}
+                    >
+                      <Icon className="h-3.5 w-3.5 opacity-70" />
+                      {step.label}
+                    </span>
+
+                    {/* Expand/collapse toggle — must be type="button" (contract). */}
+                    <button
+                      type="button"
+                      aria-expanded={isExpanded}
+                      aria-label={`${isExpanded ? 'Collapse' : 'Expand'} detail for ${step.label}`}
+                      onClick={() => toggle(step.id)}
+                      className={cn(
+                        'ml-1 rounded p-0.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors',
+                        'focus:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+                      )}
+                      data-testid={`step-toggle-${step.id}`}
+                    >
+                      {isExpanded ? (
+                        <ChevronDown className="h-3.5 w-3.5" aria-hidden />
+                      ) : (
+                        <ChevronRight className="h-3.5 w-3.5" aria-hidden />
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Collapsible detail region. */}
+                  {isExpanded && (
+                    <div
+                      className="mt-1.5 rounded-md border border-border bg-background/70 p-2 text-xs space-y-1.5"
+                      data-testid={`step-detail-${step.id}`}
+                    >
+                      {/* Static fields — always available immediately. */}
+                      <div className="space-y-0.5">
+                        {detail.service && (
+                          <p className="text-muted-foreground">
+                            <span className="font-medium text-foreground">Service:</span>{' '}
+                            {detail.service}
+                          </p>
+                        )}
+                        <p className="text-muted-foreground">
+                          <span className="font-medium text-foreground">Store:</span>{' '}
+                          {detail.store}
+                        </p>
+                        <p className="text-muted-foreground">
+                          <span className="font-medium text-foreground">Query:</span>{' '}
+                          {detail.query}
+                        </p>
+                      </div>
+
+                      {/* Dynamic result — available after response arrives. */}
+                      {detail.result !== null ? (
+                        <div>
+                          <p className="font-medium text-foreground mb-1">Result:</p>
+                          <JsonView raw={detail.result} />
+                        </div>
+                      ) : (
+                        <p className="text-muted-foreground italic">
+                          {step.status === 'done'
+                            ? 'Result data not available.'
+                            : 'Waiting for response…'}
+                        </p>
+                      )}
+                    </div>
                   )}
-                >
-                  <Icon className="h-3.5 w-3.5 opacity-70" />
-                  {step.label}
-                </span>
+                </div>
               </li>
             )
           })}
