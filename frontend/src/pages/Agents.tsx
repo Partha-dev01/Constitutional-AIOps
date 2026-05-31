@@ -500,8 +500,8 @@ export function Agents() {
                     <Cpu className={`h-5 w-5 ${fastAgentOnline ? 'text-green-500' : 'text-red-500'}`} />
                   </div>
                   <div>
-                    <h3 className="font-semibold">Qwen3-4B Q4_K_M</h3>
-                    <p className="text-sm text-muted-foreground">Port 8081 • Context: 8K tokens</p>
+                    <h3 className="font-semibold">Qwen3-4B-AWQ</h3>
+                    <p className="text-sm text-muted-foreground">Port 8000 • Context: 4K tokens</p>
                   </div>
                 </div>
                 <span className={`px-3 py-1 rounded-full text-sm ${
@@ -620,8 +620,8 @@ export function Agents() {
                     <Brain className={`h-5 w-5 ${reasoningAgentOnline ? 'text-green-500' : 'text-red-500'}`} />
                   </div>
                   <div>
-                    <h3 className="font-semibold">Qwen3-14B Q4_K_M</h3>
-                    <p className="text-sm text-muted-foreground">Port 8082 • Context: 4K tokens</p>
+                    <h3 className="font-semibold">Qwen3-14B-AWQ</h3>
+                    <p className="text-sm text-muted-foreground">Port 8001 • Context: 8K tokens</p>
                   </div>
                 </div>
                 <span className={`px-3 py-1 rounded-full text-sm ${

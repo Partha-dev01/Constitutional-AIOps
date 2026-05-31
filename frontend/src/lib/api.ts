@@ -42,17 +42,58 @@ export interface ChatRequest {
   context?: Record<string, unknown>;
 }
 
+/**
+ * Structured per-tool results the backend now returns under
+ * `ChatResponse.metadata.tools`. A key is present ONLY for a tool that
+ * actually ran for the given turn.
+ */
+export interface TelemetryToolResult {
+  service: string;
+  log_count: number;
+  error_count: number;
+  metrics: { name: string; value: number }[];
+  sample_logs: string[];
+}
+
+export interface SimilarToolResult {
+  count: number;
+  incidents: { id: string; summary: string; score: number | null }[];
+}
+
+export interface DependenciesToolResult {
+  upstream: string[];
+  downstream: string[];
+}
+
+export interface LogsToolResult {
+  total_logs: number;
+  error_count: number;
+  warning_count: number;
+  top_errors: { pattern: string; count: number }[];
+}
+
+export interface ChatToolResults {
+  telemetry?: TelemetryToolResult;
+  similar?: SimilarToolResult;
+  dependencies?: DependenciesToolResult;
+  logs?: LogsToolResult;
+}
+
+export interface ChatResponseMetadata {
+  mode?: string;
+  model_used?: string;
+  tokens_used?: number | null;
+  tools?: ChatToolResults;
+  [key: string]: unknown;
+}
+
 export interface ChatResponse {
   conversation_id: string;
   message: ChatMessage;
-  confidence?: number;
+  confidence?: number | null;
   suggested_actions?: string[] | null;
   related_incidents?: string[] | null;
-  metadata?: {
-    model_used?: string;
-    tokens_used?: number;
-    [key: string]: unknown;
-  } | null;
+  metadata?: ChatResponseMetadata | null;
 }
 
 // ---- Settings types ----
@@ -300,20 +341,53 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Default per-request timeout (ms). Generous because a single reasoning turn
+ * on the 14B model can legitimately take tens of seconds; we still want to
+ * fail with a clear message rather than hang forever if the LLM stalls or the
+ * connection drops.
+ */
+const DEFAULT_TIMEOUT_MS = 90_000;
+
 // HTTP client helper
 async function request<T>(
   endpoint: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  timeoutMs: number = DEFAULT_TIMEOUT_MS
 ): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`;
 
-  const response = await fetch(url, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
-  });
+  // Abort the request if it exceeds the timeout so callers get a deterministic
+  // error instead of an indefinitely-pending promise.
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+    });
+  } catch (err) {
+    // A timeout surfaces as an AbortError; translate it into a clear message.
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      throw new ApiError(
+        `Request timed out after ${Math.round(timeoutMs / 1000)}s. The server may be busy or unreachable.`,
+        0
+      );
+    }
+    // Network failures (server down, DNS, CORS) reach here too.
+    throw new ApiError(
+      err instanceof Error ? err.message : 'Network request failed',
+      0
+    );
+  } finally {
+    clearTimeout(timer);
+  }
 
   if (!response.ok) {
     let errorMessage = `HTTP ${response.status}`;

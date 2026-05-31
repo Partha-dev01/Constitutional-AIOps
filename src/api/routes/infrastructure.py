@@ -4,7 +4,10 @@ Constitutional AIOps - Infrastructure API Routes
 Provides endpoints for infrastructure/container status with dynamic Docker discovery.
 """
 
+import json
 import logging
+import os
+from pathlib import Path
 from typing import Any
 from datetime import datetime
 
@@ -14,6 +17,51 @@ from pydantic import BaseModel, Field
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+# ---------------------------------------------------------------------------
+# Dismissed remote hosts — persisted denylist
+#
+# The "Monitored remote hosts" list is auto-derived from live Prometheus/Loki
+# `edge` labels, so a stale or one-off host (e.g. a decommissioned box) lingers
+# until Loki retention ages it out. Dismissing an edge label hides it from the
+# list. Persisted under AIOPS_DATA_DIR (same convention as settings.py) so it
+# survives backend rebuilds. Stdlib json only — zero new deps.
+# ---------------------------------------------------------------------------
+
+def _dismissed_hosts_path() -> Path:
+    """Path to the persisted dismissed-edge-labels JSON file."""
+    base = os.environ.get("AIOPS_DATA_DIR") or os.path.join(
+        os.path.dirname(__file__), "..", "..", "..", "data", "settings"
+    )
+    path = Path(base)
+    path.mkdir(parents=True, exist_ok=True)
+    return path / "dismissed_hosts.json"
+
+
+def _load_dismissed_hosts() -> set[str]:
+    """Load the set of dismissed edge labels; return empty set on any error."""
+    try:
+        p = _dismissed_hosts_path()
+        if p.exists():
+            data = json.loads(p.read_text(encoding="utf-8"))
+            return set(data.get("dismissed", []))
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Failed to read dismissed hosts: %s", exc)
+    return set()
+
+
+def _save_dismissed_hosts(labels: set[str]) -> None:
+    """Persist the dismissed edge labels (atomic-ish: write then rename)."""
+    p = _dismissed_hosts_path()
+    tmp = p.with_suffix(".tmp")
+    try:
+        tmp.write_text(
+            json.dumps({"dismissed": sorted(labels)}, indent=2), encoding="utf-8"
+        )
+        tmp.replace(p)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Failed to persist dismissed hosts: %s", exc)
 
 # In-memory store for monitored containers
 _monitored_containers: set[str] = {
@@ -567,6 +615,7 @@ async def get_remote_hosts(request: Request) -> RemoteHostsResponse:
     if telemetry_collector is None:
         return RemoteHostsResponse(hosts=[], total=0, source="none")
 
+    dismissed = _load_dismissed_hosts()
     hosts_map: dict[str, dict] = {}
     sources_used: list[str] = []
 
@@ -695,6 +744,8 @@ async def get_remote_hosts(request: Request) -> RemoteHostsResponse:
     # ── Build response ────────────────────────────────────────────────────────
     hosts: list[RemoteHost] = []
     for edge, info in sorted(hosts_map.items()):
+        if edge in dismissed:
+            continue  # user dismissed this host from the monitored list
         targets_up = info["targets_up"]
         targets_total = info["targets_total"] or targets_up  # fallback: assume all up
         if targets_up > 0:
@@ -716,6 +767,60 @@ async def get_remote_hosts(request: Request) -> RemoteHostsResponse:
 
     source = "+".join(sources_used) if sources_used else "none"
     return RemoteHostsResponse(hosts=hosts, total=len(hosts), source=source)
+
+
+class DismissHostResponse(BaseModel):
+    """Result of dismissing/restoring a monitored remote host."""
+    edge_label: str
+    dismissed: bool
+    message: str
+
+
+@router.delete(
+    "/remote-hosts/{edge_label}",
+    response_model=DismissHostResponse,
+    summary="Dismiss Remote Edge Host",
+    description=(
+        "Hide a remote host from the monitored-hosts list by dismissing its `edge` "
+        "label. The list is auto-derived from live telemetry, so this adds the label "
+        "to a persisted denylist rather than deleting telemetry. If the host keeps "
+        "shipping it stays hidden until restored. Use to clear stale/one-off hosts."
+    ),
+)
+async def dismiss_remote_host(edge_label: str) -> DismissHostResponse:
+    """Add an edge label to the persisted denylist so it stops showing."""
+    if not edge_label.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="edge_label is required"
+        )
+    dismissed = _load_dismissed_hosts()
+    dismissed.add(edge_label)
+    _save_dismissed_hosts(dismissed)
+    logger.info("Dismissed remote host: %s", edge_label)
+    return DismissHostResponse(
+        edge_label=edge_label,
+        dismissed=True,
+        message=f"'{edge_label}' removed from the monitored-hosts list.",
+    )
+
+
+@router.post(
+    "/remote-hosts/{edge_label}/restore",
+    response_model=DismissHostResponse,
+    summary="Restore Dismissed Remote Host",
+    description="Undo a dismissal — the host reappears if it is still shipping telemetry.",
+)
+async def restore_remote_host(edge_label: str) -> DismissHostResponse:
+    """Remove an edge label from the persisted denylist."""
+    dismissed = _load_dismissed_hosts()
+    dismissed.discard(edge_label)
+    _save_dismissed_hosts(dismissed)
+    logger.info("Restored remote host: %s", edge_label)
+    return DismissHostResponse(
+        edge_label=edge_label,
+        dismissed=False,
+        message=f"'{edge_label}' restored to the monitored-hosts list.",
+    )
 
 
 __all__ = ["router"]

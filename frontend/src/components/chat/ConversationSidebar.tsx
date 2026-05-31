@@ -1,5 +1,5 @@
 import { MessageSquarePlus, Trash2, X, MessagesSquare } from 'lucide-react'
-import { cn, formatRelativeTime } from '../../lib/utils'
+import { cn, formatRelativeTime, stripMarkdown } from '../../lib/utils'
 import type { ConversationSummary } from '../../lib/api'
 
 interface ConversationSidebarProps {
@@ -84,7 +84,7 @@ export function ConversationSidebar({
           <ul className="space-y-1">
             {conversations.map((conv) => {
               const isActive = conv.conversation_id === activeId
-              const label = conv.preview?.trim() || 'New conversation'
+              const label = stripMarkdown(conv.preview ?? '') || 'New conversation'
               return (
                 <li key={conv.conversation_id} className="group relative">
                   <button

@@ -86,3 +86,18 @@ async def test_get_dependencies_uses_live_neo4j_client() -> None:
     assert deps["downstream"] == ["postgres-primary"]
     assert deps["upstream"] == ["load-balancer"]
     assert result.data["total_dependencies"] == 2
+
+
+# --- analyze_logs (A5: no fabricated mock fallback) -----------------------
+
+@pytest.mark.asyncio
+async def test_analyze_logs_without_collector_returns_failure() -> None:
+    """A5: _analyze_logs must NOT fabricate data when the collector is absent."""
+    server = MCPActionServer()  # no telemetry_collector injected
+    result = await server._analyze_logs({"service_name": "nextcloud"})
+
+    assert result.success is False
+    assert result.data is None
+    assert "telemetry collector" in (result.error or "").lower()
+    # The old code returned a fabricated summary (total_logs=1542); ensure it's gone.
+    assert result.metadata.get("source") != "mock"

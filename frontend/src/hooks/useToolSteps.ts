@@ -11,7 +11,7 @@ import type { LucideIcon } from 'lucide-react'
  * request is in flight. It is purely cosmetic — no network calls.
  */
 
-export type ToolStepStatus = 'pending' | 'running' | 'done'
+export type ToolStepStatus = 'pending' | 'running' | 'done' | 'error'
 
 /**
  * Static detail captured at derive-time (known before the response arrives).
@@ -33,6 +33,13 @@ export interface ToolStepDetailStatic {
 export interface ToolStepDetailDynamic {
   /** Raw result data — stringified JSON or human-readable text. */
   result: string | null
+  /**
+   * Concise one-line summary of the result (e.g. "50 logs · 0 errors · 4
+   * metrics"), shown inline under the step label so the searched data is
+   * visible at a glance without expanding. Filled in by enrichment; absent
+   * (undefined) before the response arrives.
+   */
+  summary?: string | null
 }
 
 export interface ToolStepDetail extends ToolStepDetailStatic, ToolStepDetailDynamic {}
@@ -174,6 +181,43 @@ export function deriveToolSteps(message: string): ToolStep[] {
 }
 
 /**
+ * Per-tool result shapes returned by the backend under
+ * `ChatResponse.metadata.tools`. Mirrors the api.ts contract types but is
+ * declared locally so this hook has no import dependency on api.ts.
+ */
+export interface TelemetryToolResult {
+  service: string
+  log_count: number
+  error_count: number
+  metrics: { name: string; value: number }[]
+  sample_logs: string[]
+}
+
+export interface SimilarToolResult {
+  count: number
+  incidents: { id: string; summary: string; score: number | null }[]
+}
+
+export interface DependenciesToolResult {
+  upstream: string[]
+  downstream: string[]
+}
+
+export interface LogsToolResult {
+  total_logs: number
+  error_count: number
+  warning_count: number
+  top_errors: { pattern: string; count: number }[]
+}
+
+export interface ChatToolResults {
+  telemetry?: TelemetryToolResult
+  similar?: SimilarToolResult
+  dependencies?: DependenciesToolResult
+  logs?: LogsToolResult
+}
+
+/**
  * Subset of ChatResponse fields used for enrichment.
  * Typed locally so this hook has no direct dependency on api.ts.
  */
@@ -183,7 +227,8 @@ export interface ToolStepResponseData {
   suggested_actions?: string[] | null
   metadata?: {
     model_used?: string
-    tokens_used?: number
+    tokens_used?: number | null
+    tools?: ChatToolResults
     [key: string]: unknown
   } | null
 }
@@ -192,91 +237,94 @@ export interface ToolStepResponseData {
  * Attach concrete backend results to the relevant derived steps.
  *
  * Called once the `POST /api/v1/chat/` response arrives. Returns a new steps
- * array (immutable update) with `detail.result` filled in for each step whose
- * data is available in the response.
+ * array (immutable update) with `detail.result` filled in from the REAL
+ * structured tool data the backend now returns under `metadata.tools`.
  *
- * Mapping:
- *  - "similar"      → related_incidents list
- *  - "dependencies" → service name (no dedicated output field; note it ran)
- *  - "telemetry"    → confidence + model from metadata
- *  - "logs"         → confidence + metadata
- *  - "reasoning"    → model_used, tokens_used, confidence, suggested_actions
+ * Mapping (step id → data source):
+ *  - "telemetry"    → metadata.tools.telemetry
+ *  - "similar"      → metadata.tools.similar
+ *  - "dependencies" → metadata.tools.dependencies
+ *  - "logs"         → metadata.tools.logs
+ *  - "reasoning"    → { model_used, tokens_used, confidence, suggested_actions }
+ *
+ * When a step has no matching tool data (the backend did not actually run that
+ * tool), a truthful short line is shown instead of fabricated prose.
  */
 export function enrichToolStepsWithResponse(
   steps: ToolStep[],
   data: ToolStepResponseData,
 ): ToolStep[] {
+  const tools = data.metadata?.tools
+
   return steps.map((step) => {
     let result: string | null = null
+    let summary: string | null = null
 
     switch (step.id) {
-      case 'similar': {
-        const incidents = data.related_incidents
-        if (incidents && incidents.length > 0) {
-          result = JSON.stringify({ similar_incidents: incidents }, null, 2)
+      case 'telemetry': {
+        const t = tools?.telemetry
+        if (t) {
+          result = JSON.stringify(t, null, 2)
+          summary = `${t.log_count} logs · ${t.error_count} errors · ${t.metrics.length} metrics`
         } else {
-          result = 'No similar incidents found in Neo4j graph memory.'
+          result = 'No telemetry returned.'
+        }
+        break
+      }
+
+      case 'similar': {
+        const s = tools?.similar
+        if (s) {
+          result = JSON.stringify(s, null, 2)
+          summary = `${s.count} similar incident${s.count === 1 ? '' : 's'}`
+        } else {
+          result = 'No similar incidents returned.'
         }
         break
       }
 
       case 'dependencies': {
-        // The dependency data is fed into the LLM context string, not returned
-        // as a structured field. Surface what we do know: the service queried.
-        result = JSON.stringify(
-          {
-            note: 'Dependency graph was fetched and injected into the reasoning context.',
-            service_queried: step.detail.service,
-            store: 'Neo4j get_dependencies (depth 2)',
-          },
-          null,
-          2,
-        )
-        break
-      }
-
-      case 'telemetry': {
-        result = JSON.stringify(
-          {
-            note: 'Telemetry context was built from Loki + Prometheus and injected into the reasoning prompt.',
-            service: step.detail.service,
-            confidence_after_reasoning: data.confidence ?? null,
-            model: data.metadata?.model_used ?? 'qwen3-14b',
-          },
-          null,
-          2,
-        )
+        const d = tools?.dependencies
+        if (d) {
+          result = JSON.stringify(d, null, 2)
+          summary = `${d.upstream.length} upstream · ${d.downstream.length} downstream`
+        } else {
+          result = 'No dependencies returned.'
+        }
         break
       }
 
       case 'logs': {
-        result = JSON.stringify(
-          {
-            note: 'Log analysis was performed and included in the reasoning context.',
-            service: step.detail.service,
-            confidence_after_reasoning: data.confidence ?? null,
-          },
-          null,
-          2,
-        )
+        const l = tools?.logs
+        if (l) {
+          result = JSON.stringify(l, null, 2)
+          summary = `${l.total_logs} logs · ${l.error_count} errors · ${l.warning_count} warnings`
+        } else {
+          result = 'No log analysis returned.'
+        }
         break
       }
 
       case 'reasoning': {
+        const model = data.metadata?.model_used ?? null
+        const tokens = data.metadata?.tokens_used ?? null
         result = JSON.stringify(
           {
-            model: data.metadata?.model_used ?? 'qwen3-14b',
-            tokens_used: data.metadata?.tokens_used ?? null,
+            model,
+            tokens_used: tokens,
             confidence: data.confidence ?? null,
             suggested_actions: data.suggested_actions ?? [],
           },
           null,
           2,
         )
+        if (model) {
+          summary = tokens != null ? `${model} · ${tokens} tokens` : model
+        }
         break
       }
     }
 
-    return { ...step, detail: { ...step.detail, result } }
+    return { ...step, detail: { ...step.detail, result, summary } }
   })
 }

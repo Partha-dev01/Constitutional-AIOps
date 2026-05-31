@@ -63,7 +63,10 @@ class ChatResponse(BaseModel):
     """Response from chat endpoint."""
     conversation_id: str = Field(..., description="Conversation identifier")
     message: ChatMessage = Field(..., description="Assistant's response")
-    confidence: float = Field(..., ge=0.0, le=1.0, description="Confidence in response")
+    confidence: Optional[float] = Field(
+        None, ge=0.0, le=1.0,
+        description="Confidence in response; null when the agent declines an off-domain request",
+    )
     suggested_actions: Optional[list[str]] = Field(
         default=None,
         description="Suggested follow-up actions"

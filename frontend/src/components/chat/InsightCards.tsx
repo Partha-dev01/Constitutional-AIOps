@@ -1,9 +1,30 @@
 import { Lightbulb, History, Gauge } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { useReveal } from '../../hooks/useReveal'
 import { cn } from '../../lib/utils'
 
+/**
+ * Render a short string as INLINE markdown (bold/italic/code) without block
+ * margins, so emphasis renders properly instead of leaking raw `**` markers
+ * into the card. Used for suggested actions / related incidents.
+ */
+function InlineMarkdown({ children }: { children: string }) {
+  return (
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      components={{
+        p: ({ children }) => <>{children}</>,
+        a: ({ children }) => <>{children}</>,
+      }}
+    >
+      {children}
+    </ReactMarkdown>
+  )
+}
+
 export interface MessageInsights {
-  confidence?: number
+  confidence?: number | null
   suggestedActions?: string[] | null
   relatedIncidents?: string[] | null
 }
@@ -77,7 +98,9 @@ export function InsightCards({ insights }: InsightCardsProps) {
             {(suggestedActions as string[]).map((action, i) => (
               <li key={i} className="flex gap-2 text-sm text-foreground">
                 <span className="text-primary">•</span>
-                <span>{action}</span>
+                <span className="[&_strong]:font-semibold [&_code]:rounded [&_code]:bg-muted [&_code]:px-1">
+                  <InlineMarkdown>{action}</InlineMarkdown>
+                </span>
               </li>
             ))}
           </ul>
