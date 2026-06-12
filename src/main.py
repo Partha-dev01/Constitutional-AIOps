@@ -33,7 +33,8 @@ from src.api.routes.tools import router as tools_router
 from src.api.routes.agents import router as agents_router
 from src.api.routes.telemetry import router as telemetry_router
 from src.api.routes.graph import router as graph_router
-from src.api.routes.prompts import router as prompts_router
+from src.api.routes.graph_topology import router as graph_topology_router
+from src.api.routes.prompts import router as prompts_router, apply_persisted_prompts
 from src.api.routes.infrastructure import router as infrastructure_router
 from src.api.routes.demo import router as demo_router
 from src.api.routes.metrics import router as metrics_router
@@ -122,6 +123,15 @@ async def lifespan(app: FastAPI):
     app.state.fast_annotator = FastAnnotator(model_router=app.state.model_router)
     app.state.reasoning_agent = ReasoningAgent(model_router=app.state.model_router)
 
+    # Re-apply persisted prompt overrides (session-14 W4): UI prompt edits are
+    # persisted under AIOPS_DATA_DIR and must survive a restart/redeploy.
+    try:
+        applied = apply_persisted_prompts(app)
+        if applied:
+            logger.info(f"Restored {len(applied)} persisted prompt override(s)")
+    except Exception as e:
+        logger.warning(f"Failed to apply persisted prompt overrides: {e}")
+
     # Initialize Constitutional Validator
     app.state.validator = ConstitutionalValidator()
 
@@ -189,6 +199,18 @@ async def lifespan(app: FastAPI):
         app.state.confidence_calculator = ConfidenceCalculator(
             episode_store=app.state.episode_store,
         )
+
+    # Seed the real platform topology (session-14 W1): idempotent MERGE of the
+    # canonical services + DEPENDS_ON edges. Non-fatal — the /graph/topology
+    # endpoint falls back to the static constants when Neo4j is unavailable.
+    if app.state.neo4j_client is not None:
+        try:
+            from src.memory.topology_seed import seed_service_topology
+
+            seed_counts = await seed_service_topology(app.state.neo4j_client)
+            logger.info(f"Service topology seeded at startup: {seed_counts}")
+        except Exception as e:
+            logger.warning(f"Topology seeding failed (non-fatal): {e}")
 
     # Initialize LangGraph orchestration pipeline (MANDATORY)
     # Implements Talker-Reasoner architecture (arXiv:2410.08328)
@@ -348,6 +370,7 @@ app.include_router(tools_router, prefix="/api/v1/tools", tags=["tools"], depende
 app.include_router(agents_router, prefix="/api/v1/agents", tags=["agents"], dependencies=_AUTHED)
 app.include_router(telemetry_router, prefix="/api/v1/telemetry", tags=["telemetry"], dependencies=_AUTHED)
 app.include_router(graph_router, prefix="/api/v1/graph", tags=["graph"], dependencies=_AUTHED)
+app.include_router(graph_topology_router, prefix="/api/v1/graph", tags=["graph"], dependencies=_AUTHED)
 app.include_router(prompts_router, prefix="/api/v1/prompts", tags=["prompts"], dependencies=_AUTHED)
 app.include_router(infrastructure_router, prefix="/api/v1/infrastructure", tags=["infrastructure"], dependencies=_AUTHED)
 app.include_router(demo_router, prefix="/api/v1/demo", tags=["demo"], dependencies=_AUTHED)
