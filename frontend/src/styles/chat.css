@@ -1,0 +1,6 @@
+/* ---------------------------------------------------------------------------
+ * Chat-page visual styles (dependency-free; plain CSS, no @apply).
+ * Loaded from main.tsx after index.css. Uses hsl(var(--token)) design tokens.
+ * Every animated class added here MUST also be listed in the reduced-motion
+ * kill block at the bottom of this file.
+ * ------------------------------------------------------------------------- */
