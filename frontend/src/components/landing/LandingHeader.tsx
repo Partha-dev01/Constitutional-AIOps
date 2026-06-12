@@ -6,7 +6,7 @@ const ANCHORS = [
   { href: '#features', label: 'Features' },
   { href: '#architecture', label: 'Architecture' },
   { href: '#live', label: 'Live demo' },
-  { href: '#team', label: 'Team' },
+  { href: '#about', label: 'About' },
 ]
 
 /**

@@ -342,17 +342,9 @@ CONFIDENCE_THRESHOLD_APPROVAL=0.70
 - **[docs/CHECKLIST.md](docs/CHECKLIST.md)**: Development progress tracker
 - **[docs/CHANGELOG.md](docs/CHANGELOG.md)**: Version history
 
-## Team
+## About
 
-**Project**: Constitutional AIOps - B.Tech Final Year Project
-**Institution**: [redacted]
-**Advisor**: [redacted]
-
-**Team Members**:
-- Par (Project Lead)
-- [redacted]
-- [redacted]
-- [redacted]
+Constitutional AIOps is an academic engineering research project.
 
 ## License
 
