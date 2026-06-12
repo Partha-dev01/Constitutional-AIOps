@@ -82,7 +82,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       authRequired = false;
     }
 
-    set({ user, authRequired, status: 'ready' });
+    // Never clobber a login that completed while this bootstrap was in
+    // flight: the /auth/me probe above may have run before the session
+    // cookie existed and report null for a user who is now signed in.
+    set((state) => ({ user: state.user ?? user, authRequired, status: 'ready' }));
   },
 
   login: async (username: string, password: string) => {
