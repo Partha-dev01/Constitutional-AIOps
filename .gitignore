@@ -150,3 +150,6 @@ dist/
 # Graph snapshots (LFS-tracked, but exclude from accidental plain-git stage)
 # Note: actual *.dump files use LFS via .gitattributes; this just keeps a clean tree
 
+
+# Local-only scratch: proofs, backups, archives, old creds. NEVER committed.
+/_local/
