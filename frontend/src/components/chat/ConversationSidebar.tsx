@@ -37,7 +37,8 @@ export function ConversationSidebar({
 }: ConversationSidebarProps) {
   const panel = (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between gap-2 border-b border-border p-3">
+      {/* Header with a faint gradient hairline instead of a hard border. */}
+      <div className="relative flex items-center justify-between gap-2 p-3 after:absolute after:inset-x-3 after:bottom-0 after:h-px after:bg-gradient-to-r after:from-border after:via-border/60 after:to-transparent">
         <span className="flex items-center gap-2 text-sm font-semibold">
           <MessagesSquare className="h-4 w-4 text-primary" />
           Conversations
@@ -56,7 +57,7 @@ export function ConversationSidebar({
         <button
           type="button"
           onClick={onNewConversation}
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-br from-primary to-primary/80 px-3 py-2 text-sm font-medium text-primary-foreground shadow-sm transition-all hover:shadow-[0_4px_16px_-4px_hsl(var(--primary)/0.5)]"
         >
           <MessageSquarePlus className="h-4 w-4" />
           New chat
@@ -91,12 +92,18 @@ export function ConversationSidebar({
                     type="button"
                     onClick={() => onSelect(conv.conversation_id)}
                     className={cn(
-                      'w-full rounded-lg px-3 py-2 pr-9 text-left transition-colors',
+                      'relative w-full rounded-lg px-3 py-2 pr-9 text-left transition-all hover:translate-x-0.5',
                       isActive
-                        ? 'bg-muted text-foreground'
+                        ? 'bg-primary/10 text-foreground'
                         : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
                     )}
                   >
+                    {isActive && (
+                      <span
+                        aria-hidden
+                        className="absolute left-0 top-1/2 h-6 w-0.5 -translate-y-1/2 rounded-full bg-primary"
+                      />
+                    )}
                     <span className="block truncate text-sm">{label}</span>
                     <span className="mt-0.5 block text-xs text-muted-foreground/70">
                       {formatRelativeTime(conv.updated_at)}
