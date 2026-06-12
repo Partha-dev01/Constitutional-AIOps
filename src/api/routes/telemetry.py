@@ -11,6 +11,8 @@ from typing import Any
 from fastapi import APIRouter, Request, Query
 from pydantic import BaseModel, Field
 
+from src.telemetry.collector import logql_escape
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
@@ -107,13 +109,13 @@ async def get_logs(
         # its own '{container=~".+"}' default.)
         logql_query = query
         if logql_query is None and service:
-            logql_query = f'{{container=~"(?i).*{service}.*"}}'
+            logql_query = f'{{container=~"(?i).*{logql_escape(service)}.*"}}'
 
         if level:
             # Anchor on a stream selector before appending the level line-filter;
             # match every container stream when no service was specified.
             base = logql_query if logql_query is not None else '{container=~".+"}'
-            logql_query = f'{base} |~ "(?i){level}"'
+            logql_query = f'{base} |~ "(?i){logql_escape(level)}"'
 
         # Query Loki via collector
         logs_data = await telemetry_collector.query_logs(

@@ -12,10 +12,11 @@ Research Paper (Section 4.5) defines 5 MCP tools:
 """
 
 import logging
+import os
 import time
 from collections import Counter
 from datetime import datetime, timedelta
-from typing import Any
+from typing import Any, Optional
 
 from fastapi import APIRouter, HTTPException, Request, status
 from pydantic import BaseModel, Field
@@ -499,17 +500,23 @@ async def call_tool(
                 telemetry_collector, tool_call.parameters, start_time
             )
 
-        # ==================== restart_service ====================
-        elif tool_call.tool_name == "restart_service":
-            return await _execute_restart_service(
-                tool_call.parameters, start_time
-            )
-
-        # ==================== scale_service ====================
-        elif tool_call.tool_name == "scale_service":
-            return await _execute_scale_service(
-                tool_call.parameters, start_time
-            )
+        # ==================== restart_service / scale_service ====================
+        # Action-class tools mutate real containers (docker restart / compose
+        # --scale on the host socket). They MUST pass the constitutional gate —
+        # the REST path used to execute them directly, bypassing the validator
+        # entirely despite requires_approval=True on their metadata.
+        elif tool_call.tool_name in ("restart_service", "scale_service"):
+            gate_error = _action_tool_gate(request, tool_call)
+            if gate_error is not None:
+                return ToolCallResponse(
+                    success=False,
+                    data=None,
+                    error=gate_error,
+                    execution_time_ms=(time.time() - start_time) * 1000,
+                )
+            if tool_call.tool_name == "restart_service":
+                return await _execute_restart_service(tool_call.parameters, start_time)
+            return await _execute_scale_service(tool_call.parameters, start_time)
 
         # ==================== query_recent_logs ====================
         elif tool_call.tool_name == "query_recent_logs":
@@ -638,7 +645,14 @@ async def _execute_get_dependencies(
         )
 
     try:
-        depth = params.get("depth", 2)
+        # depth arrives from the raw JSON body and is interpolated into the
+        # variable-length path below (Neo4j cannot parameterize path bounds) —
+        # coerce + clamp it so it can never carry injected Cypher.
+        try:
+            depth = int(params.get("depth", 2))
+        except (TypeError, ValueError):
+            depth = 2
+        depth = max(1, min(depth, 5))
 
         async with neo4j_client.session() as session:
             # Get downstream dependencies (services this service depends on)
@@ -873,6 +887,61 @@ async def _execute_analyze_time_series(
             error=f"Time series analysis failed: {str(e)}",
             execution_time_ms=(time.time() - start_time) * 1000,
         )
+
+
+def _action_tool_gate(request: Request, tool_call: "ToolCallRequest") -> Optional[str]:
+    """Constitutional gate for action-class (mutating) tools.
+
+    Returns an error string when execution must be refused, or None when the
+    call may proceed. Two layers:
+    1. Action tools are disabled unless AIOPS_ENABLE_ACTION_TOOLS is set —
+       the UI deliberately keeps them disabled and there is no approval
+       workflow wired to this REST path yet.
+    2. Even when enabled, the call must pass the live ConstitutionalValidator
+       with automatic authorization (can_proceed and no human approval needed).
+    """
+    enabled = os.getenv("AIOPS_ENABLE_ACTION_TOOLS", "").lower() in ("1", "true", "yes")
+    if not enabled:
+        return (
+            f"'{tool_call.tool_name}' is an action tool and is disabled: it mutates real "
+            "containers and requires the human-approval workflow. Set "
+            "AIOPS_ENABLE_ACTION_TOOLS=true to allow constitutionally-gated execution."
+        )
+
+    validator = getattr(request.app.state, "validator", None)
+    if validator is None:
+        return (
+            "Constitutional validator unavailable — refusing to execute an action "
+            "tool without validation."
+        )
+
+    params = tool_call.parameters or {}
+    try:
+        confidence = float(params.get("confidence", 0.5))
+    except (TypeError, ValueError):
+        confidence = 0.5
+    report = validator.validate(
+        action_id=f"tool-{tool_call.tool_name}-{int(time.time() * 1000)}",
+        action_description=(
+            f"{tool_call.tool_name} via POST /api/v1/tools/call "
+            f"on service '{params.get('service_name')}'"
+        ),
+        action_type="restart" if tool_call.tool_name == "restart_service" else "scale",
+        confidence=confidence,
+        context={
+            "service": params.get("service_name"),
+            "parameters": params,
+            "source": "rest_tools_call",
+            "target_replicas": params.get("target_replicas"),
+        },
+    )
+    if not report.can_proceed or report.requires_approval:
+        return (
+            f"Constitutional validation refused automatic execution "
+            f"(authorization={report.authorization_level.value}, "
+            f"requires_approval={report.requires_approval}): {report.explanation}"
+        )
+    return None
 
 
 async def _execute_restart_service(

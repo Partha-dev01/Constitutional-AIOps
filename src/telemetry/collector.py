@@ -34,6 +34,17 @@ _LEVEL_NORMALISE: dict[str, str] = {
     "info": "INFO",
 }
 
+# Characters allowed when interpolating a caller-supplied value (service name,
+# level, …) inside a LogQL selector / regex literal. Everything else — quotes,
+# braces, backslashes, regex metacharacters — is stripped so the value can
+# never break out of the selector it is embedded in.
+_LOGQL_UNSAFE = re.compile(r"[^a-zA-Z0-9_\-./: ]")
+
+
+def logql_escape(value: str) -> str:
+    """Sanitize a value for safe interpolation into a LogQL query string."""
+    return _LOGQL_UNSAFE.sub("", value or "")
+
 
 def _parse_log_level(stream_labels: dict[str, str], message: str) -> str:
     """
@@ -302,7 +313,7 @@ class TelemetryCollector:
             # the local `aiops-` container-name prefix (service "neo4j" matches
             # container "aiops-neo4j").
             if service and service != "all":
-                query = f'{{container=~"(?i).*{service}.*"}}'
+                query = f'{{container=~"(?i).*{logql_escape(service)}.*"}}'
             else:
                 query = '{container=~".+"}'
 
@@ -523,7 +534,7 @@ class TelemetryCollector:
         # Match on the `container` label (the only service-identifying label that
         # both local promtail and remote Alloy streams share — there is no
         # `service` label in this stack), then line-filter for error markers.
-        query = f'{{container=~"(?i).*{service}.*"}} |~ "(?i)error"'
+        query = f'{{container=~"(?i).*{logql_escape(service)}.*"}} |~ "(?i)error"'
 
         return await self.query_logs(
             service=service,

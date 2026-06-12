@@ -181,8 +181,11 @@ async def save_settings(request: Request, body: AllSettings) -> AllSettings:
     _save_persisted(data)
 
     # Apply constitutional thresholds to the live ConstitutionalValidator (best-effort).
+    # NOTE: main.py stores the validator as app.state.validator — the old
+    # "constitutional_validator" attribute name silently never matched, so saved
+    # thresholds never reached the live validator.
     try:
-        validator = getattr(request.app.state, "constitutional_validator", None)
+        validator = getattr(request.app.state, "validator", None)
         if validator is not None:
             new_auto = body.constitutional.autoThreshold / 100.0
             new_approval = body.constitutional.approvalThreshold / 100.0
