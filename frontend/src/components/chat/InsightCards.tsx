@@ -34,14 +34,34 @@ interface InsightCardsProps {
 }
 
 /** Confidence-band color: >=0.90 green, 0.70-0.90 yellow, <0.70 red. */
-function confidenceTone(confidence: number): { bar: string; text: string; label: string } {
+function confidenceTone(confidence: number): {
+  bar: string
+  text: string
+  label: string
+  accent: string
+} {
   if (confidence >= 0.9) {
-    return { bar: 'bg-green-500', text: 'text-green-600 dark:text-green-400', label: 'High' }
+    return {
+      bar: 'bg-gradient-to-r from-green-500 to-emerald-400',
+      text: 'text-green-600 dark:text-green-400',
+      label: 'High',
+      accent: 'border-l-green-500/60 bg-green-500/[0.04]',
+    }
   }
   if (confidence >= 0.7) {
-    return { bar: 'bg-yellow-500', text: 'text-yellow-600 dark:text-yellow-400', label: 'Moderate' }
+    return {
+      bar: 'bg-gradient-to-r from-yellow-500 to-amber-400',
+      text: 'text-yellow-600 dark:text-yellow-400',
+      label: 'Moderate',
+      accent: 'border-l-yellow-500/60 bg-yellow-500/[0.04]',
+    }
   }
-  return { bar: 'bg-red-500', text: 'text-red-600 dark:text-red-400', label: 'Low' }
+  return {
+    bar: 'bg-gradient-to-r from-red-500 to-rose-400',
+    text: 'text-red-600 dark:text-red-400',
+    label: 'Low',
+    accent: 'border-l-red-500/60 bg-red-500/[0.04]',
+  }
 }
 
 /**
@@ -69,7 +89,7 @@ export function InsightCards({ insights }: InsightCardsProps) {
       className={cn('reveal mt-2 space-y-2', visible && 'reveal-visible')}
     >
       {hasConfidence && tone && (
-        <div className="rounded-lg border border-border bg-muted/30 p-3">
+        <div className={cn('rounded-lg border border-border/60 border-l-2 p-3', tone.accent)}>
           <div className="mb-1.5 flex items-center justify-between text-xs">
             <span className="flex items-center gap-1.5 font-medium text-muted-foreground">
               <Gauge className="h-3.5 w-3.5" />
@@ -81,7 +101,7 @@ export function InsightCards({ insights }: InsightCardsProps) {
           </div>
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-border">
             <div
-              className={cn('h-full rounded-full transition-all', tone.bar)}
+              className={cn('bar-grow h-full rounded-full', tone.bar)}
               style={{ width: `${pct}%` }}
             />
           </div>
@@ -89,7 +109,7 @@ export function InsightCards({ insights }: InsightCardsProps) {
       )}
 
       {hasActions && (
-        <div className="rounded-lg border border-border bg-muted/30 p-3">
+        <div className="rounded-lg border border-border/60 border-l-2 border-l-primary/60 bg-primary/[0.04] p-3">
           <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
             <Lightbulb className="h-3.5 w-3.5" />
             Suggested actions
@@ -108,7 +128,7 @@ export function InsightCards({ insights }: InsightCardsProps) {
       )}
 
       {hasIncidents && (
-        <div className="rounded-lg border border-border bg-muted/30 p-3">
+        <div className="rounded-lg border border-border/60 border-l-2 border-l-amber-500/60 bg-amber-500/[0.04] p-3">
           <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
             <History className="h-3.5 w-3.5" />
             Related incidents
