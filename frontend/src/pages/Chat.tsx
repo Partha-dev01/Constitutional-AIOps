@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { Send, AlertCircle, PanelLeftOpen, Plus } from 'lucide-react'
+import { AlertCircle, PanelLeftOpen, Plus } from 'lucide-react'
 import api from '../lib/api'
+import { ChatComposer } from '../components/chat/ChatComposer'
 import { ChatMessage } from '../components/chat/ChatMessage'
 import type { ChatMessageData } from '../components/chat/ChatMessage'
 import type { MessageInsights } from '../components/chat/InsightCards'
@@ -53,7 +54,9 @@ export function Chat() {
   const history = useConversationHistory()
 
   const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    messagesEndRef.current?.scrollIntoView({
+      behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+    })
   }, [])
 
   useEffect(() => {
@@ -365,9 +368,15 @@ export function Chat() {
             </button>
             <div>
               <h1 className="text-2xl font-bold">Chat</h1>
-              <p className="text-muted-foreground">
-                Interact with the Reasoning Agent (Qwen3-14B)
-              </p>
+              {/* Status pill — deliberately a SIBLING of the h1, never inside
+                  it, so the heading's accessible name stays exactly "Chat". */}
+              <span className="mt-1 inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-card/60 px-2.5 py-0.5 text-xs text-muted-foreground shadow-sm">
+                <span className="relative flex h-1.5 w-1.5" aria-hidden>
+                  <span className="absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75 motion-safe:animate-ping" />
+                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-green-500" />
+                </span>
+                Qwen3-14B · Reasoning Agent
+              </span>
             </div>
           </div>
           <button
@@ -387,63 +396,56 @@ export function Chat() {
           </div>
         )}
 
-        {/* Messages */}
-        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto rounded-lg border border-border bg-card p-4">
-          {messages.map((message) => (
-            <div key={message.id} className="space-y-4">
-              {/* Persisted tool-call timeline for this answer: the checkmark
-                  steps + searched-data dropdowns stay visible above the reply. */}
-              {message.role === 'assistant' && toolStepsById[message.id]?.length > 0 && (
-                <ToolCallTimeline steps={toolStepsById[message.id]} />
-              )}
-              <ChatMessage
-                message={message}
-                isTyping={typingMessageId === message.id}
-                displayedContent={displayedContent}
-                insights={insightsById[message.id]}
+        {/* Messages. The outer wrapper paints the gradient backdrop + a subtle
+            inset top glow hairline; the inner div stays the ONE scrollable
+            element that auto-scroll (messagesEndRef) depends on. */}
+        <div className="relative min-h-0 flex-1 overflow-hidden rounded-xl border border-border/60 bg-gradient-to-b from-card to-card/70 shadow-sm before:pointer-events-none before:absolute before:inset-x-6 before:top-0 before:z-10 before:h-px before:bg-gradient-to-r before:from-transparent before:via-primary/40 before:to-transparent">
+          <div className="flex h-full flex-col space-y-4 overflow-y-auto p-4">
+            {messages.map((message) => (
+              <div key={message.id} className="msg-in space-y-4">
+                {/* Persisted tool-call timeline for this answer: the checkmark
+                    steps + searched-data dropdowns stay visible above the reply. */}
+                {message.role === 'assistant' && toolStepsById[message.id]?.length > 0 && (
+                  <ToolCallTimeline steps={toolStepsById[message.id]} />
+                )}
+                <ChatMessage
+                  message={message}
+                  isTyping={typingMessageId === message.id}
+                  displayedContent={displayedContent}
+                  insights={insightsById[message.id]}
+                />
+              </div>
+            ))}
+
+            {/* Live animated timeline while a request is in flight. On completion
+                (success or failure) it is retired and re-rendered, persisted,
+                above its assistant message (see toolStepsById). */}
+            {toolSteps.length > 0 && isLoading && (
+              <ToolCallTimeline
+                steps={toolSteps}
+                reducedMotionFallbackText="Thinking... running tools and reasoning."
               />
-            </div>
-          ))}
+            )}
 
-          {/* Live animated timeline while a request is in flight. On completion
-              (success or failure) it is retired and re-rendered, persisted,
-              above its assistant message (see toolStepsById). */}
-          {toolSteps.length > 0 && isLoading && (
-            <ToolCallTimeline
-              steps={toolSteps}
-              reducedMotionFallbackText="Thinking... running tools and reasoning."
-            />
-          )}
+            {showSuggestions && (
+              <div className="flex flex-1 items-center justify-center">
+                <SuggestedPrompts prompts={prompts} onPick={handlePickPrompt} />
+              </div>
+            )}
 
-          {showSuggestions && (
-            <div className="pt-6">
-              <SuggestedPrompts prompts={prompts} onPick={handlePickPrompt} />
-            </div>
-          )}
-
-          <div ref={messagesEndRef} />
+            <div ref={messagesEndRef} />
+          </div>
         </div>
 
         {/* Input */}
-        <form onSubmit={handleSubmit} className="mt-4 flex gap-2">
-          <input
-            ref={inputRef}
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder={PLACEHOLDER}
-            className="flex-1 rounded-lg border border-border bg-background px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
-            disabled={isLoading}
-          />
-          <button
-            type="submit"
-            disabled={isLoading || !input.trim()}
-            className="rounded-lg bg-primary px-4 py-2 text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
-            aria-label="Send message"
-          >
-            <Send className="h-5 w-5" />
-          </button>
-        </form>
+        <ChatComposer
+          input={input}
+          onChange={setInput}
+          onSubmit={handleSubmit}
+          isLoading={isLoading}
+          inputRef={inputRef}
+          placeholder={PLACEHOLDER}
+        />
       </div>
     </div>
   )
