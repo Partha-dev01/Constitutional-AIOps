@@ -29,7 +29,6 @@ from src.telemetry.background_processor import (
     normalize_severity,
 )
 
-
 # ── unit: title parsing ───────────────────────────────────────────────────────
 
 class TestHumanizeTitle:
