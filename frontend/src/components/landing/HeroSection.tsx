@@ -1,25 +1,24 @@
 import { Link } from 'react-router-dom'
 import { Shield, ArrowRight, Cpu } from 'lucide-react'
+import { useReveal } from '../../hooks/useReveal'
+import { useParallax } from '../../hooks/useParallax'
+import { ShotFrame } from './ShotFrame'
 
 /**
- * Landing hero. Pure static — no network calls. The animated gradient/grid
- * backdrop is built from design-token colors so it tracks the dark theme.
+ * Landing hero. Pure static — no network calls. Aurora blobs + masked grid
+ * are decorative (aria-hidden); the h1 text content is exactly
+ * "Constitutional AIOps" (word-stagger spans only), which the live e2e suite
+ * depends on.
  */
 export function HeroSection() {
   return (
     <section className="relative overflow-hidden border-b border-border">
-      {/* Animated gradient wash */}
-      <div
-        className="pointer-events-none absolute inset-0 opacity-40"
-        style={{
-          background:
-            'radial-gradient(60% 50% at 50% 0%, hsl(var(--primary) / 0.25), transparent 70%), linear-gradient(120deg, hsl(var(--primary) / 0.10), transparent, hsl(var(--primary) / 0.10))',
-          backgroundSize: '200% 200%',
-          animation: 'gradient-drift 18s ease-in-out infinite',
-        }}
-        aria-hidden="true"
-      />
-      {/* Subtle grid overlay using the border token */}
+      {/* Drifting aurora blobs (primary blue / violet / cyan) */}
+      <div className="aurora aurora-a" aria-hidden="true" />
+      <div className="aurora aurora-b" aria-hidden="true" />
+      <div className="aurora aurora-c" aria-hidden="true" />
+
+      {/* Subtle grid overlay using the border token, masked to the hero core */}
       <div
         className="pointer-events-none absolute inset-0 opacity-[0.12]"
         style={{
@@ -32,48 +31,91 @@ export function HeroSection() {
         aria-hidden="true"
       />
 
-      <div
-        className="relative mx-auto flex max-w-5xl flex-col items-center px-6 py-24 text-center sm:py-32"
-        style={{ animation: 'fade-in .8s ease-out both' }}
-      >
-        <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-4 py-1.5 text-xs font-medium text-muted-foreground backdrop-blur">
-          <Cpu className="h-3.5 w-3.5 text-primary" />
-          Simultaneous dual-model AIOps
+      <div className="relative mx-auto flex max-w-5xl flex-col items-center px-6 pb-20 pt-32 text-center sm:pb-24 sm:pt-40">
+        <div
+          className="hero-enter mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-4 py-1.5 text-xs font-medium text-muted-foreground"
+        >
+          <Cpu className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
+          Simultaneous dual-model AIOps on a single GPU
         </div>
 
         <div className="mb-6 flex items-center justify-center gap-3">
-          <Shield className="h-12 w-12 text-primary sm:h-16 sm:w-16" />
+          <Shield
+            className="float-slow h-12 w-12 shrink-0 text-primary sm:h-16 sm:w-16"
+            aria-hidden="true"
+          />
           <h1 className="text-4xl font-bold tracking-tight sm:text-6xl">
-            Constitutional <span className="text-primary">AIOps</span>
+            <span className="hero-word" style={{ animationDelay: '80ms' }}>
+              Constitutional
+            </span>{' '}
+            <span className="hero-word text-gradient" style={{ animationDelay: '240ms' }}>
+              AIOps
+            </span>
           </h1>
         </div>
 
-        <p className="max-w-2xl text-balance text-lg text-muted-foreground sm:text-xl">
-          An autonomous infrastructure-operations system built on a dual-agent LLM
-          core, a 12-principle Constitutional AI safety framework, and graph-episodic
-          memory for incident correlation.
+        <p
+          className="hero-enter max-w-2xl text-balance text-lg font-medium text-foreground sm:text-2xl"
+          style={{ animationDelay: '350ms' }}
+        >
+          Autonomous infrastructure operations with a constitution it cannot break.
         </p>
 
-        <p className="mt-4 text-sm text-muted-foreground">
-          A B.Tech final-year research project — [redacted]
+        <p
+          className="hero-enter mt-4 max-w-2xl text-balance text-sm text-muted-foreground sm:text-base"
+          style={{ animationDelay: '450ms' }}
+        >
+          A dual-agent LLM core, a 12-principle Constitutional AI safety framework, and
+          Neo4j graph-episodic memory — correlating logs, metrics, and traces into safe,
+          explainable remediation.
         </p>
 
-        <div className="mt-10 flex flex-col gap-3 sm:flex-row">
+        <div
+          className="hero-enter mt-10 flex flex-col gap-3 sm:flex-row"
+          style={{ animationDelay: '550ms' }}
+        >
           <Link
-            to="/"
-            className="group inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5"
+            to="/login?next=/"
+            className="cta-glow group inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             Open the Dashboard
-            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            <ArrowRight
+              className="h-4 w-4 transition-transform group-hover:translate-x-0.5"
+              aria-hidden="true"
+            />
           </Link>
-          <Link
-            to="/agents"
-            className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-6 py-3 text-sm font-semibold text-foreground transition-colors hover:border-primary/50 hover:text-primary"
+          <a
+            href="#architecture"
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-6 py-3 text-sm font-semibold text-foreground transition-colors hover:border-primary/50 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            Explore the Agent Hub
-          </Link>
+            See how it works
+          </a>
         </div>
+
+        <HeroShowcase />
       </div>
     </section>
+  )
+}
+
+/**
+ * Dashboard screenshot in a glass browser frame: scroll-reveal entrance plus
+ * a slight upward parallax drift (rAF-throttled; disabled entirely under
+ * prefers-reduced-motion inside useParallax).
+ */
+function HeroShowcase() {
+  const { ref, visible } = useReveal<HTMLDivElement>()
+  const parallaxRef = useParallax<HTMLDivElement>(-0.06)
+
+  return (
+    <div ref={ref} className={`reveal${visible ? ' reveal-visible' : ''} mt-16 w-full sm:mt-20`}>
+      <div ref={parallaxRef} className="mx-auto w-full max-w-4xl">
+        <ShotFrame
+          src="/screenshots/dashboard.png"
+          alt="Constitutional AIOps operations dashboard showing live agent status, incidents, and telemetry"
+          eager
+        />
+      </div>
+    </div>
   )
 }
