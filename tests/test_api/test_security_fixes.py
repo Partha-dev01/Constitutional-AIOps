@@ -32,14 +32,35 @@ class TestActionToolGate:
 
         return ToolCallRequest(tool_name=name, parameters=params or {"service_name": "nextcloud"})
 
+    @staticmethod
+    def _report(can_proceed, requires_approval, authorization="automatic", explanation="ok"):
+        """Build a mock ValidationReport with every attribute the verdict
+        serializer reads (MagicMock auto-attrs are not list-iterable)."""
+        report = MagicMock()
+        report.can_proceed = can_proceed
+        report.requires_approval = requires_approval
+        report.authorization_level = MagicMock()
+        report.authorization_level.value = authorization
+        report.overall_result = MagicMock()
+        report.overall_result.value = "passed"
+        report.confidence = 0.95
+        report.tier1_passed = True
+        report.tier2_passed = True
+        report.tier3_passed = True
+        report.violations = []
+        report.warnings = []
+        report.explanation = explanation
+        return report
+
     def test_disabled_by_default(self, monkeypatch):
         from src.api.routes.tools import _action_tool_gate
 
         monkeypatch.delenv("AIOPS_ENABLE_ACTION_TOOLS", raising=False)
         request = MagicMock()
-        error = _action_tool_gate(request, self._tool_call())
-        assert error is not None
-        assert "disabled" in error
+        decision = _action_tool_gate(request, self._tool_call())
+        assert decision.allowed is False
+        assert "disabled" in (decision.error or "")
+        assert decision.error_code == "action_tools_disabled"
 
     def test_enabled_but_no_validator_refuses(self, monkeypatch):
         from src.api.routes.tools import _action_tool_gate
@@ -47,19 +68,19 @@ class TestActionToolGate:
         monkeypatch.setenv("AIOPS_ENABLE_ACTION_TOOLS", "true")
         request = MagicMock()
         request.app.state = MagicMock(spec=[])  # no validator attribute
-        error = _action_tool_gate(request, self._tool_call())
-        assert error is not None
-        assert "validator" in error.lower()
+        decision = _action_tool_gate(request, self._tool_call())
+        assert decision.allowed is False
+        assert "validator" in (decision.error or "").lower()
+        assert decision.error_code == "validator_unavailable"
 
     def test_enabled_validator_refuses_without_automatic_authorization(self, monkeypatch):
         from src.api.routes.tools import _action_tool_gate
 
         monkeypatch.setenv("AIOPS_ENABLE_ACTION_TOOLS", "true")
-        report = MagicMock()
-        report.can_proceed = True
-        report.requires_approval = True  # APPROVAL_REQUIRED band
-        report.authorization_level.value = "approval"
-        report.explanation = "needs human approval"
+        report = self._report(
+            can_proceed=True, requires_approval=True,  # APPROVAL_REQUIRED band
+            authorization="approval", explanation="needs human approval",
+        )
 
         validator = MagicMock()
         validator.validate.return_value = report
@@ -68,18 +89,21 @@ class TestActionToolGate:
         request.app.state = MagicMock(spec=["validator"])
         request.app.state.validator = validator
 
-        error = _action_tool_gate(request, self._tool_call())
-        assert error is not None
-        assert "refused" in error.lower()
+        decision = _action_tool_gate(request, self._tool_call())
+        assert decision.allowed is False
+        assert decision.error_code == "approval_required"
+        assert "approval" in (decision.error or "").lower()
+        # The verdict payload is attached so the FE can render it.
+        assert decision.verdict is not None
+        assert decision.verdict["requires_approval"] is True
+        assert decision.verdict["authorization_level"] == "approval"
         validator.validate.assert_called_once()
 
     def test_enabled_validator_allows_automatic(self, monkeypatch):
         from src.api.routes.tools import _action_tool_gate
 
         monkeypatch.setenv("AIOPS_ENABLE_ACTION_TOOLS", "true")
-        report = MagicMock()
-        report.can_proceed = True
-        report.requires_approval = False
+        report = self._report(can_proceed=True, requires_approval=False)
         validator = MagicMock()
         validator.validate.return_value = report
 
@@ -87,12 +111,17 @@ class TestActionToolGate:
         request.app.state = MagicMock(spec=["validator"])
         request.app.state.validator = validator
 
-        assert _action_tool_gate(request, self._tool_call()) is None
+        decision = _action_tool_gate(request, self._tool_call())
+        assert decision.allowed is True
+        assert decision.error_code is None
+        assert decision.verdict is not None
+        assert decision.verdict["can_proceed"] is True
 
     @pytest.mark.asyncio
     async def test_call_tool_endpoint_refuses_restart_by_default(self, monkeypatch):
         """End-to-end through the dispatcher: a restart call must come back
-        success=False with the disabled error and never reach subprocess."""
+        success=False with the structured disabled refusal and never reach
+        subprocess."""
         from src.api.routes.tools import call_tool
 
         monkeypatch.delenv("AIOPS_ENABLE_ACTION_TOOLS", raising=False)
@@ -102,12 +131,14 @@ class TestActionToolGate:
         response = await call_tool(request, self._tool_call("restart_service"))
         assert response.success is False
         assert "disabled" in (response.error or "")
+        assert response.error_code == "action_tools_disabled"
 
         response = await call_tool(request, self._tool_call(
             "scale_service", {"service_name": "nextcloud", "target_replicas": 2}
         ))
         assert response.success is False
         assert "disabled" in (response.error or "")
+        assert response.error_code == "action_tools_disabled"
 
 
 # ---------------------------------------------------------------------------
