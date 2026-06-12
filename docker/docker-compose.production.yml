@@ -139,6 +139,12 @@ services:
       - LOKI_URL=http://loki:3100
       - PROMETHEUS_URL=http://prometheus:9090
       - WS_TOKEN=${WS_TOKEN:-}
+      # In-app login (stdlib auth). Values live only in the VM's .env.production;
+      # AUTH_REQUIRED defaults off so a bare deploy keeps pre-auth behavior.
+      - AUTH_REQUIRED=${AUTH_REQUIRED:-false}
+      - AUTH_ADMIN_USER=${AUTH_ADMIN_USER:-}
+      - AUTH_ADMIN_PASSWORD=${AUTH_ADMIN_PASSWORD:-}
+      - AUTH_SECRET_KEY=${AUTH_SECRET_KEY:-}
       - ENVIRONMENT=production
       - DEBUG=false
       - LOG_LEVEL=INFO
