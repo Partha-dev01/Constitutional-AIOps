@@ -22,10 +22,10 @@ interface ChatMessageProps {
 }
 
 /**
- * Presentational chat bubble. Markup is the verbatim extraction of the
- * original Chat.tsx bubble: avatar + markdown body (carrying the `prose`
- * class) + timestamp + typewriter cursor. Assistant insight cards render
- * beneath the bubble when present and the message is not still typing.
+ * Presentational chat bubble: avatar + markdown body (carrying the `prose`
+ * class) + typewriter cursor, with the timestamp on a hover-revealed line
+ * below the bubble. Assistant insight cards render beneath the bubble when
+ * present and the message is not still typing.
  *
  * The `prose` wrapper here is the ONLY element carrying `prose` for assistant
  * bodies — the live e2e test reads `.prose`.last().innerText().
@@ -34,22 +34,29 @@ export function ChatMessage({ message, isTyping, displayedContent, insights }: C
   const isUser = message.role === 'user'
 
   return (
-    <div className={`flex gap-3 ${isUser ? 'flex-row-reverse' : ''}`}>
-      <div
-        className={`w-8 h-8 rounded-full flex items-center justify-center ${
-          isUser ? 'bg-primary text-primary-foreground' : 'bg-muted'
-        }`}
-      >
-        {isUser ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
-      </div>
-      <div className="max-w-[70%]">
+    <div className={`group flex gap-3 ${isUser ? 'flex-row-reverse' : ''}`}>
+      {isUser ? (
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm">
+          <User className="h-4 w-4" />
+        </div>
+      ) : (
+        /* Gradient-ring avatar: 1px gradient wrapper around a bg-card core. */
+        <div className="h-9 w-9 shrink-0 rounded-full bg-gradient-to-br from-primary/60 via-primary/25 to-transparent p-px shadow-sm">
+          <div className="flex h-full w-full items-center justify-center rounded-full bg-card">
+            <Bot className="h-4 w-4 text-primary" />
+          </div>
+        </div>
+      )}
+      <div className="max-w-[75%]">
         <div
-          className={`rounded-lg p-3 ${
-            isUser ? 'bg-primary text-primary-foreground' : 'bg-muted'
+          className={`rounded-2xl p-3 ${
+            isUser
+              ? 'rounded-br-md bg-gradient-to-br from-primary to-primary/85 text-primary-foreground shadow-md'
+              : 'rounded-tl-md border border-border/60 bg-card shadow-sm'
           }`}
         >
           <div
-            className={`text-sm prose prose-sm max-w-none ${
+            className={`text-sm prose prose-sm max-w-none prose-p:leading-relaxed prose-headings:font-semibold prose-code:before:content-none prose-code:after:content-none prose-pre:bg-background/80 prose-pre:border prose-pre:border-border/60 ${
               isUser ? 'prose-invert' : 'dark:prose-invert'
             }`}
           >
@@ -60,14 +67,16 @@ export function ChatMessage({ message, isTyping, displayedContent, insights }: C
               <span className="inline-block w-2 h-4 bg-current animate-pulse ml-0.5" />
             )}
           </div>
-          <p
-            className={`text-xs mt-1 ${
-              isUser ? 'text-primary-foreground/70' : 'text-muted-foreground'
-            }`}
-          >
-            {message.timestamp.toLocaleTimeString()}
-          </p>
         </div>
+
+        {/* Timestamp lives OUTSIDE the bubble; fades in on group hover. */}
+        <p
+          className={`mt-1 text-[11px] text-muted-foreground/70 opacity-0 transition-opacity group-hover:opacity-100 ${
+            isUser ? 'text-right' : ''
+          }`}
+        >
+          {message.timestamp.toLocaleTimeString()}
+        </p>
 
         {message.role === 'assistant' && !isTyping && insights && (
           <InsightCards insights={insights} />
