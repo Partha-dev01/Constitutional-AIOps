@@ -11,6 +11,7 @@ import { deriveToolSteps, enrichToolStepsWithResponse } from '../hooks/useToolSt
 import type { ToolStep } from '../hooks/useToolSteps'
 import { useConversationHistory } from '../hooks/useConversationHistory'
 import { selectPrompts, pushRecentPrompt, getRecentPrompts } from '../lib/suggestedPrompts'
+import { prefersReducedMotion } from '../lib/utils'
 
 const PLACEHOLDER = 'Ask about incidents, metrics, or request analysis...'
 
@@ -18,14 +19,6 @@ const WELCOME = "Hello! I'm the Constitutional AIOps assistant. I can help you w
 
 /** How long each derived tool step "runs" before completing (ms). */
 const STEP_DURATION_MS = 650
-
-function prefersReducedMotion(): boolean {
-  return (
-    typeof window !== 'undefined' &&
-    typeof window.matchMedia === 'function' &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  )
-}
 
 function welcomeMessage(): ChatMessageData {
   return { id: 'welcome', role: 'assistant', content: WELCOME, timestamp: new Date() }

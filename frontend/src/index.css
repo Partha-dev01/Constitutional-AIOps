@@ -98,6 +98,17 @@ body {
   }
 }
 
+/* Gentle vertical bob shared by the landing hero and the chat empty-state. */
+@keyframes float-slow {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
 .reveal {
   opacity: 0;
 }
@@ -106,10 +117,16 @@ body {
   animation: reveal-up 0.6s ease-out forwards;
 }
 
+.float-slow {
+  animation: float-slow 5s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .reveal,
-  .reveal-visible {
+  .reveal-visible,
+  .float-slow {
     opacity: 1;
+    transform: none;
     animation: none;
   }
 }
