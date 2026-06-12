@@ -24,7 +24,7 @@ import json
 import logging
 import re
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 from uuid import uuid4
 
 from src.memory.episode_store import Episode
@@ -89,7 +89,7 @@ _TITLE_FIELD_RE = re.compile(
 )
 
 
-def _humanize_title(raw: Optional[str], fallback: str = "Anomaly detected",
+def _humanize_title(raw: str | None, fallback: str = "Anomaly detected",
                     max_len: int = 100) -> str:
     """Turn raw agent output (often a JSON blob) into a clean human title.
 
@@ -107,7 +107,7 @@ def _humanize_title(raw: Optional[str], fallback: str = "Anomaly detected",
         s = s.split("</think>")[-1].strip()
     s = s.replace("```json", "```")
 
-    candidate: Optional[str] = None
+    candidate: str | None = None
     if "{" in s:
         start, end = s.find("{"), s.rfind("}")
         if start != -1 and end > start:
@@ -161,7 +161,7 @@ _NON_EVENT_MARKERS = (
 )
 
 
-def _is_non_event(*texts: Optional[str]) -> bool:
+def _is_non_event(*texts: str | None) -> bool:
     """True when the annotation/analysis says nothing actually happened."""
     for text in texts:
         if not text:
@@ -172,7 +172,7 @@ def _is_non_event(*texts: Optional[str]) -> bool:
     return False
 
 
-def _select_affected_services(candidates: list[str], *texts: Optional[str]) -> list[str]:
+def _select_affected_services(candidates: list[str], *texts: str | None) -> list[str]:
     """Keep only the genuinely affected services for an episode.
 
     A service is genuinely affected when the analysis text actually names it.
@@ -243,7 +243,7 @@ class BackgroundTelemetryProcessor:
         self.processing_interval = processing_interval
 
         self._running = False
-        self._task: Optional[asyncio.Task] = None
+        self._task: asyncio.Task | None = None
 
         # Statistics
         self.stats = {
