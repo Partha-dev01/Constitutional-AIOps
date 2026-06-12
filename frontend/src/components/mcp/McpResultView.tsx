@@ -1,5 +1,7 @@
+import { AlertCircle, CheckCircle2, Lock, ShieldAlert, ShieldCheck, XCircle } from 'lucide-react'
 import { JsonView } from '../JsonView'
-import type { McpToolCallResult } from './types'
+import type { ConstitutionalVerdict, McpToolCallResult } from './types'
+import { ACTION_TOOLS, getVerdict } from './types'
 
 interface McpResultViewProps {
   toolName: string
@@ -317,16 +319,192 @@ function AnomalyView({ data }: { data: Record<string, unknown> }) {
   )
 }
 
+// ---------------------------------------------------------------------------
+// Constitutional verdict rendering (action tools)
+// ---------------------------------------------------------------------------
+
+// Tier pass/fail row inside the verdict block.
+function TierRow({ label, passed }: { label: string; passed: boolean | undefined }) {
+  const ok = passed === true
+  return (
+    <div className="flex items-center gap-2 text-xs">
+      {ok
+        ? <CheckCircle2 className="h-3.5 w-3.5 text-green-500 shrink-0" />
+        : <XCircle className="h-3.5 w-3.5 text-red-500 shrink-0" />}
+      <span className={ok ? 'text-muted-foreground' : 'text-red-500'}>{label}</span>
+    </div>
+  )
+}
+
+// Prominent constitutional verdict panel — rendered for refusals AND successes.
+function VerdictBlock({ verdict }: { verdict: ConstitutionalVerdict }) {
+  const violations = verdict.violations ?? []
+  const warnings = verdict.warnings ?? []
+  return (
+    <div className="rounded-lg border border-border p-3 space-y-2.5">
+      <div className="flex items-center justify-between">
+        <h5 className="text-xs font-semibold flex items-center gap-1.5">
+          <ShieldCheck className="h-3.5 w-3.5 text-orange-500" />
+          Constitutional Verdict
+        </h5>
+        <div className="flex items-center gap-1.5">
+          {verdict.authorization_level && (
+            <span className={`px-2 py-0.5 rounded text-xs ${
+              verdict.authorization_level === 'automatic' ? 'bg-green-500/10 text-green-500' :
+              verdict.authorization_level === 'approval' ? 'bg-amber-500/10 text-amber-500' :
+              'bg-red-500/10 text-red-500'
+            }`}>
+              {verdict.authorization_level}
+            </span>
+          )}
+          {typeof verdict.confidence === 'number' && (
+            <span className="px-2 py-0.5 rounded text-xs bg-muted text-muted-foreground">
+              conf {(verdict.confidence * 100).toFixed(0)}%
+            </span>
+          )}
+        </div>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
+        <TierRow label="Tier 1 · Safety" passed={verdict.principles?.tier1_safety_passed} />
+        <TierRow label="Tier 2 · Operational" passed={verdict.principles?.tier2_operational_passed} />
+        <TierRow label="Tier 3 · Learning" passed={verdict.principles?.tier3_learning_passed} />
+      </div>
+      {violations.length > 0 && (
+        <div className="space-y-1">
+          {violations.map((v, i) => (
+            <div key={i} className="rounded bg-red-500/5 border border-red-500/15 px-2.5 py-1.5 text-xs">
+              <span className="font-mono font-medium text-red-500">
+                {v.principle_id ?? 'principle'}
+              </span>
+              {v.principle_name && <span className="text-red-500"> {v.principle_name}</span>}
+              {v.reason && <span className="text-muted-foreground"> — {v.reason}</span>}
+            </div>
+          ))}
+        </div>
+      )}
+      {warnings.length > 0 && (
+        <div className="space-y-1">
+          {warnings.map((w, i) => (
+            <p key={i} className="text-xs text-yellow-600">{w}</p>
+          ))}
+        </div>
+      )}
+      {verdict.explanation && (
+        <p className="text-xs text-muted-foreground italic">{verdict.explanation}</p>
+      )}
+    </div>
+  )
+}
+
+// restart_service / scale_service success → status summary card.
+function ActionResultView({ data }: { data: Record<string, unknown> }) {
+  const isScale = asString(data.action).startsWith('scale')
+  const clamped = data.clamped === true
+  return (
+    <div className="rounded-lg border border-border p-3 space-y-2 text-sm">
+      <div className="flex items-center justify-between">
+        <span className="font-medium flex items-center gap-1.5">
+          <CheckCircle2 className="h-4 w-4 text-green-500" />
+          {isScale ? 'Service scaled' : 'Container restarted'}
+        </span>
+        <span className="px-2 py-0.5 rounded text-xs bg-green-500/10 text-green-500">
+          {asString(data.status) || 'completed'}
+        </span>
+      </div>
+      <div className="flex flex-wrap gap-1.5 text-xs">
+        <span className="px-2 py-0.5 rounded bg-muted font-mono">{asString(data.service)}</span>
+        {asString(data.container) && asString(data.container) !== asString(data.service) && (
+          <span className="px-2 py-0.5 rounded bg-muted font-mono">container: {asString(data.container)}</span>
+        )}
+        {isScale && typeof data.target_replicas === 'number' && (
+          <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-500">
+            replicas → {data.target_replicas}
+          </span>
+        )}
+        {clamped && typeof data.requested_replicas === 'number' && (
+          <span className="px-2 py-0.5 rounded bg-yellow-500/10 text-yellow-600">
+            clamped from {data.requested_replicas}
+          </span>
+        )}
+      </div>
+      {asString(data.reason) && (
+        <p className="text-xs text-muted-foreground">Reason: {asString(data.reason)}</p>
+      )}
+    </div>
+  )
+}
+
 export function McpResultView({ toolName, result }: McpResultViewProps) {
+  const verdict = getVerdict(result)
+
   if (!result.success) {
+    // approval_required — distinct amber state: the validator allowed the
+    // action only with human approval, so nothing was executed.
+    if (result.error_code === 'approval_required') {
+      return (
+        <div className="space-y-2">
+          <div className="p-3 bg-amber-500/10 border border-amber-500/25 rounded-lg">
+            <p className="text-sm font-medium text-amber-600 flex items-center gap-1.5">
+              <ShieldAlert className="h-4 w-4 shrink-0" />
+              Human approval required — not executed
+            </p>
+            <p className="text-xs text-amber-600/90 mt-1">
+              {result.error || 'The constitutional validator requires a human to approve this action.'}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              The approval execution workflow is not wired to this panel; review the verdict below.
+            </p>
+          </div>
+          {verdict && <VerdictBlock verdict={verdict} />}
+        </div>
+      )
+    }
+
+    // action_tools_disabled — neutral gated-off state, not an execution error.
+    if (result.error_code === 'action_tools_disabled') {
+      return (
+        <div className="p-3 bg-muted/50 border border-border rounded-lg">
+          <p className="text-sm font-medium flex items-center gap-1.5">
+            <Lock className="h-4 w-4 text-muted-foreground shrink-0" />
+            Action tools disabled
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            {result.error || 'Set AIOPS_ENABLE_ACTION_TOOLS=true on the backend to enable.'}
+          </p>
+        </div>
+      )
+    }
+
+    // All other failures (validation_blocked, container_not_whitelisted,
+    // validator_unavailable, execution_failed, ...) — red, with the verdict
+    // attached when validation actually ran.
     return (
-      <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-sm text-red-600">
-        {result.error || 'Tool execution failed'}
+      <div className="space-y-2">
+        <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+          <p className="text-sm text-red-600 flex items-start gap-1.5">
+            <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+            <span>{result.error || 'Tool execution failed'}</span>
+          </p>
+          {result.error_code && (
+            <p className="text-xs text-red-500/80 font-mono mt-1">{result.error_code}</p>
+          )}
+        </div>
+        {verdict && <VerdictBlock verdict={verdict} />}
       </div>
     )
   }
 
   const data = result.data
+
+  // Action tools: status card + the verdict that authorized the execution.
+  if (ACTION_TOOLS.has(toolName) && isObject(data)) {
+    return (
+      <div className="space-y-2">
+        <ActionResultView data={data} />
+        {verdict && <VerdictBlock verdict={verdict} />}
+      </div>
+    )
+  }
 
   // Shape-based formatters for the known read-only tools.
   if (isObject(data)) {
