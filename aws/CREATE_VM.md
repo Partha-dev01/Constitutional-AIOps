@@ -108,7 +108,7 @@ Create via console (Budgets → Create budget → Cost budget):
 - Period: Daily
 - Budget amount: $5
 - Filter: Tag `Project=aiops`
-- Notification: 80% actual → email to [redacted]
+- Notification: 80% actual → email to the configured billing-alert address
 - Action: at 100% threshold, stop EC2 instances tagged `BudgetControlAction=Stop`
 
 ## 7. CloudWatch idle-stop alarm
