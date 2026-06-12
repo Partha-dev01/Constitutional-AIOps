@@ -8,45 +8,96 @@ const TEAM = [
   '[redacted]',
 ]
 
+const SECTION_LINKS = [
+  { href: '#features', label: 'Features' },
+  { href: '#architecture', label: 'Architecture' },
+  { href: '#live', label: 'Live demo' },
+  { href: '#team', label: 'Team' },
+]
+
 export function TeamFooter() {
   return (
-    <footer className="py-20 sm:py-28">
-      <div className="mx-auto max-w-4xl px-6 text-center">
-        <div className="mb-6 flex items-center justify-center gap-2">
-          <Shield className="h-7 w-7 text-primary" />
-          <span className="text-lg font-bold">Constitutional AIOps</span>
-        </div>
+    <footer id="team" className="relative pb-12 pt-20 sm:pt-24">
+      {/* Gradient hairline along the footer top */}
+      <div
+        className="absolute inset-x-0 top-0 h-px"
+        style={{
+          background:
+            'linear-gradient(90deg, transparent, hsl(var(--primary) / 0.6), hsl(262 83% 58% / 0.5), transparent)',
+        }}
+        aria-hidden="true"
+      />
 
-        <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-1.5 text-xs font-medium text-muted-foreground">
-          <GraduationCap className="h-3.5 w-3.5 text-primary" />
-          B.Tech Final Year Project
-        </div>
-
-        <div className="mx-auto mb-10 grid max-w-2xl gap-2">
-          <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-sm text-foreground">
-            {TEAM.map((member) => (
-              <span key={member}>{member}</span>
-            ))}
+      <div className="mx-auto max-w-6xl px-6">
+        <div className="grid gap-12 md:grid-cols-3">
+          {/* Brand */}
+          <div>
+            <div className="mb-4 flex items-center gap-2">
+              <Shield className="h-7 w-7 text-primary" aria-hidden="true" />
+              <span className="text-lg font-bold">Constitutional AIOps</span>
+            </div>
+            <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
+              Autonomous infrastructure operations with a constitution it
+              cannot break — dual LLM agents, graph memory, and graduated
+              human trust.
+            </p>
           </div>
-          <p className="text-sm text-muted-foreground">
-            [redacted]
-          </p>
-          <p className="text-sm text-muted-foreground">
-            Advisor: [redacted]
-          </p>
+
+          {/* Section links */}
+          <div>
+            <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+              Explore
+            </h3>
+            <ul className="space-y-2">
+              {SECTION_LINKS.map((link) => (
+                <li key={link.href}>
+                  <a
+                    href={link.href}
+                    className="rounded-md text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    {link.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Team */}
+          <div>
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-1.5 text-xs font-medium text-muted-foreground">
+              <GraduationCap className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
+              B.Tech Final Year Project
+            </div>
+            <ul className="space-y-1 text-sm text-foreground">
+              {TEAM.map((member) => (
+                <li key={member}>{member}</li>
+              ))}
+            </ul>
+            <p className="mt-3 text-sm text-muted-foreground">
+              [redacted]
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Advisor: [redacted]
+            </p>
+          </div>
         </div>
 
-        <Link
-          to="/"
-          className="group inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5"
-        >
-          Open the Dashboard
-          <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-        </Link>
+        <div className="mt-14 flex flex-col items-center gap-8 border-t border-border pt-10 sm:flex-row sm:justify-between">
+          <Link
+            to="/login?next=/"
+            className="group inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          >
+            Open the Dashboard
+            <ArrowRight
+              className="h-4 w-4 transition-transform group-hover:translate-x-0.5"
+              aria-hidden="true"
+            />
+          </Link>
 
-        <p className="mt-10 text-xs text-muted-foreground">
-          Constitutional AIOps · v0.7.0
-        </p>
+          <p className="text-xs text-muted-foreground">
+            Constitutional AIOps · v0.7.0
+          </p>
+        </div>
       </div>
     </footer>
   )
