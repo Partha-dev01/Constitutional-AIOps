@@ -11,15 +11,21 @@ import logging
 import os
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.config import config
 from src.utils.logging import setup_logging
 from src.version import __version__
 
+# Import auth layer (stdlib-only: scrypt + HMAC session tokens + SQLite store)
+from src.auth.deps import auth_required, require_user
+from src.auth.store import count_users, ensure_initial_admin, init_db as init_auth_db
+from src.auth.tokens import COOKIE_NAME as SESSION_COOKIE_NAME, verify_session
+
 # Import routers
 from src.api.routes.health import router as health_router, set_startup_time
+from src.api.routes.auth import router as auth_router
 from src.api.routes.chat import router as chat_router
 from src.api.routes.incidents import router as incidents_router
 from src.api.routes.actions import router as actions_router
@@ -90,6 +96,21 @@ async def lifespan(app: FastAPI):
             "WS_TOKEN must be set in production: without it the /ws endpoint "
             "is reachable unauthenticated. Set it in .env.production."
         )
+
+    # In-app auth: initialise the SQLite user store and bootstrap the first
+    # admin from AUTH_ADMIN_USER/AUTH_ADMIN_PASSWORD (only on an empty table).
+    init_auth_db()
+    ensure_initial_admin()
+    # Guard-rail: enforcing auth with zero users would lock EVERYONE out of
+    # the API with no way to log in — refuse to start instead.
+    if auth_required() and count_users() == 0:
+        raise RuntimeError(
+            "AUTH_REQUIRED=true but the user store is empty and no valid "
+            "AUTH_ADMIN_USER/AUTH_ADMIN_PASSWORD bootstrap pair is set. "
+            "Set both env vars (password: min 10 chars, not the username) "
+            "or pre-create a user before enabling enforcement."
+        )
+    logger.info(f"In-app auth initialised (enforcement={'ON' if auth_required() else 'off'})")
 
     # Set startup time for uptime tracking
     set_startup_time()
@@ -312,21 +333,27 @@ async def root():
     }
 
 
-# Include routers with /api/v1 prefix
+# Include routers with /api/v1 prefix.
+# PUBLIC: health, the root endpoint and the auth router itself (its admin
+# endpoints are guarded internally via require_admin; /login and /config must
+# stay reachable pre-login). Everything else requires a user — which is a
+# no-op synthetic admin until AUTH_REQUIRED=true flips enforcement on.
+_AUTHED = [Depends(require_user)]
 app.include_router(health_router, prefix="/api/v1", tags=["health"])
-app.include_router(chat_router, prefix="/api/v1/chat", tags=["chat"])
-app.include_router(incidents_router, prefix="/api/v1/incidents", tags=["incidents"])
-app.include_router(actions_router, prefix="/api/v1/actions", tags=["actions"])
-app.include_router(tools_router, prefix="/api/v1/tools", tags=["tools"])
-app.include_router(agents_router, prefix="/api/v1/agents", tags=["agents"])
-app.include_router(telemetry_router, prefix="/api/v1/telemetry", tags=["telemetry"])
-app.include_router(graph_router, prefix="/api/v1/graph", tags=["graph"])
-app.include_router(prompts_router, prefix="/api/v1/prompts", tags=["prompts"])
-app.include_router(infrastructure_router, prefix="/api/v1/infrastructure", tags=["infrastructure"])
-app.include_router(demo_router, prefix="/api/v1/demo", tags=["demo"])
-app.include_router(metrics_router, prefix="/api/v1/metrics", tags=["metrics"])
-app.include_router(benchmark_router, prefix="/api/v1/benchmark", tags=["benchmark"])
-app.include_router(settings_router, prefix="/api/v1/settings", tags=["settings"])
+app.include_router(auth_router, prefix="/api/v1/auth", tags=["auth"])
+app.include_router(chat_router, prefix="/api/v1/chat", tags=["chat"], dependencies=_AUTHED)
+app.include_router(incidents_router, prefix="/api/v1/incidents", tags=["incidents"], dependencies=_AUTHED)
+app.include_router(actions_router, prefix="/api/v1/actions", tags=["actions"], dependencies=_AUTHED)
+app.include_router(tools_router, prefix="/api/v1/tools", tags=["tools"], dependencies=_AUTHED)
+app.include_router(agents_router, prefix="/api/v1/agents", tags=["agents"], dependencies=_AUTHED)
+app.include_router(telemetry_router, prefix="/api/v1/telemetry", tags=["telemetry"], dependencies=_AUTHED)
+app.include_router(graph_router, prefix="/api/v1/graph", tags=["graph"], dependencies=_AUTHED)
+app.include_router(prompts_router, prefix="/api/v1/prompts", tags=["prompts"], dependencies=_AUTHED)
+app.include_router(infrastructure_router, prefix="/api/v1/infrastructure", tags=["infrastructure"], dependencies=_AUTHED)
+app.include_router(demo_router, prefix="/api/v1/demo", tags=["demo"], dependencies=_AUTHED)
+app.include_router(metrics_router, prefix="/api/v1/metrics", tags=["metrics"], dependencies=_AUTHED)
+app.include_router(benchmark_router, prefix="/api/v1/benchmark", tags=["benchmark"], dependencies=_AUTHED)
+app.include_router(settings_router, prefix="/api/v1/settings", tags=["settings"], dependencies=_AUTHED)
 
 
 # WebSocket endpoint for real-time updates
@@ -356,11 +383,16 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str = None, token:
         Send: {"type": "subscribe", "payload": {"room": "incident:123"}}
         To subscribe to specific incident updates
     """
-    # App-layer guard: Caddy can't basic_auth the WS upgrade, so when WS_TOKEN is
-    # set the SPA must present the token it fetched from /api/v1/ws/token. An empty
-    # WS_TOKEN (local/dev) allows unauthenticated connections as before.
+    # App-layer guard: Caddy can't basic_auth the WS upgrade. A connection is
+    # accepted when EITHER (a) the browser presents a valid in-app session
+    # cookie (set by /api/v1/auth/login — sent automatically on same-origin WS
+    # upgrades), OR (b) the legacy WS_TOKEN query token matches (kept as the
+    # fallback for token-fetching clients). An empty WS_TOKEN (local/dev)
+    # still allows unauthenticated connections as before.
+    session_cookie = websocket.cookies.get(SESSION_COOKIE_NAME)
+    session_ok = bool(session_cookie) and verify_session(session_cookie) is not None
     expected = os.getenv("WS_TOKEN", "")
-    if expected and token != expected:
+    if not session_ok and expected and token != expected:
         await websocket.close(code=1008)
         return
 
@@ -380,7 +412,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str = None, token:
 
 
 # WebSocket connections info endpoint
-@app.get("/api/v1/ws/connections", tags=["websocket"])
+@app.get("/api/v1/ws/connections", tags=["websocket"], dependencies=[Depends(require_user)])
 async def get_websocket_connections():
     """Get information about active WebSocket connections."""
     return {
@@ -389,10 +421,11 @@ async def get_websocket_connections():
     }
 
 
-@app.get("/api/v1/ws/token", tags=["websocket"])
+@app.get("/api/v1/ws/token", tags=["websocket"], dependencies=[Depends(require_user)])
 async def get_ws_token():
     """Return the app-layer WebSocket token (empty string if unset). This route
-    is gated by Caddy basic_auth like all /api/* paths."""
+    is gated by Caddy basic_auth like all /api/* paths, plus the in-app session
+    once AUTH_REQUIRED is on."""
     import os
     return {"token": os.getenv("WS_TOKEN", "")}
 
