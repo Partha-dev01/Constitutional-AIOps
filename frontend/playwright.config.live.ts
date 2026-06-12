@@ -30,6 +30,10 @@ if (!USER || !PASS) {
 export default defineConfig({
   testDir: './e2e/live',
   outputDir: './test-results/live',
+  // Logs into the in-app auth (POST /api/v1/auth/login) once and saves the
+  // session cookie to the storageState below. Set E2E_AUTH_ENFORCED=false to
+  // skip (an empty storage state is written instead).
+  globalSetup: './e2e/live/global-setup.ts',
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
@@ -42,6 +46,9 @@ export default defineConfig({
   ],
   use: {
     baseURL: BASE_URL,
+    // In-app session cookie captured by e2e/live/global-setup.ts. Tests that
+    // need an anonymous session override this with a fresh storageState.
+    storageState: 'test-results/live/.auth.json',
     httpCredentials: {
       username: USER,
       password: PASS,
