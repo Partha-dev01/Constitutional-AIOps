@@ -30,6 +30,16 @@ const ctx = await browser.newContext({
 })
 const page = await ctx.newPage()
 
+// In-app login (AUTH_REQUIRED deployments): the request call shares the
+// context cookie jar, so the session cookie applies to every page below.
+// Falls back to the Caddy creds; harmless 401 when enforcement is off.
+const appUser = process.env.E2E_APP_USER || user
+const appPass = process.env.E2E_APP_PASS || pass
+const login = await ctx.request.post('/api/v1/auth/login', {
+  data: { username: appUser, password: appPass },
+})
+console.log('app login:', login.status())
+
 async function grab(name, p, settle) {
   await page.goto(p, { waitUntil: 'domcontentloaded', timeout: 45000 })
   await page.waitForTimeout(settle)
