@@ -43,10 +43,15 @@ export function ToolCallTimeline({ steps, reducedMotionFallbackText }: ToolCallT
 
   return (
     <div className="flex gap-3" aria-live="polite">
-      <div className="w-8 h-8 rounded-full flex items-center justify-center bg-primary/10 text-primary shrink-0">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary shadow-sm">
         <Sparkles className="h-4 w-4" />
       </div>
-      <div className="flex-1 rounded-lg border border-border bg-muted/30 p-3 min-w-[220px] max-w-[70%]">
+      <div
+        className={cn(
+          'min-w-[220px] max-w-[70%] flex-1 rounded-xl border bg-gradient-to-br from-muted/40 via-muted/20 to-transparent p-3 backdrop-blur-[2px]',
+          anyRunning ? 'timeline-active border-primary/30' : 'border-border/50',
+        )}
+      >
         <div className="flex items-center gap-2 text-sm font-medium">
           {anyError ? (
             <XCircle className="h-4 w-4 text-red-500" />
@@ -54,7 +59,7 @@ export function ToolCallTimeline({ steps, reducedMotionFallbackText }: ToolCallT
             <Sparkles className="h-4 w-4 text-primary" />
           )}
           {anyRunning ? (
-            <span>Thinking...</span>
+            <span className="thinking-shimmer">Thinking...</span>
           ) : anyError ? (
             <span className="text-red-600 dark:text-red-400">Request failed</span>
           ) : (
@@ -90,7 +95,11 @@ export function ToolCallTimeline({ steps, reducedMotionFallbackText }: ToolCallT
                 {/* Node marker. */}
                 <span className="relative z-10 mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center">
                   {step.status === 'done' ? (
-                    <CheckCircle2 className="h-5 w-5 text-green-500 tool-check" />
+                    <span className="relative flex h-5 w-5 items-center justify-center">
+                      {/* One-shot expanding ring behind the check. */}
+                      <span aria-hidden className="check-ripple" />
+                      <CheckCircle2 className="h-5 w-5 text-green-500 tool-check" />
+                    </span>
                   ) : step.status === 'error' ? (
                     <XCircle className="h-5 w-5 text-red-500" />
                   ) : step.status === 'running' ? (
@@ -156,7 +165,7 @@ export function ToolCallTimeline({ steps, reducedMotionFallbackText }: ToolCallT
                   {/* Collapsible detail region. */}
                   {isExpanded && (
                     <div
-                      className="mt-1.5 rounded-md border border-border bg-background/70 p-2 text-xs space-y-1.5"
+                      className="mt-1.5 rounded-lg border border-border/50 bg-background/60 p-2 text-xs space-y-1.5 backdrop-blur"
                       data-testid={`step-detail-${step.id}`}
                     >
                       {/* Static fields — always available immediately. */}
