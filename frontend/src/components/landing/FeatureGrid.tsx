@@ -1,4 +1,4 @@
-import { Cpu, ShieldCheck, Network, Activity } from 'lucide-react'
+import { Cpu, ShieldCheck, Network, Activity, Satellite, UserCheck } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useReveal } from '../../hooks/useReveal'
 
@@ -17,7 +17,7 @@ const FEATURES: Feature[] = [
   {
     icon: ShieldCheck,
     title: 'Constitutional AI Safety',
-    copy: '12 principles across 3 tiers gate every action. Graduated authorization: automatic above 0.90 confidence, human approval between 0.70 and 0.90, and alert-only below 0.70.',
+    copy: '12 principles across 3 tiers gate every action. Each proposed remediation is validated against the constitution before it is allowed anywhere near infrastructure.',
   },
   {
     icon: Network,
@@ -29,17 +29,27 @@ const FEATURES: Feature[] = [
     title: 'Unified LGTM Observability',
     copy: 'Loki, Grafana, Tempo, and Prometheus are correlated through OpenTelemetry — logs, metrics, and traces stitched into a single operational picture.',
   },
+  {
+    icon: Satellite,
+    title: 'Remote Edge Monitoring',
+    copy: 'Grafana Alloy edge agents stream logs and metrics from any Docker host into the platform, so remote fleets get the same autonomous coverage as the core stack.',
+  },
+  {
+    icon: UserCheck,
+    title: 'Human-in-the-Loop Authorization',
+    copy: 'Graduated trust keeps people in command: actions above 0.90 confidence run automatically, 0.70–0.90 requires human approval, and below 0.70 is alert-only.',
+  },
 ]
 
 export function FeatureGrid() {
   const { ref, visible } = useReveal<HTMLDivElement>()
 
   return (
-    <section className="border-b border-border py-20 sm:py-28">
+    <section id="features" className="border-b border-border py-20 sm:py-28">
       <div className="mx-auto max-w-6xl px-6">
         <div className="mx-auto mb-14 max-w-2xl text-center">
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-            Four pillars, one autonomous operator
+            Six pillars, one autonomous operator
           </h2>
           <p className="mt-4 text-muted-foreground">
             Each subsystem is designed to be inspectable, safe, and grounded in
@@ -47,22 +57,26 @@ export function FeatureGrid() {
           </p>
         </div>
 
-        <div ref={ref} className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <div ref={ref} className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {FEATURES.map((feature, i) => {
             const Icon = feature.icon
             return (
               <div
                 key={feature.title}
-                className={`reveal${visible ? ' reveal-visible' : ''} group rounded-lg border border-border bg-card p-6 transition-all hover:-translate-y-1 hover:border-primary/50`}
+                className={`reveal${visible ? ' reveal-visible' : ''}`}
                 style={{ animationDelay: `${i * 90}ms` }}
               >
-                <div className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary/20">
-                  <Icon className="h-6 w-6" />
+                {/* Reveal lives on the wrapper: reveal-up's fill-forwards
+                    transform would otherwise override the hover lift. */}
+                <div className="glass-card group h-full p-6">
+                  <div className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary/20">
+                    <Icon className="h-6 w-6" aria-hidden="true" />
+                  </div>
+                  <h3 className="mb-2 text-lg font-semibold">{feature.title}</h3>
+                  <p className="text-sm leading-relaxed text-muted-foreground">
+                    {feature.copy}
+                  </p>
                 </div>
-                <h3 className="mb-2 text-lg font-semibold">{feature.title}</h3>
-                <p className="text-sm leading-relaxed text-muted-foreground">
-                  {feature.copy}
-                </p>
               </div>
             )
           })}
