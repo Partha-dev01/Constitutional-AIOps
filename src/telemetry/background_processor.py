@@ -20,7 +20,9 @@ Architecture (Research_V7.tex Section 4.1):
 """
 
 import asyncio
+import json
 import logging
+import re
 from datetime import datetime
 from typing import Any, Optional
 from uuid import uuid4
@@ -33,6 +35,161 @@ logger = logging.getLogger(__name__)
 PROCESSING_INTERVAL_SECONDS = 30  # How often to process telemetry
 TELEMETRY_WINDOW_MINUTES = 5  # How far back to look for telemetry
 REASONING_INTERVAL_CYCLES = 10  # Run reasoning every N fast cycles (10 * 30s = 5 min)
+
+# Services kept when an analysis names NO service explicitly: linking every
+# service that merely emitted a log line in the window is what produced the
+# 560-edge graph hairball, so unattributed episodes keep at most this many.
+MAX_UNATTRIBUTED_SERVICES = 2
+
+# ---------------------------------------------------------------------------
+# Episode-quality helpers (session-14 W2)
+# ---------------------------------------------------------------------------
+
+# Canonical severity vocabulary written to episodes. Live data previously
+# carried raw str(int) blobs like "10" because the LangGraph pipeline scores
+# severity 0-10 and the old write path stringified it directly.
+_SEVERITY_STR_MAP = {
+    "info": "info", "low": "info", "none": "info", "debug": "info",
+    "warning": "warning", "warn": "warning", "medium": "warning",
+    "error": "error", "high": "error", "err": "error",
+    "critical": "critical", "crit": "critical", "fatal": "critical",
+}
+
+
+def normalize_severity(value: Any) -> str:
+    """Normalize any severity representation to {info,warning,error,critical}.
+
+    Handles the 0-10 numeric scale from the LangGraph annotate node
+    (orchestration/graph.py maps info=2 low=4 medium/warning=6 high=8
+    critical=10), numeric strings, and common string aliases.
+    """
+    if isinstance(value, bool):
+        return "info"
+    if isinstance(value, (int, float)):
+        score = float(value)
+    else:
+        s = str(value or "").strip().lower()
+        if s in _SEVERITY_STR_MAP:
+            return _SEVERITY_STR_MAP[s]
+        try:
+            score = float(s)
+        except (TypeError, ValueError):
+            return "info"
+    if score >= 9:
+        return "critical"
+    if score >= 7:
+        return "error"
+    if score >= 4:
+        return "warning"
+    return "info"
+
+
+_TITLE_FIELD_RE = re.compile(
+    r'"(?:root_cause|summary|title)"\s*:\s*"([^"]+)"'
+)
+
+
+def _humanize_title(raw: Optional[str], fallback: str = "Anomaly detected",
+                    max_len: int = 100) -> str:
+    """Turn raw agent output (often a JSON blob) into a clean human title.
+
+    RCA/annotation content is frequently a JSON document like
+    ``{"root_cause": "...", "causal_chain": [...]}`` — episode titles built by
+    naive slicing leaked truncated JSON into the UI. Prefer the
+    root_cause/summary/title field; otherwise use the first plain-text line.
+    """
+    s = (raw or "").strip()
+    if not s:
+        return fallback
+
+    # Drop chain-of-thought and code fences before extracting.
+    if "</think>" in s:
+        s = s.split("</think>")[-1].strip()
+    s = s.replace("```json", "```")
+
+    candidate: Optional[str] = None
+    if "{" in s:
+        start, end = s.find("{"), s.rfind("}")
+        if start != -1 and end > start:
+            try:
+                parsed = json.loads(s[start:end + 1])
+                if isinstance(parsed, dict):
+                    for key in ("root_cause", "summary", "title"):
+                        value = parsed.get(key)
+                        if isinstance(value, str) and value.strip():
+                            candidate = value.strip()
+                            break
+            except (json.JSONDecodeError, ValueError):
+                pass
+        if candidate is None:
+            # Truncated/non-strict JSON: regex out the human field.
+            match = _TITLE_FIELD_RE.search(s)
+            if match:
+                candidate = match.group(1)
+
+    if candidate is None:
+        first_line = next((ln.strip() for ln in s.splitlines() if ln.strip()), "")
+        candidate = first_line
+        if candidate.startswith("{") or not candidate:
+            return fallback
+
+    # Strip markdown noise + dangling punctuation from truncation.
+    candidate = candidate.replace("**", "").replace("`", "")
+    candidate = re.sub(r"^\s*#{1,6}\s*", "", candidate)
+    candidate = re.sub(r"\s+", " ", candidate).strip().rstrip(" ([{,:;-")
+    if not candidate:
+        return fallback
+    if len(candidate) > max_len:
+        candidate = candidate[:max_len].rsplit(" ", 1)[0].rstrip() + "…"
+    return candidate
+
+
+# Marker phrases for annotations/analyses that describe NOTHING happening.
+# Storing these as episodes polluted the graph with non-event noise.
+_NON_EVENT_MARKERS = (
+    "no significant anomal",
+    "no anomalies detected",
+    "no anomaly detected",
+    "no anomalies were detected",
+    "no significant issues",
+    "no issues detected",
+    "no concerning patterns",
+    "no recurring root causes",
+    "system healthy",
+    "system is healthy",
+    "operating normally",
+)
+
+
+def _is_non_event(*texts: Optional[str]) -> bool:
+    """True when the annotation/analysis says nothing actually happened."""
+    for text in texts:
+        if not text:
+            continue
+        lowered = str(text).lower()
+        if any(marker in lowered for marker in _NON_EVENT_MARKERS):
+            return True
+    return False
+
+
+def _select_affected_services(candidates: list[str], *texts: Optional[str]) -> list[str]:
+    """Keep only the genuinely affected services for an episode.
+
+    A service is genuinely affected when the analysis text actually names it.
+    When the text names none, fall back to the telemetry-derived candidates
+    only if the list is small (<= MAX_UNATTRIBUTED_SERVICES) — otherwise the
+    episode is system-wide noise and gets no INVOLVES links at all.
+    """
+    deduped: list[str] = []
+    for candidate in candidates:
+        if candidate and candidate not in deduped:
+            deduped.append(candidate)
+
+    combined = " ".join(str(t).lower() for t in texts if t)
+    mentioned = [c for c in deduped if c.lower() in combined]
+    if mentioned:
+        return mentioned
+    return sorted(deduped) if len(deduped) <= MAX_UNATTRIBUTED_SERVICES else []
 
 
 class BackgroundTelemetryProcessor:
@@ -266,22 +423,42 @@ Identify:
 
 Provide a brief summary of system health and any concerning patterns."""
 
-            # Use reasoning agent for trend analysis
-            trend_result = await self.reasoning_agent.analyze_incident({
-                "service": "system-wide",
-                "description": "Routine trend analysis",
-                "severity": "info",
-                "context": analysis_prompt,
-            })
+            # Use reasoning agent for trend analysis. NOTE: this previously
+            # called the nonexistent ``analyze_incident`` and silently raised
+            # AttributeError every cycle — the trend path never produced an
+            # episode. analyze_rca() is the real API (thinking disabled: this
+            # is a lightweight routine sweep, not a full incident RCA).
+            trend_result = await self.reasoning_agent.analyze_rca(
+                incident_data={
+                    "service": "system-wide",
+                    "description": "Routine trend analysis",
+                    "severity": "info",
+                    "context": analysis_prompt,
+                },
+                enable_thinking=False,
+            )
 
             logger.info(f"Routine reasoning complete: {trend_result.content[:200] if trend_result.content else 'No insights'}")
 
             # Store as insight episode if significant patterns found
             if trend_result.content and len(trend_result.content) > 50:
+                # W2: a "system healthy / no concerning patterns" sweep is a
+                # NON-EVENT — do not store it as an episode.
+                if _is_non_event(trend_result.content[:400]):
+                    logger.info("Routine reasoning found no concerning patterns - not storing")
+                    return
+
+                # W2: parse a clean human title out of the (often JSON) content.
+                title = (
+                    "Trend Analysis: "
+                    + _humanize_title(trend_result.content,
+                                      fallback="Recent incident patterns",
+                                      max_len=80)
+                )
                 insight_episode = Episode(
                     episode_id=str(uuid4()),
                     incident_id=str(uuid4()),
-                    title=f"Trend Analysis: {trend_result.content[:60]}",
+                    title=title,
                     description=trend_result.content,
                     severity="info",
                     category="trend_analysis",
@@ -378,43 +555,66 @@ Provide a brief summary of system health and any concerning patterns."""
             if hasattr(trace, 'service') and trace.service:
                 services.add(trace.service)
 
-        # If no services found, return list of known containers
-        if not services:
-            # Default to known container names from docker-compose
-            services = {'backend', 'frontend', 'neo4j', 'grafana', 'prometheus', 'loki'}
-
-        return list(services) if services else ['unknown']
+        # W2: NO static fallback. The old behaviour defaulted to six known
+        # containers when nothing was extracted, which linked every episode to
+        # every service and produced the graph hairball. An empty list is the
+        # honest answer; _select_affected_services decides what to keep.
+        return sorted(services)
 
     async def _store_graph_result_as_episode(self, graph_result: dict, window: Any) -> None:
         """Store a LangGraph pipeline result as an episode in Neo4j."""
         try:
-            annotation_data = graph_result.get("annotation", {})
+            annotation_data = graph_result.get("annotation", {}) or {}
             rca_data = graph_result.get("rca_result")
             correlation_id = graph_result.get("correlation_id", str(uuid4()))
-            affected_services = self._extract_services_from_window(window)
 
-            # Determine title and description from the best available data
+            annotation_content = annotation_data.get("content", "") or ""
+            rca_content = (rca_data or {}).get("content", "") or ""
+
+            # Determine title and description from the best available data.
+            # W2: parse the (frequently JSON) agent output into a clean human
+            # title instead of slicing a raw blob.
             if rca_data:
-                title = f"RCA: {rca_data.get('content', 'Analysis')[:80]}"
-                description = rca_data.get("content", "")
+                title = "RCA: " + _humanize_title(
+                    rca_content, fallback="Root cause analysis", max_len=90
+                )
+                description = rca_content
                 category = "rca"
                 outcome = "analyzed"
             else:
-                title = annotation_data.get("content", "Anomaly Detected")[:100]
-                description = annotation_data.get("content", "")
+                title = _humanize_title(annotation_content, fallback="Anomaly detected")
+                description = annotation_content
                 category = (annotation_data.get("metadata") or {}).get("category", "unknown")
                 outcome = "open"
+
+            # W2: "No significant anomalies detected" NON-EVENTS must not be
+            # stored as episodes at all.
+            if _is_non_event(annotation_content[:400], title):
+                logger.debug(f"Skipping non-event annotation: {title[:80]}")
+                return
+
+            # W2: link only genuinely affected services (text-mentioned, or a
+            # small telemetry-derived candidate set) — never the whole stack.
+            affected_services = _select_affected_services(
+                self._extract_services_from_window(window),
+                title, annotation_content, rca_content,
+            )
 
             episode = Episode(
                 episode_id=correlation_id,
                 incident_id=correlation_id,
                 title=title,
                 description=description,
-                severity=str(graph_result.get("severity", "info")),
+                # W2: write-time normalization — the pipeline carries a 0-10
+                # int; str()-ing it stored severities like "10".
+                severity=normalize_severity(graph_result.get("severity", "info")),
                 category=category,
                 detected_at=datetime.utcnow(),
                 affected_services=affected_services,
-                root_cause=rca_data.get("content", "unknown")[:200] if rca_data else "unknown",
+                root_cause=(
+                    _humanize_title(rca_content, fallback="unknown", max_len=200)
+                    if rca_data else "unknown"
+                ),
                 causal_chain=graph_result.get("steps_completed", []),
                 confidence=graph_result.get("confidence", 0.5),
                 outcome=outcome,
@@ -446,19 +646,31 @@ Provide a brief summary of system health and any concerning patterns."""
             metadata = annotation.metadata or {}
             episode_id = str(uuid4())
 
-            # Extract actual service names from telemetry (Phase 1 fix)
-            affected_services = self._extract_services_from_window(window)
+            annotation_content = annotation.content or ""
+            title = _humanize_title(annotation_content, fallback="Anomaly detected")
+
+            # W2: never store "no significant anomalies" non-events.
+            if _is_non_event(annotation_content[:400], title):
+                logger.debug(f"Skipping non-event annotation: {title[:80]}")
+                return
+
+            # W2: only genuinely affected services (text-mentioned or a small
+            # telemetry-derived candidate set).
+            affected_services = _select_affected_services(
+                self._extract_services_from_window(window),
+                title, annotation_content,
+            )
 
             # Create proper Episode object for EpisodeStore
             episode = Episode(
                 episode_id=episode_id,
                 incident_id=episode_id,  # Use same ID for incident
-                title=annotation.content[:100] if annotation.content else "Anomaly Detected",
-                description=annotation.content or "",
-                severity=metadata.get("severity", "info"),
+                title=title,
+                description=annotation_content,
+                severity=normalize_severity(metadata.get("severity", "info")),
                 category=metadata.get("category", "unknown"),
                 detected_at=datetime.utcnow(),
-                affected_services=affected_services,  # Use extracted services instead of "combined"
+                affected_services=affected_services,
                 root_cause=metadata.get("category", "unknown"),
                 causal_chain=metadata.get("key_indicators", []),
                 confidence=annotation.confidence,
@@ -545,28 +757,42 @@ Telemetry: {window.log_count} logs, {len(window.metrics)} metrics, {len(window.t
 
 Please perform root cause analysis and suggest remediation actions.
 """
-            rca_result = await self.reasoning_agent.analyze_incident({
-                "service": services_str,
-                "description": annotation.content,
-                "severity": annotation.metadata.get("severity", "warning"),
-                "context": context,
-            })
+            # NOTE: previously called the nonexistent ``analyze_incident``
+            # (AttributeError swallowed by the except below) — RCA escalation
+            # episodes were never stored. analyze_rca() is the real API.
+            rca_result = await self.reasoning_agent.analyze_rca(
+                incident_data={
+                    "service": services_str,
+                    "description": annotation.content,
+                    "severity": annotation.metadata.get("severity", "warning"),
+                    "context": context,
+                },
+            )
 
             logger.info(f"RCA completed: {rca_result.content[:200]}")
 
             # Store RCA episode with proper Episode object and compaction
             if self.episode_store:
                 rca_episode_id = str(uuid4())
+                rca_title = "RCA: " + _humanize_title(
+                    rca_result.content, fallback="Root cause analysis", max_len=90
+                )
                 rca_episode = Episode(
                     episode_id=rca_episode_id,
                     incident_id=rca_episode_id,
-                    title=f"RCA: {rca_result.content[:80]}" if rca_result.content else "Root Cause Analysis",
+                    title=rca_title,
                     description=rca_result.content or "",
-                    severity=annotation.metadata.get("severity", "warning"),
+                    severity=normalize_severity(
+                        annotation.metadata.get("severity", "warning")
+                    ),
                     category="rca",
                     detected_at=datetime.utcnow(),
-                    affected_services=affected_services,  # Use extracted services
-                    root_cause=rca_result.content[:200] if rca_result.content else "unknown",
+                    affected_services=_select_affected_services(
+                        affected_services, rca_title, rca_result.content,
+                    ),
+                    root_cause=_humanize_title(
+                        rca_result.content, fallback="unknown", max_len=200
+                    ),
                     causal_chain=[annotation.content[:100]] if annotation.content else [],
                     confidence=rca_result.confidence,
                     outcome="analyzed",
@@ -601,4 +827,4 @@ Please perform root cause analysis and suggest remediation actions.
         }
 
 
-__all__ = ["BackgroundTelemetryProcessor"]
+__all__ = ["BackgroundTelemetryProcessor", "normalize_severity"]
