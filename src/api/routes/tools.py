@@ -13,17 +13,74 @@ Research Paper (Section 4.5) defines 5 MCP tools:
 
 import logging
 import os
+import re
 import time
 from collections import Counter
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any, Optional
 
 from fastapi import APIRouter, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
+from src.utils.audit import get_audit_logger
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+# ---------------------------------------------------------------------------
+# Action-tool gating constants (restart_service / scale_service)
+# ---------------------------------------------------------------------------
+
+# The two tools that mutate real containers. Everything else is read-only.
+ACTION_TOOLS: tuple[str, ...] = ("restart_service", "scale_service")
+
+# Master kill-switch: action tools stay refused unless this env var is truthy.
+ACTION_TOOLS_ENV = "AIOPS_ENABLE_ACTION_TOOLS"
+
+# Comma-separated extra container names allowed as action targets
+# (same pattern as AIOPS_DEMO_CONTAINER_WHITELIST in demo.py).
+ACTION_CONTAINER_WHITELIST_ENV = "AIOPS_ACTION_CONTAINER_WHITELIST"
+
+# scale_service replica clamp — keeps a typo like 500 from forking the host.
+MIN_SCALE_REPLICAS = 0
+MAX_SCALE_REPLICAS = 5
+
+# Defense-in-depth: even whitelisted names must look like docker names, never
+# like CLI flags or shell metacharacters.
+_CONTAINER_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
+
+
+def _action_tools_enabled() -> bool:
+    """True when the operator has explicitly enabled action tools via env."""
+    return os.getenv(ACTION_TOOLS_ENV, "").lower() in ("1", "true", "yes")
+
+
+def _allowed_action_containers() -> set[str]:
+    """Containers action tools may target: nextcloud by default, extendable
+    via a comma-separated AIOPS_ACTION_CONTAINER_WHITELIST."""
+    extra = os.getenv(ACTION_CONTAINER_WHITELIST_ENV, "")
+    allowed = {"nextcloud"}
+    allowed.update(name.strip() for name in extra.split(",") if name.strip())
+    return allowed
+
+
+def _resolve_action_container(service_name: Any) -> Optional[str]:
+    """Resolve a requested service name to a whitelisted container name.
+
+    Accepts the bare name or the platform's ``aiops-`` prefixed convention,
+    but ONLY if the resolved name is on the whitelist AND is a syntactically
+    safe docker name. Returns None when no whitelisted match exists.
+    """
+    if not isinstance(service_name, str) or not service_name.strip():
+        return None
+    name = service_name.strip()
+    allowed = _allowed_action_containers()
+    for candidate in (name, f"aiops-{name}"):
+        if candidate in allowed and _CONTAINER_NAME_RE.match(candidate):
+            return candidate
+    return None
 
 
 class ToolCallRequest(BaseModel):
@@ -62,6 +119,9 @@ class ToolCallResponse(BaseModel):
     success: bool
     data: Any
     error: str | None = None
+    # Machine-readable refusal/failure class so the frontend can render
+    # distinct states (e.g. "action_tools_disabled", "approval_required").
+    error_code: str | None = None
     execution_time_ms: float
     metadata: dict[str, Any] = Field(default_factory=dict)
 
@@ -74,12 +134,25 @@ class ToolInfo(BaseModel):
     parameters: dict[str, Any]
     requires_approval: bool
     risk_level: str
+    # Gating metadata: action tools report enabled=False (with the env var in
+    # gated_by) until AIOPS_ENABLE_ACTION_TOOLS is set, so the frontend can be
+    # data-driven instead of hardcoding which tools are disabled.
+    enabled: bool = True
+    gated_by: str | None = None
 
 
 class ToolListResponse(BaseModel):
     """Response listing all tools."""
     tools: list[ToolInfo]
     total: int
+
+
+def _apply_action_gating(tool: ToolInfo) -> ToolInfo:
+    """Stamp enabled/gated_by metadata onto action-class tool definitions."""
+    if tool.category == "action" or tool.name in ACTION_TOOLS:
+        tool.enabled = _action_tools_enabled()
+        tool.gated_by = ACTION_TOOLS_ENV
+    return tool
 
 
 @router.get(
@@ -134,14 +207,14 @@ async def list_tools(request: Request) -> ToolListResponse:
             ),
             ToolInfo(
                 name="restart_service",
-                description="Restart a Docker service with health check validation",
+                description="Restart a whitelisted Docker container (docker restart). Gated by AIOPS_ENABLE_ACTION_TOOLS and constitutional validation.",
                 category="action",
                 parameters={
                     "type": "object",
                     "properties": {
-                        "service_name": {"type": "string", "description": "Service to restart"},
-                        "graceful": {"type": "boolean", "default": True},
-                        "reason": {"type": "string", "description": "Reason for restart"},
+                        "service_name": {"type": "string", "description": "Service to restart — must be on the action container whitelist (default: nextcloud)"},
+                        "graceful": {"type": "boolean", "default": True, "description": "Whether to perform a graceful restart"},
+                        "reason": {"type": "string", "description": "Reason for restart (recorded in the audit trail)"},
                     },
                     "required": ["service_name", "reason"],
                 },
@@ -150,14 +223,14 @@ async def list_tools(request: Request) -> ToolListResponse:
             ),
             ToolInfo(
                 name="scale_service",
-                description="Scale Docker service replicas with resource verification",
+                description="Scale Docker Compose service replicas. Replica count is clamped to 0-5. Gated by AIOPS_ENABLE_ACTION_TOOLS and constitutional validation.",
                 category="action",
                 parameters={
                     "type": "object",
                     "properties": {
-                        "service_name": {"type": "string", "description": "Service to scale"},
-                        "target_replicas": {"type": "integer", "description": "Target replica count"},
-                        "reason": {"type": "string", "description": "Reason for scaling"},
+                        "service_name": {"type": "string", "description": "Service to scale — must be on the action container whitelist (default: nextcloud)"},
+                        "target_replicas": {"type": "integer", "minimum": 0, "maximum": 5, "description": "Target replica count (clamped to 0-5)"},
+                        "reason": {"type": "string", "description": "Reason for scaling (recorded in the audit trail)"},
                     },
                     "required": ["service_name", "target_replicas", "reason"],
                 },
@@ -172,8 +245,8 @@ async def list_tools(request: Request) -> ToolListResponse:
                     "type": "object",
                     "properties": {
                         "service_name": {"type": "string", "description": "Service to analyze"},
-                        "time_range_minutes": {"type": "integer", "default": 30},
-                        "log_level": {"type": "string", "enum": ["all", "error", "warn", "info"]},
+                        "time_range_minutes": {"type": "integer", "default": 30, "description": "Time window in minutes to analyze"},
+                        "log_level": {"type": "string", "enum": ["all", "error", "warn", "info"], "default": "error", "description": "Minimum log level to analyze"},
                     },
                     "required": ["service_name"],
                 },
@@ -188,8 +261,8 @@ async def list_tools(request: Request) -> ToolListResponse:
                     "type": "object",
                     "properties": {
                         "service_name": {"type": "string", "description": "Service to analyze"},
-                        "metric_name": {"type": "string", "description": "Specific metric (optional)"},
-                        "time_range_minutes": {"type": "integer", "default": 60},
+                        "metric_name": {"type": "string", "description": "Specific PromQL metric name to analyze (optional; defaults to all summary metrics)"},
+                        "time_range_minutes": {"type": "integer", "default": 60, "description": "Time window in minutes for the analysis"},
                     },
                     "required": ["service_name"],
                 },
@@ -204,9 +277,9 @@ async def list_tools(request: Request) -> ToolListResponse:
                 parameters={
                     "type": "object",
                     "properties": {
-                        "service": {"type": "string", "description": "Service name (use 'all' for all)"},
-                        "time_range_minutes": {"type": "integer", "default": 15},
-                        "limit": {"type": "integer", "default": 50},
+                        "service": {"type": "string", "description": "Service name (use 'all' for all services)"},
+                        "time_range_minutes": {"type": "integer", "default": 15, "description": "How many minutes back to query"},
+                        "limit": {"type": "integer", "default": 50, "description": "Maximum number of log entries to return"},
                         "query": {"type": "string", "description": "Optional LogQL query override"},
                     },
                     "required": ["service"],
@@ -222,8 +295,8 @@ async def list_tools(request: Request) -> ToolListResponse:
                     "type": "object",
                     "properties": {
                         "service": {"type": "string", "description": "Service name"},
-                        "time_range_minutes": {"type": "integer", "default": 30},
-                        "metrics": {"type": "array", "items": {"type": "string"}, "description": "Optional PromQL queries"},
+                        "time_range_minutes": {"type": "integer", "default": 30, "description": "Time window in minutes to query"},
+                        "metrics": {"type": "array", "items": {"type": "string"}, "description": "Optional list of PromQL queries (defaults to summary metrics)"},
                     },
                     "required": ["service"],
                 },
@@ -237,7 +310,7 @@ async def list_tools(request: Request) -> ToolListResponse:
                 parameters={
                     "type": "object",
                     "properties": {
-                        "all_containers": {"type": "boolean", "default": False, "description": "Include stopped containers"},
+                        "all_containers": {"type": "boolean", "default": False, "description": "Include stopped containers (default: running only)"},
                         "name_filter": {"type": "string", "description": "Optional substring filter on container name"},
                     },
                     "required": [],
@@ -246,11 +319,12 @@ async def list_tools(request: Request) -> ToolListResponse:
                 risk_level="low",
             ),
         ]
+        default_tools = [_apply_action_gating(t) for t in default_tools]
         return ToolListResponse(tools=default_tools, total=len(default_tools))
 
     tools = mcp_server.list_tools()
     return ToolListResponse(
-        tools=[ToolInfo(**t) for t in tools],
+        tools=[_apply_action_gating(ToolInfo(**t)) for t in tools],
         total=len(tools),
     )
 
@@ -310,14 +384,14 @@ async def get_tool(request: Request, tool_name: str) -> ToolInfo:
             ),
             "restart_service": ToolInfo(
                 name="restart_service",
-                description="Restart a Docker service with health check validation",
+                description="Restart a whitelisted Docker container (docker restart). Gated by AIOPS_ENABLE_ACTION_TOOLS and constitutional validation.",
                 category="action",
                 parameters={
                     "type": "object",
                     "properties": {
-                        "service_name": {"type": "string", "description": "Service to restart"},
-                        "graceful": {"type": "boolean", "default": True},
-                        "reason": {"type": "string", "description": "Reason for restart"},
+                        "service_name": {"type": "string", "description": "Service to restart — must be on the action container whitelist (default: nextcloud)"},
+                        "graceful": {"type": "boolean", "default": True, "description": "Whether to perform a graceful restart"},
+                        "reason": {"type": "string", "description": "Reason for restart (recorded in the audit trail)"},
                     },
                     "required": ["service_name", "reason"],
                 },
@@ -326,14 +400,14 @@ async def get_tool(request: Request, tool_name: str) -> ToolInfo:
             ),
             "scale_service": ToolInfo(
                 name="scale_service",
-                description="Scale Docker service replicas with resource verification",
+                description="Scale Docker Compose service replicas. Replica count is clamped to 0-5. Gated by AIOPS_ENABLE_ACTION_TOOLS and constitutional validation.",
                 category="action",
                 parameters={
                     "type": "object",
                     "properties": {
-                        "service_name": {"type": "string", "description": "Service to scale"},
-                        "target_replicas": {"type": "integer", "description": "Target replica count"},
-                        "reason": {"type": "string", "description": "Reason for scaling"},
+                        "service_name": {"type": "string", "description": "Service to scale — must be on the action container whitelist (default: nextcloud)"},
+                        "target_replicas": {"type": "integer", "minimum": 0, "maximum": 5, "description": "Target replica count (clamped to 0-5)"},
+                        "reason": {"type": "string", "description": "Reason for scaling (recorded in the audit trail)"},
                     },
                     "required": ["service_name", "target_replicas", "reason"],
                 },
@@ -428,7 +502,7 @@ async def get_tool(request: Request, tool_name: str) -> ToolInfo:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Tool '{tool_name}' not found",
             )
-        return tool_definitions[tool_name]
+        return _apply_action_gating(tool_definitions[tool_name])
 
     tool = mcp_server.get_tool(tool_name)
     if not tool:
@@ -437,14 +511,14 @@ async def get_tool(request: Request, tool_name: str) -> ToolInfo:
             detail=f"Tool '{tool_name}' not found",
         )
 
-    return ToolInfo(
+    return _apply_action_gating(ToolInfo(
         name=tool.name,
         description=tool.description,
         category=tool.category.value,
         parameters=tool.parameters,
         requires_approval=tool.requires_approval,
         risk_level=tool.risk_level,
-    )
+    ))
 
 
 @router.post(
@@ -505,18 +579,8 @@ async def call_tool(
         # --scale on the host socket). They MUST pass the constitutional gate —
         # the REST path used to execute them directly, bypassing the validator
         # entirely despite requires_approval=True on their metadata.
-        elif tool_call.tool_name in ("restart_service", "scale_service"):
-            gate_error = _action_tool_gate(request, tool_call)
-            if gate_error is not None:
-                return ToolCallResponse(
-                    success=False,
-                    data=None,
-                    error=gate_error,
-                    execution_time_ms=(time.time() - start_time) * 1000,
-                )
-            if tool_call.tool_name == "restart_service":
-                return await _execute_restart_service(tool_call.parameters, start_time)
-            return await _execute_scale_service(tool_call.parameters, start_time)
+        elif tool_call.tool_name in ACTION_TOOLS:
+            return await _run_action_tool(request, tool_call, start_time)
 
         # ==================== query_recent_logs ====================
         elif tool_call.tool_name == "query_recent_logs":
@@ -889,37 +953,142 @@ async def _execute_analyze_time_series(
         )
 
 
-def _action_tool_gate(request: Request, tool_call: "ToolCallRequest") -> Optional[str]:
+@dataclass
+class ActionGateDecision:
+    """Outcome of the constitutional gate for an action tool call.
+
+    `verdict` carries the serialized constitutional validation report whenever
+    the validator actually ran — on refusals AND on allowed calls — so callers
+    can always surface it to the user.
+    """
+    allowed: bool
+    error: Optional[str] = None
+    error_code: Optional[str] = None
+    verdict: Optional[dict[str, Any]] = None
+
+
+def _constitutional_verdict(report: Any) -> dict[str, Any]:
+    """Serialize a ValidationReport into a JSON-safe verdict payload."""
+    violations = []
+    for v in getattr(report, "violations", None) or []:
+        principle = getattr(v, "principle", None)
+        violations.append({
+            "principle_id": getattr(principle, "id", None),
+            "principle_name": getattr(principle, "name", None),
+            "severity": getattr(v, "severity", None),
+            "reason": getattr(v, "reason", None),
+        })
+    authorization = getattr(report, "authorization_level", None)
+    overall = getattr(report, "overall_result", None)
+    return {
+        "can_proceed": bool(getattr(report, "can_proceed", False)),
+        "requires_approval": bool(getattr(report, "requires_approval", False)),
+        "authorization_level": getattr(authorization, "value", None),
+        "overall_result": getattr(overall, "value", None),
+        "confidence": getattr(report, "confidence", None),
+        "principles": {
+            "tier1_safety_passed": bool(getattr(report, "tier1_passed", False)),
+            "tier2_operational_passed": bool(getattr(report, "tier2_passed", False)),
+            "tier3_learning_passed": bool(getattr(report, "tier3_passed", False)),
+        },
+        "violations": violations,
+        "warnings": list(getattr(report, "warnings", None) or []),
+        "explanation": getattr(report, "explanation", ""),
+    }
+
+
+def _audit_action_attempt(
+    tool_name: str,
+    parameters: dict[str, Any],
+    outcome: str,
+    error_code: Optional[str] = None,
+    verdict: Optional[dict[str, Any]] = None,
+) -> None:
+    """Write one audit line per action-tool attempt (allowed OR refused).
+
+    Audit failures must never break the API response — log and continue.
+    """
+    try:
+        get_audit_logger().log_tool_invocation(
+            tool_name=tool_name,
+            parameters=parameters,
+            actor_id="rest_tools_call",
+            context={
+                "outcome": outcome,
+                "error_code": error_code,
+                "constitutional": verdict,
+            },
+        )
+    except Exception as e:  # pragma: no cover - defensive
+        logger.warning(f"Audit logging failed for {tool_name}: {e}")
+
+
+def _action_tool_gate(request: Request, tool_call: "ToolCallRequest") -> ActionGateDecision:
     """Constitutional gate for action-class (mutating) tools.
 
-    Returns an error string when execution must be refused, or None when the
-    call may proceed. Two layers:
-    1. Action tools are disabled unless AIOPS_ENABLE_ACTION_TOOLS is set —
-       the UI deliberately keeps them disabled and there is no approval
-       workflow wired to this REST path yet.
-    2. Even when enabled, the call must pass the live ConstitutionalValidator
-       with automatic authorization (can_proceed and no human approval needed).
+    Returns a structured ActionGateDecision. Layers, in order:
+    1. Action tools are refused unless AIOPS_ENABLE_ACTION_TOOLS is set
+       (`error_code="action_tools_disabled"`) — production default.
+    2. The live ConstitutionalValidator must be available
+       (`error_code="validator_unavailable"`).
+    3. The target service must resolve to a whitelisted container
+       (`error_code="container_not_whitelisted"`).
+    4. The validator must allow the action: blocked verdicts come back as
+       `validation_blocked`; verdicts needing a human come back as
+       `approval_required` and are NOT executed (the human-approval execution
+       flow is intentionally not wired to this REST path).
+    The serialized verdict is attached whenever validation ran.
     """
-    enabled = os.getenv("AIOPS_ENABLE_ACTION_TOOLS", "").lower() in ("1", "true", "yes")
-    if not enabled:
-        return (
-            f"'{tool_call.tool_name}' is an action tool and is disabled: it mutates real "
-            "containers and requires the human-approval workflow. Set "
-            "AIOPS_ENABLE_ACTION_TOOLS=true to allow constitutionally-gated execution."
+    params = tool_call.parameters or {}
+
+    if not _action_tools_enabled():
+        return ActionGateDecision(
+            allowed=False,
+            error=(
+                f"'{tool_call.tool_name}' is an action tool and is disabled: it mutates real "
+                f"containers. Set {ACTION_TOOLS_ENV}=true on the backend to allow "
+                "constitutionally-gated execution."
+            ),
+            error_code="action_tools_disabled",
         )
 
     validator = getattr(request.app.state, "validator", None)
     if validator is None:
-        return (
-            "Constitutional validator unavailable — refusing to execute an action "
-            "tool without validation."
+        return ActionGateDecision(
+            allowed=False,
+            error=(
+                "Constitutional validator unavailable — refusing to execute an action "
+                "tool without validation."
+            ),
+            error_code="validator_unavailable",
         )
 
-    params = tool_call.parameters or {}
+    container = _resolve_action_container(params.get("service_name"))
+    if container is None:
+        return ActionGateDecision(
+            allowed=False,
+            error=(
+                f"Service '{params.get('service_name')}' is not on the action-tool container "
+                f"whitelist ({', '.join(sorted(_allowed_action_containers()))}). Extend it via "
+                f"{ACTION_CONTAINER_WHITELIST_ENV} if this is intentional."
+            ),
+            error_code="container_not_whitelisted",
+        )
+
     try:
         confidence = float(params.get("confidence", 0.5))
     except (TypeError, ValueError):
         confidence = 0.5
+    context: dict[str, Any] = {
+        "service": params.get("service_name"),
+        "parameters": params,
+        "source": "rest_tools_call",
+        "target_replicas": params.get("target_replicas"),
+    }
+    # Callers (e.g. agents) may supply extra validation context such as
+    # telemetry_evidence; the UI sends none, so P2.2 keeps it at approval.
+    if isinstance(tool_call.context, dict):
+        context = {**tool_call.context, **context}
     report = validator.validate(
         action_id=f"tool-{tool_call.tool_name}-{int(time.time() * 1000)}",
         action_description=(
@@ -928,27 +1097,84 @@ def _action_tool_gate(request: Request, tool_call: "ToolCallRequest") -> Optiona
         ),
         action_type="restart" if tool_call.tool_name == "restart_service" else "scale",
         confidence=confidence,
-        context={
-            "service": params.get("service_name"),
-            "parameters": params,
-            "source": "rest_tools_call",
-            "target_replicas": params.get("target_replicas"),
-        },
+        context=context,
     )
-    if not report.can_proceed or report.requires_approval:
-        return (
-            f"Constitutional validation refused automatic execution "
-            f"(authorization={report.authorization_level.value}, "
-            f"requires_approval={report.requires_approval}): {report.explanation}"
+    verdict = _constitutional_verdict(report)
+
+    if not report.can_proceed:
+        return ActionGateDecision(
+            allowed=False,
+            error=(
+                f"Constitutional validation blocked execution "
+                f"(authorization={verdict['authorization_level']}): {report.explanation}"
+            ),
+            error_code="validation_blocked",
+            verdict=verdict,
         )
-    return None
+    if report.requires_approval:
+        return ActionGateDecision(
+            allowed=False,
+            error=(
+                f"Constitutional validation refused automatic execution — human approval "
+                f"required (authorization={verdict['authorization_level']}): {report.explanation}"
+            ),
+            error_code="approval_required",
+            verdict=verdict,
+        )
+    return ActionGateDecision(allowed=True, verdict=verdict)
+
+
+async def _run_action_tool(
+    request: Request,
+    tool_call: "ToolCallRequest",
+    start_time: float,
+) -> ToolCallResponse:
+    """Gate, execute, and audit an action tool call (restart/scale)."""
+    decision = _action_tool_gate(request, tool_call)
+    params = tool_call.parameters or {}
+
+    if not decision.allowed:
+        _audit_action_attempt(
+            tool_call.tool_name, params, outcome="refused",
+            error_code=decision.error_code, verdict=decision.verdict,
+        )
+        metadata: dict[str, Any] = {"gated_by": ACTION_TOOLS_ENV}
+        if decision.verdict is not None:
+            metadata["constitutional"] = decision.verdict
+        return ToolCallResponse(
+            success=False,
+            data=None,
+            error=decision.error,
+            error_code=decision.error_code,
+            execution_time_ms=(time.time() - start_time) * 1000,
+            metadata=metadata,
+        )
+
+    if tool_call.tool_name == "restart_service":
+        response = await _execute_restart_service(params, start_time)
+    else:
+        response = await _execute_scale_service(params, start_time)
+
+    # The verdict is part of the payload on success AND failure.
+    if decision.verdict is not None:
+        response.metadata = {**response.metadata, "constitutional": decision.verdict}
+    _audit_action_attempt(
+        tool_call.tool_name, params,
+        outcome="executed" if response.success else "execution_failed",
+        error_code=response.error_code, verdict=decision.verdict,
+    )
+    return response
 
 
 async def _execute_restart_service(
     params: dict,
     start_time: float,
 ) -> ToolCallResponse:
-    """Restart a Docker service (requires Constitutional AI approval)."""
+    """Restart a whitelisted Docker container.
+
+    Defense in depth: re-checks the container whitelist itself (the gate also
+    checks it) so no dispatch path can restart an arbitrary container.
+    """
     import subprocess
 
     service_name = params.get("service_name")
@@ -957,6 +1183,20 @@ async def _execute_restart_service(
             success=False,
             data=None,
             error="service_name parameter required",
+            error_code="invalid_parameters",
+            execution_time_ms=(time.time() - start_time) * 1000,
+        )
+
+    container_name = _resolve_action_container(service_name)
+    if container_name is None:
+        return ToolCallResponse(
+            success=False,
+            data=None,
+            error=(
+                f"Service '{service_name}' is not on the action-tool container whitelist "
+                f"({', '.join(sorted(_allowed_action_containers()))})."
+            ),
+            error_code="container_not_whitelisted",
             execution_time_ms=(time.time() - start_time) * 1000,
         )
 
@@ -964,8 +1204,6 @@ async def _execute_restart_service(
     graceful = params.get("graceful", True)
 
     try:
-        # Execute docker restart
-        container_name = f"aiops-{service_name}" if not service_name.startswith("aiops-") else service_name
         cmd = ["docker", "restart", container_name]
 
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
@@ -989,6 +1227,7 @@ async def _execute_restart_service(
                 success=False,
                 data=None,
                 error=f"Docker restart failed: {result.stderr}",
+                error_code="execution_failed",
                 execution_time_ms=(time.time() - start_time) * 1000,
             )
 
@@ -997,6 +1236,7 @@ async def _execute_restart_service(
             success=False,
             data=None,
             error="Restart operation timed out",
+            error_code="execution_timeout",
             execution_time_ms=(time.time() - start_time) * 1000,
         )
     except Exception as e:
@@ -1005,6 +1245,7 @@ async def _execute_restart_service(
             success=False,
             data=None,
             error=f"Service restart failed: {str(e)}",
+            error_code="execution_failed",
             execution_time_ms=(time.time() - start_time) * 1000,
         )
 
@@ -1013,7 +1254,11 @@ async def _execute_scale_service(
     params: dict,
     start_time: float,
 ) -> ToolCallResponse:
-    """Scale a Docker service (requires Constitutional AI approval)."""
+    """Scale a whitelisted Docker Compose service.
+
+    Defense in depth: re-checks the container whitelist and clamps the replica
+    count to [MIN_SCALE_REPLICAS, MAX_SCALE_REPLICAS] regardless of input.
+    """
     import subprocess
 
     service_name = params.get("service_name")
@@ -1024,6 +1269,7 @@ async def _execute_scale_service(
             success=False,
             data=None,
             error="service_name parameter required",
+            error_code="invalid_parameters",
             execution_time_ms=(time.time() - start_time) * 1000,
         )
 
@@ -1032,14 +1278,43 @@ async def _execute_scale_service(
             success=False,
             data=None,
             error="target_replicas parameter required",
+            error_code="invalid_parameters",
             execution_time_ms=(time.time() - start_time) * 1000,
         )
+
+    container_name = _resolve_action_container(service_name)
+    if container_name is None:
+        return ToolCallResponse(
+            success=False,
+            data=None,
+            error=(
+                f"Service '{service_name}' is not on the action-tool container whitelist "
+                f"({', '.join(sorted(_allowed_action_containers()))})."
+            ),
+            error_code="container_not_whitelisted",
+            execution_time_ms=(time.time() - start_time) * 1000,
+        )
+
+    # bool is an int subclass — reject it explicitly, then coerce + clamp.
+    if isinstance(target_replicas, bool) or not isinstance(target_replicas, (int, str)):
+        target_replicas = None
+    try:
+        requested_replicas = int(target_replicas)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return ToolCallResponse(
+            success=False,
+            data=None,
+            error="target_replicas must be an integer",
+            error_code="invalid_parameters",
+            execution_time_ms=(time.time() - start_time) * 1000,
+        )
+    applied_replicas = max(MIN_SCALE_REPLICAS, min(requested_replicas, MAX_SCALE_REPLICAS))
 
     reason = params.get("reason", "No reason provided")
 
     try:
         # For Docker Compose scaling
-        cmd = ["docker", "compose", "up", "-d", "--scale", f"{service_name}={target_replicas}"]
+        cmd = ["docker", "compose", "up", "-d", "--scale", f"{container_name}={applied_replicas}"]
 
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
 
@@ -1048,8 +1323,11 @@ async def _execute_scale_service(
                 success=True,
                 data={
                     "service": service_name,
+                    "container": container_name,
                     "action": "scale",
-                    "target_replicas": target_replicas,
+                    "target_replicas": applied_replicas,
+                    "requested_replicas": requested_replicas,
+                    "clamped": applied_replicas != requested_replicas,
                     "status": "completed",
                     "reason": reason,
                 },
@@ -1061,6 +1339,7 @@ async def _execute_scale_service(
                 success=False,
                 data=None,
                 error=f"Scale operation failed: {result.stderr}",
+                error_code="execution_failed",
                 execution_time_ms=(time.time() - start_time) * 1000,
             )
 
@@ -1069,6 +1348,7 @@ async def _execute_scale_service(
             success=False,
             data=None,
             error="Scale operation timed out",
+            error_code="execution_timeout",
             execution_time_ms=(time.time() - start_time) * 1000,
         )
     except Exception as e:
@@ -1077,6 +1357,7 @@ async def _execute_scale_service(
             success=False,
             data=None,
             error=f"Service scale failed: {str(e)}",
+            error_code="execution_failed",
             execution_time_ms=(time.time() - start_time) * 1000,
         )
 
@@ -1310,10 +1591,15 @@ async def execute_tool_call(
             result = await _execute_analyze_logs(telemetry_collector, parameters, start_time)
         elif tool_name == "analyze_time_series_anomaly":
             result = await _execute_analyze_time_series(telemetry_collector, parameters, start_time)
-        elif tool_name == "restart_service":
-            result = await _execute_restart_service(parameters, start_time)
-        elif tool_name == "scale_service":
-            result = await _execute_scale_service(parameters, start_time)
+        elif tool_name in ACTION_TOOLS:
+            # The programmatic path used to dispatch restart/scale straight to
+            # the executors, bypassing the constitutional gate entirely. Route
+            # it through the same gate + audit pipeline as the REST endpoint.
+            result = await _run_action_tool(
+                request,
+                ToolCallRequest(tool_name=tool_name, parameters=parameters),
+                start_time,
+            )
         elif tool_name == "query_recent_logs":
             result = await _execute_query_recent_logs(telemetry_collector, parameters, start_time)
         elif tool_name == "query_metric":
@@ -1328,6 +1614,7 @@ async def execute_tool_call(
             "success": result.success,
             "data": result.data,
             "error": result.error,
+            "error_code": result.error_code,
             "execution_time_ms": result.execution_time_ms,
         }
 
