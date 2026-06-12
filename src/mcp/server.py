@@ -8,12 +8,22 @@ All tools are validated through Constitutional AI before execution.
 import asyncio
 import json
 import logging
+import os
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Callable, Optional
 from enum import Enum
 
 logger = logging.getLogger(__name__)
+
+# Action-class tools (restart/scale) are gated off unless this env var is set.
+# Mirrors the REST gate in src/api/routes/tools.py.
+ACTION_TOOLS_ENV = "AIOPS_ENABLE_ACTION_TOOLS"
+
+
+def _action_tools_enabled() -> bool:
+    """True when the operator has explicitly enabled action tools via env."""
+    return os.getenv(ACTION_TOOLS_ENV, "").lower() in ("1", "true", "yes")
 
 
 class ToolCategory(str, Enum):
@@ -116,6 +126,8 @@ class MCPActionServer:
                     "limit": {
                         "type": "integer",
                         "default": 5,
+                        "minimum": 1,
+                        "maximum": 20,
                         "description": "Maximum number of similar incidents to return"
                     }
                 },
@@ -162,14 +174,14 @@ class MCPActionServer:
         # 3. Restart Service
         self._tools["restart_service"] = ToolDefinition(
             name="restart_service",
-            description="Restart a service or specific instance. Requires Constitutional AI approval for production services.",
+            description="Restart a whitelisted service container. Gated by AIOPS_ENABLE_ACTION_TOOLS; every call is validated against the constitutional principles first.",
             category=ToolCategory.ACTION,
             parameters={
                 "type": "object",
                 "properties": {
                     "service_name": {
                         "type": "string",
-                        "description": "Name of the service to restart"
+                        "description": "Name of the service to restart — must be on the action container whitelist (default: nextcloud)"
                     },
                     "instance_id": {
                         "type": "string",
@@ -183,11 +195,13 @@ class MCPActionServer:
                     "timeout_seconds": {
                         "type": "integer",
                         "default": 60,
-                        "description": "Timeout for restart operation"
+                        "minimum": 1,
+                        "maximum": 600,
+                        "description": "Timeout for restart operation in seconds"
                     },
                     "reason": {
                         "type": "string",
-                        "description": "Reason for restart (required for audit)"
+                        "description": "Reason for restart (recorded in the audit trail)"
                     }
                 },
                 "required": ["service_name", "reason"]
@@ -200,28 +214,29 @@ class MCPActionServer:
         # 4. Scale Service
         self._tools["scale_service"] = ToolDefinition(
             name="scale_service",
-            description="Scale service replicas up or down. Requires Constitutional AI approval.",
+            description="Scale service replicas up or down (replica count clamped to 0-5). Gated by AIOPS_ENABLE_ACTION_TOOLS; every call is validated against the constitutional principles first.",
             category=ToolCategory.ACTION,
             parameters={
                 "type": "object",
                 "properties": {
                     "service_name": {
                         "type": "string",
-                        "description": "Name of the service to scale"
+                        "description": "Name of the service to scale — must be on the action container whitelist (default: nextcloud)"
                     },
                     "target_replicas": {
                         "type": "integer",
                         "minimum": 0,
-                        "maximum": 100,
-                        "description": "Target number of replicas"
+                        "maximum": 5,
+                        "description": "Target number of replicas (clamped to 0-5 by the executor)"
                     },
                     "current_replicas": {
                         "type": "integer",
+                        "minimum": 0,
                         "description": "Current number of replicas (for validation)"
                     },
                     "reason": {
                         "type": "string",
-                        "description": "Reason for scaling (required for audit)"
+                        "description": "Reason for scaling (recorded in the audit trail)"
                     }
                 },
                 "required": ["service_name", "target_replicas", "reason"]
@@ -246,6 +261,8 @@ class MCPActionServer:
                     "time_range_minutes": {
                         "type": "integer",
                         "default": 30,
+                        "minimum": 1,
+                        "maximum": 1440,
                         "description": "Time range in minutes to analyze"
                     },
                     "log_level": {
@@ -282,11 +299,15 @@ class MCPActionServer:
                     "time_range_minutes": {
                         "type": "integer",
                         "default": 15,
+                        "minimum": 1,
+                        "maximum": 1440,
                         "description": "How many minutes back to query"
                     },
                     "limit": {
                         "type": "integer",
                         "default": 50,
+                        "minimum": 1,
+                        "maximum": 500,
                         "description": "Maximum number of log entries to return"
                     },
                     "query": {
@@ -316,6 +337,8 @@ class MCPActionServer:
                     "time_range_minutes": {
                         "type": "integer",
                         "default": 30,
+                        "minimum": 1,
+                        "maximum": 1440,
                         "description": "Time range in minutes to query"
                     },
                     "metrics": {
@@ -375,6 +398,8 @@ class MCPActionServer:
                     "time_range_minutes": {
                         "type": "integer",
                         "default": 60,
+                        "minimum": 1,
+                        "maximum": 1440,
                         "description": "Time range in minutes for the analysis window"
                     }
                 },
@@ -385,8 +410,20 @@ class MCPActionServer:
             handler=self._analyze_time_series_anomaly
         )
 
+    def _tool_enabled(self, tool: ToolDefinition) -> bool:
+        """Whether the tool is currently callable: read-only tools always are;
+        action-class tools require the AIOPS_ENABLE_ACTION_TOOLS env gate."""
+        if tool.category is not ToolCategory.ACTION:
+            return True
+        return _action_tools_enabled()
+
     def list_tools(self) -> list[dict[str, Any]]:
-        """List all available tools with their definitions."""
+        """List all available tools with their definitions.
+
+        Includes per-tool gating metadata (`enabled`, `gated_by`) so clients
+        (frontend) can derive action-tool availability from the listing
+        instead of hardcoding it.
+        """
         return [
             {
                 "name": tool.name,
@@ -395,6 +432,8 @@ class MCPActionServer:
                 "parameters": tool.parameters,
                 "requires_approval": tool.requires_approval,
                 "risk_level": tool.risk_level,
+                "enabled": self._tool_enabled(tool),
+                "gated_by": ACTION_TOOLS_ENV if tool.category is ToolCategory.ACTION else None,
             }
             for tool in self._tools.values()
         ]
@@ -429,6 +468,20 @@ class MCPActionServer:
                 success=False,
                 data=None,
                 error=f"Tool '{tool_name}' not found",
+            )
+
+        # Action-class tools are gated off unless explicitly enabled — same
+        # structured refusal contract as the REST path in routes/tools.py.
+        if not self._tool_enabled(tool):
+            return ToolResult(
+                success=False,
+                data=None,
+                error=(
+                    f"'{tool_name}' is an action tool and is disabled: it mutates real "
+                    f"containers. Set {ACTION_TOOLS_ENV}=true to allow "
+                    "constitutionally-gated execution."
+                ),
+                metadata={"error_code": "action_tools_disabled", "gated_by": ACTION_TOOLS_ENV},
             )
 
         # Validate through Constitutional AI if required
