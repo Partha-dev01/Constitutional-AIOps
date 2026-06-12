@@ -6,6 +6,7 @@ Supports general chat, RCA analysis, and remediation planning.
 """
 
 import logging
+import os
 import re
 import time
 import uuid
@@ -398,6 +399,22 @@ router = APIRouter()
 # In-memory conversation store (replace with Redis/Neo4j in production)
 _conversations: dict[str, ConversationHistory] = {}
 
+# Cap the in-memory store so a long-lived process (plus e2e suites) can't grow
+# it unboundedly: beyond the cap, the least-recently-updated conversations are
+# evicted on each new-conversation create.
+_MAX_CONVERSATIONS = int(os.getenv("CHAT_MAX_CONVERSATIONS", "200"))
+
+
+def _evict_stale_conversations() -> None:
+    """Drop the oldest conversations once the store exceeds _MAX_CONVERSATIONS."""
+    overflow = len(_conversations) - _MAX_CONVERSATIONS
+    if overflow <= 0:
+        return
+    by_age = sorted(_conversations.values(), key=lambda c: c.updated_at)
+    for conv in by_age[:overflow]:
+        _conversations.pop(conv.conversation_id, None)
+    logger.info(f"Evicted {overflow} stale conversation(s) (cap {_MAX_CONVERSATIONS})")
+
 
 @router.post(
     "/",
@@ -435,6 +452,7 @@ async def chat(request: Request, chat_request: ChatRequest) -> ChatResponse:
             context=chat_request.context,
         )
         _conversations[conversation_id] = conversation
+        _evict_stale_conversations()
 
     # Add user message
     user_message = ChatMessage(
@@ -999,6 +1017,12 @@ def _extract_actions(content: str) -> list[str] | None:
 
     Strips markdown so no raw ``**`` / ``#`` leaks into the UI, and drops
     header-only lines (e.g. a bare "Recommendation:") that are not real actions.
+
+    Two collection paths:
+    1. Keyword lines anywhere (suggest/recommend/should/…).
+    2. Bullet/numbered lines inside a recommendations-style section — the model
+       often emits "Recommendations:" followed by keyword-less bullets ("Restart
+       the nextcloud container"), which the keyword filter alone would miss.
     """
     actions: list[str] = []
     keywords = ["suggest", "recommend", "should", "could try", "consider"]
@@ -1008,24 +1032,38 @@ def _extract_actions(content: str) -> list[str] | None:
         "recommended actions", "suggestion", "suggestions", "suggested actions",
         "next steps", "action items",
     }
+    bullet_re = re.compile(r"^\s*(?:[-*+]|\d+[.)])\s+")
 
+    in_actions_section = False
     for raw_line in content.split("\n"):
         line = _strip_markdown_inline(raw_line)
         if not line:
+            # A blank line ends a recommendations section.
+            in_actions_section = False
             continue
         low = line.lower()
-        if not any(kw in low for kw in keywords):
+        is_header = low.rstrip(":").strip() in header_labels
+        if is_header:
+            # Entering a recommendations-style section: its bullets are actions
+            # even without keywords. The header itself is never an action.
+            in_actions_section = True
             continue
+
+        is_section_bullet = in_actions_section and bool(bullet_re.match(raw_line))
+        if not is_section_bullet:
+            # A non-bullet line ends the section (new prose paragraph/heading).
+            if in_actions_section:
+                in_actions_section = False
+            if not any(kw in low for kw in keywords):
+                continue
         # Drop section headers masquerading as actions ("Recommendation:",
-        # "Recommendations", "Next Steps:", …) — they end with ':' or are just
-        # a label, not an actionable sentence.
+        # "Next Steps:", …) — they end with ':' or are just a label, not an
+        # actionable sentence.
         if line.endswith(":"):
-            continue
-        if low.rstrip(":").strip() in header_labels:
             continue
         if len(line.split()) < 3:
             continue
-        if len(line) > 12:
+        if len(line) > 12 and line not in actions:
             actions.append(line[:200])
 
     return actions[:5] if actions else None

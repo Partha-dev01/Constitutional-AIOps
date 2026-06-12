@@ -102,7 +102,7 @@ class TestPutSettings:
         )
 
         mock_request = MagicMock()
-        mock_request.app.state = MagicMock(spec=[])  # no constitutional_validator attr
+        mock_request.app.state = MagicMock(spec=[])  # no validator attr
 
         body = AllSettings(
             constitutional=ConstitutionalSettingsModel(autoThreshold=88),
@@ -128,13 +128,17 @@ class TestPutSettings:
             TelemetrySettingsModel,
         )
 
-        # Mock a live validator
+        # Mock a live validator. main.py stores it as app.state.validator —
+        # the route must read THAT attribute (a previous bug read the
+        # nonexistent app.state.constitutional_validator and silently never
+        # pushed thresholds).
         validator = MagicMock()
         validator.confidence_threshold_auto = 0.90
         validator.confidence_threshold_approval = 0.70
 
         mock_request = MagicMock()
-        mock_request.app.state.constitutional_validator = validator
+        mock_request.app.state = MagicMock(spec=["validator"])
+        mock_request.app.state.validator = validator
 
         body = AllSettings(
             constitutional=ConstitutionalSettingsModel(autoThreshold=85, approvalThreshold=65),
