@@ -555,14 +555,23 @@ class Neo4jClient:
         if not self._connected:
             return []
 
-        query = """
-        MATCH path = (s:Service {name: $service_name})-[:DEPENDS_ON*1..$depth]->(dep:Service)
+        # Neo4j cannot parameterize a variable-length path bound ($depth here
+        # raised at runtime and the caller swallowed it, so this always
+        # returned []). Clamp the int and interpolate it instead.
+        try:
+            depth = int(depth)
+        except (TypeError, ValueError):
+            depth = 2
+        depth = max(1, min(depth, 5))
+
+        query = f"""
+        MATCH path = (s:Service {{name: $service_name}})-[:DEPENDS_ON*1..{depth}]->(dep:Service)
         RETURN dep.name as name, dep.namespace as namespace, length(path) as distance
         ORDER BY distance
         """
 
         async with self.session() as session:
-            result = await session.run(query, service_name=service_name, depth=depth)
+            result = await session.run(query, service_name=service_name)
             records = await result.data()
             return records
 

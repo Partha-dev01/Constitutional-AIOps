@@ -656,11 +656,15 @@ async def list_services(
                collect(DISTINCT dep.name) as dependencies,
                collect(DISTINCT upstream.name) as dependents
         """
+        # Parameterize the status filter — interpolating it into the Cypher
+        # string would allow query injection from the query param.
+        query_params: dict[str, Any] = {}
         if status_filter:
-            query = query.replace("MATCH (s:Service)", f"MATCH (s:Service {{status: '{status_filter}'}})")
+            query = query.replace("MATCH (s:Service)", "MATCH (s:Service {status: $status})")
+            query_params["status"] = status_filter
 
         async with neo4j_client.session() as session:
-            query_result = await session.run(query)
+            query_result = await session.run(query, **query_params)
             result = await query_result.data()
 
         services = []
@@ -1150,8 +1154,12 @@ class GenerateEpisodesRequest(BaseModel):
         description="Number of episodes per service (1-3)"
     )
     clear_existing: bool = Field(
-        default=True,
-        description="Clear existing graph data before generating"
+        default=False,
+        description=(
+            "Clear existing graph data before generating. Defaults to False: "
+            "wiping the whole graph (MATCH (n) DETACH DELETE n) must be an "
+            "explicit opt-in, never the effect of a bare POST."
+        ),
     )
 
 

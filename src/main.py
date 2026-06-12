@@ -81,6 +81,16 @@ async def lifespan(app: FastAPI):
     logger.info(f"Fast Agent URL: {config.llm.fast_agent_url}")
     logger.info(f"Reasoning Agent URL: {config.llm.reasoning_agent_url}")
 
+    # The /ws endpoint is deliberately outside Caddy's basic_auth (the browser
+    # can't attach credentials to a WS upgrade), so the app-layer WS_TOKEN is
+    # its ONLY guard. An empty token silently disables that guard — refuse to
+    # start in production rather than expose the event stream publicly.
+    if os.getenv("ENVIRONMENT", "local").lower() == "production" and not os.getenv("WS_TOKEN"):
+        raise RuntimeError(
+            "WS_TOKEN must be set in production: without it the /ws endpoint "
+            "is reachable unauthenticated. Set it in .env.production."
+        )
+
     # Set startup time for uptime tracking
     set_startup_time()
 

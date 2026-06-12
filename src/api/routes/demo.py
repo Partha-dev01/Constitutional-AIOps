@@ -7,6 +7,7 @@ These anomalies trigger the full telemetry pipeline: collection -> annotation ->
 
 import logging
 import asyncio
+import os
 from datetime import datetime
 from typing import Any
 
@@ -24,6 +25,31 @@ _demo_state = {
     "anomalies_triggered": 0,
     "container_name": "nextcloud",
 }
+
+
+def _ensure_demo_allowed() -> None:
+    """Demo anomalies exec real stress/pkill inside a container — keep them out
+    of production unless explicitly enabled via AIOPS_ENABLE_DEMO."""
+    if os.getenv("ENVIRONMENT", "local").lower() != "production":
+        return
+    if os.getenv("AIOPS_ENABLE_DEMO", "").lower() in ("1", "true", "yes"):
+        return
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail=(
+            "Demo mode is disabled in production (it execs stress/kill commands "
+            "inside containers). Set AIOPS_ENABLE_DEMO=true to allow it."
+        ),
+    )
+
+
+def _allowed_demo_containers() -> set[str]:
+    """Containers demo mode may target: nextcloud by default, extendable via a
+    comma-separated AIOPS_DEMO_CONTAINER_WHITELIST."""
+    extra = os.getenv("AIOPS_DEMO_CONTAINER_WHITELIST", "")
+    allowed = {"nextcloud"}
+    allowed.update(name.strip() for name in extra.split(",") if name.strip())
+    return allowed
 
 
 class DemoStatus(BaseModel):
@@ -205,6 +231,7 @@ async def start_demo(request: Request) -> DemoStartResponse:
     These anomalies will be detected by the telemetry pipeline and processed
     by the Fast Agent (annotation) and Reasoning Agent (RCA).
     """
+    _ensure_demo_allowed()
     if _demo_state["active"]:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -435,6 +462,18 @@ async def set_demo_container(container_name: str) -> dict[str, Any]:
     Args:
         container_name: Name of the container to target
     """
+    _ensure_demo_allowed()
+    allowed = _allowed_demo_containers()
+    if container_name not in allowed:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=(
+                f"Container '{container_name}' is not on the demo whitelist "
+                f"({sorted(allowed)}). Demo anomalies exec stress/kill commands, so "
+                "arbitrary containers may not be targeted; extend "
+                "AIOPS_DEMO_CONTAINER_WHITELIST if this is intentional."
+            ),
+        )
     if _demo_state["active"]:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
