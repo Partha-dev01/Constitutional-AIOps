@@ -4,3 +4,140 @@
  * Every animated class added here MUST also be listed in the reduced-motion
  * kill block at the bottom of this file.
  * ------------------------------------------------------------------------- */
+
+/* Message-group entrance: gentle rise + fade as each bubble lands. */
+@keyframes msg-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Left-to-right highlight sweep across the "Thinking..." label. */
+@keyframes shimmer {
+  from {
+    background-position: 200% center;
+  }
+  to {
+    background-position: -200% center;
+  }
+}
+
+/* One-shot expanding ring behind a freshly-completed timeline check. */
+@keyframes ring-out {
+  from {
+    transform: scale(0.4);
+    opacity: 0.7;
+  }
+  to {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+}
+
+/* Confidence-gauge fill entrance (origin-left scaleX). */
+@keyframes bar-grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/* Entrance animation for each chat message group. */
+.msg-in {
+  animation: msg-in 0.3s ease-out;
+}
+
+/* Gradient text sweep on the in-flight "Thinking..." label. The label stays a
+ * single uninterrupted text node (e2e contract); only its paint changes. */
+.thinking-shimmer {
+  background-image: linear-gradient(
+    90deg,
+    hsl(var(--foreground)) 0%,
+    hsl(var(--primary)) 45%,
+    hsl(var(--primary)) 55%,
+    hsl(var(--foreground)) 100%
+  );
+  background-size: 200% auto;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: shimmer 1.8s linear infinite;
+}
+
+/* Expanding ring rendered behind the completed-step check icon. */
+.check-ripple {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  border: 2px solid hsl(var(--primary) / 0.5);
+  pointer-events: none;
+  animation: ring-out 0.6s ease-out forwards;
+}
+
+/* Soft glow on the tool timeline while a request is in flight. */
+.timeline-active {
+  box-shadow:
+    0 0 0 1px hsl(var(--primary) / 0.08),
+    0 4px 24px -6px hsl(var(--primary) / 0.25);
+}
+
+/* Composer focus glow — a transition, not a keyframe, so typing feels calm. */
+.composer-glow {
+  transition:
+    box-shadow 0.25s ease,
+    border-color 0.25s ease;
+}
+
+.composer-glow:focus-within {
+  border-color: hsl(var(--primary) / 0.5);
+  box-shadow:
+    0 0 0 1px hsl(var(--primary) / 0.35),
+    0 0 24px -4px hsl(var(--primary) / 0.35);
+}
+
+/* Confidence-gauge fill sweeps in from the left. */
+.bar-grow {
+  transform-origin: left;
+  animation: bar-grow 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* ---------------------------------------------------------------------------
+ * Reduced motion: snap every animated class above to its final state.
+ * Mirrors the patterns in index.css.
+ * ------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .msg-in,
+  .check-ripple,
+  .timeline-active,
+  .composer-glow,
+  .bar-grow {
+    opacity: 1;
+    transform: none;
+    animation: none;
+    transition: none;
+  }
+
+  /* The ripple's whole purpose is motion; at rest it would just be a stray
+   * ring around the check, so hide it entirely. */
+  .check-ripple {
+    display: none;
+  }
+
+  /* Static label color instead of the gradient sweep. */
+  .thinking-shimmer {
+    animation: none;
+    background-image: none;
+    background-clip: border-box;
+    -webkit-background-clip: border-box;
+    -webkit-text-fill-color: currentColor;
+    color: inherit;
+  }
+}
