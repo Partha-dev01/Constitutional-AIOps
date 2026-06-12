@@ -1,23 +1,16 @@
 import { Link } from 'react-router-dom'
 import { Shield, GraduationCap, ArrowRight } from 'lucide-react'
 
-const TEAM = [
-  '[redacted]',
-  '[redacted]',
-  '[redacted]',
-  '[redacted]',
-]
-
 const SECTION_LINKS = [
   { href: '#features', label: 'Features' },
   { href: '#architecture', label: 'Architecture' },
   { href: '#live', label: 'Live demo' },
-  { href: '#team', label: 'Team' },
+  { href: '#about', label: 'About' },
 ]
 
 export function TeamFooter() {
   return (
-    <footer id="team" className="relative pb-12 pt-20 sm:pt-24">
+    <footer id="about" className="relative pb-12 pt-20 sm:pt-24">
       {/* Gradient hairline along the footer top */}
       <div
         className="absolute inset-x-0 top-0 h-px"
@@ -62,22 +55,15 @@ export function TeamFooter() {
             </ul>
           </div>
 
-          {/* Team */}
+          {/* About */}
           <div>
             <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-1.5 text-xs font-medium text-muted-foreground">
               <GraduationCap className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
-              B.Tech Final Year Project
+              Academic research project
             </div>
-            <ul className="space-y-1 text-sm text-foreground">
-              {TEAM.map((member) => (
-                <li key={member}>{member}</li>
-              ))}
-            </ul>
-            <p className="mt-3 text-sm text-muted-foreground">
-              [redacted]
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Advisor: [redacted]
+            <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
+              An engineering research project exploring constitutional safety
+              for autonomous, LLM-driven infrastructure operations.
             </p>
           </div>
         </div>

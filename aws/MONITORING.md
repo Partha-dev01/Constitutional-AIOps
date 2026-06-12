@@ -95,7 +95,7 @@ aws budgets describe-budget --profile aiops-operator --account-id 123456789012 \
   --query 'Budget.{Limit:BudgetLimit.Amount,Used:CalculatedSpend.ActualSpend.Amount}'
 ```
 
-Email alerts go to `[redacted]` at 80% and 100% — check inbox.
+Email alerts go to the configured billing-alert address at 80% and 100% — check inbox.
 
 ## Benchmark progress (once Phase 4.2 starts)
 

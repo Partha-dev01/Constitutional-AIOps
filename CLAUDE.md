@@ -413,11 +413,7 @@ reasoning_response = await router.reasoning_completion(prompt)
 ## 👥 Project Team
 
 **Project**: Constitutional AIOps
-**Type**: B.Tech Final Year Project
-**Institution**: [redacted]
-**Advisor**: [redacted]
-
-**Team**: [redacted], [redacted], [redacted], [redacted]
+**Type**: Academic engineering research project
 
 ---
 
