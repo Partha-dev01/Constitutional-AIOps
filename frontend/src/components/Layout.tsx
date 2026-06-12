@@ -1,5 +1,5 @@
 import { ReactNode, useState, useEffect } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard,
   AlertTriangle,
@@ -10,10 +10,13 @@ import {
   Cpu,
   BarChart3,
   FlaskConical,
-  Server
+  LogOut,
+  Server,
+  UserCircle2
 } from 'lucide-react'
 import { cn } from '../lib/utils'
 import api, { HealthResponse, isComponentHealthy } from '../lib/api'
+import { useAuthStore } from '../lib/auth'
 
 interface LayoutProps {
   children: ReactNode
@@ -32,7 +35,16 @@ const navigation = [
 
 export function Layout({ children }: LayoutProps) {
   const location = useLocation()
+  const navigate = useNavigate()
   const [health, setHealth] = useState<HealthResponse | null>(null)
+  const user = useAuthStore((s) => s.user)
+  const authRequired = useAuthStore((s) => s.authRequired)
+  const logout = useAuthStore((s) => s.logout)
+
+  const handleLogout = async () => {
+    await logout()
+    navigate('/login')
+  }
 
   // Fetch health status periodically
   useEffect(() => {
@@ -91,6 +103,26 @@ export function Layout({ children }: LayoutProps) {
 
         {/* System Health Status */}
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-border space-y-3">
+          {/* Signed-in identity + logout (only meaningful once auth is enforced) */}
+          {authRequired && user && (
+            <div className="flex items-center justify-between gap-2 text-sm">
+              <span
+                className="flex min-w-0 items-center gap-2 text-muted-foreground"
+                title={`Signed in as ${user.username}`}
+              >
+                <UserCircle2 className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+                <span className="truncate">{user.username}</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => { void handleLogout() }}
+                className="flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+              >
+                <LogOut className="h-4 w-4" aria-hidden="true" />
+                Logout
+              </button>
+            </div>
+          )}
           <div className="flex items-center gap-2 text-sm">
             <Activity className={cn('h-4 w-4', systemHealthy ? 'text-green-500' : 'text-red-500')} />
             <span className="text-muted-foreground">

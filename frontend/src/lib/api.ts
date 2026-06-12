@@ -329,6 +329,51 @@ export interface DashboardStats {
   };
 }
 
+// ---- Auth types ----
+export interface AuthUser {
+  username: string;
+  role: string;
+}
+
+export interface AuthConfigResponse {
+  auth_required: boolean;
+}
+
+export interface LoginResponse {
+  user: AuthUser;
+  expires_at: string;
+}
+
+export interface LogoutResponse {
+  ok: boolean;
+  everywhere: boolean;
+}
+// ---- end Auth types ----
+
+/**
+ * Window event dispatched when any non-auth API call comes back 401, so the
+ * auth store (lib/auth.ts) can clear the cached user without api.ts importing
+ * it (avoids a module cycle).
+ */
+export const AUTH_UNAUTHORIZED_EVENT = 'aiops:unauthorized';
+
+/**
+ * Global 401 handler: notify the auth store and send the browser to /login,
+ * preserving the current location as ?next=. Guarded so a 401 while already
+ * on /login can never cause a redirect loop.
+ */
+function handleUnauthorized(): void {
+  try {
+    window.dispatchEvent(new CustomEvent(AUTH_UNAUTHORIZED_EVENT));
+  } catch {
+    // Event dispatch is best-effort only.
+  }
+  const { pathname, search } = window.location;
+  if (pathname === '/login') return;
+  const next = encodeURIComponent(`${pathname}${search}`);
+  window.location.assign(`/login?next=${next}`);
+}
+
 // API Error
 export class ApiError extends Error {
   constructor(
@@ -366,6 +411,8 @@ async function request<T>(
   try {
     response = await fetch(url, {
       ...options,
+      // Send the httpOnly session cookie on every same-origin API call.
+      credentials: 'same-origin',
       signal: controller.signal,
       headers: {
         'Content-Type': 'application/json',
@@ -396,6 +443,13 @@ async function request<T>(
       errorMessage = errorData.detail || errorData.message || errorMessage;
     } catch {
       // Ignore JSON parse errors
+    }
+    // A 401 on any non-auth endpoint means the session expired or was
+    // revoked: clear the cached user and route to the login page. Auth
+    // endpoints handle their own 401s (e.g. bad credentials on /auth/login,
+    // the probe on /auth/me) and must NOT trigger a global redirect.
+    if (response.status === 401 && !endpoint.startsWith('/auth/')) {
+      handleUnauthorized();
     }
     throw new ApiError(errorMessage, response.status);
   }
@@ -596,6 +650,26 @@ export const api = {
       };
     },
   },
+  // Auth (login/session). NOTE: /auth/config is public; the rest ride the
+  // httpOnly session cookie set by login.
+  auth: {
+    config: () => request<AuthConfigResponse>('/auth/config'),
+
+    me: () => request<AuthUser>('/auth/me'),
+
+    login: (username: string, password: string) =>
+      request<LoginResponse>('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ username, password }),
+      }),
+
+    logout: (everywhere = false) =>
+      request<LogoutResponse>('/auth/logout', {
+        method: 'POST',
+        body: JSON.stringify({ everywhere }),
+      }),
+  },
+
   // Settings
   settings: {
     get: () => request<AllSettings>('/settings/'),
