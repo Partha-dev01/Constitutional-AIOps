@@ -19,6 +19,10 @@ function anonContextOptions() {
       username: process.env.E2E_USER ?? '',
       password: process.env.E2E_PASS ?? '',
     },
+    // Contexts created through the `playwright` fixture inherit the project's
+    // use.storageState (the logged-in session cookie) just like they inherit
+    // httpCredentials — force an empty cookie jar so "anonymous" is real.
+    storageState: { cookies: [], origins: [] },
   }
 }
 
