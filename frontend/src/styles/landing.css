@@ -3,4 +3,339 @@
  * Loaded from main.tsx after index.css. Uses hsl(var(--token)) design tokens.
  * Every animated class added here MUST also be listed in the reduced-motion
  * kill block at the bottom of this file.
+ *
+ * Reuses (does NOT duplicate) from index.css: reveal-up, fade-in,
+ * gradient-drift, float-slow keyframes; .reveal/.reveal-visible/.float-slow
+ * utilities; tool-pulse keyframe (validator ring below).
  * ------------------------------------------------------------------------- */
+
+/* ------------------------------- Keyframes ------------------------------ */
+
+/* Three slow-drifting aurora blobs behind the hero. Long loops (22–30s) so
+ * the motion reads as ambience, not animation. */
+@keyframes aurora-a {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  33% {
+    transform: translate3d(70px, -50px, 0) scale(1.12);
+  }
+  66% {
+    transform: translate3d(-50px, 40px, 0) scale(0.94);
+  }
+}
+
+@keyframes aurora-b {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  40% {
+    transform: translate3d(-80px, 60px, 0) scale(1.08);
+  }
+  75% {
+    transform: translate3d(50px, -30px, 0) scale(0.96);
+  }
+}
+
+@keyframes aurora-c {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  30% {
+    transform: translate3d(40px, 60px, 0) scale(1.15);
+  }
+  70% {
+    transform: translate3d(-60px, -40px, 0) scale(0.9);
+  }
+}
+
+/* Marching dashes along the architecture flow line (SVG stroke-dashoffset). */
+@keyframes dash-flow {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: -48;
+  }
+}
+
+/* Periodic glossy sweep across screenshot frames. Mostly idle: the strip
+ * crosses in the first ~25% of the cycle, then rests off-screen. */
+@keyframes sheen {
+  0% {
+    transform: translateX(-160%) skewX(-18deg);
+  }
+  25%,
+  100% {
+    transform: translateX(260%) skewX(-18deg);
+  }
+}
+
+/* ------------------------- Anchor scroll offsets ------------------------ */
+
+/* The fixed glass header is 4rem tall; keep anchored sections clear of it.
+ * These ids exist only on the landing page. Smooth scrolling is opt-in and
+ * scoped to documents containing the landing sections; it never applies under
+ * reduced motion. */
+#features,
+#architecture,
+#live,
+#team {
+  scroll-margin-top: 5rem;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html:has(#features) {
+    scroll-behavior: smooth;
+  }
+}
+
+/* ----------------------------- Fixed header ----------------------------- */
+
+/* Transparent over the hero; gains glass (blur + tinted bg + hairline) once
+ * the page scrolls. LandingHeader toggles .is-scrolled via a rAF-throttled
+ * scroll listener. */
+.glass-header {
+  background-color: transparent;
+  border-bottom: 1px solid transparent;
+  transition:
+    background-color 0.3s ease,
+    border-color 0.3s ease,
+    box-shadow 0.3s ease;
+}
+
+.glass-header.is-scrolled {
+  background-color: hsl(var(--background) / 0.7);
+  border-bottom-color: hsl(var(--border) / 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 1px 24px hsl(var(--background) / 0.4);
+}
+
+/* ------------------------------ Hero aurora ----------------------------- */
+
+.aurora {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(72px);
+  pointer-events: none;
+  will-change: transform;
+}
+
+.aurora-a {
+  width: 36rem;
+  height: 36rem;
+  top: -12rem;
+  left: -8rem;
+  background: radial-gradient(circle, hsl(var(--primary) / 0.28), transparent 65%);
+  animation: aurora-a 26s ease-in-out infinite;
+}
+
+.aurora-b {
+  width: 32rem;
+  height: 32rem;
+  top: -6rem;
+  right: -10rem;
+  background: radial-gradient(circle, hsl(262 83% 58% / 0.22), transparent 65%);
+  animation: aurora-b 30s ease-in-out infinite;
+}
+
+.aurora-c {
+  width: 28rem;
+  height: 28rem;
+  bottom: -10rem;
+  left: 30%;
+  background: radial-gradient(circle, hsl(190 95% 50% / 0.16), transparent 65%);
+  animation: aurora-c 22s ease-in-out infinite;
+}
+
+/* ----------------------------- Hero headline ---------------------------- */
+
+/* Word-staggered entrance. Composes the shared reveal-up keyframe from
+ * index.css; each word sets its own animation-delay inline. Spans only —
+ * the h1 text content stays exactly "Constitutional AIOps". */
+.hero-word {
+  display: inline-block;
+  opacity: 0;
+  animation: reveal-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Staggered entrance for the hero badge, copy, and CTA row. Composes the
+ * shared reveal-up keyframe; each element sets animation-delay inline. */
+.hero-enter {
+  opacity: 0;
+  animation: reveal-up 0.7s ease-out both;
+}
+
+/* Gradient text clip used on the "AIOps" word. Decorative accent hues are
+ * intentionally hardcoded (violet/cyan) alongside the primary token. */
+.text-gradient {
+  background: linear-gradient(
+    100deg,
+    hsl(var(--primary)),
+    hsl(262 83% 58%) 50%,
+    hsl(190 95% 50%)
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Primary CTA glow. */
+.cta-glow {
+  box-shadow:
+    0 0 20px hsl(var(--primary) / 0.4),
+    0 8px 32px hsl(var(--primary) / 0.22);
+  transition: box-shadow 0.25s ease, transform 0.25s ease;
+}
+
+.cta-glow:hover {
+  box-shadow:
+    0 0 32px hsl(var(--primary) / 0.55),
+    0 10px 40px hsl(var(--primary) / 0.3);
+}
+
+/* ------------------------------ Glass cards ----------------------------- */
+
+/* Feature cards: gradient hairline border (two-layer background trick),
+ * inner radial highlight, hover lift. */
+.glass-card {
+  position: relative;
+  border-radius: 0.75rem;
+  border: 1px solid transparent;
+  background:
+    linear-gradient(hsl(var(--card)), hsl(var(--card))) padding-box,
+    linear-gradient(
+        160deg,
+        hsl(var(--border)),
+        hsl(var(--primary) / 0.45) 45%,
+        hsl(var(--border))
+      )
+      border-box;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.glass-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    120% 80% at 50% 0%,
+    hsl(var(--primary) / 0.08),
+    transparent 60%
+  );
+  pointer-events: none;
+}
+
+.glass-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 40px -12px hsl(var(--primary) / 0.18);
+}
+
+/* --------------------------- Screenshot frames -------------------------- */
+
+/* Glass "browser" frame shared by the hero showcase and proof rows. */
+.shot-frame {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0.75rem;
+  border: 1px solid hsl(var(--border) / 0.9);
+  background: hsl(var(--card) / 0.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow:
+    0 24px 64px -16px hsl(var(--primary) / 0.22),
+    0 8px 28px hsl(222 47% 3% / 0.45);
+}
+
+/* Static top sheen: a faint glossy edge along the frame's top. */
+.shot-frame::after {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    hsl(var(--foreground) / 0.25),
+    transparent
+  );
+  pointer-events: none;
+}
+
+/* Animated glossy strip sweeping across the frame (see sheen keyframe). */
+.shot-sheen {
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  background: linear-gradient(
+    100deg,
+    transparent,
+    hsl(var(--foreground) / 0.05),
+    transparent
+  );
+  animation: sheen 9s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* -------------------------- Architecture flow --------------------------- */
+
+/* Animated dashed pipeline + curved Neo4j return path (lg+ only). The SVG
+ * sits behind the stage cards; strokes use vector-effect non-scaling. */
+.flow-line {
+  stroke-dasharray: 7 7;
+  animation: dash-flow 1.4s linear infinite;
+}
+
+.flow-return {
+  stroke-dasharray: 5 7;
+  animation: dash-flow 2.2s linear infinite;
+}
+
+/* Pulsing ring on the Constitutional Validator stage icon. Reuses the
+ * tool-pulse keyframe defined in index.css. */
+.validator-ring {
+  animation: tool-pulse 1.8s ease-in-out infinite;
+}
+
+/* ------------------------- Reduced-motion kills ------------------------- */
+/* Single kill block: every animated/transitioning class above snaps to its
+ * final, fully-visible state. JS-driven motion (parallax, count-ups, header
+ * class toggling beyond color) bails separately via prefersReducedMotion(). */
+@media (prefers-reduced-motion: reduce) {
+  .aurora,
+  .aurora-a,
+  .aurora-b,
+  .aurora-c,
+  .hero-word,
+  .hero-enter,
+  .cta-glow,
+  .glass-card,
+  .glass-header,
+  .shot-sheen,
+  .flow-line,
+  .flow-return,
+  .validator-ring {
+    opacity: 1;
+    transform: none;
+    animation: none;
+    transition: none;
+  }
+
+  .hero-word {
+    opacity: 1;
+  }
+
+  .shot-sheen {
+    opacity: 0;
+  }
+
+  .glass-card:hover {
+    transform: none;
+  }
+}
