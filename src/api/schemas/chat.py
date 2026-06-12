@@ -100,6 +100,10 @@ class ConversationHistory(BaseModel):
     updated_at: datetime
     messages: list[ChatMessage]
     context: Optional[dict[str, Any]] = None
+    owner: Optional[str] = Field(
+        default=None,
+        description="Username that owns this conversation; None for legacy/global ones",
+    )
 
     class Config:
         json_schema_extra = {

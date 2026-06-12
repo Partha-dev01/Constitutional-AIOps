@@ -18,8 +18,11 @@ import os
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
+
+from src.auth import store as user_store
+from src.auth.deps import User, coerce_user, is_synthetic, require_user
 
 logger = logging.getLogger(__name__)
 
@@ -163,9 +166,23 @@ class AllSettings(BaseModel):
     summary="Get Settings",
     description="Return current persisted settings (merged with defaults for any missing keys).",
 )
-async def get_settings() -> AllSettings:
-    """Return current settings, merging persisted file with built-in defaults."""
+async def get_settings(user: User = Depends(require_user)) -> AllSettings:
+    """Return current settings, merging persisted file with built-in defaults.
+
+    For a REAL DB user the per-user `notifications` row (if any) is overlaid
+    on the global values; the pre-rollout synthetic admin keeps reading the
+    global file only — zero behavior change until AUTH_REQUIRED flips.
+    """
+    user = coerce_user(user)
     merged = _merge_with_defaults(_load_persisted())
+    if not is_synthetic(user):
+        try:
+            per_user = user_store.get_user_settings(user.id) or {}
+            notifications = per_user.get("notifications")
+            if isinstance(notifications, dict):
+                merged["notifications"].update(notifications)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Failed to read per-user settings for %s: %s", user.username, exc)
     return AllSettings(**merged)
 
 
@@ -175,10 +192,48 @@ async def get_settings() -> AllSettings:
     summary="Save Settings",
     description="Persist all settings and apply constitutional thresholds to the live validator.",
 )
-async def save_settings(request: Request, body: AllSettings) -> AllSettings:
-    """Persist settings and push constitutional thresholds to the live validator."""
+async def save_settings(
+    request: Request,
+    body: AllSettings,
+    user: User = Depends(require_user),
+) -> AllSettings:
+    """Persist settings and push constitutional thresholds to the live validator.
+
+    Scoping rules:
+    * synthetic admin (AUTH_REQUIRED off): whole payload to the global file,
+      exactly as before — zero behavior change pre-flip.
+    * real DB user: `notifications` goes to THEIR user row. The system-wide
+      `constitutional` + `telemetry` sections may only be CHANGED by admins
+      (403 for everyone else); admin changes go to the global file.
+    """
+    user = coerce_user(user)
     data = body.model_dump()
-    _save_persisted(data)
+
+    if is_synthetic(user):
+        _save_persisted(data)
+    else:
+        current_global = _merge_with_defaults(_load_persisted())
+        if user.role != "admin":
+            # Non-admins may not touch the system-wide sections. The UI sends
+            # the full settings object, so "touch" means "differs from the
+            # current global values".
+            if (
+                data["constitutional"] != current_global["constitutional"]
+                or data["telemetry"] != current_global["telemetry"]
+            ):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Only admins may change constitutional or telemetry settings",
+                )
+        else:
+            persisted = _load_persisted()
+            persisted["constitutional"] = data["constitutional"]
+            persisted["telemetry"] = data["telemetry"]
+            _save_persisted(persisted)
+        try:
+            user_store.set_user_settings(user.id, {"notifications": data["notifications"]})
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Failed to save per-user settings for %s: %s", user.username, exc)
 
     # Apply constitutional thresholds to the live ConstitutionalValidator (best-effort).
     # NOTE: main.py stores the validator as app.state.validator — the old
