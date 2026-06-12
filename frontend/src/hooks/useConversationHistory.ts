@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import api, { ApiError } from '../lib/api'
 import type { ConversationSummary } from '../lib/api'
+import { useAuthStore } from '../lib/auth'
 
 /**
  * Conversation-history state for the Chat sidebar.
@@ -12,17 +13,27 @@ import type { ConversationSummary } from '../lib/api'
  * ephemeral, so the cache is a best-effort convenience, never the source of
  * truth — a successful fetch always replaces it.
  *
+ * The cache key is scoped per signed-in username (`<key>:<username|anon>`) so
+ * two users on the same browser never see each other's cached sidebar; the
+ * auth store also clears all per-user caches on logout (lib/auth.ts).
+ *
  * Everything degrades silently: storage failures (private mode / quota) and
  * fetch failures never throw out of the hook; they just leave the last-known
  * list in place and surface a boolean `error` flag for the UI.
  */
 
+// Base key; lib/auth.ts clears all `aiops.chat.conversations*` keys on logout.
 const CACHE_KEY = 'aiops.chat.conversations'
 
+/** Per-user cache key so cached sidebars never leak across accounts. */
+function cacheKeyFor(username: string | null): string {
+  return `${CACHE_KEY}:${username || 'anon'}`
+}
+
 /** Read the cached conversation list. Never throws. */
-function readCache(): ConversationSummary[] {
+function readCache(key: string): ConversationSummary[] {
   try {
-    const raw = window.localStorage.getItem(CACHE_KEY)
+    const raw = window.localStorage.getItem(key)
     if (!raw) return []
     const parsed: unknown = JSON.parse(raw)
     if (!Array.isArray(parsed)) return []
@@ -39,9 +50,9 @@ function readCache(): ConversationSummary[] {
 }
 
 /** Persist the conversation list to the mirror. Never throws. */
-function writeCache(items: ConversationSummary[]): void {
+function writeCache(key: string, items: ConversationSummary[]): void {
   try {
-    window.localStorage.setItem(CACHE_KEY, JSON.stringify(items))
+    window.localStorage.setItem(key, JSON.stringify(items))
   } catch {
     // Mirror is best-effort only.
   }
@@ -61,7 +72,12 @@ export interface UseConversationHistory {
 }
 
 export function useConversationHistory(): UseConversationHistory {
-  const [conversations, setConversations] = useState<ConversationSummary[]>(() => readCache())
+  const username = useAuthStore((s) => s.user?.username ?? null)
+  const cacheKey = cacheKeyFor(username)
+
+  const [conversations, setConversations] = useState<ConversationSummary[]>(() =>
+    readCache(cacheKey),
+  )
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
 
@@ -70,7 +86,7 @@ export function useConversationHistory(): UseConversationHistory {
       const res = await api.chat.listConversations()
       const items = res.items ?? []
       setConversations(items)
-      writeCache(items)
+      writeCache(cacheKey, items)
       setError(false)
     } catch (err) {
       // A 404 (no conversations endpoint yet / empty) is not a real error for
@@ -83,13 +99,13 @@ export function useConversationHistory(): UseConversationHistory {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [cacheKey])
 
   const remove = useCallback(async (id: string) => {
     // Optimistic: drop it locally first so the UI feels instant.
     setConversations((prev) => {
       const next = prev.filter((c) => c.conversation_id !== id)
-      writeCache(next)
+      writeCache(cacheKey, next)
       return next
     })
     try {
@@ -98,11 +114,15 @@ export function useConversationHistory(): UseConversationHistory {
       // If the delete failed, re-sync from the backend to restore truth.
       void refresh()
     }
-  }, [refresh])
+  }, [cacheKey, refresh])
 
+  // Re-seed from the (possibly different) per-user cache and re-fetch when
+  // the signed-in identity changes — including logout, which the auth store
+  // pairs with clearing every per-user cache.
   useEffect(() => {
+    setConversations(readCache(cacheKey))
     void refresh()
-  }, [refresh])
+  }, [cacheKey, refresh])
 
   return { conversations, loading, error, refresh, remove }
 }
