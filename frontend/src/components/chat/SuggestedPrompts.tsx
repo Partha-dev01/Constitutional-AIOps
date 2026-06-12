@@ -18,8 +18,8 @@ export function SuggestedPrompts({ prompts, onPick, title }: SuggestedPromptsPro
 
   return (
     <div className="mx-auto max-w-2xl text-center">
-      <div className="mb-3 inline-flex h-11 w-11 items-center justify-center rounded-lg bg-primary/10 text-primary">
-        <Sparkles className="h-6 w-6" />
+      <div className="float-slow mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/25 via-primary/10 to-transparent text-primary shadow-[0_8px_30px_-6px_hsl(var(--primary)/0.35)]">
+        <Sparkles className="h-7 w-7" />
       </div>
       <h2 className="text-lg font-semibold">{title ?? 'Try asking about'}</h2>
       <p className="mt-1 text-sm text-muted-foreground">
@@ -33,7 +33,7 @@ export function SuggestedPrompts({ prompts, onPick, title }: SuggestedPromptsPro
             type="button"
             onClick={() => onPick(prompt)}
             style={{ animationDelay: `${i * 60}ms` }}
-            className="chip-in group flex items-center gap-2 rounded-lg border border-border bg-card p-3 text-left text-sm transition-all hover:-translate-y-0.5 hover:border-primary/50"
+            className="chip-in group flex items-center gap-2 rounded-xl border border-border/60 bg-card/70 p-3 text-left text-sm transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-[0_4px_20px_-4px_hsl(var(--primary)/0.3)]"
           >
             <Sparkles className="h-4 w-4 shrink-0 text-primary/70 transition-colors group-hover:text-primary" />
             <span className="text-foreground">{prompt}</span>
