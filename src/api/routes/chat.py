@@ -13,8 +13,9 @@ import uuid
 from datetime import datetime, timedelta
 from typing import Any, Optional
 
-from fastapi import APIRouter, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 
+from src.auth.deps import User, coerce_user, require_user
 from src.api.schemas.chat import (
     AnalysisRequest,
     AnalysisResponse,
@@ -416,13 +417,26 @@ def _evict_stale_conversations() -> None:
     logger.info(f"Evicted {overflow} stale conversation(s) (cap {_MAX_CONVERSATIONS})")
 
 
+def _can_access(conversation: ConversationHistory, user: User) -> bool:
+    """Per-user data scoping: a conversation is visible to its owner; legacy
+    owner-less (None) conversations are visible to admins only."""
+    owner = getattr(conversation, "owner", None)
+    if owner == user.username:
+        return True
+    return owner is None and user.role == "admin"
+
+
 @router.post(
     "/",
     response_model=ChatResponse,
     summary="Send Chat Message",
     description="Send a message to the Reasoning Agent and get a response",
 )
-async def chat(request: Request, chat_request: ChatRequest) -> ChatResponse:
+async def chat(
+    request: Request,
+    chat_request: ChatRequest,
+    user: User = Depends(require_user),
+) -> ChatResponse:
     """
     Send a message to the Reasoning Agent.
 
@@ -438,11 +452,18 @@ async def chat(request: Request, chat_request: ChatRequest) -> ChatResponse:
     Returns:
         Assistant's response with confidence and suggestions
     """
+    user = coerce_user(user)
+
     # Get or create conversation
     conversation_id = chat_request.conversation_id or f"conv-{uuid.uuid4().hex[:12]}"
 
     if conversation_id in _conversations:
         conversation = _conversations[conversation_id]
+        if not _can_access(conversation, user):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Conversation {conversation_id} not found",
+            )
     else:
         conversation = ConversationHistory(
             conversation_id=conversation_id,
@@ -450,6 +471,7 @@ async def chat(request: Request, chat_request: ChatRequest) -> ChatResponse:
             updated_at=datetime.utcnow(),
             messages=[],
             context=chat_request.context,
+            owner=user.username,
         )
         _conversations[conversation_id] = conversation
         _evict_stale_conversations()
@@ -630,7 +652,11 @@ async def chat(request: Request, chat_request: ChatRequest) -> ChatResponse:
     summary="Run Analysis",
     description="Run RCA or planning analysis on incident data",
 )
-async def analyze(request: Request, analysis_request: AnalysisRequest) -> AnalysisResponse:
+async def analyze(
+    request: Request,
+    analysis_request: AnalysisRequest,
+    user: User = Depends(require_user),
+) -> AnalysisResponse:
     """
     Run specialized analysis (RCA or remediation planning).
 
@@ -644,6 +670,7 @@ async def analyze(request: Request, analysis_request: AnalysisRequest) -> Analys
     Returns:
         Structured analysis results with confidence
     """
+    user = coerce_user(user)
     start_time = time.perf_counter()
     analysis_id = f"ana-{uuid.uuid4().hex[:12]}"
 
@@ -752,7 +779,10 @@ async def analyze(request: Request, analysis_request: AnalysisRequest) -> Analys
     summary="Get Conversation History",
     description="Retrieve full conversation history by ID",
 )
-async def get_conversation(conversation_id: str) -> ConversationHistory:
+async def get_conversation(
+    conversation_id: str,
+    user: User = Depends(require_user),
+) -> ConversationHistory:
     """
     Get conversation history.
 
@@ -762,13 +792,17 @@ async def get_conversation(conversation_id: str) -> ConversationHistory:
     Returns:
         Full conversation with all messages
     """
-    if conversation_id not in _conversations:
+    user = coerce_user(user)
+    conversation = _conversations.get(conversation_id)
+    # A conversation owned by someone else is indistinguishable from a missing
+    # one (404, not 403) so conversation ids cannot be probed across users.
+    if conversation is None or not _can_access(conversation, user):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Conversation {conversation_id} not found",
         )
 
-    return _conversations[conversation_id]
+    return conversation
 
 
 @router.delete(
@@ -777,14 +811,19 @@ async def get_conversation(conversation_id: str) -> ConversationHistory:
     summary="Delete Conversation",
     description="Delete a conversation by ID",
 )
-async def delete_conversation(conversation_id: str) -> None:
+async def delete_conversation(
+    conversation_id: str,
+    user: User = Depends(require_user),
+) -> None:
     """
     Delete a conversation.
 
     Args:
         conversation_id: Unique conversation identifier
     """
-    if conversation_id not in _conversations:
+    user = coerce_user(user)
+    conversation = _conversations.get(conversation_id)
+    if conversation is None or not _can_access(conversation, user):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Conversation {conversation_id} not found",
@@ -801,6 +840,7 @@ async def delete_conversation(conversation_id: str) -> None:
 async def list_conversations(
     limit: int = 20,
     offset: int = 0,
+    user: User = Depends(require_user),
 ) -> dict[str, Any]:
     """
     List active conversations.
@@ -810,10 +850,12 @@ async def list_conversations(
         offset: Pagination offset
 
     Returns:
-        List of conversation summaries
+        List of conversation summaries (only those visible to the caller:
+        own conversations, plus legacy owner-less ones for admins).
     """
+    user = coerce_user(user)
     all_convs = sorted(
-        _conversations.values(),
+        (c for c in _conversations.values() if _can_access(c, user)),
         key=lambda c: c.updated_at,
         reverse=True,
     )
