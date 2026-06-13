@@ -18,7 +18,7 @@ aiohttp>=3.9.0
 
 # Database
 neo4j>=5.14.0
-influxdb-client>=1.38.0
+influxdb-client>=1.50.0
 
 # Telemetry
 opentelemetry-api>=1.21.0
