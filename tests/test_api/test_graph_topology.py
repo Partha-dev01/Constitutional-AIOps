@@ -183,9 +183,12 @@ class TestEpisodeBucketing:
             # just inside the window start -> bucket 0
             _episode_row("ep-old", "Old incident", "critical",
                          now - timedelta(hours=167, minutes=50), ["backend"]),
-            # mid-window -> bucket 14 (168h / 28 buckets = 6h per bucket)
+            # mid-window -> bucket 14 (168h / 28 buckets = 6h per bucket). Use
+            # the CENTRE of bucket 14 (offset 87h => 14.5), not its 84h edge, so
+            # the few ms between this `now` and the endpoint's `now` can't floor
+            # it down to bucket 13.
             _episode_row("ep-mid", "Mid incident", "info",
-                         now - timedelta(hours=84), ["backend"]),
+                         now - timedelta(hours=81), ["backend"]),
             # most recent -> bucket 27; legacy numeric severity
             _episode_row("ep-new", "New incident", "10",
                          now - timedelta(minutes=1), ["backend"]),
