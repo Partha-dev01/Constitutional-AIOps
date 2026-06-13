@@ -1,0 +1,235 @@
+{
+  "generated_at": "2026-06-12T12:00:00Z",
+  "window_hours": 168,
+  "bucket_minutes": 360,
+  "nodes": [
+    {
+      "id": "caddy",
+      "label": "Caddy",
+      "kind": "gateway",
+      "tier": 0,
+      "health": "healthy",
+      "health_reason": "up and serving",
+      "episode_count": 1,
+      "incident_count": 0,
+      "last_episode_at": "2026-06-06T20:00:00Z",
+      "buckets": [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      "recent_episodes": [
+        { "id": "ep-caddy-1", "title": "Caddy upstream 502 burst on /api", "severity": "warning", "at": "2026-06-06T20:00:00Z" }
+      ],
+      "meta": { "port": 443, "description": "Reverse proxy and TLS termination for all public traffic", "edge_label": null }
+    },
+    {
+      "id": "frontend",
+      "label": "Frontend",
+      "kind": "frontend",
+      "tier": 1,
+      "health": "healthy",
+      "health_reason": "up and serving",
+      "episode_count": 0,
+      "incident_count": 0,
+      "last_episode_at": null,
+      "buckets": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      "recent_episodes": [],
+      "meta": { "port": 3000, "description": "React SPA served by nginx", "edge_label": null }
+    },
+    {
+      "id": "backend",
+      "label": "Backend API",
+      "kind": "backend",
+      "tier": 1,
+      "health": "warning",
+      "health_reason": "error episode within the last 6h",
+      "episode_count": 6,
+      "incident_count": 2,
+      "last_episode_at": "2026-06-12T08:30:00Z",
+      "buckets": [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1],
+      "recent_episodes": [
+        { "id": "ep-be-6", "title": "Backend API 5xx spike after deploy", "severity": "error", "at": "2026-06-12T08:30:00Z" },
+        { "id": "ep-be-5", "title": "Neo4j connection pool exhausted in backend", "severity": "critical", "at": "2026-06-12T04:10:00Z" },
+        { "id": "ep-be-4", "title": "Slow /chat responses: reasoning queue backlog", "severity": "warning", "at": "2026-06-11T22:15:00Z" }
+      ],
+      "meta": { "port": 8080, "description": "FastAPI control plane: agents, incidents, constitutional gate", "edge_label": null }
+    },
+    {
+      "id": "grafana",
+      "label": "Grafana",
+      "kind": "observability",
+      "tier": 1,
+      "health": "healthy",
+      "health_reason": "up and serving",
+      "episode_count": 1,
+      "incident_count": 0,
+      "last_episode_at": "2026-06-08T14:00:00Z",
+      "buckets": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      "recent_episodes": [
+        { "id": "ep-graf-1", "title": "Grafana datasource query timeout", "severity": "warning", "at": "2026-06-08T14:00:00Z" }
+      ],
+      "meta": { "port": 3001, "description": "Dashboards over Prometheus, Loki and Tempo", "edge_label": null }
+    },
+    {
+      "id": "promtail",
+      "label": "Promtail",
+      "kind": "observability",
+      "tier": 1,
+      "health": "healthy",
+      "health_reason": "shipping logs",
+      "episode_count": 0,
+      "incident_count": 0,
+      "last_episode_at": null,
+      "buckets": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      "recent_episodes": [],
+      "meta": { "port": 9080, "description": "Container log shipper feeding Loki", "edge_label": null }
+    },
+    {
+      "id": "otel-collector",
+      "label": "OTel Collector",
+      "kind": "observability",
+      "tier": 1,
+      "health": "healthy",
+      "health_reason": "pipeline healthy",
+      "episode_count": 0,
+      "incident_count": 0,
+      "last_episode_at": null,
+      "buckets": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      "recent_episodes": [],
+      "meta": { "port": 4317, "description": "Trace and metric pipeline into Tempo and Prometheus", "edge_label": null }
+    },
+    {
+      "id": "neo4j",
+      "label": "Neo4j",
+      "kind": "datastore",
+      "tier": 2,
+      "health": "healthy",
+      "health_reason": "bolt reachable",
+      "episode_count": 2,
+      "incident_count": 1,
+      "last_episode_at": "2026-06-12T04:05:00Z",
+      "buckets": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0],
+      "recent_episodes": [
+        { "id": "ep-neo-2", "title": "Neo4j bolt connection refused", "severity": "error", "at": "2026-06-12T04:05:00Z" },
+        { "id": "ep-neo-1", "title": "Neo4j checkpoint latency spike", "severity": "warning", "at": "2026-06-11T01:00:00Z" }
+      ],
+      "meta": { "port": 7687, "description": "Episodic knowledge graph store", "edge_label": null }
+    },
+    {
+      "id": "loki",
+      "label": "Loki",
+      "kind": "datastore",
+      "tier": 2,
+      "health": "healthy",
+      "health_reason": "ready",
+      "episode_count": 1,
+      "incident_count": 0,
+      "last_episode_at": "2026-06-10T14:00:00Z",
+      "buckets": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+      "recent_episodes": [
+        { "id": "ep-loki-1", "title": "Loki ingester flush backlog", "severity": "warning", "at": "2026-06-10T14:00:00Z" }
+      ],
+      "meta": { "port": 3100, "description": "Log aggregation store", "edge_label": null }
+    },
+    {
+      "id": "prometheus",
+      "label": "Prometheus",
+      "kind": "datastore",
+      "tier": 2,
+      "health": "healthy",
+      "health_reason": "ready",
+      "episode_count": 2,
+      "incident_count": 0,
+      "last_episode_at": "2026-06-10T19:30:00Z",
+      "buckets": [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
+      "recent_episodes": [
+        { "id": "ep-prom-2", "title": "Prometheus scrape spike from edge host", "severity": "info", "at": "2026-06-10T19:30:00Z" },
+        { "id": "ep-prom-1", "title": "Prometheus WAL replay slow start", "severity": "info", "at": "2026-06-07T15:00:00Z" }
+      ],
+      "meta": { "port": 9090, "description": "Metrics store and alerting source", "edge_label": null }
+    },
+    {
+      "id": "tempo",
+      "label": "Tempo",
+      "kind": "datastore",
+      "tier": 2,
+      "health": "unknown",
+      "health_reason": "no telemetry received in window",
+      "episode_count": 0,
+      "incident_count": 0,
+      "last_episode_at": null,
+      "buckets": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      "recent_episodes": [],
+      "meta": { "port": 3200, "description": "Distributed trace store", "edge_label": null }
+    },
+    {
+      "id": "qwen3-4b",
+      "label": "Qwen3-4B",
+      "kind": "llm",
+      "tier": 2,
+      "health": "healthy",
+      "health_reason": "model loaded",
+      "episode_count": 1,
+      "incident_count": 0,
+      "last_episode_at": "2026-06-09T08:45:00Z",
+      "buckets": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      "recent_episodes": [
+        { "id": "ep-q4-1", "title": "Fast agent annotation timeout burst", "severity": "warning", "at": "2026-06-09T08:45:00Z" }
+      ],
+      "meta": { "port": 8000, "description": "Fast annotator LLM (vLLM)", "edge_label": null }
+    },
+    {
+      "id": "qwen3-14b",
+      "label": "Qwen3-14B",
+      "kind": "llm",
+      "tier": 2,
+      "health": "warning",
+      "health_reason": "p95 latency elevated",
+      "episode_count": 2,
+      "incident_count": 1,
+      "last_episode_at": "2026-06-11T22:15:00Z",
+      "buckets": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0],
+      "recent_episodes": [
+        { "id": "ep-q14-2", "title": "Slow /chat responses: reasoning queue backlog", "severity": "warning", "at": "2026-06-11T22:15:00Z" },
+        { "id": "ep-q14-1", "title": "Reasoning agent KV-cache pressure", "severity": "warning", "at": "2026-06-11T14:20:00Z" }
+      ],
+      "meta": { "port": 8001, "description": "Reasoning agent LLM (vLLM)", "edge_label": null }
+    },
+    {
+      "id": "edge:nextcloud-host",
+      "label": "nextcloud-host",
+      "kind": "edge",
+      "tier": 3,
+      "health": "critical",
+      "health_reason": "repeated critical episodes; host degraded",
+      "episode_count": 8,
+      "incident_count": 3,
+      "last_episode_at": "2026-06-11T09:45:00Z",
+      "buckets": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 3, 2, 1, 0, 0, 0, 0],
+      "recent_episodes": [
+        { "id": "ep-nc-8", "title": "Disk pressure on /var/lib/docker", "severity": "error", "at": "2026-06-11T09:45:00Z" },
+        { "id": "ep-nc-7", "title": "High CPU steal on nextcloud-host", "severity": "warning", "at": "2026-06-11T02:30:00Z" },
+        { "id": "ep-nc-6", "title": "Nextcloud cron job failures", "severity": "warning", "at": "2026-06-10T21:10:00Z" },
+        { "id": "ep-nc-5", "title": "Nextcloud php-fpm OOM kill", "severity": "error", "at": "2026-06-10T18:40:00Z" },
+        { "id": "ep-nc-4", "title": "Nextcloud database connection refused", "severity": "critical", "at": "2026-06-10T13:05:00Z" }
+      ],
+      "meta": { "port": null, "description": "Remote edge host shipping logs and metrics into the platform", "edge_label": "nextcloud-host" }
+    }
+  ],
+  "edges": [
+    { "id": "caddy->frontend", "source": "caddy", "target": "frontend", "relationship": "DEPENDS_ON", "kind": "static", "co_episode_count": 0, "buckets": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
+    { "id": "caddy->backend", "source": "caddy", "target": "backend", "relationship": "DEPENDS_ON", "kind": "static", "co_episode_count": 0, "buckets": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
+    { "id": "caddy->grafana", "source": "caddy", "target": "grafana", "relationship": "DEPENDS_ON", "kind": "static", "co_episode_count": 0, "buckets": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
+    { "id": "backend->neo4j", "source": "backend", "target": "neo4j", "relationship": "DEPENDS_ON", "kind": "static", "co_episode_count": 1, "buckets": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0] },
+    { "id": "backend->loki", "source": "backend", "target": "loki", "relationship": "DEPENDS_ON", "kind": "static", "co_episode_count": 0, "buckets": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
+    { "id": "backend->prometheus", "source": "backend", "target": "prometheus", "relationship": "DEPENDS_ON", "kind": "static", "co_episode_count": 0, "buckets": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
+    { "id": "backend->qwen3-4b", "source": "backend", "target": "qwen3-4b", "relationship": "DEPENDS_ON", "kind": "static", "co_episode_count": 0, "buckets": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
+    { "id": "backend->qwen3-14b", "source": "backend", "target": "qwen3-14b", "relationship": "DEPENDS_ON", "kind": "static", "co_episode_count": 1, "buckets": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0] },
+    { "id": "promtail->loki", "source": "promtail", "target": "loki", "relationship": "DEPENDS_ON", "kind": "static", "co_episode_count": 0, "buckets": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
+    { "id": "otel-collector->tempo", "source": "otel-collector", "target": "tempo", "relationship": "DEPENDS_ON", "kind": "static", "co_episode_count": 0, "buckets": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
+    { "id": "otel-collector->prometheus", "source": "otel-collector", "target": "prometheus", "relationship": "DEPENDS_ON", "kind": "static", "co_episode_count": 0, "buckets": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
+    { "id": "grafana->prometheus", "source": "grafana", "target": "prometheus", "relationship": "DEPENDS_ON", "kind": "static", "co_episode_count": 0, "buckets": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
+    { "id": "grafana->loki", "source": "grafana", "target": "loki", "relationship": "DEPENDS_ON", "kind": "static", "co_episode_count": 0, "buckets": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
+    { "id": "grafana->tempo", "source": "grafana", "target": "tempo", "relationship": "DEPENDS_ON", "kind": "static", "co_episode_count": 0, "buckets": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
+    { "id": "edge:nextcloud-host->loki", "source": "edge:nextcloud-host", "target": "loki", "relationship": "SHIPS_TELEMETRY", "kind": "dynamic", "co_episode_count": 1, "buckets": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0] },
+    { "id": "edge:nextcloud-host->prometheus", "source": "edge:nextcloud-host", "target": "prometheus", "relationship": "SHIPS_TELEMETRY", "kind": "dynamic", "co_episode_count": 1, "buckets": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0] }
+  ],
+  "stats": { "nodes": 13, "edges": 16, "episodes_in_window": 24, "source": "neo4j" }
+}
