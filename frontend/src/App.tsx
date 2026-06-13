@@ -5,6 +5,7 @@ import { RequireAuth } from './components/RequireAuth'
 import { Landing } from './pages/Landing'
 import { Login } from './pages/Login'
 import { Dashboard } from './pages/Dashboard'
+import { Console } from './pages/Console'
 import { Agents } from './pages/Agents'
 import { Infrastructure } from './pages/Infrastructure'
 import { Incidents } from './pages/Incidents'
@@ -57,6 +58,7 @@ function App() {
           <RequireAuth>
             <Layout>
               <Routes>
+                <Route path="/console" element={<Console />} />
                 <Route path="/agents" element={<Agents />} />
                 <Route path="/infrastructure" element={<Infrastructure />} />
                 <Route path="/incidents" element={<Incidents />} />

@@ -12,6 +12,7 @@ import {
   FlaskConical,
   LogOut,
   Server,
+  LayoutPanelLeft,
   UserCircle2
 } from 'lucide-react'
 import { cn } from '../lib/utils'
@@ -24,6 +25,7 @@ interface LayoutProps {
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+  { name: 'Command Center', href: '/console', icon: LayoutPanelLeft },
   { name: 'Agents', href: '/agents', icon: Cpu },
   { name: 'Infrastructure', href: '/infrastructure', icon: Server },
   { name: 'Incidents', href: '/incidents', icon: AlertTriangle },
