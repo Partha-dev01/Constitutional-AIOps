@@ -1,10 +1,19 @@
 """
-Tests for Loki log-level parsing fix.
+Tests for Loki log-level parsing fix and the container-label pipeline.
 
 Verifies that _parse_log_level extracts the level correctly from both
 Loki stream labels (when available) and from the log message body
 (the common case for Docker/promtail pipelines where the level label
 is not set or defaults to "info").
+
+Also verifies the `container` label path end-to-end:
+- promtail-config.yaml now derives `container` from
+  `__meta_docker_container_name` (via docker_sd_configs + relabel_configs),
+  mirroring the Alloy edge agent rule in monitoring-agent/config.alloy:32-36.
+- The collector's query_logs builds a `{container=~…}` LogQL selector (not
+  `job=containerlogs`) so both local and remote streams are visible.
+- The collector maps the `container` stream label to LogEntry.service so
+  callers get the real container name rather than a query fallback.
 """
 
 import pytest
@@ -106,20 +115,36 @@ class TestQueryLogsLevelIntegration:
         Simulates a Loki response where the stream has no 'level' label
         (typical for Docker containers with promtail).  The collector must
         extract the level from the log message.
+
+        The `container` label in the mocked stream payload represents what
+        promtail now emits after the docker_sd_configs + relabel_configs fix in
+        promtail-config.yaml (rule: __meta_docker_container_name → container,
+        mirroring monitoring-agent/config.alloy:32-36).  The collector's
+        query_logs must:
+          1. build a {container=~"…"} selector (not job="containerlogs"), and
+          2. map the `container` stream label to LogEntry.service.
         """
         import httpx
-        from unittest.mock import AsyncMock, MagicMock, patch
+        from unittest.mock import AsyncMock, MagicMock, patch, call
         from datetime import datetime, timezone
 
         from src.telemetry.collector import TelemetryCollector
 
+        # This payload represents a real promtail docker_sd stream: the
+        # `container` label is set by the relabel rule (not injected by the
+        # test), and there is no hand-added level label — level comes from
+        # the log message body via _parse_log_level.
         loki_payload = {
             "data": {
                 "result": [
                     {
                         "stream": {
                             "job": "containerlogs",
-                            "container": "nextcloud",
+                            # `container` is now set by promtail's relabel rule
+                            # (__meta_docker_container_name → container).
+                            # This label is what the collector's {container=~…}
+                            # selector matches against.
+                            "container": "aiops-nextcloud",
                             # No 'level' key — promtail raw Docker logs
                         },
                         "values": [
@@ -155,6 +180,7 @@ class TestQueryLogsLevelIntegration:
 
         await collector.close()
 
+        # ── Level extraction from message body ─────────────────────────────
         assert len(logs) == 5
         levels = [e.level for e in logs]
         assert levels[0] == "ERROR"
@@ -162,6 +188,29 @@ class TestQueryLogsLevelIntegration:
         assert levels[2] == "DEBUG"
         assert levels[3] == "INFO"
         assert levels[4] == "INFO"  # no keyword → defaults INFO
+
+        # ── Prove the `container` label flows to LogEntry.service ──────────
+        # The collector maps labels["container"] → LogEntry.service so callers
+        # can identify which container a log came from using the same label
+        # that promtail's docker_sd_configs relabel rule now emits.
+        assert all(e.service == "aiops-nextcloud" for e in logs), (
+            "LogEntry.service must be populated from the 'container' stream "
+            "label (set by promtail's relabel rule), not a fallback string."
+        )
+
+        # ── Prove the collector queries by container= (not job=) ───────────
+        # The {container=~"…"} selector is what makes both local (promtail)
+        # and remote (Alloy) logs visible; the old job="containerlogs" query
+        # silently dropped all edge-agent streams.
+        called_url = mock_get.call_args[0][0]
+        called_params = mock_get.call_args[1].get("params", mock_get.call_args[0][1] if len(mock_get.call_args[0]) > 1 else {})
+        loki_query = called_params.get("query", "")
+        assert "container" in loki_query, (
+            f"Loki selector must filter by 'container' label; got: {loki_query!r}"
+        )
+        assert "job" not in loki_query, (
+            f"Loki selector must NOT filter by 'job' (drops edge streams); got: {loki_query!r}"
+        )
 
     @pytest.mark.asyncio
     async def test_query_logs_honours_stream_level_label(self):
@@ -215,3 +264,106 @@ class TestQueryLogsLevelIntegration:
         assert len(logs) == 1
         # level label "error" should win over "INFO" in the message body
         assert logs[0].level == "ERROR"
+
+
+class TestMetricsSummaryFilter:
+    """
+    Tests that the /metrics summary path honours the service/edge filter
+    and does NOT hard-default to 'nextcloud'.
+
+    Previously telemetry.py:186 set `service_name = service or "nextcloud"`,
+    causing the summary to always scope to a single demo host.  After the fix
+    the caller passes the actual service value (or None for all-hosts), and
+    collector.py builds filtered PromQL selectors when a service is given.
+    """
+
+    @pytest.mark.asyncio
+    async def test_summary_with_no_service_sends_global_queries(self):
+        """
+        When no service is specified the summary PromQL must be global
+        (no edge/job filter) — the old hardcoded 'nextcloud' must not appear.
+        """
+        from unittest.mock import AsyncMock, MagicMock, patch
+        from datetime import datetime, timezone
+
+        from src.telemetry.collector import TelemetryCollector
+
+        empty_prom_response = {"data": {"result": []}}
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.raise_for_status = MagicMock()
+        mock_response.json.return_value = empty_prom_response
+
+        collector = TelemetryCollector(
+            loki_url="http://mock-loki:3100",
+            prometheus_url="http://mock-prom:9090",
+            tempo_url="http://mock-tempo:3200",
+        )
+
+        mock_get = AsyncMock(return_value=mock_response)
+        with patch.object(collector._client, "get", mock_get):
+            await collector.query_metrics(
+                service=None,
+                start_time=datetime(2023, 11, 14, tzinfo=timezone.utc),
+                end_time=datetime(2023, 11, 15, tzinfo=timezone.utc),
+            )
+
+        await collector.close()
+
+        # All four summary queries must have been fired.
+        assert mock_get.call_count == 4
+
+        # None of the queries should reference "nextcloud" (the old hard default)
+        for c in mock_get.call_args_list:
+            params = c[1].get("params", {})
+            q = params.get("query", "")
+            assert "nextcloud" not in q, (
+                f"Summary query must not hard-default to 'nextcloud'; got: {q!r}"
+            )
+
+    @pytest.mark.asyncio
+    async def test_summary_with_service_scopes_promql_to_edge(self):
+        """
+        When a service/edge name is provided the summary PromQL selectors must
+        include a label matcher for that name so the result is scoped to the
+        requested host.
+        """
+        from unittest.mock import AsyncMock, MagicMock, patch
+        from datetime import datetime, timezone
+
+        from src.telemetry.collector import TelemetryCollector
+
+        empty_prom_response = {"data": {"result": []}}
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.raise_for_status = MagicMock()
+        mock_response.json.return_value = empty_prom_response
+
+        collector = TelemetryCollector(
+            loki_url="http://mock-loki:3100",
+            prometheus_url="http://mock-prom:9090",
+            tempo_url="http://mock-tempo:3200",
+        )
+
+        mock_get = AsyncMock(return_value=mock_response)
+        with patch.object(collector._client, "get", mock_get):
+            await collector.query_metrics(
+                service="my-edge-host",
+                start_time=datetime(2023, 11, 14, tzinfo=timezone.utc),
+                end_time=datetime(2023, 11, 15, tzinfo=timezone.utc),
+            )
+
+        await collector.close()
+
+        assert mock_get.call_count == 4
+
+        # Every summary query must contain the requested service/edge name so
+        # the Metrics panel is scoped to the selected host.
+        for c in mock_get.call_args_list:
+            params = c[1].get("params", {})
+            q = params.get("query", "")
+            assert "my-edge-host" in q, (
+                f"Summary query must contain the requested service filter; got: {q!r}"
+            )
