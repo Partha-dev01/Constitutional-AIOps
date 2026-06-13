@@ -2,7 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Global 20% scale-down: the whole rem-based UI shrinks so more fits per
+ * screen. Breakpoints (sm/md/lg/xl) and dvh are pixel-based and unaffected. */
+html {
+  font-size: 80%;
+}
+
 :root {
+  /* The app is dark-theme only. Declaring a dark color-scheme makes native
+   * form controls (select/option popups, number-input spinners, scrollbars,
+   * date pickers) render dark instead of the browser's default light. */
+  color-scheme: dark;
   --background: 0 0% 100%;
   --foreground: 222.2 84% 4.9%;
   --card: 0 0% 100%;
@@ -22,6 +32,7 @@
 }
 
 .dark {
+  color-scheme: dark;
   --background: 222.2 84% 4.9%;
   --foreground: 210 40% 98%;
   --card: 222.2 84% 4.9%;
