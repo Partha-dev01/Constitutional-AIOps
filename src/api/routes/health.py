@@ -6,6 +6,7 @@ Checks connectivity to LLM endpoints, Neo4j, and observability stack.
 """
 
 import logging
+import time
 from datetime import datetime
 from typing import Any
 
@@ -17,7 +18,6 @@ from src.version import __version__
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
-
 
 class ComponentHealth(BaseModel):
     """Health status of a single component."""
@@ -65,6 +65,22 @@ class LivenessResponse(BaseModel):
     timestamp: datetime
 
 
+# ---------------------------------------------------------------------------
+# Short TTL cache for /health probe results.
+#
+# Each call to health_check() fires 2+ outbound LLM probes.  When the endpoint
+# is polled rapidly (Layout + Dashboard + Agents each every 30s) these probes
+# pile up.  A short cache lets concurrent polls reuse a recent result without
+# re-firing all probes; the first call after the TTL re-probes as normal.
+#
+# HEALTH_CACHE_TTL_SECONDS is intentionally small (5-10s) so the cache never
+# makes an incident recovery look delayed to the operator.
+# ---------------------------------------------------------------------------
+HEALTH_CACHE_TTL_SECONDS: float = 8.0  # module constant — tunable via import
+
+_health_cache_result: list[ComponentHealth] | None = None  # cached component list
+_health_cache_ts: float = 0.0  # monotonic timestamp of last probe
+
 # Track startup time for uptime calculation
 _startup_time: datetime | None = None
 
@@ -91,22 +107,34 @@ async def health_check(request: Request) -> HealthResponse:
     - Neo4j database
     - Observability stack (optional)
 
+    Results are cached for ``HEALTH_CACHE_TTL_SECONDS`` so rapid polls from
+    Layout / Dashboard / Agents do not re-fire all LLM probes on every request.
+
     Returns:
         HealthResponse with status of each component
     """
-    components: list[ComponentHealth] = []
+    global _health_cache_result, _health_cache_ts
 
-    # Check Fast Agent
-    fast_health = await _check_fast_agent(request)
-    components.append(fast_health)
+    now = time.monotonic()
+    if _health_cache_result is not None and (now - _health_cache_ts) < HEALTH_CACHE_TTL_SECONDS:
+        components = _health_cache_result
+    else:
+        components = []
 
-    # Check Reasoning Agent
-    reasoning_health = await _check_reasoning_agent(request)
-    components.append(reasoning_health)
+        # Check Fast Agent
+        fast_health = await _check_fast_agent(request)
+        components.append(fast_health)
 
-    # Check Neo4j (if available)
-    neo4j_health = await _check_neo4j(request)
-    components.append(neo4j_health)
+        # Check Reasoning Agent
+        reasoning_health = await _check_reasoning_agent(request)
+        components.append(reasoning_health)
+
+        # Check Neo4j (if available)
+        neo4j_health = await _check_neo4j(request)
+        components.append(neo4j_health)
+
+        _health_cache_result = components
+        _health_cache_ts = time.monotonic()
 
     # Determine overall status
     all_healthy = all(c.healthy for c in components)
@@ -116,11 +144,11 @@ async def health_check(request: Request) -> HealthResponse:
     )
 
     if all_healthy:
-        status = "healthy"
+        overall_status = "healthy"
     elif critical_healthy:
-        status = "degraded"
+        overall_status = "degraded"
     else:
-        status = "unhealthy"
+        overall_status = "unhealthy"
 
     # Calculate uptime
     uptime = None
@@ -128,7 +156,7 @@ async def health_check(request: Request) -> HealthResponse:
         uptime = (datetime.utcnow() - _startup_time).total_seconds()
 
     return HealthResponse(
-        status=status,
+        status=overall_status,
         timestamp=datetime.utcnow(),
         version=__version__,
         components=components,
