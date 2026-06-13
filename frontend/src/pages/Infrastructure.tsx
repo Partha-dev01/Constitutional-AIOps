@@ -17,7 +17,13 @@ import {
   WifiOff,
   HelpCircle,
   Trash2,
+  Zap,
+  HeartPulse,
+  AlertTriangle,
+  Save,
 } from 'lucide-react'
+import apiClient from '../lib/api'
+import type { DemoScenario, DemoStatus } from '../lib/api'
 
 // Container info type (moved from Agents.tsx)
 interface ContainerInfo {
@@ -76,6 +82,14 @@ export function Infrastructure() {
   // --- Remote (edge) host state ---
   const [remoteHosts, setRemoteHosts] = useState<RemoteHost[]>([])
   const [remoteHostsLoading, setRemoteHostsLoading] = useState(false)
+
+  // --- Demo / Chaos panel state (t3 demo agent orchestration) ---
+  const [demoScenarios, setDemoScenarios] = useState<DemoScenario[]>([])
+  const [demoStatus, setDemoStatus] = useState<DemoStatus | null>(null)
+  /** Per-scenario in-flight flag, keyed by `${scenarioId}:${action}`. */
+  const [demoBusy, setDemoBusy] = useState<Record<string, boolean>>({})
+  const [demoTargetInput, setDemoTargetInput] = useState<string>('')
+  const [demoTargetSaving, setDemoTargetSaving] = useState(false)
 
   // --- Guided edge onboarding state (NEW, frontend-only, no persisted secrets) ---
   const origin = typeof window !== 'undefined' ? window.location.origin : ''
@@ -170,10 +184,73 @@ export function Infrastructure() {
     }
   }, [])
 
+  // --- Demo / Chaos: scenario catalog + live status ---
+  const fetchDemoScenarios = useCallback(async () => {
+    try {
+      const data = await apiClient.demo.scenarios()
+      setDemoScenarios(data.scenarios || [])
+    } catch (err) {
+      console.error('Failed to fetch demo scenarios:', err)
+    }
+  }, [])
+
+  const fetchDemoStatus = useCallback(async () => {
+    try {
+      const data = await apiClient.demo.status()
+      setDemoStatus(data)
+      // Seed the editable target URL once from the server (don't clobber edits).
+      setDemoTargetInput((prev) => (prev ? prev : data.target_url || ''))
+    } catch (err) {
+      console.error('Failed to fetch demo status:', err)
+      setDemoStatus(null)
+    }
+  }, [])
+
+  const runDemoChaos = useCallback(
+    async (scenarioId: string, action: 'start' | 'heal') => {
+      const key = `${scenarioId}:${action}`
+      setDemoBusy((prev) => ({ ...prev, [key]: true }))
+      try {
+        if (action === 'start') await apiClient.demo.start(scenarioId)
+        else await apiClient.demo.heal(scenarioId)
+        // Refresh status so the badge reflects the new scenario state.
+        await fetchDemoStatus()
+      } catch (err) {
+        console.error(`Failed to ${action} scenario ${scenarioId}:`, err)
+      } finally {
+        setDemoBusy((prev) => ({ ...prev, [key]: false }))
+      }
+    },
+    [fetchDemoStatus],
+  )
+
+  const saveDemoTarget = useCallback(async () => {
+    setDemoTargetSaving(true)
+    try {
+      await apiClient.demo.setTarget(demoTargetInput.trim())
+      await fetchDemoStatus()
+    } catch (err) {
+      console.error('Failed to set demo target:', err)
+    } finally {
+      setDemoTargetSaving(false)
+    }
+  }, [demoTargetInput, fetchDemoStatus])
+
   useEffect(() => {
     fetchContainers()
     fetchRemoteHosts()
   }, [fetchContainers, fetchRemoteHosts])
+
+  // Load the demo scenario catalog once, then poll live status every 8s while
+  // the panel is mounted (cleared on unmount).
+  useEffect(() => {
+    fetchDemoScenarios()
+    fetchDemoStatus()
+    const id = setInterval(() => {
+      void fetchDemoStatus()
+    }, 8000)
+    return () => clearInterval(id)
+  }, [fetchDemoScenarios, fetchDemoStatus])
 
   // --- Selection + monitoring handlers (moved verbatim) ---
   const toggleContainerSelection = (containerName: string) => {
@@ -805,6 +882,184 @@ export function Infrastructure() {
                 {copied === 'promql' ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
               </button>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* D) Demo / Chaos panel — launch fault scenarios against the t3 demo
+          agent and watch live status. Additive section; existing test-ids
+          above are untouched. */}
+      <div className="bg-card rounded-lg border border-border" data-testid="demo-panel">
+        <div className="p-4 border-b border-border">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-semibold flex items-center gap-2">
+                <Zap className="h-4 w-4 text-yellow-500" />
+                Demo / Chaos
+              </h3>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                Inject faults into the demo target, then heal them — to showcase AI remediation.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {demoStatus &&
+                (demoStatus.reachable ? (
+                  <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-green-500/10 text-green-500">
+                    <Wifi className="h-3 w-3" />
+                    agent reachable
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-red-500/10 text-red-500">
+                    <WifiOff className="h-3 w-3" />
+                    unreachable
+                  </span>
+                ))}
+              <button
+                onClick={() => { void fetchDemoStatus() }}
+                className="flex items-center gap-2 px-2.5 py-1 text-xs bg-muted rounded hover:bg-muted/80"
+                title="Refresh demo status"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                Refresh
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-4 space-y-4">
+          {/* Unreachable hint */}
+          {demoStatus && !demoStatus.reachable && (
+            <div
+              data-testid="demo-unreachable-hint"
+              className="flex items-start gap-2 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg text-sm text-yellow-700"
+            >
+              <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+              <span>Agent unreachable — set the t3 target URL below and Save.</span>
+            </div>
+          )}
+
+          {/* Target container status badges */}
+          {demoStatus && (
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <span className="text-muted-foreground">Containers:</span>
+              {(['nextcloud', 'nextcloud-db'] as const).map((c) => {
+                const running = demoStatus.containers?.[c]?.running ?? false
+                return (
+                  <span
+                    key={c}
+                    data-testid={`demo-container-${c}`}
+                    className={`flex items-center gap-1 px-2 py-0.5 rounded-full ${
+                      running
+                        ? 'bg-green-500/10 text-green-500'
+                        : 'bg-red-500/10 text-red-500'
+                    }`}
+                  >
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full ${running ? 'bg-green-500' : 'bg-red-500'}`}
+                    />
+                    {c} {running ? 'running' : 'down'}
+                  </span>
+                )
+              })}
+            </div>
+          )}
+
+          {/* Scenario list */}
+          <div className="space-y-2">
+            {demoScenarios.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No scenarios available. Set the t3 target URL and refresh.
+              </p>
+            ) : (
+              demoScenarios.map((sc) => {
+                const active = demoStatus?.scenarios?.[sc.id]?.active ?? false
+                const startBusy = demoBusy[`${sc.id}:start`] ?? false
+                const healBusy = demoBusy[`${sc.id}:heal`] ?? false
+                return (
+                  <div
+                    key={sc.id}
+                    data-testid={`demo-scenario-${sc.id}`}
+                    className="flex items-center justify-between gap-3 p-3 bg-muted/50 rounded-lg"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-sm">{sc.label}</span>
+                        <span
+                          data-testid={`demo-scenario-${sc.id}-badge`}
+                          className={`px-2 py-0.5 rounded-full text-[11px] ${
+                            active
+                              ? 'bg-red-500/10 text-red-500'
+                              : 'bg-green-500/10 text-green-500'
+                          }`}
+                        >
+                          {active ? 'active' : 'healthy'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground truncate">{sc.description}</p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        data-testid={`demo-scenario-${sc.id}-start`}
+                        onClick={() => { void runDemoChaos(sc.id, 'start') }}
+                        disabled={startBusy}
+                        className="flex items-center gap-1.5 px-2.5 py-1 text-xs bg-red-500/90 text-white rounded hover:bg-red-500 disabled:opacity-50"
+                      >
+                        {startBusy ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Play className="h-3.5 w-3.5" />
+                        )}
+                        Start
+                      </button>
+                      <button
+                        data-testid={`demo-scenario-${sc.id}-heal`}
+                        onClick={() => { void runDemoChaos(sc.id, 'heal') }}
+                        disabled={healBusy}
+                        className="flex items-center gap-1.5 px-2.5 py-1 text-xs bg-green-500/90 text-white rounded hover:bg-green-500 disabled:opacity-50"
+                      >
+                        {healBusy ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <HeartPulse className="h-3.5 w-3.5" />
+                        )}
+                        Heal
+                      </button>
+                    </div>
+                  </div>
+                )
+              })
+            )}
+          </div>
+
+          {/* t3 target URL config */}
+          <div className="pt-2 border-t border-border">
+            <label className="block text-sm font-medium mb-2">t3 Target URL</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="url"
+                value={demoTargetInput}
+                data-testid="demo-target-input"
+                onChange={(e) => setDemoTargetInput(e.target.value)}
+                placeholder="http://t3-demo-agent:9099"
+                className="flex-1 px-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+              <button
+                data-testid="demo-target-save"
+                onClick={() => { void saveDemoTarget() }}
+                disabled={demoTargetSaving}
+                className="flex items-center gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
+              >
+                {demoTargetSaving ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+                Save
+              </button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Base URL of the t3 demo agent that runs chaos scenarios.
+            </p>
           </div>
         </div>
       </div>

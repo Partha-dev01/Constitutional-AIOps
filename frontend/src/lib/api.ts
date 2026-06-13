@@ -89,6 +89,34 @@ export interface ChatResponseMetadata {
   [key: string]: unknown;
 }
 
+/**
+ * An AI-proposed remediation action attached to a chat turn. The card in the
+ * chat (ProposedActionCard) lets a human approve/reject it (mode "approve"),
+ * or shows the outcome read-only when it was auto-executed or blocked.
+ */
+export interface ProposedAction {
+  id: string;
+  tool_name: string;
+  parameters: { service_name: string; reason: string };
+  target: 't3' | 'local';
+  title: string;
+  rationale: string;
+  mode: 'approve' | 'auto';
+  status: 'proposed' | 'auto_executed' | 'blocked';
+  verdict: Record<string, unknown> | null;
+  execution_result: Record<string, unknown> | null;
+}
+
+/** Result of a human decision on a proposed action (approve/reject). */
+export interface ActionDecisionResponse {
+  action_id: string;
+  status: 'executed' | 'refused' | 'rejected';
+  success: boolean;
+  error_code: string | null;
+  verdict: Record<string, unknown> | null;
+  result: Record<string, unknown> | null;
+}
+
 export interface ChatResponse {
   conversation_id: string;
   message: ChatMessage;
@@ -96,6 +124,8 @@ export interface ChatResponse {
   suggested_actions?: string[] | null;
   related_incidents?: string[] | null;
   metadata?: ChatResponseMetadata | null;
+  /** Optional AI-proposed remediation for this turn (may be null/absent). */
+  proposed_action?: ProposedAction | null;
 }
 
 // ---- Settings types ----
@@ -128,12 +158,47 @@ export interface TelemetrySettings {
   retentionDays: number;
 }
 
+export type RemediationMode = 'diagnose' | 'approve' | 'auto';
+
+export interface RemediationSettings {
+  mode: RemediationMode;
+  /** Min confidence (70..99) for auto-execution. Default 90. */
+  autoConfidenceThreshold: number;
+  /** Require telemetry evidence before auto-executing. Default true. */
+  requireEvidenceForAuto: boolean;
+  /** Base URL of the t3 demo agent. */
+  demoTargetUrl: string;
+}
+
 export interface AllSettings {
   constitutional: ConstitutionalSettings;
   notifications: NotificationSettings;
   telemetry: TelemetrySettings;
+  remediation: RemediationSettings;
 }
 // ---- end Settings types ----
+
+// ---- Demo / Chaos types ----
+export interface DemoScenario {
+  id: string;
+  label: string;
+  description: string;
+}
+
+export interface DemoStatus {
+  target_url: string;
+  reachable: boolean;
+  scenarios: Record<string, { active: boolean }>;
+  containers: Record<string, { running: boolean }>;
+}
+
+export interface DemoChaosResult {
+  scenario: string;
+  action: 'start' | 'heal';
+  success: boolean;
+  detail: string;
+}
+// ---- end Demo / Chaos types ----
 
 export interface ConversationSummary {
   conversation_id: string;
@@ -492,6 +557,32 @@ export const api = {
 
     deleteConversation: (id: string) =>
       request<void>(`/chat/conversations/${id}`, { method: 'DELETE' }),
+
+    /** Approve (or reject) an AI-proposed remediation action from a chat turn. */
+    decideAction: (actionId: string, approved: boolean, comment?: string) =>
+      request<ActionDecisionResponse>(`/chat/actions/${actionId}/decision`, {
+        method: 'POST',
+        body: JSON.stringify(comment === undefined ? { approved } : { approved, comment }),
+      }),
+  },
+
+  // Demo / Chaos (t3 demo agent orchestration)
+  demo: {
+    scenarios: () => request<{ scenarios: DemoScenario[] }>('/demo/scenarios'),
+
+    status: () => request<DemoStatus>('/demo/status'),
+
+    start: (scenario: string) =>
+      request<DemoChaosResult>(`/demo/chaos/${scenario}/start`, { method: 'POST' }),
+
+    heal: (scenario: string) =>
+      request<DemoChaosResult>(`/demo/chaos/${scenario}/heal`, { method: 'POST' }),
+
+    setTarget: (url: string) =>
+      request<{ target_url: string }>('/demo/target', {
+        method: 'PUT',
+        body: JSON.stringify({ url }),
+      }),
   },
 
   // Incidents
