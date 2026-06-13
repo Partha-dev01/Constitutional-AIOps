@@ -372,7 +372,7 @@ export function Settings() {
                 {/* Auto threshold slider */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <label className="text-sm font-medium">Automatic Action Threshold</label>
+                    <label htmlFor="auto-threshold-slider" className="text-sm font-medium">Automatic Action Threshold</label>
                     <span
                       data-testid="auto-threshold-value"
                       className="text-sm font-semibold text-primary"
@@ -381,6 +381,7 @@ export function Settings() {
                     </span>
                   </div>
                   <input
+                    id="auto-threshold-slider"
                     type="range"
                     min={70}
                     max={99}
@@ -407,7 +408,7 @@ export function Settings() {
                 {/* Approval threshold slider */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <label className="text-sm font-medium">Approval Required Threshold</label>
+                    <label htmlFor="approval-threshold-slider" className="text-sm font-medium">Approval Required Threshold</label>
                     <span
                       data-testid="approval-threshold-value"
                       className="text-sm font-semibold text-yellow-500"
@@ -416,6 +417,7 @@ export function Settings() {
                     </span>
                   </div>
                   <input
+                    id="approval-threshold-slider"
                     type="range"
                     min={50}
                     max={89}
@@ -760,7 +762,11 @@ export function Settings() {
                   />
                   {telemetry.lokiEnabled && (
                     <div className="ml-6 mt-2">
+                      <label htmlFor="loki-url" className="block text-xs font-medium text-muted-foreground mb-1">
+                        Loki endpoint URL
+                      </label>
                       <input
+                        id="loki-url"
                         type="url"
                         value={telemetry.lokiUrl}
                         data-testid="loki-url-input"
@@ -785,7 +791,11 @@ export function Settings() {
                   />
                   {telemetry.prometheusEnabled && (
                     <div className="ml-6 mt-2">
+                      <label htmlFor="prometheus-url" className="block text-xs font-medium text-muted-foreground mb-1">
+                        Prometheus endpoint URL
+                      </label>
                       <input
+                        id="prometheus-url"
                         type="url"
                         value={telemetry.prometheusUrl}
                         data-testid="prometheus-url-input"
@@ -810,7 +820,11 @@ export function Settings() {
                   />
                   {telemetry.tempoEnabled && (
                     <div className="ml-6 mt-2">
+                      <label htmlFor="tempo-url" className="block text-xs font-medium text-muted-foreground mb-1">
+                        Tempo endpoint URL
+                      </label>
                       <input
+                        id="tempo-url"
                         type="url"
                         value={telemetry.tempoUrl}
                         data-testid="tempo-url-input"

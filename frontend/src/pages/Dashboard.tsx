@@ -134,11 +134,13 @@ export function Dashboard() {
             onClick={fetchData}
             disabled={loading}
             className="p-2 rounded-lg hover:bg-muted disabled:opacity-50"
+            aria-label="Refresh dashboard"
+            title="Refresh"
           >
             {loading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="h-4 w-4 motion-safe:animate-spin" aria-hidden="true" />
             ) : (
-              <RefreshCw className="h-4 w-4" />
+              <RefreshCw className="h-4 w-4" aria-hidden="true" />
             )}
           </button>
         </div>
