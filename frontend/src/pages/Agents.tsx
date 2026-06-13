@@ -59,7 +59,7 @@ interface MetricPoint {
 }
 
 export function Agents() {
-  const [activeTab, setActiveTab] = useState<AgentTab>('fast')
+  const [activeTab, setActiveTab] = useState<AgentTab>('architecture')
   const [health, setHealth] = useState<HealthResponse | null>(null)
 
   // Fast Agent state
@@ -123,12 +123,12 @@ export function Agents() {
   }
 
   const tabs = [
+    { id: 'architecture' as const, label: 'Architecture', icon: Waypoints, description: 'Live platform topology' },
+    { id: 'tools' as const, label: 'MCP Tools', icon: Wrench, description: 'Tool Configuration' },
     { id: 'fast' as const, label: 'Fast Agent', icon: Zap, description: 'Telemetry annotation' },
     { id: 'reasoning' as const, label: 'Reasoning Agent', icon: Brain, description: 'RCA & Planning' },
     { id: 'telemetry' as const, label: 'Telemetry', icon: Network, description: 'Logs/Metrics/Traces' },
     { id: 'graph' as const, label: 'Graph Explorer', icon: GitBranch, description: 'Neo4j Episodes' },
-    { id: 'architecture' as const, label: 'Architecture', icon: Waypoints, description: 'Live platform topology' },
-    { id: 'tools' as const, label: 'MCP Tools', icon: Wrench, description: 'Tool Configuration' },
   ]
 
   // Fetch health status

@@ -238,6 +238,17 @@ export function EpisodicGraphExplorer({
     return map
   }, [filteredLinks])
 
+  // Stable graphData reference. Passing a NEW { nodes, links } object literal on
+  // every render (e.g. when hoveredNode/selectedNode state changes during a mouse
+  // hover) makes react-force-graph re-ingest the data and REHEAT the simulation
+  // (alpha→1), so the whole layout slowly drifts toward a corner on every hover.
+  // Memoizing keeps the reference stable across hover/select re-renders — it only
+  // changes when the filtered node/link sets actually change (data refresh / filter).
+  const graphData = useMemo(
+    () => ({ nodes: filteredNodes as NodeObject[], links: filteredLinks as LinkObject[] }),
+    [filteredNodes, filteredLinks],
+  )
+
   // Configure d3 forces for better node separation across the full canvas area.
   // FIX: Add forceX/forceY to pull nodes toward the canvas center (0, 0 in graph
   // coordinates, which maps to the canvas center). This prevents nodes from
@@ -551,7 +562,7 @@ export function EpisodicGraphExplorer({
       >
         <ForceGraph2D
           ref={graphRef}
-          graphData={{ nodes: filteredNodes as NodeObject[], links: filteredLinks as LinkObject[] }}
+          graphData={graphData}
           // FIX: Pass resolved width/height directly. Height = fixed prop (no
           // ResizeObserver feed-back loop). Width = observed width once measured.
           width={graphWidth}
