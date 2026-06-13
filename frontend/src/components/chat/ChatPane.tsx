@@ -497,7 +497,7 @@ export function ChatPane({ variant = 'page', seedContext, injectedPrompt, classN
   // ---- Embedded (cockpit) variant: slim header, no sidebar, fills its cell.
   if (embedded) {
     return (
-      <div className={`flex min-h-0 flex-col ${className}`} data-testid="chat-pane-embedded">
+      <div className={`flex h-full min-h-0 flex-col ${className}`} data-testid="chat-pane-embedded">
         <div className="mb-2 flex shrink-0 items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-blue-400 drop-shadow-[0_0_6px_hsl(var(--primary)/0.7)]" />
@@ -525,8 +525,10 @@ export function ChatPane({ variant = 'page', seedContext, injectedPrompt, classN
   }
 
   // ---- Page variant: the full /chat experience (DOM the e2e contracts read).
+  // Root fills the shell's bounded <main> (h-full min-h-0) so the messages area
+  // scrolls internally with the composer pinned — no page-level cutoff.
   return (
-    <div className="flex h-[calc(100vh-3rem)] gap-4">
+    <div className="flex h-full min-h-0 gap-4">
       <ConversationSidebar
         conversations={history.conversations}
         activeId={conversationId}
@@ -539,8 +541,8 @@ export function ChatPane({ variant = 'page', seedContext, injectedPrompt, classN
         onCloseMobile={() => setSidebarOpen(false)}
       />
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <div className="mb-4 flex items-center justify-between gap-3">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <div className="mb-4 flex shrink-0 items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <button
               type="button"
