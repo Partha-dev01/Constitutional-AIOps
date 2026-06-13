@@ -250,14 +250,16 @@ class TestDemoGate:
         monkeypatch.delenv("AIOPS_ENABLE_DEMO", raising=False)
         _ensure_demo_allowed()  # must not raise
 
-    def test_container_whitelist(self, monkeypatch):
-        from src.api.routes.demo import _allowed_demo_containers
-
-        monkeypatch.delenv("AIOPS_DEMO_CONTAINER_WHITELIST", raising=False)
-        assert _allowed_demo_containers() == {"nextcloud"}
-
-        monkeypatch.setenv("AIOPS_DEMO_CONTAINER_WHITELIST", "alpha, beta")
-        assert _allowed_demo_containers() == {"nextcloud", "alpha", "beta"}
+    # NOTE: ``_allowed_demo_containers`` (the OLD local-docker container
+    # whitelist) was intentionally removed when the demo subsystem was
+    # re-architected to inject chaos on the remote t3 control agent instead of
+    # exec-ing into local containers. The backend demo routes now have NO local
+    # docker path and accept only a closed set of scenario IDs (404 on unknown);
+    # the container allow-list is enforced on the t3 agent itself
+    # (``demo-agent/agent.py`` ``_whitelist()`` -> 403). That gating is covered
+    # by ``test_demo_t3.py`` (scenario enum / routing) and
+    # ``test_demo_agent/test_agent.py`` (agent whitelist + auth). The
+    # ``_ensure_demo_allowed`` production gate above is unchanged.
 
 
 # ---------------------------------------------------------------------------
