@@ -463,3 +463,37 @@ class TestSeedTopology:
             assert isinstance(svc["tier"], int)
         for source, target in PLATFORM_DEPENDENCIES:
             assert source in ids and target in ids
+
+
+class TestResolveHealthLadder:
+    """The health ladder must treat docker 'running' as authoritative for
+    liveness: a configured-but-unscraped prometheus target (up=0) cannot mark a
+    live container critical (neo4j / the vLLM models / promtail expose no
+    metrics by design)."""
+
+    def test_running_container_with_prom_down_is_not_critical(self):
+        from src.api.routes.graph_topology import _resolve_health
+        health, _ = _resolve_health(
+            "neo4j",
+            {"neo4j": {"up": False, "job": "neo4j"}},
+            {"neo4j": "running"},
+            False,
+        )
+        assert health == "healthy"
+
+    def test_prom_down_without_docker_signal_is_critical(self):
+        from src.api.routes.graph_topology import _resolve_health
+        health, _ = _resolve_health(
+            "neo4j", {"neo4j": {"up": False, "job": "neo4j"}}, {}, False
+        )
+        assert health == "critical"
+
+    def test_dead_container_is_critical_regardless_of_prom(self):
+        from src.api.routes.graph_topology import _resolve_health
+        health, _ = _resolve_health(
+            "neo4j",
+            {"neo4j": {"up": True, "job": "neo4j"}},
+            {"neo4j": "exited"},
+            False,
+        )
+        assert health == "critical"
