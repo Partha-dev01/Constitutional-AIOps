@@ -24,6 +24,25 @@
 	email {$ACME_EMAIL}
 	# To dry-run against the LE staging CA while testing certs, uncomment:
 	# acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
+
+	# --- Trusted-proxy / X-Forwarded-For normalisation (Batch F #2) ---------
+	# Single-Caddy topology: Caddy is the ONLY hop in front of the backend.
+	# Without this block Caddy preserves any attacker-supplied inbound
+	# X-Forwarded-For and only appends the real peer, so the backend's
+	# left-most-IP parse was attacker-controlled (login-lockout bypass).
+	#
+	# `trusted_proxies static private_ranges` tells Caddy which upstream
+	# addresses are trustworthy. Since requests reach Caddy directly from the
+	# public internet (no CDN/LB in front), NO inbound peer is a trusted
+	# proxy, so Caddy treats the connecting client as the real client and
+	# does NOT honour any client-sent X-Forwarded-For when computing
+	# client_ip. The backend independently parses XFF from the RIGHT-most hop
+	# (the entry Caddy appends) — see src/api/routes/auth.py:_client_ip — so
+	# the throttle key is the address Caddy observed, not a spoofed prefix.
+	servers {
+		trusted_proxies static private_ranges
+		client_ip_headers X-Forwarded-For
+	}
 }
 
 # Reusable human-auth snippet so each route enforces the same credential and
@@ -31,6 +50,35 @@
 (app_auth) {
 	basic_auth {
 		{$APP_BASIC_AUTH_USER} {$APP_BASIC_AUTH_HASH}
+	}
+}
+
+# Reusable security-response-headers snippet (Batch F #1). Applied to the
+# human-facing app routes (SPA, /api, /grafana). NOT applied to /ingest/*
+# (machine-to-machine telemetry push — these headers are meaningless there and
+# a restrictive CSP could interfere with store API responses).
+#
+# CSP note: this is a REAL-but-permissive policy, deliberately not locked down
+# to nonce-only. The Vite React bundle ships hashed JS but Tailwind/inlined
+# critical styles and Grafana (served under /grafana) both require
+# 'unsafe-inline' styles, and Grafana also uses inline/eval'd scripts and
+# blob/data workers. Everything is same-origin (/api, /ws, /grafana), so the
+# policy below keeps default-src 'self' while allowing the inline styles +
+# ws:/wss: connect the SPA and Grafana actually need. Tightening to a strict
+# nonce-based CSP would break Grafana and is left as a follow-up.
+(security_headers) {
+	header {
+		# HSTS: 1 year, include subdomains. (No `preload` — opt into that only
+		# after confirming every subdomain is HTTPS-only.)
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		# Clickjacking: deny framing entirely. CSP frame-ancestors 'self' is the
+		# modern equivalent and also covers Grafana's own embedded panels.
+		X-Frame-Options "DENY"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' ws: wss:; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'"
+		# Drop the server banner.
+		-Server
 	}
 }
 
@@ -53,6 +101,14 @@
 		basic_auth {
 			{$INGEST_BASIC_AUTH_USER} {$INGEST_BASIC_AUTH_HASH}
 		}
+		# Body cap (Batch F #3): keep the 10MB ceiling on telemetry pushes.
+		# RATE-LIMITING FOLLOW-UP: stock Caddy has NO `rate_limit` directive, so
+		# we deliberately do NOT add one here (a fake/broken directive would fail
+		# `caddy validate`). Per-source request rate-limiting on /ingest/* needs a
+		# CUSTOM Caddy build that bundles the community ratelimit plugin, e.g.:
+		#   xcaddy build --with github.com/mholt/caddy-ratelimit
+		# Once that image is in use, add a `rate_limit` block inside this handle.
+		# Until then the 10MB body cap below is the only ingest-side throttle.
 		request_body {
 			max_size 10MB
 		}
@@ -71,6 +127,7 @@
 	# Grafana under /grafana/ (GF_SERVER_SERVE_FROM_SUB_PATH keeps the prefix).
 	@grafana path /grafana /grafana/*
 	handle @grafana {
+		import security_headers
 		import app_auth
 		reverse_proxy grafana:3000
 	}
@@ -78,6 +135,7 @@
 	# Backend REST API (human-auth gated).
 	@api path /api/*
 	handle @api {
+		import security_headers
 		import app_auth
 		reverse_proxy backend:8000
 	}
@@ -87,11 +145,13 @@
 	# (WS_TOKEN) validated against the /api/v1/ws/token value the SPA fetches.
 	@ws path /ws
 	handle @ws {
+		import security_headers
 		reverse_proxy backend:8000
 	}
 
 	# SPA — everything else.
 	handle {
+		import security_headers
 		import app_auth
 		reverse_proxy frontend:3000
 	}
