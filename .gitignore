@@ -30,11 +30,11 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# Environment
+# Environment — ignore ALL .env variants (incl. .env.production), keep templates
 .env
-.env.local
-.env.*.local
+.env.*
 !.env.example
+!.env.production.example
 
 # Quickstart operator secrets (never commit real credentials)
 quickstart/secrets.local.ps1
