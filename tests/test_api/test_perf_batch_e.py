@@ -64,7 +64,7 @@ class TestDockerToThread:
 
         with patch.object(_asyncio, "to_thread", new=fake_to_thread):
             with patch.object(infra_mod, "_collect_container_status", return_value=([], 0, 0)) as mock_fn:
-                result = _asyncio.get_event_loop().run_until_complete(
+                result = _asyncio.new_event_loop().run_until_complete(
                     infra_mod.get_containers(request)
                 )
 
@@ -84,7 +84,7 @@ class TestDockerToThread:
 
         with patch.object(_asyncio, "to_thread", new=fake_to_thread):
             with patch.object(infra_mod, "_discover_all_containers", return_value=[]):
-                result = _asyncio.get_event_loop().run_until_complete(
+                result = _asyncio.new_event_loop().run_until_complete(
                     infra_mod.discover_containers()
                 )
 
@@ -101,7 +101,7 @@ class TestDockerToThread:
             raise RuntimeError("daemon unavailable")
 
         with patch.object(_asyncio, "to_thread", new=boom):
-            response = _asyncio.get_event_loop().run_until_complete(
+            response = _asyncio.new_event_loop().run_until_complete(
                 infra_mod.get_containers(request)
             )
 
@@ -147,7 +147,7 @@ class TestHealthTTLCache:
 
         self._reset_cache()
         request = self._make_mock_request()
-        loop = asyncio.get_event_loop()
+        loop = asyncio.new_event_loop()
 
         # First call — fills cache
         loop.run_until_complete(health_mod.health_check(request))
@@ -168,7 +168,7 @@ class TestHealthTTLCache:
 
         self._reset_cache()
         request = self._make_mock_request()
-        loop = asyncio.get_event_loop()
+        loop = asyncio.new_event_loop()
 
         # First call
         loop.run_until_complete(health_mod.health_check(request))
@@ -191,7 +191,7 @@ class TestHealthTTLCache:
 
         self._reset_cache()
         request = self._make_mock_request()
-        loop = asyncio.get_event_loop()
+        loop = asyncio.new_event_loop()
 
         response = loop.run_until_complete(health_mod.health_check(request))
 
@@ -334,7 +334,7 @@ class TestIncidentsCap:
 
         fake_all = {inc.id: inc}
         with patch.object(ps, "load_all_incidents", return_value=fake_all):
-            result = _asyncio.get_event_loop().run_until_complete(
+            result = _asyncio.new_event_loop().run_until_complete(
                 inc_mod.get_incident(inc.id)
             )
 
@@ -351,7 +351,7 @@ class TestIncidentsCap:
         self._clear_incidents()
         with patch.object(ps, "load_all_incidents", return_value={}):
             try:
-                _asyncio.get_event_loop().run_until_complete(
+                _asyncio.new_event_loop().run_until_complete(
                     inc_mod.get_incident("INC-GHOST-9999")
                 )
                 assert False, "Expected HTTPException 404"
