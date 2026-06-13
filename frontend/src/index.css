@@ -75,6 +75,41 @@ body {
 }
 
 /* ---------------------------------------------------------------------------
+ * prefers-reduced-motion: neutralise Tailwind's built-in animate-* utilities
+ * so users who request reduced motion don't get spinning / pulsing / pinging.
+ * Custom CSS keyframes (below) are already killed by their own @media blocks.
+ * ------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .animate-spin,
+  .animate-pulse,
+  .animate-ping,
+  .animate-bounce {
+    animation: none !important;
+  }
+
+  /* Transition durations to near-instant so layout shifts still work */
+  .transition,
+  .transition-all,
+  .transition-colors,
+  .transition-opacity,
+  .transition-transform {
+    transition-duration: 1ms !important;
+  }
+}
+
+/* Toast slide-in (new) — killed by the block above in reduced-motion. */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ---------------------------------------------------------------------------
  * Landing-page animations (dependency-free; Tailwind + plain CSS keyframes).
  * ------------------------------------------------------------------------- */
 @keyframes reveal-up {

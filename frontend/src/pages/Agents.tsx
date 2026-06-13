@@ -22,6 +22,7 @@ import { JsonView } from '../components/JsonView'
 import { McpToolList } from '../components/mcp/McpToolList'
 import { McpExecutePanel } from '../components/mcp/McpExecutePanel'
 import type { McpToolInfo } from '../components/mcp/types'
+import { Tabs, TabPanel } from '../components/ui/Tabs'
 
 // The interactive Platform Architecture (schema) graph now lives in its own
 // top-level Command Center page (/console); the Neo4j episodic Graph Explorer
@@ -450,32 +451,18 @@ export function Agents() {
         </div>
       </div>
 
-      {/* Tab Navigation */}
-      <div className="flex gap-1 p-1 bg-muted rounded-lg overflow-x-auto">
-        {tabs.map((tab) => {
-          const Icon = tab.icon
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
-                activeTab === tab.id
-                  ? 'bg-background text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <Icon className="h-4 w-4" />
-              <span className="hidden sm:inline">{tab.label}</span>
-              <span className="sm:hidden">{tab.label.split(' ')[0]}</span>
-            </button>
-          )
-        })}
-      </div>
+      {/* Tab Navigation — accessible tablist via shared Tabs primitive */}
+      <Tabs
+        value={activeTab}
+        onChange={(id) => setActiveTab(id as AgentTab)}
+        tabs={tabs}
+        variant="pill"
+      >
 
       {/* Tab Content */}
       <div className="min-h-[600px]">
         {/* Fast Agent Tab */}
-        {activeTab === 'fast' && (
+        <TabPanel id="fast" activeTab={activeTab}>
           <div className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
@@ -529,10 +516,11 @@ export function Agents() {
                   </div>
                 ) : fastActivity.length > 0 ? (
                   fastActivity.map((activity) => (
-                    <div
+                    <button
                       key={activity.id}
                       onClick={() => toggleExpanded(activity.id)}
-                      className="p-4 hover:bg-muted/50 cursor-pointer"
+                      aria-expanded={expandedIds.has(activity.id)}
+                      className="w-full p-4 hover:bg-muted/50 text-left"
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex-1 min-w-0">
@@ -580,7 +568,7 @@ export function Agents() {
                             : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
                         </div>
                       </div>
-                    </div>
+                    </button>
                   ))
                 ) : (
                   <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
@@ -592,10 +580,10 @@ export function Agents() {
               </div>
             </div>
           </div>
-        )}
+        </TabPanel>
 
         {/* Reasoning Agent Tab */}
-        {activeTab === 'reasoning' && (
+        <TabPanel id="reasoning" activeTab={activeTab}>
           <div className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
@@ -649,10 +637,11 @@ export function Agents() {
                   </div>
                 ) : reasoningActivity.length > 0 ? (
                   reasoningActivity.map((activity) => (
-                    <div
+                    <button
                       key={activity.id}
                       onClick={() => toggleExpanded(activity.id)}
-                      className="p-4 hover:bg-muted/50 cursor-pointer"
+                      aria-expanded={expandedIds.has(activity.id)}
+                      className="w-full p-4 hover:bg-muted/50 text-left"
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex-1 min-w-0">
@@ -701,7 +690,7 @@ export function Agents() {
                             : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
                         </div>
                       </div>
-                    </div>
+                    </button>
                   ))
                 ) : (
                   <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
@@ -713,10 +702,10 @@ export function Agents() {
               </div>
             </div>
           </div>
-        )}
+        </TabPanel>
 
         {/* Telemetry Tab */}
-        {activeTab === 'telemetry' && (
+        <TabPanel id="telemetry" activeTab={activeTab}>
           <div className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
@@ -829,10 +818,10 @@ export function Agents() {
               )}
             </div>
           </div>
-        )}
+        </TabPanel>
 
         {/* Graph Explorer Tab */}
-        {activeTab === 'graph' && (
+        <TabPanel id="graph" activeTab={activeTab}>
           <div className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
@@ -899,10 +888,10 @@ export function Agents() {
               )}
             </div>
           </div>
-        )}
+        </TabPanel>
 
         {/* MCP Tools Tab */}
-        {activeTab === 'tools' && (
+        <TabPanel id="tools" activeTab={activeTab}>
           <div className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
@@ -934,8 +923,9 @@ export function Agents() {
               <McpExecutePanel tool={selectedTool} />
             </div>
           </div>
-        )}
+        </TabPanel>
       </div>
+      </Tabs>
     </div>
   )
 }
