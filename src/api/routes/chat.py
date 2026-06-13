@@ -33,6 +33,11 @@ from src.api.schemas.chat import (
 # Import MCP tool executor for automatic tool calls during chat
 from src.api.routes.tools import execute_tool_call
 
+# Durable persistence (write-through): the in-memory dicts below stay the read
+# fast-path; these helpers mirror each mutation into SQLite so conversations and
+# pending actions survive a backend restart/redeploy.
+from src.persistence import store as persistence_store
+
 logger = logging.getLogger(__name__)
 
 # Known services in the Constitutional AIOps stack
@@ -504,6 +509,37 @@ _conversations: dict[str, ConversationHistory] = {}
 _MAX_CONVERSATIONS = int(os.getenv("CHAT_MAX_CONVERSATIONS", "200"))
 
 
+# Write-through helpers: persist failures must NEVER break a chat request, so
+# every durable write is best-effort (logged, swallowed). The in-memory dict is
+# always updated first and remains the read fast-path.
+def _persist_save_conversation(conversation: ConversationHistory) -> None:
+    try:
+        persistence_store.save_conversation(conversation)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Failed to persist conversation %s: %s", conversation.conversation_id, exc)
+
+
+def _persist_delete_conversation(conversation_id: str) -> None:
+    try:
+        persistence_store.delete_conversation(conversation_id)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Failed to delete persisted conversation %s: %s", conversation_id, exc)
+
+
+def _persist_save_pending_action(action_id: str, entry: dict[str, Any]) -> None:
+    try:
+        persistence_store.save_pending_action(action_id, entry)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Failed to persist pending action %s: %s", action_id, exc)
+
+
+def _persist_delete_pending_action(action_id: str) -> None:
+    try:
+        persistence_store.delete_pending_action(action_id)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Failed to delete persisted pending action %s: %s", action_id, exc)
+
+
 def _evict_stale_conversations() -> None:
     """Drop the oldest conversations once the store exceeds _MAX_CONVERSATIONS."""
     overflow = len(_conversations) - _MAX_CONVERSATIONS
@@ -512,6 +548,7 @@ def _evict_stale_conversations() -> None:
     by_age = sorted(_conversations.values(), key=lambda c: c.updated_at)
     for conv in by_age[:overflow]:
         _conversations.pop(conv.conversation_id, None)
+        _persist_delete_conversation(conv.conversation_id)
     logger.info(f"Evicted {overflow} stale conversation(s) (cap {_MAX_CONVERSATIONS})")
 
 
@@ -571,11 +608,13 @@ def _evict_stale_pending_actions() -> None:
     ]
     for aid in expired:
         _pending_actions.pop(aid, None)
+        _persist_delete_pending_action(aid)
     overflow = len(_pending_actions) - _MAX_PENDING_ACTIONS
     if overflow > 0:
         by_age = sorted(_pending_actions.items(), key=lambda kv: kv[1].get("created_at", 0.0))
         for aid, _ in by_age[:overflow]:
             _pending_actions.pop(aid, None)
+            _persist_delete_pending_action(aid)
     if expired or overflow > 0:
         logger.info(
             "Evicted pending action(s): %d expired, %d over-cap",
@@ -717,7 +756,7 @@ async def _maybe_propose_remediation(
     proposed = _build_proposed_action(detected, mode, status_value="proposed")
 
     def _cache(action: dict[str, Any]) -> None:
-        _pending_actions[action["id"]] = {
+        entry = {
             "tool_name": action["tool_name"],
             "parameters": action["parameters"],
             "owner": owner,
@@ -725,6 +764,8 @@ async def _maybe_propose_remediation(
             "created_at": time.time(),
             "proposed_action": action,
         }
+        _pending_actions[action["id"]] = entry
+        _persist_save_pending_action(action["id"], entry)
         _evict_stale_pending_actions()
 
     if mode == "approve":
@@ -845,6 +886,7 @@ async def chat(
             owner=user.username,
         )
         _conversations[conversation_id] = conversation
+        _persist_save_conversation(conversation)
         _evict_stale_conversations()
 
     # Add user message
@@ -854,6 +896,8 @@ async def chat(
         timestamp=datetime.utcnow(),
     )
     conversation.messages.append(user_message)
+    conversation.updated_at = datetime.utcnow()
+    _persist_save_conversation(conversation)
 
     # Get reasoning agent
     reasoning_agent = getattr(request.app.state, "reasoning_agent", None)
@@ -1053,6 +1097,9 @@ async def chat(
     )
     conversation.messages.append(assistant_message)
     conversation.updated_at = datetime.utcnow()
+    # Write-through the completed turn (incl. the assistant_message.metadata) so a
+    # reloaded conversation can replay its reasoning timeline + insight cards.
+    _persist_save_conversation(conversation)
 
     # confidence is Optional: None for a genuine off-domain refusal (the UI then
     # hides the confidence gauge), an evidence-based 0.5–0.9 otherwise.
@@ -1110,6 +1157,7 @@ async def decide_action(
     if not body.approved:
         # User declined: nothing executes; remove the pending action.
         _pending_actions.pop(action_id, None)
+        _persist_delete_pending_action(action_id)
         logger.info("Proposed action %s rejected by %s", action_id, user.username)
         return DecisionResponse(
             action_id=action_id,
@@ -1123,6 +1171,7 @@ async def decide_action(
     # Approved: run through the gated programmatic path. The pending entry is
     # consumed regardless of outcome (single-use approval).
     _pending_actions.pop(action_id, None)
+    _persist_delete_pending_action(action_id)
     tool_name = entry["tool_name"]
     parameters = entry["parameters"]
 
@@ -1369,6 +1418,7 @@ async def delete_conversation(
         )
 
     del _conversations[conversation_id]
+    _persist_delete_conversation(conversation_id)
 
 
 @router.get(
