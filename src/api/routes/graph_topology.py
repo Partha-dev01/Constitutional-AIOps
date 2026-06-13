@@ -418,6 +418,7 @@ def _resolve_health(
     health, reason = "unknown", "no health signal"
 
     docker_status = docker_health.get(sid)
+    docker_running = docker_status == "running"
     if docker_status is not None:
         if docker_status == "running":
             health, reason = "healthy", "docker container running"
@@ -432,7 +433,12 @@ def _resolve_health(
             # A live scrape only upgrades; it cannot mask a dead container.
             if health != "critical":
                 health, reason = "healthy", f"prometheus up=1 (job {prom['job']})"
-        else:
+        elif not docker_running:
+            # up=0 is only a real liveness problem when docker does NOT confirm
+            # the container is running. Several platform services (neo4j, the
+            # vLLM models, promtail) expose no Prometheus metrics by design, so
+            # a configured-but-unscraped target must never mark a live container
+            # critical — docker "running" is authoritative for liveness.
             health, reason = "critical", f"prometheus up=0 (job {prom['job']})"
 
     if health == "healthy" and has_recent_incident:
