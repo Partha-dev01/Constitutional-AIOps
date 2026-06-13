@@ -1,0 +1,143 @@
+/* ---------------------------------------------------------------------------
+ * Schema-mode (Platform Architecture) styles — dependency-free plain CSS.
+ * Loaded from main.tsx after chat.css. Uses hsl(var(--token)) design tokens.
+ * Every animated class added here MUST also be listed in the reduced-motion
+ * kill block at the bottom of this file (house rule, see landing.css).
+ * ------------------------------------------------------------------------- */
+
+/* ------------------------------- Keyframes ------------------------------ */
+
+/* Marching dashes along schema edges (SVG stroke-dashoffset). Speed is set
+ * per-edge via the --schema-dash-dur custom property (scrub activity). */
+@keyframes schema-dash {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: -64;
+  }
+}
+
+/* Soft breathing pulse on critical-health rings. */
+@keyframes schema-pulse {
+  0%,
+  100% {
+    opacity: 0.85;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+
+/* Right drawer slide-in. */
+@keyframes schema-drawer-in {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Selection chip / hover-card pop. */
+@keyframes schema-pop {
+  from {
+    transform: translateY(4px) scale(0.97);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+/* ------------------------------- Edges ---------------------------------- */
+
+/* Animated flow overlay on static DEPENDS_ON edges. */
+.schema-edge-flow {
+  stroke-dasharray: 6 12;
+  animation: schema-dash var(--schema-dash-dur, 2.4s) linear infinite;
+}
+
+/* Dynamic SHIPS_TELEMETRY edges: the line itself is dashed and marches. */
+.schema-edge-dynamic {
+  stroke-dasharray: 5 6;
+  animation: schema-dash var(--schema-dash-dur, 2.8s) linear infinite;
+}
+
+/* ------------------------------- Nodes ---------------------------------- */
+
+/* Pulsing ring around critical-health nodes. transform-box keeps any future
+ * scale animations centered on the ring itself. */
+.schema-critical-pulse {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: schema-pulse 1.6s ease-in-out infinite;
+}
+
+.schema-node {
+  cursor: pointer;
+}
+
+.schema-node .schema-node-body {
+  transition: filter 0.2s ease;
+}
+
+.schema-node:hover .schema-node-body {
+  filter: brightness(1.18);
+}
+
+/* ----------------------------- Drawer / cards --------------------------- */
+
+.schema-drawer {
+  animation: schema-drawer-in 0.22s ease-out both;
+}
+
+.schema-hover-card {
+  animation: schema-pop 0.14s ease-out both;
+}
+
+.schema-chip {
+  animation: schema-pop 0.16s ease-out both;
+}
+
+/* --------------------------- Time scrubber ------------------------------ */
+
+.schema-scrubber {
+  touch-action: none; /* pointer-drag owns horizontal movement */
+}
+
+.schema-scrubber:focus-visible {
+  outline: 2px solid hsl(var(--primary) / 0.6);
+  outline-offset: 2px;
+}
+
+.schema-scrubber-bar {
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+
+/* ------------------------- Reduced-motion kills ------------------------- */
+/* Single kill block: every animated/transitioning class above snaps to its
+ * final, fully-visible state (house rule shared with landing.css/chat.css). */
+@media (prefers-reduced-motion: reduce) {
+  .schema-edge-flow,
+  .schema-edge-dynamic,
+  .schema-critical-pulse,
+  .schema-drawer,
+  .schema-hover-card,
+  .schema-chip,
+  .schema-scrubber-bar,
+  .schema-node .schema-node-body {
+    opacity: 1;
+    transform: none;
+    animation: none;
+    transition: none;
+  }
+
+  /* The flow overlay's whole purpose is motion — hide it at rest. */
+  .schema-edge-flow {
+    opacity: 0;
+  }
+}
