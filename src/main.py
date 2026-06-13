@@ -113,6 +113,50 @@ async def lifespan(app: FastAPI):
         )
     logger.info(f"In-app auth initialised (enforcement={'ON' if auth_required() else 'off'})")
 
+    # Durable app-state hydration (Batch A): conversations, incidents, pending
+    # remediation actions and the incident-id counter are written through to a
+    # SQLite store under AIOPS_DATA_DIR on every mutation. Re-hydrate the
+    # in-memory dicts (the read fast-path) here so a restart/redeploy restores
+    # the prior state instead of dropping it. Non-fatal: a persistence failure
+    # must never block startup — the system simply starts empty.
+    try:
+        from src.persistence import store as persistence_store
+        from src.api.routes import chat as chat_routes
+        from src.api.routes import incidents as incident_routes
+
+        persistence_store.init_db()
+
+        loaded_convs = persistence_store.load_all_conversations()
+        chat_routes._conversations.update(loaded_convs)
+        # Re-apply the in-memory eviction cap after a bulk load so a large
+        # persisted history can't blow past CHAT_MAX_CONVERSATIONS.
+        chat_routes._evict_stale_conversations()
+
+        loaded_pending = persistence_store.load_all_pending_actions()
+        chat_routes._pending_actions.update(loaded_pending)
+        # Drop anything already past its TTL / over cap on load.
+        chat_routes._evict_stale_pending_actions()
+
+        loaded_incidents = persistence_store.load_all_incidents()
+        incident_routes._incidents.update(loaded_incidents)
+
+        # Restore the incident counter so new IDs keep advancing past the
+        # highest pre-restart value (set_counter persists the live max).
+        incident_routes._incident_counter = persistence_store.get_counter(
+            incident_routes._INCIDENT_COUNTER_NAME, 0
+        )
+
+        logger.info(
+            "Durable state restored: %d conversation(s), %d incident(s), "
+            "%d pending action(s), incident_counter=%d",
+            len(chat_routes._conversations),
+            len(incident_routes._incidents),
+            len(chat_routes._pending_actions),
+            incident_routes._incident_counter,
+        )
+    except Exception as e:  # noqa: BLE001
+        logger.warning(f"Failed to hydrate durable app state (starting empty): {e}")
+
     # Set startup time for uptime tracking
     set_startup_time()
 
