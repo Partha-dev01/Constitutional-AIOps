@@ -182,8 +182,10 @@ async def get_metrics(
         end_time = datetime.utcnow()
         start_time = end_time - timedelta(minutes=minutes)
 
-        # Build metrics queries for container/service
-        service_name = service or "nextcloud"
+        # Build metrics queries for container/service.
+        # No default: pass None (all hosts) when no service/edge is specified so
+        # the summary is not hard-scoped to a single demo host.
+        service_name = service or None
         metrics_queries = None
         if query:
             metrics_queries = [query]
