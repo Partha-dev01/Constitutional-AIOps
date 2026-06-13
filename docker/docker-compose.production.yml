@@ -149,9 +149,15 @@ services:
       - DEBUG=false
       - LOG_LEVEL=INFO
       - API_WORKERS=4
-      - AIOPS_DATA_DIR=/app/data
+      # Persisted app state (settings/prompts/users.db/auth key) lives in a
+      # SUBPATH so the EBS mount below does NOT shadow the image-baked, read-only
+      # benchmark mirror at /app/data/benchmark (COPY data/ in Dockerfile.backend).
+      - AIOPS_DATA_DIR=/app/data/state
     volumes:
-      - /mnt/data/app:/app/data  # EBS-backed; persists user settings (settings.json) across rebuilds + stop/start
+      # Mount EBS at /app/data/state (NOT /app/data) — mounting over /app/data
+      # hides the shipped /app/data/benchmark and empties the Benchmark page.
+      # The same EBS files just surface at /app/data/state, so auth/settings persist.
+      - /mnt/data/app:/app/data/state  # EBS-backed; persists settings/prompts/users.db across rebuilds + stop/start
     depends_on:
       qwen3-4b:
         condition: service_healthy
