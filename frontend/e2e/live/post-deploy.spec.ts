@@ -311,6 +311,54 @@ test.describe('Post-deploy gate — interactions stay console-clean', () => {
     expectClean(capture, 'Chat send + response')
   })
 
+  test('reloading a conversation replays its reasoning timeline (history persistence)', async ({
+    page,
+  }) => {
+    test.setTimeout(160_000) // a real 14B round-trip, then a reload
+    const capture = captureErrors(page, 'chat-history-replay')
+    await page.goto('/chat')
+    await expect(page.getByRole('heading', { name: 'Chat' })).toBeVisible()
+
+    // A query with a known service + log keywords drives telemetry/log tools AND
+    // the reasoning step, so the persisted timeline has something to replay.
+    const prompt = 'Analyze recent error logs for nextcloud'
+    const input = page.getByPlaceholder('Ask about incidents, metrics, or request analysis...')
+    await input.fill(prompt)
+
+    // Capture the conversation id from the chat response so we reload THIS exact
+    // conversation deterministically (the sidebar can hold many others).
+    const [resp] = await Promise.all([
+      page.waitForResponse(
+        (r) => r.url().includes('/api/v1/chat/') && r.request().method() === 'POST',
+        { timeout: 95_000 },
+      ),
+      page.locator('form button[type="submit"]').click(),
+    ])
+    const convId = (await resp.json()).conversation_id as string
+    expect(convId, 'chat response should carry a conversation_id').toBeTruthy()
+
+    // The backend has responded (resp captured) and stored the turn server-side.
+    // Confirm the LIVE timeline COMMITTED: the reasoning step's enriched token
+    // summary ("qwen3-14b · N tokens") only appears once the answer has landed.
+    await expect(page.getByText(/qwen3-14b · \d+ tokens?/i).first()).toBeVisible({ timeout: 95_000 })
+
+    // Reload THIS conversation from history via the ?conversation= hand-off — a
+    // FRESH navigation that runs the same load path as clicking it in the
+    // sidebar, so any rendered timeline must be rebuilt from persisted metadata
+    // (no left-over in-memory state). This is the regression the fix addresses.
+    await page.goto(`/chat?conversation=${convId}`)
+    await expect(page.getByRole('heading', { name: 'Chat' })).toBeVisible()
+
+    // THE FIX: the reloaded turn replays its reasoning timeline AND the enriched
+    // step results (the token summary proves the persisted tool/model metadata
+    // was reconstructed) — not just the bare answer text.
+    await expect(page.getByText('Reasoning with Qwen3-14B').first()).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByText(/qwen3-14b · \d+ tokens?/i).first()).toBeVisible({ timeout: 5_000 })
+
+    await page.screenshot({ path: `${SHOT_DIR}/chat-history-replay.png`, fullPage: true })
+    expectClean(capture, 'reload conversation replays reasoning')
+  })
+
   test('live WebSocket connects on the Dashboard (real backend health)', async ({ page }) => {
     // The spec is explicit: on the LIVE backend the WebSocket SHOULD connect, so
     // this is asserted as a first-class signal (not allowlisted away). The
