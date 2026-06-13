@@ -61,7 +61,7 @@ bert-score>=0.3.13
 transformers>=4.30.0
 
 # HuggingFace Datasets (for LEMMA-RCA benchmark download)
-datasets>=2.14.0
+datasets>=5.0.0
 huggingface-hub>=0.17.0
 
 # Agent Orchestration (LangGraph state machine for dual-agent pipeline)
