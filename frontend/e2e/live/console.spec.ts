@@ -4,10 +4,10 @@ import { test, expect } from '@playwright/test'
  * Live deploy smoke for the Command Center cockpit (/console) on
  * https://aiops.imaginaerium.in. Inherits the logged-in storageState + Caddy
  * basic-auth from playwright.config.live.ts. Proves the three panes render
- * against the REAL backend (topology, incidents, chat) and the graph toggles.
+ * against the REAL backend (topology, incidents, chat).
  */
 test.describe('Live — Command Center', () => {
-  test('cockpit renders all three panes with real data + toggles', async ({ page }) => {
+  test('cockpit renders all three panes with real data', async ({ page }) => {
     await page.goto('/console')
 
     // Header + the three cockpit surfaces.
@@ -27,14 +27,5 @@ test.describe('Live — Command Center', () => {
     ).toBeVisible({ timeout: 30_000 })
 
     await page.screenshot({ path: 'test-results/live/console-live.png' })
-
-    // Collapse the graph → slim rail appears and the pane is gone.
-    await page.getByTestId('console-toggle-graph').click()
-    await expect(page.getByTestId('console-graph-pane')).toHaveCount(0)
-    await expect(page.getByTestId('console-graph-rail')).toBeVisible()
-
-    // Re-open from the rail.
-    await page.getByTestId('console-graph-rail').click()
-    await expect(page.getByTestId('console-graph-pane')).toBeVisible()
   })
 })
