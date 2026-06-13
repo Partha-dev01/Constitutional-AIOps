@@ -62,18 +62,19 @@ export function Console() {
     item.type === 'node' ? item.node.label : `${item.edge.source} → ${item.edge.target}`
 
   return (
-    <div className="flex flex-col gap-4 xl:h-[calc(100vh-3rem)]">
-      {/* Header */}
+    <div className="flex flex-col gap-3 xl:min-h-[calc(100vh-3rem)]">
+      {/* Header — compact so the panes get the vertical room. */}
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="flex items-center gap-2 text-2xl font-bold">
-            <Waypoints className="h-6 w-6 text-primary" />
-            Command Center
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Live topology, active incidents and the assistant — one operations view.
-          </p>
+        <div className="flex items-center gap-2.5">
+          <Waypoints className="h-6 w-6 shrink-0 text-primary" />
+          <div>
+            <h1 className="text-xl font-bold leading-tight">Command Center</h1>
+            <p className="text-xs text-muted-foreground">
+              Live topology, active incidents and the assistant — one operations view.
+            </p>
+          </div>
         </div>
+        {/* ONE toggle for the entire left pane. */}
         <button
           type="button"
           onClick={() => setGraphOpen((v) => !v)}
@@ -82,33 +83,24 @@ export function Console() {
           aria-pressed={graphOpen}
         >
           {graphOpen ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}
-          {graphOpen ? 'Hide graph' : 'Show graph'}
+          {graphOpen ? 'Hide panel' : 'Show panel'}
         </button>
       </div>
 
-      {/* Body: graph (left) + incidents/chat (right). Side-by-side on lg, stacked below. */}
-      <div className="flex min-h-0 flex-1 flex-col gap-4 xl:flex-row">
-        {/* LEFT — topology graph (collapsible) */}
+      {/* Body: left pane (graph) + right column (incidents over chat). Columns
+          stretch to equal height on xl; the whole cockpit grows (and the page
+          scrolls) rather than cramming when the viewport is short. */}
+      <div className="flex min-h-0 flex-1 flex-col gap-3 xl:flex-row">
+        {/* LEFT PANE — topology graph (collapsible as one unit) */}
         {graphOpen ? (
           <section
-            className="relative flex h-[340px] min-h-0 flex-col rounded-xl border border-border bg-card p-3 xl:h-auto xl:w-[42%] xl:min-w-[360px] xl:max-w-[680px]"
+            className="relative flex h-[400px] min-h-0 flex-col rounded-xl border border-border bg-card p-3 xl:h-auto xl:w-[40%] xl:min-w-[340px] xl:max-w-[640px]"
             data-testid="console-graph-pane"
           >
-            <div className="mb-2 flex shrink-0 items-center justify-between">
-              <h2 className="flex items-center gap-2 text-sm font-semibold">
-                <Waypoints className="h-4 w-4 text-cyan-400" />
-                Platform Topology
-              </h2>
-              <button
-                type="button"
-                onClick={() => setGraphOpen(false)}
-                title="Collapse graph"
-                aria-label="Collapse graph"
-                className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-              >
-                <PanelLeftClose className="h-4 w-4" />
-              </button>
-            </div>
+            <h2 className="mb-2 flex shrink-0 items-center gap-2 text-sm font-semibold">
+              <Waypoints className="h-4 w-4 text-cyan-400" />
+              Platform Topology
+            </h2>
             <div className="min-h-0 flex-1">
               <Suspense
                 fallback={
@@ -125,30 +117,31 @@ export function Console() {
             </p>
           </section>
         ) : (
-          // Collapsed rail (lg+) — a slim re-open affordance.
+          // Collapsed: a slim full-height rail to bring the whole pane back.
           <button
             type="button"
             onClick={() => setGraphOpen(true)}
             className="hidden shrink-0 flex-col items-center gap-2 rounded-xl border border-border bg-card px-2 py-3 text-muted-foreground hover:bg-muted hover:text-foreground xl:flex"
             data-testid="console-graph-rail"
-            title="Show graph"
-            aria-label="Show graph"
+            title="Show panel"
+            aria-label="Show panel"
           >
             <PanelLeftOpen className="h-4 w-4" />
             <span className="[writing-mode:vertical-rl] text-xs font-medium">Topology</span>
           </button>
         )}
 
-        {/* RIGHT — incidents (top) + chat (bottom) */}
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4">
-          {/* TOP — active incidents */}
-          <div className="shrink-0 overflow-y-auto xl:max-h-[40%]" data-testid="console-incidents">
+        {/* RIGHT COLUMN — incidents (top) + chat (bottom) */}
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
+          {/* TOP — active incidents (natural height, scrolls only if many) */}
+          <div className="max-h-[420px] shrink-0 overflow-y-auto" data-testid="console-incidents">
             <ActiveIncidentsPanel onOpenInChat={handleOpenInChat} />
           </div>
 
-          {/* BOTTOM — assistant chat with graph-selection context */}
+          {/* BOTTOM — assistant chat. flex-1 fills the rest with a comfortable
+              floor so the welcome + prompts + composer are never crammed. */}
           <div
-            className="flex min-h-[460px] min-w-0 flex-1 flex-col rounded-xl border border-border bg-card/40 p-3 xl:min-h-0"
+            className="flex min-h-[460px] min-w-0 flex-1 flex-col rounded-xl border border-border bg-card/40 p-3"
             data-testid="console-chat"
           >
             {selection.length > 0 && (
@@ -184,7 +177,7 @@ export function Console() {
         </div>
       </div>
 
-      {/* Mobile hint: incidents count never hidden, but the cockpit stacks. */}
+      {/* Narrow-viewport hint: the cockpit stacks vertically below xl. */}
       <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground/60 xl:hidden">
         <AlertTriangle className="h-3 w-3" />
         Best viewed on a wider screen — panes stack on narrow viewports.
