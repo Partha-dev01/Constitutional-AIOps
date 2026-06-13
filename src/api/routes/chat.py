@@ -1029,20 +1029,30 @@ async def chat(
             detail=f"Reasoning agent unavailable: {str(e)}",
         )
 
-    # Create assistant message
-    assistant_message = ChatMessage(
-        role=ChatRole.ASSISTANT,
-        content=assistant_response["content"],
-        timestamp=datetime.utcnow(),
-    )
-    conversation.messages.append(assistant_message)
-    conversation.updated_at = datetime.utcnow()
-
     # C1: prefer the find_similar tool's incidents (so card + dropdown agree with the
     # timeline that claims the find_similar tool); else fall back to _find_related_incidents.
     related_incidents = _related_from_similar(assistant_response["tool_struct"])
     if related_incidents is None:
         related_incidents = await _find_related_incidents(request, chat_request.message)
+
+    # Create assistant message, persisting the per-turn metadata ON it so loading
+    # this conversation from history can replay the tool-call timeline + insight
+    # cards (otherwise reloaded chats show only the text). The shape mirrors the
+    # ChatResponse fields the frontend uses (enrichToolStepsWithResponse + insights).
+    assistant_message = ChatMessage(
+        role=ChatRole.ASSISTANT,
+        content=assistant_response["content"],
+        timestamp=datetime.utcnow(),
+        metadata={
+            "confidence": assistant_response.get("confidence"),
+            "suggested_actions": assistant_response.get("suggested_actions"),
+            "related_incidents": related_incidents,
+            "proposed_action": assistant_response.get("proposed_action"),
+            "metadata": assistant_response.get("metadata"),
+        },
+    )
+    conversation.messages.append(assistant_message)
+    conversation.updated_at = datetime.utcnow()
 
     # confidence is Optional: None for a genuine off-domain refusal (the UI then
     # hides the confidence gauge), an evidence-based 0.5–0.9 otherwise.

@@ -354,17 +354,55 @@ export function ChatPane({ variant = 'page', seedContext, injectedPrompt, classN
       setToolStepsById({})
       try {
         const conv = await api.chat.getConversation(id)
-        const loaded: ChatMessageData[] = conv.messages
-          .filter((m) => m.role === 'user' || m.role === 'assistant')
-          .map((m, i) => ({
-            id: `${id}-${i}`,
-            role: m.role as 'user' | 'assistant',
-            content: m.content,
-            timestamp: m.timestamp ? new Date(m.timestamp) : new Date(),
-          }))
+        const visible = conv.messages.filter((m) => m.role === 'user' || m.role === 'assistant')
+        const loaded: ChatMessageData[] = visible.map((m, i) => ({
+          id: `${id}-${i}`,
+          role: m.role as 'user' | 'assistant',
+          content: m.content,
+          timestamp: m.timestamp ? new Date(m.timestamp) : new Date(),
+        }))
+
+        // Replay each assistant turn's reasoning section. The step list is
+        // re-derived from the preceding user query (mirrors the backend's
+        // deterministic tool gating) so the timeline reappears for ANY reloaded
+        // turn; when the backend persisted per-turn results (new conversations)
+        // the steps are enriched with the real data and the insight/proposed
+        // cards are restored too. Pre-existing chats (no stored metadata) still
+        // get their derived timeline back, just without the searched-data dropdowns.
+        const rebuiltSteps: Record<string, ToolStep[]> = {}
+        const rebuiltInsights: Record<string, MessageInsights> = {}
+        const rebuiltProposed: Record<string, ProposedAction> = {}
+        let lastUserText = ''
+        visible.forEach((m, i) => {
+          if (m.role === 'user') {
+            lastUserText = m.content
+            return
+          }
+          const msgId = `${id}-${i}`
+          const derived = deriveToolSteps(lastUserText).map((s) => ({ ...s, status: 'done' as const }))
+          const meta = m.metadata
+          if (meta) {
+            rebuiltSteps[msgId] = enrichToolStepsWithResponse(derived, {
+              confidence: meta.confidence,
+              related_incidents: meta.related_incidents,
+              suggested_actions: meta.suggested_actions,
+              metadata: meta.metadata ?? undefined,
+            })
+            rebuiltInsights[msgId] = {
+              confidence: meta.confidence ?? null,
+              suggestedActions: meta.suggested_actions ?? undefined,
+              relatedIncidents: meta.related_incidents ?? undefined,
+            }
+            if (meta.proposed_action) rebuiltProposed[msgId] = meta.proposed_action
+          } else if (derived.length > 0) {
+            rebuiltSteps[msgId] = derived
+          }
+        })
+
         setConversationId(id)
-        setInsightsById({})
-        setProposedById({})
+        setInsightsById(rebuiltInsights)
+        setProposedById(rebuiltProposed)
+        setToolStepsById(rebuiltSteps)
         setMessages(loaded.length > 0 ? loaded : [welcomeMessage()])
       } catch (err) {
         console.error('Failed to load conversation:', err)

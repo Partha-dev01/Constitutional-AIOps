@@ -24,6 +24,15 @@ class ChatMessage(BaseModel):
     role: ChatRole = Field(..., description="Message sender role")
     content: str = Field(..., description="Message content")
     timestamp: Optional[datetime] = Field(default_factory=datetime.utcnow)
+    metadata: Optional[dict[str, Any]] = Field(
+        default=None,
+        description=(
+            "Per-turn assistant metadata (confidence, suggested/related, tool "
+            "results, proposed_action) persisted so a conversation reloaded from "
+            "history can replay its reasoning timeline + insight cards. Null on "
+            "user turns and on pre-existing conversations."
+        ),
+    )
 
     class Config:
         json_schema_extra = {
