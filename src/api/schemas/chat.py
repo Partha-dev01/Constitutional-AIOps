@@ -76,6 +76,15 @@ class ChatResponse(BaseModel):
         description="Related incident IDs from memory"
     )
     metadata: Optional[dict[str, Any]] = Field(default=None, description="Additional metadata")
+    proposed_action: Optional[dict[str, Any]] = Field(
+        default=None,
+        description=(
+            "AI-proposed remediation action riding the chat response (approve/auto "
+            "modes only; omitted entirely in diagnose mode). Shape: {id, tool_name, "
+            "parameters{service_name, reason}, target, title, rationale, mode, status, "
+            "verdict, execution_result}."
+        ),
+    )
 
     class Config:
         json_schema_extra = {
@@ -89,6 +98,49 @@ class ChatResponse(BaseModel):
                 "confidence": 0.85,
                 "suggested_actions": ["Scale up payment-service", "Check database connections"],
                 "related_incidents": ["INC-2024-001", "INC-2024-012"]
+            }
+        }
+
+
+class DecisionRequest(BaseModel):
+    """User decision on a proposed remediation action (approve-to-run protocol)."""
+    approved: bool = Field(..., description="True to execute the cached action, False to reject it")
+    comment: Optional[str] = Field(default=None, description="Optional human note recorded with the decision")
+
+    class Config:
+        json_schema_extra = {
+            "example": {"approved": True, "comment": "Confirmed: restart the DB container"}
+        }
+
+
+class DecisionResponse(BaseModel):
+    """Outcome of acting on a proposed remediation action."""
+    action_id: str = Field(..., description="The proposed action's id")
+    status: str = Field(
+        ...,
+        description="'executed' (ran), 'refused' (gate declined), or 'rejected' (user declined)",
+    )
+    success: bool = Field(..., description="True only when the action actually executed")
+    error_code: Optional[str] = Field(
+        default=None,
+        description="Gate/execution error class when not successful (e.g. approval_required)",
+    )
+    verdict: Optional[dict[str, Any]] = Field(
+        default=None, description="Serialized constitutional validation verdict, when available"
+    )
+    result: Optional[dict[str, Any]] = Field(
+        default=None, description="Execution result payload, when the action ran"
+    )
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "action_id": "act-ab12cd34ef56",
+                "status": "executed",
+                "success": True,
+                "error_code": None,
+                "verdict": {"can_proceed": True, "authorization_level": "auto"},
+                "result": {"service": "nextcloud", "action": "restart", "status": "completed"},
             }
         }
 
@@ -181,6 +233,8 @@ __all__ = [
     "ChatMessage",
     "ChatRequest",
     "ChatResponse",
+    "DecisionRequest",
+    "DecisionResponse",
     "ConversationHistory",
     "AnalysisRequest",
     "AnalysisResponse",
