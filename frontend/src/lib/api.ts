@@ -239,11 +239,28 @@ export interface Incident {
   status: IncidentStatus;
   category?: string;
   affected_services: ServiceInfo[];
+  tags?: string[];
+  source?: string;
   created_at: string;
   updated_at: string;
   resolved_at?: string;
+  /** RCA blob as returned by the live API (root_cause + causal chain). */
+  rca?: { root_cause?: string; summary?: string; causal_chain?: string[] } | null;
   rca_result?: RCAResult;
   remediation_plan?: RemediationPlan;
+}
+
+/** Result of POST /incidents/{id}/remediate (approve-and-remediate). */
+export interface IncidentRemediateResult {
+  incident_id: string;
+  status: 'resolved' | 'refused';
+  success: boolean;
+  /** demo_heal = t3 chaos heal; restart_service = gated executor. */
+  method: 'demo_heal' | 'restart_service';
+  error_code?: string | null;
+  detail?: string;
+  verdict?: Record<string, unknown> | null;
+  incident: Incident;
 }
 
 export interface IncidentCreate {
@@ -625,6 +642,17 @@ export const api = {
 
     getSimilar: (id: string) =>
       request<{ similar: Incident[] }>(`/incidents/${id}/similar`),
+
+    /** Approve-and-remediate: demo incidents heal on the t3, real incidents
+     *  restart the affected service through the constitutional gate. */
+    remediate: (id: string) =>
+      request<IncidentRemediateResult>(`/incidents/${id}/remediate`, {
+        method: 'POST',
+      }),
+
+    /** Reject the remediation and archive the incident (status -> closed). */
+    dismiss: (id: string) =>
+      request<Incident>(`/incidents/${id}/dismiss`, { method: 'POST' }),
 
     getStats: () =>
       request<{ total: number; by_status: Record<string, number>; by_severity: Record<string, number> }>('/incidents/stats'),

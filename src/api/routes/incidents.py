@@ -356,6 +356,164 @@ async def analyze_incident(
     return incident
 
 
+@router.post(
+    "/{incident_id}/remediate",
+    summary="Remediate Incident",
+    description=(
+        "Approve-and-remediate an incident. Demo incidents heal the injected "
+        "fault on the t3 control agent; real incidents restart the affected "
+        "service through the constitutional gate (same path as chat "
+        "approve-to-run, so Tier-1 safety + the action kill-switch + whitelist "
+        "all still apply). The verdict is surfaced in the response."
+    ),
+)
+async def remediate_incident(request: Request, incident_id: str) -> dict[str, Any]:
+    """Run the remediation for an incident and resolve it on success.
+
+    Demo incidents (source ``demo-mode`` / a scenario tag) call the matching t3
+    chaos heal — the action that actually clears them. Real incidents restart the
+    first affected service through ``execute_tool_call`` so the Tier-1 safety
+    principles, ``AIOPS_ENABLE_ACTION_TOOLS`` kill-switch and container whitelist
+    are all enforced. Status goes REMEDIATING during the attempt, RESOLVED on
+    success, or back to PENDING_APPROVAL when the gate/executor declines so the
+    incident stays actionable (retry / open in chat).
+    """
+    if incident_id not in _incidents:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Incident {incident_id} not found",
+        )
+
+    incident = _incidents[incident_id]
+    prior_status = incident.status
+    incident.status = IncidentStatus.REMEDIATING
+    incident.updated_at = datetime.utcnow()
+
+    # Demo incidents heal via the t3 agent (the action that truly clears them).
+    from src.api.routes.demo import _SCENARIO_IDS
+
+    scenario = next((t for t in (incident.tags or []) if t in _SCENARIO_IDS), None)
+    is_demo = incident.source == "demo-mode" or "demo" in (incident.tags or [])
+
+    verdict: Any = None
+    error_code: Any = None
+
+    if is_demo and scenario:
+        from src.remediation import t3_client
+
+        result = await t3_client.chaos_heal(scenario)
+        success = bool(result.get("success"))
+        detail = str(result.get("detail") or result.get("error") or "")
+        method = "demo_heal"
+    else:
+        service = (
+            incident.affected_services[0].name
+            if incident.affected_services
+            else None
+        )
+        if not service:
+            incident.status = prior_status
+            incident.updated_at = datetime.utcnow()
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Incident has no affected service to remediate",
+            )
+
+        from src.api.routes.tools import execute_tool_call
+
+        validator = getattr(request.app.state, "validator", None)
+        auto_threshold = getattr(validator, "confidence_threshold_auto", 0.9) or 0.9
+        try:
+            result = await execute_tool_call(
+                request,
+                tool_name="restart_service",
+                parameters={
+                    "service_name": service,
+                    "reason": f"Operator-approved remediation for {incident.id}",
+                    "confidence": float(auto_threshold),
+                },
+                context={
+                    "telemetry_evidence": True,
+                    "audit_enabled": True,
+                    "human_approved": True,
+                    "source": "incident_remediate",
+                },
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.error("Remediation for %s raised: %s", incident_id, exc)
+            incident.status = IncidentStatus.PENDING_APPROVAL
+            incident.updated_at = datetime.utcnow()
+            return {
+                "incident_id": incident_id,
+                "status": "refused",
+                "success": False,
+                "method": "restart_service",
+                "error_code": "execution_failed",
+                "detail": str(exc),
+                "verdict": None,
+                "incident": incident,
+            }
+
+        success = bool(result.get("success"))
+        meta = result.get("metadata")
+        verdict = result.get("verdict") or (
+            meta.get("constitutional") if isinstance(meta, dict) else None
+        )
+        error_code = result.get("error_code")
+        detail = (
+            "Service restart executed."
+            if success
+            else str(result.get("error") or error_code or "Remediation declined.")
+        )
+        method = "restart_service"
+
+    if success:
+        incident.status = IncidentStatus.RESOLVED
+        if incident.resolved_at is None:
+            incident.resolved_at = datetime.utcnow()
+    else:
+        # Keep it actionable so the operator can retry / open it in chat.
+        incident.status = IncidentStatus.PENDING_APPROVAL
+    incident.updated_at = datetime.utcnow()
+    logger.info(
+        "Remediation for %s via %s -> success=%s", incident_id, method, success
+    )
+
+    return {
+        "incident_id": incident_id,
+        "status": "resolved" if success else "refused",
+        "success": success,
+        "method": method,
+        "error_code": error_code,
+        "detail": detail,
+        "verdict": verdict,
+        "incident": incident,
+    }
+
+
+@router.post(
+    "/{incident_id}/dismiss",
+    response_model=Incident,
+    summary="Dismiss Incident",
+    description="Reject remediation and archive the incident (status -> closed).",
+)
+async def dismiss_incident(incident_id: str) -> Incident:
+    """Operator rejected the remediation: archive the incident (CLOSED)."""
+    if incident_id not in _incidents:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Incident {incident_id} not found",
+        )
+
+    incident = _incidents[incident_id]
+    incident.status = IncidentStatus.CLOSED
+    if incident.resolved_at is None:
+        incident.resolved_at = datetime.utcnow()
+    incident.updated_at = datetime.utcnow()
+    logger.info("Dismissed incident: %s", incident_id)
+    return incident
+
+
 @router.get(
     "/{incident_id}/similar",
     summary="Find Similar Incidents",
