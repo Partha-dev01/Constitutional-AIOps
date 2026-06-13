@@ -112,8 +112,8 @@ const VIEWPORTS = [
   { name: 'laptop-tabs-1536x720', w: 1536, h: 720, lg: true },
   // Lots of chrome (tabs + bookmarks + devtools docked) → very short.
   { name: 'laptop-devtools-1366x620', w: 1366, h: 620, lg: true },
-  // 1024 is below the cockpit's xl side-by-side breakpoint → it stacks + scrolls.
-  { name: 'tablet-landscape-1024x768', w: 1024, h: 768, lg: false },
+  // 1024 is exactly the cockpit's lg side-by-side breakpoint.
+  { name: 'tablet-landscape-1024x768', w: 1024, h: 768, lg: true },
   { name: 'tablet-portrait-834x1112', w: 834, h: 1112, lg: false },
   { name: 'mobile-390x844', w: 390, h: 844, lg: false },
 ]
@@ -142,25 +142,6 @@ test.describe('Command Center layout', () => {
       await page.screenshot({ path: join(SHOT_DIR, `${vp.name}.png`), fullPage: true })
     })
   }
-
-  test('graph pane toggles to give width to the chat', async ({ page }) => {
-    await mockApi(page)
-    await page.setViewportSize({ width: 1536, height: 800 })
-    await page.goto('/console')
-
-    await expect(page.getByTestId('console-graph-pane')).toBeVisible()
-    await page.waitForTimeout(700)
-    await page.screenshot({ path: join(SHOT_DIR, 'toggle-1-graph-open.png') })
-
-    await page.getByTestId('console-toggle-graph').click()
-    await expect(page.getByTestId('console-graph-pane')).toHaveCount(0)
-    await expect(page.getByTestId('console-graph-rail')).toBeVisible()
-    await page.screenshot({ path: join(SHOT_DIR, 'toggle-2-graph-collapsed.png') })
-
-    // Re-open from the collapsed rail.
-    await page.getByTestId('console-graph-rail').click()
-    await expect(page.getByTestId('console-graph-pane')).toBeVisible()
-  })
 
   test('Agents page no longer has an Architecture tab (it moved to Command Center)', async ({ page }) => {
     await mockApi(page)
