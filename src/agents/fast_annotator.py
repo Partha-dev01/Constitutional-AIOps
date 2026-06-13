@@ -159,6 +159,10 @@ class FastAnnotator(BaseAgent):
     Optimized for speed over depth - complex issues are routed to reasoning agent.
     """
     
+    # The only live prompt this agent consumes. ("fast_classifier" exists in
+    # the prompts API but NO call path uses it — see the session-14 audit.)
+    PROMPT_NAMES: tuple[str, ...] = ("fast_annotator",)
+
     def __init__(self, model_router: Optional[ModelRouter] = None):
         """
         Initialize the fast annotator.
@@ -168,6 +172,12 @@ class FastAnnotator(BaseAgent):
         """
         super().__init__(AgentRole.FAST_ANNOTATOR)
         self.model_router = model_router or ModelRouter()
+
+        # System prompt override (session-14 W4): empty dict means the baked
+        # FAST_ANNOTATOR_SYSTEM_PROMPT constant is used. Populated via
+        # set_system_prompt (live push from PUT /prompts/{name} + persisted
+        # replay at startup); cleared via reset_prompts.
+        self._prompt_overrides: dict[str, str] = {}
 
         # Activity logging for API visibility
         self.activity_log: list[dict[str, Any]] = []
@@ -180,10 +190,57 @@ class FastAnnotator(BaseAgent):
             "_latency_sum": 0.0,
             "_first_request_time": None,
         }
-    
+
+    def set_system_prompt(self, name: str, prompt: str) -> None:
+        """
+        Override the annotation system prompt (live, takes effect immediately).
+
+        Args:
+            name: Must be "fast_annotator" — the only prompt this agent reads.
+            prompt: The new system prompt text.
+
+        Raises:
+            ValueError: Unknown prompt name or empty prompt.
+        """
+        if name not in self.PROMPT_NAMES:
+            raise ValueError(
+                f"Unknown fast-agent prompt '{name}' "
+                f"(expected one of {sorted(self.PROMPT_NAMES)}; "
+                f"'fast_classifier' has no live consumer)"
+            )
+        if not prompt or not prompt.strip():
+            raise ValueError("System prompt must not be empty")
+        self._prompt_overrides[name] = prompt
+        self.logger.info(f"System prompt override applied for '{name}'")
+
+    def reset_prompts(self, name: Optional[str] = None) -> None:
+        """
+        Clear prompt overrides, restoring the baked module constant.
+
+        Args:
+            name: A specific prompt name to reset, or None to reset all.
+
+        Raises:
+            ValueError: Unknown prompt name.
+        """
+        if name is None:
+            self._prompt_overrides.clear()
+            self.logger.info("All system prompt overrides cleared")
+            return
+        if name not in self.PROMPT_NAMES:
+            raise ValueError(
+                f"Unknown fast-agent prompt '{name}' "
+                f"(expected one of {sorted(self.PROMPT_NAMES)})"
+            )
+        self._prompt_overrides.pop(name, None)
+        self.logger.info(f"System prompt override cleared for '{name}'")
+
     def get_system_prompt(self) -> str:
-        """Get the system prompt for fast annotation."""
-        return FAST_ANNOTATOR_SYSTEM_PROMPT
+        """Get the ACTIVE system prompt for fast annotation: a live override
+        when one has been applied, else the baked module constant."""
+        return self._prompt_overrides.get(
+            "fast_annotator", FAST_ANNOTATOR_SYSTEM_PROMPT
+        )
     
     async def process(self, input_data: dict[str, Any]) -> AgentResponse:
         """
