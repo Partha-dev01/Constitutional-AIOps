@@ -74,10 +74,6 @@ from src.utils.websocket import manager as ws_manager, EventType, WebSocketEvent
 logger = logging.getLogger(__name__)
 
 
-class _BodyTooLarge(Exception):
-    """Internal signal: a streamed /api/* request body exceeded the size cap."""
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
@@ -397,26 +393,12 @@ async def _limit_api_body_size(request, call_next):
                     status_code=400, content={"detail": "Invalid Content-Length"}
                 )
 
-        # Guard against a missing/under-reported Content-Length: wrap receive()
-        # and tally the actual streamed bytes, aborting if they exceed the cap.
-        total = 0
-
-        async def _capped_receive():
-            nonlocal total
-            message = await request._receive()
-            if message["type"] == "http.request":
-                total += len(message.get("body", b""))
-                if total > _MAX_API_BODY_BYTES:
-                    raise _BodyTooLarge()
-            return message
-
-        request._receive = _capped_receive
-        try:
-            return await call_next(request)
-        except _BodyTooLarge:
-            return JSONResponse(
-                status_code=413, content={"detail": "Request body too large"}
-            )
+        # NOTE: cap by Content-Length only. Wrapping receive() to tally streamed
+        # bytes is unsafe under Starlette's BaseHTTPMiddleware — it corrupts body
+        # parsing for downstream handlers (observed live as 400 "error parsing the
+        # body" on every POST). Chunked requests without a Content-Length are not
+        # byte-capped here; uvicorn enforces its own limits and every real API
+        # client (browser fetch, curl) sends Content-Length.
 
     return await call_next(request)
 
