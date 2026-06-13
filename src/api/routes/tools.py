@@ -1079,16 +1079,36 @@ def _action_tool_gate(request: Request, tool_call: "ToolCallRequest") -> ActionG
         confidence = float(params.get("confidence", 0.5))
     except (TypeError, ValueError):
         confidence = 0.5
+
+    caller_context = tool_call.context if isinstance(tool_call.context, dict) else {}
+
+    # Populate the constitutional context so the Tier-1/Tier-2 principles that
+    # read incident/scope/resource signals actually evaluate instead of seeing
+    # empty inputs (previously P1.2/P1.3/P2.1 were inert on every live path):
+    #  - active_incident: a remediation that came from the incident/approve flow
+    #    is by definition acting on an active incident, so P1.2 can evaluate
+    #    (it now passes for human_approved remediations and blocks unapproved ones).
+    #  - action_scope: a restart/scale of one whitelisted container is a single,
+    #    minimal-intervention action — declare it so P2.1 is meaningful instead
+    #    of never firing.
+    derived_context: dict[str, Any] = {}
+    caller_source = caller_context.get("source")
+    if caller_source in {"incident_remediate", "approve_to_run"}:
+        derived_context["active_incident"] = True
+    derived_context.setdefault("action_scope", caller_context.get("action_scope", "single"))
+
     context: dict[str, Any] = {
         "service": params.get("service_name"),
         "parameters": params,
         "source": "rest_tools_call",
         "target_replicas": params.get("target_replicas"),
     }
-    # Callers (e.g. agents) may supply extra validation context such as
-    # telemetry_evidence; the UI sends none, so P2.2 keeps it at approval.
-    if isinstance(tool_call.context, dict):
-        context = {**tool_call.context, **context}
+    # Layer order: gate-derived defaults < caller-supplied context < gate-owned
+    # keys. Callers (e.g. agents) may supply extra validation context such as
+    # telemetry_evidence/human_approved/resource_usage; the UI sends none, so
+    # P2.2 keeps it at approval. The gate-owned keys above always win for the
+    # service/parameters/source/target_replicas identity fields.
+    context = {**derived_context, **caller_context, **context}
     report = validator.validate(
         action_id=f"tool-{tool_call.tool_name}-{int(time.time() * 1000)}",
         action_description=(

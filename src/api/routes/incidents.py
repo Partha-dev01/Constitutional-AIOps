@@ -461,6 +461,32 @@ async def remediate_incident(request: Request, incident_id: str) -> dict[str, An
         from src.remediation import t3_client
 
         _ensure_demo_allowed()
+
+        # Run the demo heal THROUGH the constitutional gate so it is not a silent
+        # bypass: the system's thesis is "every action through the validator".
+        # The heal is a t3 chaos-reversal (not a container restart/scale), so it
+        # cannot use execute_tool_call's whitelist path; instead we validate the
+        # heal action directly with the live validator and audit it, surfacing a
+        # real verdict to the UI instead of None. Tier-1 still applies (a heal is
+        # a benign, operator-approved, reversible action so it passes).
+        verdict = _validate_and_audit_demo_heal(request, incident, scenario)
+        if verdict is not None and not verdict.get("can_proceed", True):
+            # Constitutional validation refused the heal — keep the incident
+            # actionable and surface why (mirrors the real-path refusal contract).
+            incident.status = IncidentStatus.PENDING_APPROVAL
+            incident.updated_at = datetime.utcnow()
+            _persist_save_incident(incident)
+            return {
+                "incident_id": incident_id,
+                "status": "refused",
+                "success": False,
+                "method": "demo_heal",
+                "error_code": "validation_blocked",
+                "detail": verdict.get("explanation") or "Demo heal blocked by constitutional validation.",
+                "verdict": verdict,
+                "incident": incident,
+            }
+
         result = await t3_client.chaos_heal(scenario)
         success = bool(result.get("success"))
         detail = str(result.get("detail") or result.get("error") or "")
@@ -482,8 +508,23 @@ async def remediate_incident(request: Request, incident_id: str) -> dict[str, An
 
         from src.api.routes.tools import execute_tool_call
 
+        # Carry the REAL evidence-based confidence (the RCA confidence when the
+        # incident has been analysed) rather than synthesizing the auto-threshold
+        # just to clear the authorization matrix. human_approved=True is the
+        # actual authorization here, and the validator now treats explicit human
+        # approval as the matrix authorization (Tier-1 still blocks
+        # unconditionally), so the audit trail records the true confidence instead
+        # of a misleading 0.90. Unanalysed incidents have no RCA confidence, so
+        # fall back to the approval threshold as a neutral, non-inflated value.
         validator = getattr(request.app.state, "validator", None)
-        auto_threshold = getattr(validator, "confidence_threshold_auto", 0.9) or 0.9
+        approval_threshold = (
+            getattr(validator, "confidence_threshold_approval", 0.7) or 0.7
+        )
+        real_confidence = (
+            incident.rca.confidence
+            if incident.rca and incident.rca.confidence is not None
+            else float(approval_threshold)
+        )
         try:
             result = await execute_tool_call(
                 request,
@@ -491,7 +532,7 @@ async def remediate_incident(request: Request, incident_id: str) -> dict[str, An
                 parameters={
                     "service_name": service,
                     "reason": f"Operator-approved remediation for {incident.id}",
-                    "confidence": float(auto_threshold),
+                    "confidence": float(real_confidence),
                 },
                 context={
                     # Evidence-based: only assert telemetry evidence when the
@@ -635,6 +676,73 @@ async def find_similar_incidents(
 
 # Helper functions
 
+def _validate_and_audit_demo_heal(
+    request: Request,
+    incident: Incident,
+    scenario: str,
+) -> Any:
+    """Run the demo-incident heal through the constitutional validator + audit.
+
+    The demo heal is a chaos-reversal control action on the remote t3 host, not a
+    container restart/scale, so it cannot use ``execute_tool_call``'s whitelist
+    gate. To keep the "every action is validated" guarantee true (and to stop the
+    demo branch being a silent bypass), we validate the heal directly with the
+    live ``ConstitutionalValidator`` and write an audit line either way. Returns
+    the serialized verdict dict (or ``None`` if no validator is available — in
+    which case the caller proceeds, matching demo's permissive intent but now
+    with an audit trail).
+    """
+    validator = getattr(request.app.state, "validator", None)
+
+    verdict = None
+    if validator is not None:
+        try:
+            from src.api.routes.tools import _constitutional_verdict
+
+            auto_threshold = getattr(validator, "confidence_threshold_auto", 0.9) or 0.9
+            report = validator.validate(
+                action_id=f"demo-heal-{incident.id}-{int(datetime.utcnow().timestamp() * 1000)}",
+                action_description=f"Demo chaos-heal '{scenario}' for incident {incident.id}",
+                # A heal RESTORES service health — it is not a destructive
+                # restart/deploy/scale_down, so P1.2 does not classify it as a
+                # destructive action. It is operator-approved and reversible.
+                action_type="heal",
+                confidence=float(auto_threshold),
+                context={
+                    "active_incident": True,
+                    "human_approved": True,
+                    "telemetry_evidence": bool(incident.rca),
+                    "audit_enabled": True,
+                    "action_scope": "single",
+                    "source": "demo_heal",
+                },
+            )
+            verdict = _constitutional_verdict(report)
+        except Exception as exc:  # noqa: BLE001 - validation must not break heal
+            logger.warning("Demo-heal constitutional validation failed: %s", exc)
+            verdict = None
+
+    # Audit the attempt regardless of validator availability.
+    try:
+        from src.api.routes.tools import _audit_action_attempt
+
+        _audit_action_attempt(
+            "demo_heal",
+            {"scenario": scenario, "incident_id": incident.id},
+            outcome=(
+                "refused"
+                if verdict is not None and not verdict.get("can_proceed", True)
+                else "validated"
+            ),
+            error_code=None,
+            verdict=verdict,
+        )
+    except Exception as exc:  # noqa: BLE001 - audit must not break heal
+        logger.warning("Demo-heal audit logging failed: %s", exc)
+
+    return verdict
+
+
 async def _trigger_analysis(
     request: Request,
     incident: Incident,
@@ -687,11 +795,26 @@ async def _trigger_analysis(
                 similar_incidents=rca_data["metadata"].get("similar_incidents"),
             )
 
-        # Use authorization level from constitutional validation
+        # Use authorization level from constitutional validation.
+        #
+        # IMPORTANT: analysis performs NO execution — there is no executor that
+        # picks up a REMEDIATING incident and runs anything; the actual restart
+        # only happens when a human hits "Approve & Remediate" (-> remediate_
+        # incident -> the gated execute_tool_call). Previously an "automatic"
+        # auth_level flipped the incident to REMEDIATING here, which then made the
+        # anti-storm guard in remediate_incident refuse the operator's manual
+        # remediation with `already_remediating` — permanently locking the
+        # incident in a "Remediating" state that nothing was remediating.
+        #
+        # Until autonomous execution is wired, cap a high-confidence verdict at
+        # PENDING_APPROVAL so it stays actionable by an operator. (Setting
+        # REMEDIATING from analysis is a no-op-with-deadlock, not autonomy.)
+        # AUDIT-D5 TODO: if/when an executor consumes REMEDIATING incidents and
+        # runs the gated restart end-to-end, switch "automatic" back to entering
+        # REMEDIATING immediately before that execute_tool_call (and clear it on
+        # completion) rather than from analysis.
         auth_level = graph_result.get("authorization_level", "alert")
-        if auth_level == "automatic":
-            incident.status = IncidentStatus.REMEDIATING
-        elif auth_level == "approval":
+        if auth_level in ("automatic", "approval"):
             incident.status = IncidentStatus.PENDING_APPROVAL
         else:
             incident.status = IncidentStatus.ANALYZING

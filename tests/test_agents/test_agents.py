@@ -135,6 +135,59 @@ class TestReasoningAgent:
         assert response.confidence > 0.7
     
     @pytest.mark.asyncio
+    async def test_rca_confidence_percentage_is_clamped(self, mock_model_router, sample_incident_data):
+        """D-item3: a model that returns a percentage-form confidence (e.g. 95)
+        or a >1 value is normalized + clamped into [0,1] so AnalysisResponse
+        (ge=0.0, le=1.0) does not 500 the /chat/analyze endpoint."""
+        mock_model_router.reasoning_completion = AsyncMock(return_value={
+            "choices": [{
+                "message": {
+                    "content": json.dumps({
+                        "root_cause": "pool exhaustion",
+                        "causal_chain": ["a", "b"],
+                        "confidence": 95,  # percentage form, not 0-1
+                    })
+                }
+            }]
+        })
+
+        agent = ReasoningAgent(model_router=mock_model_router)
+        response = await agent.analyze_rca(sample_incident_data)
+
+        assert 0.0 <= response.confidence <= 1.0
+        assert response.confidence == pytest.approx(0.95)
+
+    @pytest.mark.asyncio
+    async def test_rca_confidence_above_one_clamped(self, mock_model_router, sample_incident_data):
+        """A wildly out-of-range confidence (e.g. 9.5) is normalized then clamped
+        to at most 1.0 without raising."""
+        mock_model_router.reasoning_completion = AsyncMock(return_value={
+            "choices": [{
+                "message": {
+                    "content": json.dumps({
+                        "root_cause": "x",
+                        "confidence": 9.5,
+                    })
+                }
+            }]
+        })
+
+        agent = ReasoningAgent(model_router=mock_model_router)
+        response = await agent.analyze_rca(sample_incident_data)
+
+        assert 0.0 <= response.confidence <= 1.0
+
+    def test_normalize_confidence_helper(self):
+        """Unit-test the clamp helper directly across the edge cases."""
+        from src.agents.reasoning_agent import ReasoningAgent
+
+        assert ReasoningAgent._normalize_confidence(0.85) == pytest.approx(0.85)
+        assert ReasoningAgent._normalize_confidence(95) == pytest.approx(0.95)
+        assert ReasoningAgent._normalize_confidence(150) == 1.0
+        assert ReasoningAgent._normalize_confidence(-0.2) == 0.0
+        assert ReasoningAgent._normalize_confidence("not-a-number") == 0.7
+
+    @pytest.mark.asyncio
     async def test_chat_mode(self, mock_model_router):
         """Test chat interaction."""
         mock_model_router.reasoning_completion = AsyncMock(return_value={

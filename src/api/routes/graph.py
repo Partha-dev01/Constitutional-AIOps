@@ -387,7 +387,8 @@ async def get_episodes(
                     """
                     MATCH (s:Entity)-[r:RELATES]->(o:Entity)
                     RETURN s.name as subject, r.type as relation, o.name as object,
-                           r.source_episode as episode_id, r.extraction_method as method
+                           r.source_episode as episode_id, r.extraction_method as method,
+                           r.confidence as confidence
                     ORDER BY r.timestamp DESC
                     LIMIT 100
                     """,
@@ -422,12 +423,24 @@ async def get_episodes(
                 else:
                     entity_map[obj].relation_count += 1
 
-                # Add dynamic edge with LLM-extracted relation type
+                # Add dynamic edge with LLM-extracted relation type. Carry the
+                # stored r.confidence as the edge weight so the min_confidence
+                # filter below is real — previously weight defaulted to 1.0, so
+                # `1.0 >= min_confidence` was always true and the param did
+                # nothing for entity edges.
+                try:
+                    edge_confidence = float(triplet.get("confidence"))
+                except (TypeError, ValueError):
+                    edge_confidence = 1.0
                 edges.append(GraphEdge(
                     source=f"entity-{subject}",
                     target=f"entity-{obj}",
                     relationship=relation.lower(),  # Dynamic relation from LLM
-                    metadata={"extraction_method": triplet.get("method", "llm")},
+                    weight=edge_confidence,
+                    metadata={
+                        "extraction_method": triplet.get("method", "llm"),
+                        "confidence": edge_confidence,
+                    },
                 ))
 
         except Exception as e:
@@ -670,12 +683,18 @@ async def list_services(
 
         services = []
         for row in result:
+            # ServiceNode has no dependencies/dependents fields — passing them
+            # raised a Pydantic ValidationError that the bare except swallowed,
+            # so this route always returned []. Carry the dependency info in the
+            # existing metadata dict instead (no response-schema change).
             services.append(ServiceNode(
                 name=row["name"],
-                type=row.get("type", "service"),
-                status=row.get("status", "healthy"),
-                dependencies=[d for d in row.get("dependencies", []) if d],
-                dependents=[d for d in row.get("dependents", []) if d],
+                type=row.get("type") or "service",
+                status=row.get("status") or "healthy",
+                metadata={
+                    "dependencies": [d for d in row.get("dependencies", []) if d],
+                    "dependents": [d for d in row.get("dependents", []) if d],
+                },
             ))
 
         return services
@@ -735,6 +754,33 @@ async def get_service_dependencies(
         return DependencyGraph(service=name, upstream=[], downstream=[], depth=depth)
 
 
+def _episode_to_legacy_model(ep: Any) -> Episode:
+    """Map a real ``memory.episode_store.Episode`` dataclass onto the legacy
+    ``Episode`` response model used by ``/graph/episodes/{id}`` and ``/similar``.
+
+    The dataclass exposes ``episode_id`` / ``detected_at`` / ``affected_services``
+    / ``resolution_notes`` — NOT the legacy ``id`` / ``timestamp`` / ``resolution``
+    / ``metadata`` attrs the old code read (which always raised AttributeError).
+    A small metadata dict is synthesized from real fields for context.
+    """
+    return Episode(
+        id=ep.episode_id,
+        title=ep.title,
+        timestamp=ep.detected_at,
+        category=ep.category,
+        severity=ep.severity,
+        services=ep.affected_services,
+        root_cause=ep.root_cause,
+        resolution=ep.resolution_notes,
+        confidence=ep.confidence,
+        metadata={
+            "incident_id": ep.incident_id,
+            "outcome": ep.outcome,
+            "causal_chain": ep.causal_chain,
+        },
+    )
+
+
 @router.get(
     "/episodes/{episode_id}",
     response_model=Episode,
@@ -752,25 +798,17 @@ async def get_episode(request: Request, episode_id: str) -> Episode:
         )
 
     try:
-        ep = episode_store.get_episode(episode_id)
+        # EpisodeStore.get_episode is async; map off the real Episode dataclass
+        # (episode_id / detected_at / affected_services / resolution_notes), NOT
+        # the legacy id/timestamp/resolution/metadata attrs which do not exist.
+        ep = await episode_store.get_episode(episode_id)
         if ep is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Episode '{episode_id}' not found",
             )
 
-        return Episode(
-            id=ep.id,
-            title=ep.title,
-            timestamp=ep.timestamp,
-            category=ep.category,
-            severity=ep.severity,
-            services=ep.affected_services,
-            root_cause=ep.root_cause,
-            resolution=ep.resolution,
-            confidence=ep.confidence,
-            metadata=ep.metadata,
-        )
+        return _episode_to_legacy_model(ep)
     except HTTPException:
         raise
     except Exception as e:
@@ -793,47 +831,38 @@ async def find_similar_episodes(
     limit: int = Query(5, ge=1, le=20),
 ) -> list[SimilarEpisode]:
     """Find episodes similar to the given one."""
-    context_retriever = getattr(request.app.state, "context_retriever", None)
     episode_store = getattr(request.app.state, "episode_store", None)
 
-    if context_retriever is None or episode_store is None:
+    if episode_store is None:
         return []
 
     try:
-        # Get the source episode
-        source_ep = episode_store.get_episode(episode_id)
+        # get_episode is async; await it. (The old code called a nonexistent
+        # ContextRetriever.find_similar and never awaited get_episode, so this
+        # route silently returned [] for every call.)
+        source_ep = await episode_store.get_episode(episode_id)
         if source_ep is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Episode '{episode_id}' not found",
             )
 
-        # Find similar episodes
-        similar = await context_retriever.find_similar(
-            title=source_ep.title,
-            category=source_ep.category,
-            services=source_ep.affected_services,
-            limit=limit + 1,  # +1 to exclude self
+        # Use the real EpisodeStore similarity API (signature/service/embedding
+        # based). It excludes the source episode itself by episode_id.
+        similar = await episode_store.find_similar_episodes(
+            source_ep,
+            limit=limit,
+            min_similarity=0.3,
         )
 
-        # Filter out the source episode and convert
         result = []
         for ep, score in similar:
-            if ep.id != episode_id:
-                result.append(SimilarEpisode(
-                    episode=Episode(
-                        id=ep.id,
-                        title=ep.title,
-                        timestamp=ep.timestamp,
-                        category=ep.category,
-                        severity=ep.severity,
-                        services=ep.affected_services,
-                        root_cause=ep.root_cause,
-                        resolution=ep.resolution,
-                        confidence=ep.confidence,
-                    ),
-                    similarity_score=score,
-                ))
+            if ep.episode_id == episode_id:
+                continue
+            result.append(SimilarEpisode(
+                episode=_episode_to_legacy_model(ep),
+                similarity_score=score,
+            ))
 
         return result[:limit]
 
@@ -918,11 +947,13 @@ async def get_graph_stats(request: Request) -> GraphStatsResponse:
             logger.warning(f"Failed to get graph stats: {e}")
 
     elif episode_store is not None:
-        # Fallback to episode store
+        # Fallback to the in-memory episode store. EpisodeStore has no
+        # list_episodes method (the old call raised AttributeError → swallowed →
+        # always 0); read the real _memory_store dict directly.
         try:
-            episode_count = len(episode_store.list_episodes(limit=1000))
-        except Exception:
-            pass
+            episode_count = len(getattr(episode_store, "_memory_store", {}) or {})
+        except Exception as e:  # pragma: no cover - defensive
+            logger.warning(f"Failed to count in-memory episodes: {e}")
 
     return GraphStatsResponse(
         connected=connected,

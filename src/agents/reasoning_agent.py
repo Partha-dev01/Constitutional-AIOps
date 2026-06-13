@@ -419,7 +419,7 @@ class ReasoningAgent(BaseAgent):
             # Parse based on mode
             if mode in ("rca", "planning"):
                 parsed = self._parse_json_response(content)
-                confidence = parsed.get("confidence", 0.7)
+                confidence = self._normalize_confidence(parsed.get("confidence", 0.7))
                 result = AgentResponse(
                     content=content,
                     confidence=confidence,
@@ -603,6 +603,25 @@ class ReasoningAgent(BaseAgent):
 
         return user_prompt, system_prompt
     
+    @staticmethod
+    def _normalize_confidence(raw: Any) -> float:
+        """Coerce a model-supplied confidence to a safe ``[0.0, 1.0]`` float.
+
+        The RCA/planning system prompt asks for ``0.0-1.0``, but models sometimes
+        return a percentage (e.g. ``95``) or a ``>1`` value. ``AnalysisResponse``
+        pins ``confidence`` to ``ge=0.0, le=1.0`` (api/schemas/chat.py), so an
+        un-normalized value 500s the ``/chat/analyze`` endpoint. Normalize values
+        ``> 1`` by dividing by 100 (percentage form), then clamp into range. Bad
+        types fall back to the neutral ``0.7`` default.
+        """
+        try:
+            value = float(raw)
+        except (TypeError, ValueError):
+            return 0.7
+        if value > 1.0:
+            value = value / 100.0
+        return max(0.0, min(1.0, value))
+
     def _parse_json_response(self, content: str) -> dict[str, Any]:
         """Parse JSON from model response with robust brace-matching fallback."""
         try:
