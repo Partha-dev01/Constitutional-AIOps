@@ -185,7 +185,7 @@ export function Benchmark() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">Benchmark</h1>
           <p className="text-muted-foreground">
@@ -203,13 +203,13 @@ export function Benchmark() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 border-b border-border">
+      <div className="flex gap-2 border-b border-border overflow-x-auto">
         {(['datasets', 'run', 'results', 'compare'] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={cn(
-              'px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors',
+              'px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors whitespace-nowrap',
               activeTab === tab
                 ? 'border-primary text-primary'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -224,7 +224,7 @@ export function Benchmark() {
       {activeTab === 'datasets' && (
         <div className="grid gap-4 md:grid-cols-2">
           {datasets.map((dataset) => (
-            <div key={dataset.name} className="p-4 rounded-lg border bg-card">
+            <div key={dataset.name} className="p-4 rounded-lg border border-border bg-card">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-2">
                   <Database className="h-5 w-5 text-primary" />
@@ -272,7 +272,7 @@ export function Benchmark() {
       {activeTab === 'run' && (
         <div className="space-y-6">
           {/* Configuration */}
-          <div className="p-4 rounded-lg border bg-card">
+          <div className="p-4 rounded-lg border border-border bg-card">
             <h3 className="font-medium mb-4">Benchmark Configuration</h3>
             <div className="grid gap-4 md:grid-cols-3">
               <div>
@@ -280,7 +280,7 @@ export function Benchmark() {
                 <select
                   value={selectedModel}
                   onChange={(e) => setSelectedModel(e.target.value)}
-                  className="w-full p-2 rounded border bg-background"
+                  className="w-full p-2 rounded border border-border bg-background text-foreground"
                   disabled={status?.is_running}
                 >
                   {Object.entries(models).map(([name, info]) => (
@@ -300,7 +300,7 @@ export function Benchmark() {
                   onChange={(e) => setMaxAnnotation(parseInt(e.target.value) || 100)}
                   min={1}
                   max={200}
-                  className="w-full p-2 rounded border bg-background"
+                  className="w-full p-2 rounded border border-border bg-background text-foreground"
                   disabled={status?.is_running}
                 />
               </div>
@@ -314,7 +314,7 @@ export function Benchmark() {
                   onChange={(e) => setMaxRca(parseInt(e.target.value) || 50)}
                   min={1}
                   max={100}
-                  className="w-full p-2 rounded border bg-background"
+                  className="w-full p-2 rounded border border-border bg-background text-foreground"
                   disabled={status?.is_running}
                 />
               </div>
@@ -341,7 +341,7 @@ export function Benchmark() {
 
           {/* Progress */}
           {status?.is_running && status.progress && (
-            <div className="p-4 rounded-lg border bg-card">
+            <div className="p-4 rounded-lg border border-border bg-card">
               <h3 className="font-medium mb-4">Progress</h3>
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
@@ -369,21 +369,21 @@ export function Benchmark() {
           <div className="flex justify-end gap-2">
             <button
               onClick={() => handleExport('json')}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm rounded border hover:bg-muted"
+              className="flex items-center gap-2 px-3 py-1.5 text-sm rounded border border-border hover:bg-muted"
             >
               <FileJson className="h-4 w-4" />
               JSON
             </button>
             <button
               onClick={() => handleExport('csv')}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm rounded border hover:bg-muted"
+              className="flex items-center gap-2 px-3 py-1.5 text-sm rounded border border-border hover:bg-muted"
             >
               <FileSpreadsheet className="h-4 w-4" />
               CSV
             </button>
             <button
               onClick={() => handleExport('latex')}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm rounded border hover:bg-muted"
+              className="flex items-center gap-2 px-3 py-1.5 text-sm rounded border border-border hover:bg-muted"
             >
               <FileCode className="h-4 w-4" />
               LaTeX
@@ -391,8 +391,8 @@ export function Benchmark() {
           </div>
 
           {results.length > 0 ? (
-            <div className="rounded-lg border overflow-hidden">
-              <table className="w-full">
+            <div className="rounded-lg border border-border bg-card overflow-x-auto">
+              <table className="w-full min-w-[640px]">
                 <thead className="bg-muted">
                   <tr>
                     <th className="px-4 py-2 text-left text-sm font-medium">Model</th>
@@ -405,7 +405,7 @@ export function Benchmark() {
                 </thead>
                 <tbody>
                   {results.map((result) => (
-                    <tr key={result.model_name} className="border-t">
+                    <tr key={result.model_name} className="border-t border-border">
                       <td className="px-4 py-2 font-medium">{result.model_name}</td>
                       <td className="px-4 py-2 text-right">{result.annotation_accuracy.toFixed(1)}%</td>
                       <td className="px-4 py-2 text-right">{result.rca_accuracy.toFixed(1)}%</td>
@@ -437,7 +437,7 @@ export function Benchmark() {
           {results.length >= 2 ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {results.map((result) => (
-                <div key={result.model_name} className="p-4 rounded-lg border bg-card">
+                <div key={result.model_name} className="p-4 rounded-lg border border-border bg-card">
                   <h3 className="font-medium mb-3">{result.model_name}</h3>
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
