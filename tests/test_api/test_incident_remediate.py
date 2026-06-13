@@ -13,13 +13,21 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 
-def _seed(*, demo: bool, scenario: str | None = None, service: str = "nextcloud"):
+def _seed(
+    *,
+    demo: bool,
+    scenario: str | None = None,
+    service: str = "nextcloud",
+    analyzed: bool = False,
+    status=None,
+):
     from src.api.routes.incidents import _incidents
     from src.api.schemas.incident import (
         Incident,
         IncidentCategory,
         IncidentSeverity,
         IncidentStatus,
+        RCAResult,
         ServiceInfo,
     )
 
@@ -33,7 +41,12 @@ def _seed(*, demo: bool, scenario: str | None = None, service: str = "nextcloud"
         affected_services=[ServiceInfo(name=service)],
         tags=(["demo", "auto-generated", scenario] if demo and scenario else []),
         source=("demo-mode" if demo else "manual"),
-        status=IncidentStatus.PENDING_APPROVAL,
+        status=status or IncidentStatus.PENDING_APPROVAL,
+        rca=(
+            RCAResult(root_cause="rc", causal_chain=["a"], confidence=0.9)
+            if analyzed
+            else None
+        ),
         created_at=now,
         updated_at=now,
         detected_at=now,
@@ -68,7 +81,7 @@ async def test_remediate_real_incident_uses_gated_executor() -> None:
     from src.api.routes.incidents import remediate_incident
     from src.api.schemas.incident import IncidentStatus
 
-    inc = _seed(demo=False, service="nextcloud")
+    inc = _seed(demo=False, service="nextcloud", analyzed=True)
     req = MagicMock()
     req.app.state.validator.confidence_threshold_auto = 0.9
     fake = AsyncMock(
@@ -86,6 +99,7 @@ async def test_remediate_real_incident_uses_gated_executor() -> None:
     assert kwargs["parameters"]["service_name"] == "nextcloud"
     assert kwargs["parameters"]["confidence"] == 0.9
     assert kwargs["context"]["human_approved"] is True
+    # Evidence is asserted only because this incident has an RCA (analyzed=True).
     assert kwargs["context"]["telemetry_evidence"] is True
     assert out["success"] is True
     assert out["method"] == "restart_service"
@@ -151,3 +165,39 @@ async def test_dismiss_unknown_incident_raises_404() -> None:
     with pytest.raises(HTTPException) as exc_info:
         await dismiss_incident("nope")
     assert exc_info.value.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_remediate_refuses_when_already_remediating() -> None:
+    """Anti-storm guard: a second remediate while one is in flight is a no-op."""
+    from src.api.routes.incidents import remediate_incident
+    from src.api.schemas.incident import IncidentStatus
+
+    inc = _seed(demo=True, scenario="cpu_stress", status=IncidentStatus.REMEDIATING)
+    heal = AsyncMock(return_value={"success": True})
+    with patch("src.remediation.t3_client.chaos_heal", new=heal):
+        out = await remediate_incident(MagicMock(), inc.id)
+
+    heal.assert_not_awaited()
+    assert out["success"] is False
+    assert out["error_code"] == "already_remediating"
+    assert inc.status == IncidentStatus.REMEDIATING
+
+
+@pytest.mark.asyncio
+async def test_remediate_demo_blocked_in_production_without_flag(monkeypatch) -> None:
+    """The demo heal path honours the production kill-switch (AIOPS_ENABLE_DEMO)."""
+    from fastapi import HTTPException
+
+    from src.api.routes.incidents import remediate_incident
+
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.delenv("AIOPS_ENABLE_DEMO", raising=False)
+    inc = _seed(demo=True, scenario="cpu_stress")
+    heal = AsyncMock(return_value={"success": True})
+    with patch("src.remediation.t3_client.chaos_heal", new=heal):
+        with pytest.raises(HTTPException) as exc_info:
+            await remediate_incident(MagicMock(), inc.id)
+
+    assert exc_info.value.status_code == 403
+    heal.assert_not_awaited()

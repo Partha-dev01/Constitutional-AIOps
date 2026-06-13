@@ -386,6 +386,21 @@ async def remediate_incident(request: Request, incident_id: str) -> dict[str, An
 
     incident = _incidents[incident_id]
     prior_status = incident.status
+
+    # Anti-storm / idempotency: refuse a second remediation while one is already
+    # in flight — every call drives a real restart/heal control action.
+    if prior_status == IncidentStatus.REMEDIATING:
+        return {
+            "incident_id": incident_id,
+            "status": "in_progress",
+            "success": False,
+            "method": None,
+            "error_code": "already_remediating",
+            "detail": "A remediation is already in progress for this incident.",
+            "verdict": None,
+            "incident": incident,
+        }
+
     incident.status = IncidentStatus.REMEDIATING
     incident.updated_at = datetime.utcnow()
 
@@ -399,8 +414,12 @@ async def remediate_incident(request: Request, incident_id: str) -> dict[str, An
     error_code: Any = None
 
     if is_demo and scenario:
+        # The demo heal drives a real control action on the remote t3, so honour
+        # the same production kill-switch the demo routes enforce.
+        from src.api.routes.demo import _ensure_demo_allowed
         from src.remediation import t3_client
 
+        _ensure_demo_allowed()
         result = await t3_client.chaos_heal(scenario)
         success = bool(result.get("success"))
         detail = str(result.get("detail") or result.get("error") or "")
@@ -433,7 +452,10 @@ async def remediate_incident(request: Request, incident_id: str) -> dict[str, An
                     "confidence": float(auto_threshold),
                 },
                 context={
-                    "telemetry_evidence": True,
+                    # Evidence-based: only assert telemetry evidence when the
+                    # incident has actually been analysed (carries an RCA),
+                    # rather than hardcoding True regardless.
+                    "telemetry_evidence": bool(incident.rca),
                     "audit_enabled": True,
                     "human_approved": True,
                     "source": "incident_remediate",

@@ -224,7 +224,8 @@ export interface ConversationHistory {
 }
 
 export type IncidentSeverity = 'critical' | 'high' | 'medium' | 'low' | 'info';
-export type IncidentStatus = 'open' | 'investigating' | 'identified' | 'monitoring' | 'resolved' | 'closed';
+// Matches the backend IncidentStatus enum (src/api/schemas/incident.py).
+export type IncidentStatus = 'detecting' | 'analyzing' | 'pending_approval' | 'remediating' | 'resolved' | 'closed';
 
 export interface ServiceInfo {
   name: string;
