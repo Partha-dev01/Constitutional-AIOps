@@ -252,15 +252,20 @@ async def save_settings(
             if (
                 data["constitutional"] != current_global["constitutional"]
                 or data["telemetry"] != current_global["telemetry"]
+                or data["remediation"] != current_global["remediation"]
             ):
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Only admins may change constitutional or telemetry settings",
+                    detail="Only admins may change constitutional, telemetry or remediation settings",
                 )
         else:
             persisted = _load_persisted()
             persisted["constitutional"] = data["constitutional"]
             persisted["telemetry"] = data["telemetry"]
+            # ``remediation`` is a system-wide section (like constitutional /
+            # telemetry); it must be persisted on the real-admin path too, else
+            # mode/auto-threshold changes silently never stick once AUTH is on.
+            persisted["remediation"] = data["remediation"]
             _save_persisted(persisted)
         try:
             user_store.set_user_settings(user.id, {"notifications": data["notifications"]})

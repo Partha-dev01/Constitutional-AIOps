@@ -230,6 +230,39 @@ class TestPutSettings:
         assert rem["demoTargetUrl"] == "http://t3:9000"
 
     @pytest.mark.asyncio
+    async def test_save_remediation_persists_for_real_admin(self, tmp_settings_dir, monkeypatch):
+        """Regression (found in live deploy validation): a REAL (non-synthetic)
+        admin's remediation changes must persist. The auth-scoping branch
+        originally wrote only constitutional + telemetry to the global file, so
+        mode / threshold edits silently never stuck once AUTH_REQUIRED was on —
+        the headline approve/auto feature was unconfigurable in production."""
+        import src.api.routes.settings as settings_mod
+        from src.api.routes.settings import (
+            save_settings,
+            get_remediation_settings,
+            AllSettings,
+            RemediationSettingsModel,
+        )
+        from src.auth.deps import User
+
+        # A real DB admin (id is NOT the synthetic sentinel).
+        admin = User(id="real-admin-1", username="admin", role="admin")
+        # Don't touch the SQLite user store (notifications write).
+        monkeypatch.setattr(settings_mod, "user_store", MagicMock())
+
+        mock_request = MagicMock()
+        mock_request.app.state = MagicMock(spec=[])  # no validator attr
+
+        body = AllSettings(
+            remediation=RemediationSettingsModel(mode="auto", autoConfidenceThreshold=95),
+        )
+        await save_settings(mock_request, body, admin)
+
+        rem = get_remediation_settings()
+        assert rem["mode"] == "auto"
+        assert rem["autoConfidenceThreshold"] == 95
+
+    @pytest.mark.asyncio
     async def test_save_updates_live_validator(self, tmp_settings_dir):
         from src.api.routes.settings import save_settings, AllSettings
         from src.api.routes.settings import (
