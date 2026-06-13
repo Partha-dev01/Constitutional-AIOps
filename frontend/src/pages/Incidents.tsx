@@ -188,10 +188,10 @@ export function Incidents() {
           className="px-4 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
         >
           <option value="all">All Status</option>
-          <option value="open">Open</option>
-          <option value="investigating">Investigating</option>
-          <option value="identified">Identified</option>
-          <option value="monitoring">Monitoring</option>
+          <option value="detecting">Detecting</option>
+          <option value="analyzing">Analyzing</option>
+          <option value="pending_approval">Needs Approval</option>
+          <option value="remediating">Remediating</option>
           <option value="resolved">Resolved</option>
           <option value="closed">Closed</option>
         </select>
@@ -291,10 +291,10 @@ function IncidentCard({
   }
 
   const statusIcons: Record<string, React.ElementType> = {
-    open: AlertTriangle,
-    investigating: Clock,
-    identified: Eye,
-    monitoring: Eye,
+    detecting: AlertTriangle,
+    analyzing: Clock,
+    pending_approval: Eye,
+    remediating: Play,
     resolved: CheckCircle,
     closed: CheckCircle,
   }
@@ -326,7 +326,7 @@ function IncidentCard({
           <span className={`px-2 py-1 rounded-full text-xs capitalize ${
             incident.status === 'resolved' || incident.status === 'closed'
               ? 'bg-green-500/10 text-green-500'
-              : incident.status === 'investigating' || incident.status === 'identified'
+              : incident.status === 'pending_approval' || incident.status === 'analyzing'
               ? 'bg-yellow-500/10 text-yellow-500'
               : 'bg-red-500/10 text-red-500'
           }`}>
@@ -356,7 +356,7 @@ function IncidentCard({
         >
           View Details
         </button>
-        {(incident.status === 'open' || incident.status === 'investigating') && (
+        {incident.status !== 'resolved' && incident.status !== 'closed' && (
           <button
             onClick={onAnalyze}
             className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90"
