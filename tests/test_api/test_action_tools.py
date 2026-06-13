@@ -467,6 +467,60 @@ class TestListingGatingMetadata:
 
 
 # ---------------------------------------------------------------------------
+# D-item5: gate populates constitutional context (active_incident / action_scope)
+# ---------------------------------------------------------------------------
+
+class TestGateContextPopulation:
+    def _capturing_validator_request(self):
+        """Real-ish request whose validator captures the context it was given."""
+        captured = {}
+        validator = MagicMock()
+        validator.validate.side_effect = lambda **kw: captured.update(kw) or _report()
+        request = MagicMock()
+        request.app.state = MagicMock(spec=["validator"])
+        request.app.state.validator = validator
+        return request, captured
+
+    @pytest.mark.asyncio
+    async def test_incident_remediate_source_sets_active_incident(self, monkeypatch, fake_run):
+        from src.api.routes.tools import ToolCallRequest, _action_tool_gate
+
+        monkeypatch.setenv("AIOPS_ENABLE_ACTION_TOOLS", "true")
+        request, captured = self._capturing_validator_request()
+        tool_call = ToolCallRequest(
+            tool_name="restart_service",
+            parameters={"service_name": "nextcloud", "reason": "t", "confidence": 0.9},
+            context={"source": "incident_remediate", "human_approved": True},
+        )
+
+        _action_tool_gate(request, tool_call)
+
+        ctx = captured["context"]
+        # Wired so P1.2/P2.1 actually evaluate on the live remediation path.
+        assert ctx["active_incident"] is True
+        assert ctx["action_scope"] == "single"
+        # Caller context still flows through.
+        assert ctx["human_approved"] is True
+
+    @pytest.mark.asyncio
+    async def test_rest_ui_call_does_not_assert_active_incident(self, monkeypatch, fake_run):
+        from src.api.routes.tools import ToolCallRequest, _action_tool_gate
+
+        monkeypatch.setenv("AIOPS_ENABLE_ACTION_TOOLS", "true")
+        request, captured = self._capturing_validator_request()
+        tool_call = ToolCallRequest(
+            tool_name="restart_service",
+            parameters={"service_name": "nextcloud", "reason": "t", "confidence": 0.9},
+        )
+
+        _action_tool_gate(request, tool_call)
+
+        ctx = captured["context"]
+        # A bare UI call is not an incident-remediation flow.
+        assert ctx.get("active_incident") is not True
+
+
+# ---------------------------------------------------------------------------
 # Programmatic + MCP-server execution paths share the gate
 # ---------------------------------------------------------------------------
 
