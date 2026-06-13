@@ -33,6 +33,46 @@ def _require_password(env_var: str, dev_default: str) -> str:
     return dev_default
 
 
+def _resolve_cors_origins() -> list:
+    """Parse ``CORS_ORIGINS`` and refuse the unsafe ``*`` + credentials combo.
+
+    The app sends credentials (``allow_credentials=True`` in ``main.py``), so a
+    wildcard origin is BOTH browser-invalid (Starlette can't reflect ``*`` with
+    credentials) AND unsafe (it would make the credentialed API readable by any
+    site). We therefore:
+      * strip empty entries left by a stray trailing comma;
+      * reject a literal ``*`` origin in production (fail-fast — the operator
+        must pin a real origin list);
+      * outside production, drop a ``*`` and fall back to the localhost dev
+        origin with a warning instead of booting an unsafe config.
+    """
+    raw = os.getenv("CORS_ORIGINS", "http://localhost:3000")
+    origins = [o.strip() for o in raw.split(",") if o.strip()]
+    is_production = os.getenv("ENVIRONMENT", "local").lower() == "production"
+
+    if "*" in origins:
+        if is_production:
+            raise RuntimeError(
+                "CORS_ORIGINS='*' is not allowed: the API sends credentials, so a "
+                "wildcard origin is both browser-invalid and unsafe. Set CORS_ORIGINS "
+                "to an explicit comma-separated origin list in .env.production."
+            )
+        # Dev: don't honour the wildcard; drop it and keep any explicit origins.
+        import logging as _logging
+
+        _logging.getLogger(__name__).warning(
+            "CORS_ORIGINS contained '*' with credentials enabled; ignoring the "
+            "wildcard (unsafe). Using explicit origins only."
+        )
+        origins = [o for o in origins if o != "*"]
+
+    if not origins:
+        # Never boot with an empty allow-list (would make every CORS preflight
+        # fail); fall back to the documented dev default.
+        origins = ["http://localhost:3000"]
+    return origins
+
+
 @dataclass
 class LLMConfig:
     """LLM endpoint configuration for simultaneous dual-model setup."""
@@ -188,10 +228,8 @@ class AppConfig:
     )
     log_format: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     
-    # CORS
-    cors_origins: list = field(
-        default_factory=lambda: os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
-    )
+    # CORS — validated: never a wildcard while credentials are enabled.
+    cors_origins: list = field(default_factory=_resolve_cors_origins)
 
 
 @dataclass
