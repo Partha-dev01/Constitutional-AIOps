@@ -1,5 +1,5 @@
 import { MessageSquarePlus, X } from 'lucide-react'
-import { FocusTarget, SchemaSeverity } from './types'
+import { FocusTarget, SchemaSeverity, kindAccent } from './types'
 
 const SEVERITY_CHIP: Record<SchemaSeverity, string> = {
   info: 'bg-blue-500/15 text-blue-400',
@@ -46,7 +46,17 @@ export function DetailDrawer({ target, onClose, onAddToAskAi }: DetailDrawerProp
       <div className="flex items-start justify-between gap-2 border-b border-slate-800 p-3">
         <div className="min-w-0">
           <h4 className="truncate text-sm font-semibold text-slate-100">{title}</h4>
-          <span className="mt-1 inline-block rounded bg-slate-700/70 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-slate-300">
+          <span
+            className="mt-1 inline-block rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide"
+            style={
+              isNode
+                ? {
+                    backgroundColor: `hsl(${kindAccent(target.node.kind)} / 0.16)`,
+                    color: `hsl(${kindAccent(target.node.kind)})`,
+                  }
+                : { backgroundColor: 'rgb(51 65 85 / 0.7)', color: 'rgb(203 213 225)' }
+            }
+          >
             {isNode ? target.node.kind : `${target.edge.relationship} · ${target.edge.kind}`}
           </span>
         </div>

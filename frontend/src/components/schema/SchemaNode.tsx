@@ -10,7 +10,7 @@ import {
   Server,
 } from 'lucide-react'
 import { NODE_H, NODE_W } from './layout'
-import { TopologyNode } from './types'
+import { TopologyNode, kindAccent } from './types'
 
 /** Health-dot palette: green / amber / red / slate. */
 const HEALTH_COLOR: Record<string, string> = {
@@ -62,6 +62,7 @@ function SchemaNodeInner({
 }: SchemaNodeProps) {
   const Icon = KIND_ICON[node.kind] ?? Box
   const healthColor = HEALTH_COLOR[node.health] ?? HEALTH_COLOR.unknown
+  const accent = kindAccent(node.kind)
   const glow = Math.min(0.5, activity * 0.22)
   const subLabel = node.meta.port ? `${node.kind} · :${node.meta.port}` : node.kind
 
@@ -79,7 +80,8 @@ function SchemaNodeInner({
       onPointerMove={(e) => onHover(node, e)}
       onPointerLeave={() => onHover(null)}
     >
-      {/* Activity glow: brightness driven by the scrubbed current bucket. */}
+      {/* Activity glow: brightness driven by the scrubbed current bucket,
+          tinted with this service's category accent. */}
       {glow > 0 && (
         <rect
           x={-6}
@@ -87,7 +89,7 @@ function SchemaNodeInner({
           width={NODE_W + 12}
           height={NODE_H + 12}
           rx={14}
-          fill="hsl(var(--primary))"
+          fill={`hsl(${accent})`}
           opacity={glow}
           filter="url(#schemaGlow)"
           pointerEvents="none"
@@ -131,24 +133,35 @@ function SchemaNodeInner({
         pointerEvents="none"
       />
 
-      {/* Kind glyph. */}
-      <g transform="translate(11, 13)" style={{ color: '#94a3b8' }} pointerEvents="none">
-        <Icon width={16} height={16} strokeWidth={1.75} />
+      {/* Kind glyph in a category-tinted chip. */}
+      <rect
+        x={9}
+        y={17}
+        width={22}
+        height={22}
+        rx={6}
+        fill={`hsl(${accent} / 0.16)`}
+        stroke={`hsl(${accent} / 0.45)`}
+        strokeWidth={1}
+        pointerEvents="none"
+      />
+      <g transform="translate(12, 20)" style={{ color: `hsl(${accent})` }} pointerEvents="none">
+        <Icon width={16} height={16} strokeWidth={2} />
       </g>
 
       {/* Label + sub-label. */}
       <text
-        x={36}
+        x={37}
         y={24}
-        fill="#e2e8f0"
+        fill="#e8edf5"
         fontSize={12}
         fontWeight={600}
         pointerEvents="none"
       >
         {truncate(node.label, 15)}
       </text>
-      <text x={36} y={40} fill="#7c8aa0" fontSize={9} pointerEvents="none">
-        {truncate(subLabel, 22)}
+      <text x={37} y={40} fill="#8593aa" fontSize={9} pointerEvents="none">
+        {truncate(subLabel, 21)}
       </text>
 
       {/* Health dot (bottom-right) + critical pulse ring. */}
@@ -183,8 +196,8 @@ function SchemaNodeInner({
         opacity={displayCount === 0 ? 0.35 : 1}
         pointerEvents="none"
       >
-        <rect x={-15} y={-9} width={30} height={18} rx={9} fill="#16213a" stroke="hsl(var(--primary) / 0.55)" strokeWidth={1} />
-        <text x={0} y={3.5} textAnchor="middle" fontSize={10} fontWeight={600} fill="#c7d2fe">
+        <rect x={-15} y={-9} width={30} height={18} rx={9} fill="#101729" stroke={`hsl(${accent} / 0.55)`} strokeWidth={1} />
+        <text x={0} y={3.5} textAnchor="middle" fontSize={10} fontWeight={600} fill={`hsl(${accent})`}>
           {displayCount}
         </text>
       </g>

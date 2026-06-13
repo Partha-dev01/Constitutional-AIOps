@@ -96,6 +96,30 @@ export interface ScrubDerived {
 export const nodeKey = (id: string): string => `node:${id}`
 export const edgeKey = (id: string): string => `edge:${id}`
 
+// ---------------------------------------------------------------------------
+// Category accent palette. Each service `kind` gets its own hue so the
+// architecture reads as coloured tiers rather than one navy hairball. Values
+// are bare HSL triplets (consumed as `hsl(${accent})` / `hsl(${accent} / a)`),
+// chosen to stay clear of the health palette (green/amber/red) and the cyan
+// telemetry edges. Selection always stays primary-blue, regardless of kind.
+// ---------------------------------------------------------------------------
+export const KIND_ACCENT: Record<string, string> = {
+  gateway: '243 85% 70%', // indigo — the front door
+  frontend: '205 90% 62%', // sky — the UI
+  backend: '217 91% 63%', // blue — the core
+  datastore: '268 84% 70%', // violet — persistence
+  observability: '190 90% 56%', // cyan — telemetry (ties to dynamic edges)
+  llm: '292 84% 70%', // fuchsia — the models
+  edge: '345 85% 66%', // rose — external/remote hosts
+}
+
+export const DEFAULT_ACCENT = '215 20% 65%'
+
+/** Resolve the category accent (bare HSL triplet) for a service kind. */
+export function kindAccent(kind: string): string {
+  return KIND_ACCENT[kind] ?? DEFAULT_ACCENT
+}
+
 /** True for dynamically-discovered edge-host nodes (pinned to the last layer). */
 export function isEdgeHostNode(node: Pick<TopologyNode, 'id' | 'kind'>): boolean {
   return node.kind === 'edge' || node.id.startsWith('edge:')

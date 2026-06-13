@@ -90,12 +90,12 @@ export function AskAiPanel({ selection, onRemoveSelection, windowHours }: AskAiP
 
   return (
     <div
-      className="flex w-full shrink-0 flex-col rounded-lg border border-slate-800 bg-slate-900/70 lg:w-80"
+      className="flex w-full shrink-0 flex-col rounded-lg border border-slate-700/60 bg-gradient-to-b from-slate-900/85 to-slate-950/70 ring-1 ring-inset ring-white/5 lg:w-80"
       data-testid="askai-panel"
     >
-      <div className="flex items-center justify-between border-b border-slate-800 px-3 py-2.5">
+      <div className="flex items-center justify-between border-b border-slate-800 bg-gradient-to-r from-primary/10 to-transparent px-3 py-2.5">
         <h4 className="flex items-center gap-1.5 text-sm font-semibold text-slate-200">
-          <Sparkles className="h-4 w-4 text-blue-400" />
+          <Sparkles className="h-4 w-4 text-blue-400 drop-shadow-[0_0_6px_hsl(var(--primary)/0.7)]" />
           Ask AI
         </h4>
         {conversationId && (
@@ -148,8 +148,11 @@ export function AskAiPanel({ selection, onRemoveSelection, windowHours }: AskAiP
       {/* Compact message list. */}
       <div ref={listRef} className="min-h-0 flex-1 space-y-2 overflow-y-auto px-3 py-2">
         {messages.length === 0 && !loading && (
-          <div className="flex h-full flex-col items-center justify-center gap-1 text-center">
-            <p className="text-xs text-slate-500">
+          <div className="flex h-full flex-col items-center justify-center gap-2 px-4 text-center">
+            <div className="rounded-full border border-primary/20 bg-primary/10 p-2.5">
+              <Sparkles className="h-5 w-5 text-blue-400/80" />
+            </div>
+            <p className="max-w-[200px] text-xs leading-relaxed text-slate-500">
               Ask about the architecture, health or recent episodes.
             </p>
           </div>
