@@ -154,16 +154,16 @@ export function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="Active Incidents"
-          value={stats?.incidents.open?.toString() || '0'}
+          value={stats?.incidents.active?.toString() || '0'}
           icon={AlertTriangle}
-          trend={`${stats?.incidents.investigating || 0} investigating`}
+          trend={`${stats?.incidents.in_progress || 0} in progress`}
           color="text-yellow-500"
         />
         <StatCard
           title="Auto-Resolved"
-          value={stats?.incidents.resolved_today?.toString() || '0'}
+          value={stats?.incidents.resolved_total?.toString() || '0'}
           icon={CheckCircle}
-          trend="Last 24 hours"
+          trend="Resolved incidents"
           color="text-green-500"
         />
         <StatCard
