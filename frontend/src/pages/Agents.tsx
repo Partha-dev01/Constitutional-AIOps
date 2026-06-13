@@ -5,6 +5,7 @@ import {
   Brain,
   Network,
   GitBranch,
+  Waypoints,
   Wrench,
   RefreshCw,
   Loader2,
@@ -23,16 +24,13 @@ import { McpToolList } from '../components/mcp/McpToolList'
 import { McpExecutePanel } from '../components/mcp/McpExecutePanel'
 import type { McpToolInfo } from '../components/mcp/types'
 
-// Schema mode is lazy-loaded so the main bundle chunk doesn't grow; it is
-// only fetched when the user flips the graph tab to Architecture.
+// The interactive Platform Architecture (schema) graph is lazy-loaded so the
+// main bundle chunk doesn't grow; it is only fetched when the Architecture tab
+// is opened. The Neo4j episodic Graph Explorer is its own separate tab.
 const SchemaGraph = lazy(() => import('../components/schema/SchemaGraph'))
 
 // Tab type
-type AgentTab = 'fast' | 'reasoning' | 'telemetry' | 'graph' | 'tools'
-
-// Graph tab view mode. 'neo4j' is the contract-critical default (the force
-// graph canvas + its e2e suite must be what renders on tab open).
-type GraphMode = 'neo4j' | 'schema'
+type AgentTab = 'fast' | 'reasoning' | 'telemetry' | 'graph' | 'architecture' | 'tools'
 
 // Activity item type for agent activity streams
 interface AgentActivity {
@@ -79,7 +77,6 @@ export function Agents() {
   const [logFilter, setLogFilter] = useState<string>('all')
 
   // Graph state - using EpisodicNode/EpisodicLink for force-directed graph
-  const [graphMode, setGraphMode] = useState<GraphMode>('neo4j')
   const [graphNodes, setGraphNodes] = useState<EpisodicNode[]>([])
   const [graphEdges, setGraphEdges] = useState<EpisodicLink[]>([])
   const [graphLoading, setGraphLoading] = useState(false)
@@ -130,6 +127,7 @@ export function Agents() {
     { id: 'reasoning' as const, label: 'Reasoning Agent', icon: Brain, description: 'RCA & Planning' },
     { id: 'telemetry' as const, label: 'Telemetry', icon: Network, description: 'Logs/Metrics/Traces' },
     { id: 'graph' as const, label: 'Graph Explorer', icon: GitBranch, description: 'Neo4j Episodes' },
+    { id: 'architecture' as const, label: 'Architecture', icon: Waypoints, description: 'Live platform topology' },
     { id: 'tools' as const, label: 'MCP Tools', icon: Wrench, description: 'Tool Configuration' },
   ]
 
@@ -169,15 +167,15 @@ export function Agents() {
     }
   }, [activeTab])
 
-  // Auto-refresh graph data every 30s when graph tab is active (matches Fast
-  // Agent interval). Gated to neo4j mode — schema mode owns its own fetching.
+  // Auto-refresh the Neo4j episodic graph every 30s while its tab is active
+  // (matches Fast Agent interval). The Architecture tab owns its own fetching.
   useEffect(() => {
-    if (activeTab !== 'graph' || graphMode !== 'neo4j') return
+    if (activeTab !== 'graph') return
     const interval = setInterval(() => {
       fetchGraphData()
     }, 30000) // 30 seconds - matches background processor interval
     return () => clearInterval(interval)
-  }, [activeTab, graphMode])
+  }, [activeTab])
 
   const fetchFastActivity = async () => {
     setFastLoading(true)
@@ -846,76 +844,34 @@ export function Agents() {
                   Graph Explorer
                 </h2>
                 <p className="text-sm text-muted-foreground">
-                  {graphMode === 'neo4j'
-                    ? 'Neo4j episodic memory and service dependencies'
-                    : 'Live platform topology, health and episode evolution'}
+                  Neo4j episodic memory and service dependencies
                 </p>
               </div>
-              {graphMode === 'neo4j' && (
-                <button
-                  onClick={fetchGraphData}
-                  disabled={graphLoading}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-muted rounded-lg text-sm hover:bg-muted/80 disabled:opacity-50"
-                >
-                  {graphLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-                  Refresh
-                </button>
-              )}
+              <button
+                onClick={fetchGraphData}
+                disabled={graphLoading}
+                className="flex items-center gap-2 px-3 py-1.5 bg-muted rounded-lg text-sm hover:bg-muted/80 disabled:opacity-50"
+              >
+                {graphLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                Refresh
+              </button>
             </div>
 
-            {/* Episodic Graph Explorer (default) / Platform Architecture (schema mode) */}
+            {/* Episodic Knowledge Graph (Neo4j). The interactive Platform
+                Architecture graph lives in its own Architecture tab. */}
             <div className="bg-card rounded-lg border border-border p-4">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold">
-                  {graphMode === 'neo4j' ? 'Episodic Knowledge Graph' : 'Platform Architecture'}
-                </h3>
-                <div className="flex items-center gap-3">
-                  {graphMode === 'neo4j' && (
-                    <span
-                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${isComponentHealthy(health, 'neo4j') ? 'bg-green-500/10 text-green-500' : 'bg-yellow-500/10 text-yellow-500'}`}
-                      title={isComponentHealthy(health, 'neo4j') ? 'Connected to Neo4j' : 'Using in-memory fallback'}
-                    >
-                      <span className={`w-1.5 h-1.5 rounded-full ${isComponentHealthy(health, 'neo4j') ? 'bg-green-500' : 'bg-yellow-500'}`} />
-                      Neo4j • {isComponentHealthy(health, 'neo4j') ? 'Connected' : 'Fallback'}
-                    </span>
-                  )}
-                  {/* Segmented view-mode toggle (buttons only — never a select). */}
-                  <div className="flex items-center gap-1 text-xs">
-                    <button
-                      onClick={() => setGraphMode('neo4j')}
-                      className={`px-2 py-1 rounded-l-md border transition-colors ${
-                        graphMode === 'neo4j'
-                          ? 'bg-blue-600 text-white border-blue-500'
-                          : 'bg-slate-800/90 text-slate-400 border-slate-700 hover:bg-slate-700'
-                      }`}
-                    >
-                      Episodes
-                    </button>
-                    <button
-                      onClick={() => setGraphMode('schema')}
-                      className={`px-2 py-1 rounded-r-md border-t border-r border-b transition-colors ${
-                        graphMode === 'schema'
-                          ? 'bg-blue-600 text-white border-blue-500'
-                          : 'bg-slate-800/90 text-slate-400 border-slate-700 hover:bg-slate-700'
-                      }`}
-                    >
-                      Architecture
-                    </button>
-                  </div>
-                </div>
+                <h3 className="font-semibold">Episodic Knowledge Graph</h3>
+                <span
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${isComponentHealthy(health, 'neo4j') ? 'bg-green-500/10 text-green-500' : 'bg-yellow-500/10 text-yellow-500'}`}
+                  title={isComponentHealthy(health, 'neo4j') ? 'Connected to Neo4j' : 'Using in-memory fallback'}
+                >
+                  <span className={`w-1.5 h-1.5 rounded-full ${isComponentHealthy(health, 'neo4j') ? 'bg-green-500' : 'bg-yellow-500'}`} />
+                  Neo4j • {isComponentHealthy(health, 'neo4j') ? 'Connected' : 'Fallback'}
+                </span>
               </div>
 
-              {graphMode === 'schema' ? (
-                <Suspense
-                  fallback={
-                    <div className="flex items-center justify-center h-[520px] bg-gradient-to-br from-slate-900/50 to-slate-800/50 rounded-lg">
-                      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                    </div>
-                  }
-                >
-                  <SchemaGraph height={520} />
-                </Suspense>
-              ) : graphNodes.length > 0 ? (
+              {graphNodes.length > 0 ? (
                 <EpisodicGraphExplorer
                   nodes={graphNodes}
                   links={graphEdges}
@@ -944,6 +900,38 @@ export function Agents() {
                   </button>
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Architecture Tab — interactive platform topology (schema graph) */}
+        {activeTab === 'architecture' && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold flex items-center gap-2">
+                  <Waypoints className="h-5 w-5 text-cyan-500" />
+                  Architecture
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  Live platform topology, health and episode evolution
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-card rounded-lg border border-border p-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold">Platform Architecture</h3>
+              </div>
+              <Suspense
+                fallback={
+                  <div className="flex items-center justify-center h-[520px] bg-gradient-to-br from-slate-900/50 to-slate-800/50 rounded-lg">
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  </div>
+                }
+              >
+                <SchemaGraph height={520} />
+              </Suspense>
             </div>
           </div>
         )}

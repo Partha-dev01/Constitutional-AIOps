@@ -1,4 +1,4 @@
-import { Bot, User } from 'lucide-react'
+import { ShieldCheck, User } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { InsightCards } from './InsightCards'
@@ -44,11 +44,10 @@ export function ChatMessage({ message, isTyping, displayedContent, insights, pro
           <User className="h-4 w-4" />
         </div>
       ) : (
-        /* Gradient-ring avatar: 1px gradient wrapper around a bg-card core. */
-        <div className="h-9 w-9 shrink-0 rounded-full bg-gradient-to-br from-primary/60 via-primary/25 to-transparent p-px shadow-sm">
-          <div className="flex h-full w-full items-center justify-center rounded-full bg-card">
-            <Bot className="h-4 w-4 text-primary" />
-          </div>
+        /* Assistant mark: flat brand-tinted disc — no glowing-orb halo, no toy
+           robot. ShieldCheck ties replies to the constitutional/governed system. */
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-primary/25 bg-primary/10 text-primary shadow-sm ring-1 ring-inset ring-white/5">
+          <ShieldCheck className="h-[18px] w-[18px]" strokeWidth={2} />
         </div>
       )}
       <div className="max-w-[75%]">
