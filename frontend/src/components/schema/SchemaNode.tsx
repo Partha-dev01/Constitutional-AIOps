@@ -63,7 +63,7 @@ function SchemaNodeInner({
   const Icon = KIND_ICON[node.kind] ?? Box
   const healthColor = HEALTH_COLOR[node.health] ?? HEALTH_COLOR.unknown
   const accent = kindAccent(node.kind)
-  const glow = Math.min(0.5, activity * 0.22)
+  const glow = Math.min(0.16, activity * 0.09)
   const subLabel = node.meta.port ? `${node.kind} · :${node.meta.port}` : node.kind
 
   return (
@@ -130,6 +130,19 @@ function SchemaNodeInner({
         height={26}
         rx={9}
         fill="url(#schemaNodeSheen)"
+        pointerEvents="none"
+      />
+
+      {/* Thin category accent stripe down the left edge — a clean status bar
+          instead of a glowing gradient border. */}
+      <rect
+        x={2}
+        y={9}
+        width={3}
+        height={NODE_H - 18}
+        rx={1.5}
+        fill={`hsl(${accent})`}
+        opacity={0.85}
         pointerEvents="none"
       />
 

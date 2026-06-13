@@ -167,20 +167,19 @@ export function SchemaCanvas({
       onPointerCancel={handlePointerUp}
     >
       <defs>
-        {/* Glass-card body: vertical dark gradient. */}
+        {/* Flat card body — solid slate, no dramatic glass gradient. */}
         <linearGradient id="schemaNodeFill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#1b2540" stopOpacity="0.97" />
-          <stop offset="100%" stopColor="#0c1322" stopOpacity="0.97" />
+          <stop offset="0%" stopColor="#141c2c" />
+          <stop offset="100%" stopColor="#111825" />
         </linearGradient>
-        {/* Gradient hairline stroke, mimicking .glass-card (landing.css). */}
+        {/* Crisp flat hairline stroke (no primary-accent glow gradient). */}
         <linearGradient id="schemaNodeStroke" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" style={{ stopColor: 'hsl(var(--border))' }} />
-          <stop offset="45%" style={{ stopColor: 'hsl(var(--primary) / 0.55)' }} />
-          <stop offset="100%" style={{ stopColor: 'hsl(var(--border))' }} />
+          <stop offset="0%" stopColor="#2b3850" />
+          <stop offset="100%" stopColor="#2b3850" />
         </linearGradient>
-        {/* Inner top highlight. */}
+        {/* Very subtle inner top highlight. */}
         <linearGradient id="schemaNodeSheen" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.09" />
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.04" />
           <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
         </linearGradient>
         {/* Soft glow used by activity halos. */}

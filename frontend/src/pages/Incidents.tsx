@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { AlertTriangle, CheckCircle, Clock, Search, Plus, Eye, Play, X, Loader2, RefreshCw } from 'lucide-react'
 import { formatRelativeTime } from '../lib/utils'
 import api, { Incident, IncidentSeverity, IncidentStatus, Action, IncidentCreate } from '../lib/api'
+import { ActiveIncidentsPanel } from '../components/incidents/ActiveIncidentsPanel'
 
 export function Incidents() {
   const [incidents, setIncidents] = useState<Incident[]>([])
@@ -119,6 +120,9 @@ export function Incidents() {
           </button>
         </div>
       </div>
+
+      {/* Act on live incidents inline: approve & remediate / reject / open in chat. */}
+      <ActiveIncidentsPanel />
 
       {/* Pending Approvals Banner */}
       {pendingActions.length > 0 && (

@@ -369,6 +369,21 @@ export function Chat() {
     if (requested !== conversationId) void handleSelectConversation(requested)
   }, [searchParams, setSearchParams, conversationId, handleSelectConversation])
 
+  // Hand-off entry point: ?ask=<prompt> prefills the composer (e.g. an incident's
+  // "Open in Chat") so the operator can review and send. Prefill only — never
+  // auto-sends — so the empty-state / loading contract is unaffected.
+  const handledAskParamRef = useRef(false)
+  useEffect(() => {
+    if (handledAskParamRef.current) return
+    handledAskParamRef.current = true
+    const ask = searchParams.get('ask')
+    if (!ask) return
+    const next = new URLSearchParams(searchParams)
+    next.delete('ask')
+    setSearchParams(next, { replace: true })
+    setInput(ask)
+  }, [searchParams, setSearchParams])
+
   // Empty-state chips show only on a brand-new, idle conversation.
   const showSuggestions = messages.length <= 1 && !isLoading && !conversationId
 

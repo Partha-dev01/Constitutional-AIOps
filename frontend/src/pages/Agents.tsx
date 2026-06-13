@@ -23,6 +23,7 @@ import { JsonView } from '../components/JsonView'
 import { McpToolList } from '../components/mcp/McpToolList'
 import { McpExecutePanel } from '../components/mcp/McpExecutePanel'
 import type { McpToolInfo } from '../components/mcp/types'
+import { ActiveIncidentsPanel } from '../components/incidents/ActiveIncidentsPanel'
 
 // The interactive Platform Architecture (schema) graph is lazy-loaded so the
 // main bundle chunk doesn't grow; it is only fetched when the Architecture tab
@@ -918,6 +919,10 @@ export function Agents() {
                 </p>
               </div>
             </div>
+
+            {/* Active incidents — deal with them right here: approve & remediate
+                (gated executor / t3 heal), reject, or open in chat. */}
+            <ActiveIncidentsPanel />
 
             <div className="bg-card rounded-lg border border-border p-4">
               <div className="flex items-center justify-between mb-4">
