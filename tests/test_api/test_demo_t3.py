@@ -228,6 +228,20 @@ class TestDemoScenariosRoute:
         for s in resp.scenarios:
             assert s.label and s.description
 
+    def test_scenario_incident_categories_are_valid_enum_values(self):
+        """Regression (found in live deploy validation): _log_demo_incidents
+        built IncidentCategory from fabricated names (INFRASTRUCTURE /
+        APPLICATION / NETWORK) → AttributeError → 500 on EVERY chaos start.
+        Every scenario's category + severity string must map to a real enum."""
+        from src.api.routes.demo import _SCENARIO_INCIDENT
+        from src.api.schemas.incident import IncidentCategory
+
+        valid_cats = {c.value for c in IncidentCategory}
+        for scenario, (label, sev, cat, desc) in _SCENARIO_INCIDENT.items():
+            assert cat in valid_cats, f"{scenario}: {cat!r} is not a real IncidentCategory"
+            assert sev in {"high", "medium", "low"}, f"{scenario}: bad severity {sev!r}"
+            assert label and desc
+
 
 class TestDemoStatusRoute:
     @pytest.mark.asyncio

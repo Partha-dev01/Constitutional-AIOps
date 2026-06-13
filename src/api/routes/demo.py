@@ -79,15 +79,15 @@ _SCENARIO_IDS = {s["id"] for s in SCENARIOS}
 # Map each scenario to the incident properties used when logging the demo
 # incident (so RCA gets a meaningful title/severity).
 _SCENARIO_INCIDENT = {
-    "db_down": ("Database Down", "high", "infrastructure",
+    "db_down": ("Database Down", "high", "availability",
                 "nextcloud-db is offline — database connectivity lost."),
     "cpu_stress": ("CPU Stress", "high", "performance",
                    "High CPU utilization detected on nextcloud."),
-    "mem_stress": ("Memory Stress", "medium", "performance",
+    "mem_stress": ("Memory Stress", "medium", "resource",
                    "Memory pressure detected on nextcloud — potential OOM."),
-    "bad_config_5xx": ("Bad Config (5xx)", "high", "application",
+    "bad_config_5xx": ("Bad Config (5xx)", "high", "error",
                        "nextcloud returning 5xx errors (maintenance mode / bad config)."),
-    "disk_fill": ("Disk Fill", "medium", "infrastructure",
+    "disk_fill": ("Disk Fill", "medium", "resource",
                   "Disk pressure detected on nextcloud — data volume filling up."),
 }
 
@@ -313,18 +313,21 @@ async def _log_demo_incidents(request: Request, scenario_ids: list[str]) -> None
         "medium": IncidentSeverity.MEDIUM,
         "low": IncidentSeverity.LOW,
     }
+    # Map the scenario category strings to real IncidentCategory members
+    # (the enum has no INFRASTRUCTURE/APPLICATION/NETWORK values).
     category_map = {
-        "infrastructure": IncidentCategory.INFRASTRUCTURE,
+        "availability": IncidentCategory.AVAILABILITY,
         "performance": IncidentCategory.PERFORMANCE,
-        "application": IncidentCategory.APPLICATION,
-        "network": IncidentCategory.NETWORK,
+        "resource": IncidentCategory.RESOURCE,
+        "error": IncidentCategory.ERROR,
+        "configuration": IncidentCategory.CONFIGURATION,
     }
 
     try:
         for scenario in scenario_ids:
             label, sev, cat, description = _SCENARIO_INCIDENT.get(
                 scenario,
-                (scenario, "medium", "infrastructure",
+                (scenario, "medium", "availability",
                  f"Chaos scenario '{scenario}' injected."),
             )
 
@@ -339,7 +342,7 @@ async def _log_demo_incidents(request: Request, scenario_ids: list[str]) -> None
                 title=f"[DEMO] {label} on {affected}",
                 description=description,
                 severity=severity_map.get(sev, IncidentSeverity.MEDIUM),
-                category=category_map.get(cat, IncidentCategory.INFRASTRUCTURE),
+                category=category_map.get(cat, IncidentCategory.UNKNOWN),
                 affected_services=[ServiceInfo(name=affected)],
                 tags=["demo", "auto-generated", scenario],
                 source="demo-mode",
