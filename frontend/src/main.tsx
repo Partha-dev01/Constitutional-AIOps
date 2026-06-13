@@ -6,6 +6,7 @@ import App from './App'
 import './index.css'
 import './styles/landing.css'
 import './styles/chat.css'
+import './styles/schema.css'
 
 const queryClient = new QueryClient({
   defaultOptions: {

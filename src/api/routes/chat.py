@@ -55,6 +55,100 @@ def _extract_service_from_query(message: str) -> Optional[str]:
     return None
 
 
+# Selection-context rendering (session-14: Graph "Schema mode" → chat).
+# The Schema view sends the user's node/edge selection as ChatRequest.context
+# with source=="schema-graph". Before session-14 ChatRequest.context was a dead
+# field (stored on the conversation, never read); now a recognised selection is
+# rendered into the LLM runtime context so "ask AI about these" is grounded.
+_SELECTION_MAX_ITEMS = 8           # nodes + edges combined
+_SELECTION_MAX_RECENT = 2          # episode titles per node
+_SELECTION_TITLE_CHARS = 80        # per episode title
+_SELECTION_MAX_CHARS = 1200        # hard cap on the whole block
+
+
+def _selected_known_service(ctx: Optional[dict[str, Any]]) -> Optional[str]:
+    """Return the single known service in a schema-graph selection, else None.
+
+    Lets the chat path auto-run telemetry/MCP tools for a node the user selected
+    even when they didn't name it in free text.
+    """
+    if not isinstance(ctx, dict) or ctx.get("source") != "schema-graph":
+        return None
+    selection = ctx.get("selection") or {}
+    nodes = selection.get("nodes") or []
+    services = {
+        n.get("id")
+        for n in nodes
+        if isinstance(n, dict) and n.get("id") in KNOWN_SERVICES
+    }
+    return next(iter(services)) if len(services) == 1 else None
+
+
+def _render_selection_context(ctx: Optional[dict[str, Any]]) -> str:
+    """Render a schema-graph selection into a compact, capped context block.
+
+    Returns "" when ctx is absent or not a recognised schema-graph selection.
+    """
+    if not isinstance(ctx, dict) or ctx.get("source") != "schema-graph":
+        return ""
+    selection = ctx.get("selection") or {}
+    nodes = [n for n in (selection.get("nodes") or []) if isinstance(n, dict)]
+    edges = [e for e in (selection.get("edges") or []) if isinstance(e, dict)]
+    if not nodes and not edges:
+        return ""
+
+    lines: list[str] = [
+        "## User Selection (Architecture Schema view)",
+        "The user selected these elements in the Graph Explorer and is asking "
+        "about them. Treat the selection as the primary subject of the question.",
+    ]
+    shown = 0
+    for n in nodes:
+        if shown >= _SELECTION_MAX_ITEMS:
+            break
+        label = str(n.get("label") or n.get("id") or "unknown")
+        kind = str(n.get("kind") or "service")
+        health = str(n.get("health") or "unknown")
+        eps = n.get("episode_count")
+        inc = n.get("incident_count")
+        detail = f"- Service \"{label}\" (kind {kind}, health {health})"
+        if isinstance(eps, int):
+            detail += f" — {eps} episodes"
+            if isinstance(inc, int):
+                detail += f", {inc} incidents"
+        recent = [r for r in (n.get("recent") or []) if isinstance(r, dict)]
+        if recent:
+            titles = []
+            for r in recent[:_SELECTION_MAX_RECENT]:
+                title = str(r.get("title") or "")[:_SELECTION_TITLE_CHARS]
+                sev = str(r.get("severity") or "")
+                titles.append(f"\"{title}\" ({sev})" if sev else f"\"{title}\"")
+            detail += "; recent: " + ", ".join(titles)
+        lines.append(detail)
+        shown += 1
+    for e in edges:
+        if shown >= _SELECTION_MAX_ITEMS:
+            break
+        src = str(e.get("source") or "?")
+        tgt = str(e.get("target") or "?")
+        rel = str(e.get("relationship") or "related to")
+        co = e.get("co_episode_count")
+        detail = f"- Dependency {src} → {tgt} ({rel})"
+        if isinstance(co, int) and co:
+            detail += f" — {co} correlated episodes"
+        lines.append(detail)
+        shown += 1
+
+    total = len(nodes) + len(edges)
+    if total > shown:
+        lines.append(f"- …and {total - shown} more selected element(s)")
+
+    block = "\n".join(lines)
+    if len(block) > _SELECTION_MAX_CHARS:
+        block = block[:_SELECTION_MAX_CHARS].rstrip() + "\n- …(truncated)"
+    return block
+
+
 async def _build_telemetry_context(
     request: Request,
     service: str,
@@ -464,6 +558,10 @@ async def chat(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Conversation {conversation_id} not found",
             )
+        # Refresh the stored selection context so a fresh Schema-mode selection
+        # (or a hand-off from the full Chat page) updates an existing thread.
+        if chat_request.context is not None:
+            conversation.context = chat_request.context
     else:
         conversation = ConversationHistory(
             conversation_id=conversation_id,
@@ -504,8 +602,17 @@ async def chat(
         # Build runtime context with current system state
         runtime_context = await _build_runtime_context(request)
 
-        # Extract service from query and get real telemetry data
+        # Selection context from the Graph "Schema mode" (session-14). Prefer the
+        # context on this turn; fall back to the conversation's stored selection.
+        selection_ctx = chat_request.context or conversation.context
+        selection_context = _render_selection_context(selection_ctx)
+
+        # Extract service from query and get real telemetry data. If the user
+        # named no service but selected exactly one in the schema view, use it so
+        # the telemetry/MCP auto-tools below run for the selected node.
         service = _extract_service_from_query(chat_request.message)
+        if service is None:
+            service = _selected_known_service(selection_ctx)
         telemetry_context = ""
         telemetry_struct: Optional[dict[str, Any]] = None
         if service:
@@ -517,12 +624,15 @@ async def chat(
             request, chat_request.message, service
         )
 
-        # Combine telemetry + MCP tools + runtime context for comprehensive LLM input
+        # Combine selection + telemetry + MCP tools + runtime context for the LLM.
+        # The user's explicit selection leads so the model treats it as the subject.
         full_context = runtime_context
         if mcp_tool_context:
             full_context = mcp_tool_context + "\n\n" + full_context
         if telemetry_context:
             full_context = telemetry_context + "\n\n" + full_context
+        if selection_context:
+            full_context = selection_context + "\n\n" + full_context
 
         # Assemble structured tool metadata (B3 / THE CONTRACT). Only include a key
         # for a tool that actually ran and returned real data.
@@ -601,6 +711,8 @@ async def chat(
         metadata.setdefault("mode", "chat")
         if tools_meta:
             metadata["tools"] = tools_meta
+        if selection_context:
+            metadata["selection_applied"] = True
 
         assistant_response = {
             "content": content,
