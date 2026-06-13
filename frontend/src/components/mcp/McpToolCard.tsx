@@ -1,6 +1,6 @@
-import { Lock } from 'lucide-react'
+import { Lock, ShieldCheck } from 'lucide-react'
 import type { McpToolInfo } from './types'
-import { isToolDisabled } from './types'
+import { disabledReason, isActionTool, isToolDisabled } from './types'
 
 interface McpToolCardProps {
   tool: McpToolInfo
@@ -18,15 +18,18 @@ function categoryBadge(cat: string | undefined): string {
   }
 }
 
-// A single tool row in the tool list. Disabled (action) tools are not selectable.
+// A single tool row in the tool list. Disabled state is data-driven from the
+// backend listing (`enabled`/`gated_by`), not hardcoded per tool name.
 export function McpToolCard({ tool, selected, onSelect }: McpToolCardProps) {
-  const disabled = isToolDisabled(tool.name)
+  const disabled = isToolDisabled(tool)
+  const action = isActionTool(tool)
   const risk = tool.risk_level ?? 'low'
 
   return (
     <button
       type="button"
       disabled={disabled}
+      title={disabled ? disabledReason(tool) : undefined}
       onClick={() => !disabled && onSelect(tool)}
       className={`w-full text-left p-4 transition-colors ${
         disabled
@@ -56,7 +59,15 @@ export function McpToolCard({ tool, selected, onSelect }: McpToolCardProps) {
       </div>
       <p className="text-sm text-muted-foreground">{tool.description}</p>
       {disabled && (
-        <p className="text-xs text-yellow-500 mt-1.5">Requires approval — coming soon</p>
+        <p className="text-xs text-yellow-500 mt-1.5">
+          Gated off — set {tool.gated_by ?? 'AIOPS_ENABLE_ACTION_TOOLS'}=true on the backend to enable
+        </p>
+      )}
+      {!disabled && action && (
+        <p className="text-xs text-orange-500 mt-1.5 flex items-center gap-1">
+          <ShieldCheck className="h-3 w-3" />
+          Constitutionally gated — every call is validated before execution
+        </p>
       )}
     </button>
   )

@@ -17,6 +17,7 @@ Graph Model (from Research_V7.tex):
 
 import logging
 import json
+import os
 from datetime import datetime, timedelta
 from typing import Any
 from uuid import uuid4
@@ -1026,81 +1027,54 @@ async def get_detailed_graph_stats(request: Request) -> dict:
 # Episode Generation via Reasoning Agent
 # =============================================================================
 
-# Template-based schema for service definitions
-SERVICE_TEMPLATES = [
-    {
-        "name": "neo4j",
-        "type": "database",
-        "port": 7687,
-        "description": "Graph database for episodic memory and knowledge storage",
-        "health_endpoint": "/",
-        "dependencies": ["backend"],
-        "common_issues": ["memory_pressure", "connection_pool_exhaustion", "slow_queries"],
-    },
-    {
-        "name": "prometheus",
-        "type": "monitoring",
-        "port": 9090,
-        "description": "Metrics collection, alerting, and time-series database",
-        "health_endpoint": "/-/healthy",
-        "dependencies": ["otel-collector"],
-        "common_issues": ["scrape_target_down", "storage_full", "query_timeout"],
-    },
-    {
-        "name": "grafana",
-        "type": "visualization",
-        "port": 3001,
-        "description": "Dashboard visualization and alerting UI",
-        "health_endpoint": "/api/health",
-        "dependencies": ["prometheus", "loki", "tempo"],
-        "common_issues": ["dashboard_load_timeout", "datasource_error", "auth_failure"],
-    },
-    {
-        "name": "loki",
-        "type": "logging",
-        "port": 3100,
-        "description": "Log aggregation and querying system",
-        "health_endpoint": "/ready",
-        "dependencies": ["otel-collector"],
-        "common_issues": ["ingestion_backlog", "storage_limit", "rate_limiting"],
-    },
-    {
-        "name": "tempo",
-        "type": "tracing",
-        "port": 3200,
-        "description": "Distributed tracing backend for trace storage and querying",
-        "health_endpoint": "/ready",
-        "dependencies": ["otel-collector"],
-        "common_issues": ["trace_storage_full", "span_drop", "query_timeout"],
-    },
-    {
-        "name": "otel-collector",
-        "type": "telemetry",
-        "port": 4317,
-        "description": "OpenTelemetry collector for unified telemetry pipeline",
-        "health_endpoint": "/",
-        "dependencies": [],
-        "common_issues": ["exporter_failure", "pipeline_blocked", "memory_limit"],
-    },
-    {
-        "name": "backend",
-        "type": "api",
-        "port": 8000,
-        "description": "FastAPI backend with dual LLM agents (Qwen3-4B + Qwen3-14B)",
-        "health_endpoint": "/api/v1/health",
-        "dependencies": ["neo4j", "prometheus", "loki"],
-        "common_issues": ["llm_timeout", "api_latency", "database_connection"],
-    },
-    {
-        "name": "frontend",
-        "type": "ui",
-        "port": 3000,
-        "description": "React dashboard for Constitutional AIOps visualization",
-        "health_endpoint": "/",
-        "dependencies": ["backend"],
-        "common_issues": ["api_unreachable", "render_error", "websocket_disconnect"],
-    },
-]
+# SERVICE_TEMPLATES (the old hand-maintained constant) is RETIRED: it was
+# stale (missing caddy/promtail/qwen3-*) and its dependency direction was
+# BACKWARDS. The demo fabricator below now derives its service definitions
+# from the canonical topology in src/memory/topology_seed.py.
+
+# Per-kind plausible issue flavors for the demo episode prompt only.
+_DEMO_COMMON_ISSUES: dict[str, list[str]] = {
+    "gateway": ["upstream_unreachable", "tls_handshake_failure", "route_misconfig"],
+    "frontend": ["api_unreachable", "render_error", "asset_load_failure"],
+    "backend": ["llm_timeout", "api_latency", "database_connection"],
+    "datastore": ["memory_pressure", "connection_pool_exhaustion", "slow_queries"],
+    "observability": ["ingestion_backlog", "scrape_target_down", "query_timeout"],
+    "llm": ["inference_timeout", "vram_exhaustion", "queue_saturation"],
+}
+
+
+def _demo_service_templates() -> list[dict[str, Any]]:
+    """Demo-prompt service definitions derived from the canonical topology.
+
+    Dependency direction follows topology_seed: X DEPENDS_ON Y (the retired
+    SERVICE_TEMPLATES had this backwards for neo4j et al).
+    """
+    from src.memory.topology_seed import PLATFORM_DEPENDENCIES, PLATFORM_SERVICES
+
+    deps_by_service: dict[str, list[str]] = {}
+    for source, target in PLATFORM_DEPENDENCIES:
+        deps_by_service.setdefault(source, []).append(target)
+
+    return [
+        {
+            "name": svc["id"],
+            "type": svc["kind"],
+            "kind": svc["kind"],
+            "tier": svc["tier"],
+            "port": svc["port"],
+            "description": svc["description"],
+            "dependencies": deps_by_service.get(svc["id"], []),
+            "common_issues": _DEMO_COMMON_ISSUES.get(
+                svc["kind"], ["service_degradation"]
+            ),
+        }
+        for svc in PLATFORM_SERVICES
+    ]
+
+
+def _demo_enabled() -> bool:
+    """The LLM demo-episode fabricator is opt-in via AIOPS_ENABLE_DEMO."""
+    return os.getenv("AIOPS_ENABLE_DEMO", "").strip().lower() in ("1", "true", "yes")
 
 # Episode generation prompt template
 EPISODE_GENERATION_TEMPLATE = """You are an expert SRE analyzing infrastructure for the Constitutional AIOps system.
@@ -1185,9 +1159,19 @@ async def generate_episodes(
     """
     Generate realistic episodes using the Reasoning Agent (Qwen3-14B).
 
-    This uses template-based schemas for each service to create episodes
-    that accurately reflect the Constitutional AIOps architecture.
+    This is a DEMO data fabricator (synthetic episodes). It is gated behind
+    AIOPS_ENABLE_DEMO so a production graph can never be polluted with
+    fabricated incidents by a stray POST.
     """
+    if not _demo_enabled():
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=(
+                "Demo episode generation is disabled. This endpoint fabricates "
+                "synthetic incidents via the LLM; set AIOPS_ENABLE_DEMO=true to enable it."
+            ),
+        )
+
     reasoning_agent = getattr(request.app.state, "reasoning_agent", None)
     neo4j_client = getattr(request.app.state, "neo4j_client", None)
 
@@ -1214,16 +1198,18 @@ async def generate_episodes(
                 await session.run("MATCH (n) DETACH DELETE n")
             logger.info("Cleared existing graph data")
 
-        # Determine which services to process
-        target_services = gen_request.services or [s["name"] for s in SERVICE_TEMPLATES]
+        # Determine which services to process (canonical topology, not the
+        # retired SERVICE_TEMPLATES constant)
+        service_templates = _demo_service_templates()
+        target_services = gen_request.services or [s["name"] for s in service_templates]
         all_services_text = "\n".join([
             f"- {s['name']} ({s['type']}): {s['description']}"
-            for s in SERVICE_TEMPLATES
+            for s in service_templates
         ])
 
         now = datetime.utcnow()
 
-        for service_template in SERVICE_TEMPLATES:
+        for service_template in service_templates:
             if service_template["name"] not in target_services:
                 continue
 
@@ -1278,22 +1264,24 @@ async def generate_episodes(
 
                     # Store in Neo4j with full schema
                     async with neo4j_client.session() as session:
-                        # Create Service node with full details
+                        # Create Service node with full details (kind/tier kept
+                        # consistent with the canonical topology seed)
                         await session.run("""
                             MERGE (s:Service {name: $name})
                             SET s.type = $type,
+                                s.kind = $kind,
+                                s.tier = $tier,
                                 s.port = $port,
                                 s.description = $description,
-                                s.health_endpoint = $health,
                                 s.status = 'healthy',
-                                s.last_checked = $now,
-                                s.uptime_percent = 99.9
+                                s.last_checked = $now
                         """, {
                             "name": svc_name,
                             "type": service_template["type"],
+                            "kind": service_template["kind"],
+                            "tier": service_template["tier"],
                             "port": service_template["port"],
                             "description": service_template["description"],
-                            "health": service_template["health_endpoint"],
                             "now": now.isoformat(),
                         })
 
@@ -1336,7 +1324,7 @@ async def generate_episodes(
                             if affected_svc != svc_name:
                                 # Find template for affected service
                                 affected_template = next(
-                                    (t for t in SERVICE_TEMPLATES if t["name"] == affected_svc),
+                                    (t for t in service_templates if t["name"] == affected_svc),
                                     None
                                 )
                                 if affected_template:

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { AlertCircle, PanelLeftOpen, Plus } from 'lucide-react'
 import api from '../lib/api'
 import { ChatComposer } from '../components/chat/ChatComposer'
@@ -337,6 +338,23 @@ export function Chat() {
     },
     [history, conversationId, handleNewConversation],
   )
+
+  // Hand-off entry point (e.g. schema-graph "Continue in Chat"): when the page
+  // mounts with ?conversation=<id>, load that conversation through the normal
+  // selection path, then strip the param so reload/back stays clean. The ref
+  // guard makes this strictly mount-once without trimming the dependency list.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const handledConversationParamRef = useRef(false)
+  useEffect(() => {
+    if (handledConversationParamRef.current) return
+    handledConversationParamRef.current = true
+    const requested = searchParams.get('conversation')
+    if (!requested) return
+    const next = new URLSearchParams(searchParams)
+    next.delete('conversation')
+    setSearchParams(next, { replace: true })
+    if (requested !== conversationId) void handleSelectConversation(requested)
+  }, [searchParams, setSearchParams, conversationId, handleSelectConversation])
 
   // Empty-state chips show only on a brand-new, idle conversation.
   const showSuggestions = messages.length <= 1 && !isLoading && !conversationId

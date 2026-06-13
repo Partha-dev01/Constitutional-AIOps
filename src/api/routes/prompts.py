@@ -5,10 +5,12 @@ Provides endpoints for viewing and customizing system prompts
 for the Fast Agent and Reasoning Agent.
 """
 
+import json
 import logging
-from typing import Any
+import os
+from pathlib import Path
 
-from fastapi import APIRouter, Request, HTTPException, status
+from fastapi import APIRouter, FastAPI, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
@@ -130,8 +132,107 @@ Output structured JSON that the action executor can process.""",
     ),
 }
 
-# In-memory storage for prompt customizations
-_custom_prompts: dict[str, str] = {}
+# ---------------------------------------------------------------------------
+# Persistence (session-14 W4)
+#
+# Before W4 the prompts API only mutated an in-memory dict and pushed to a
+# `set_system_prompt` method that NEITHER agent implemented (hasattr-guarded,
+# silently swallowed) — so UI prompt edits never reached the agents and never
+# survived a restart. Now overrides are persisted under AIOPS_DATA_DIR and
+# re-applied to the live agents at startup; PUT fails loudly if it cannot be
+# applied. See docs/audits/SESSION14_PROMPT_CHAIN_AUDIT.md.
+# ---------------------------------------------------------------------------
+
+
+class _AgentUnavailableError(RuntimeError):
+    """Raised when the target agent is not initialised on app.state."""
+
+
+def _prompts_path() -> Path:
+    """Path to the persisted prompt-overrides JSON (mirrors settings.py).
+
+    Priority: AIOPS_DATA_DIR env (prod bind-mount) else repo-local data/settings.
+    """
+    base = os.environ.get("AIOPS_DATA_DIR") or os.path.join(
+        os.path.dirname(__file__), "..", "..", "..", "data", "settings"
+    )
+    path = Path(base)
+    path.mkdir(parents=True, exist_ok=True)
+    return path / "prompts.json"
+
+
+def _load_persisted() -> dict[str, str]:
+    """Load persisted prompt overrides from disk; {} on any error."""
+    try:
+        p = _prompts_path()
+        if p.exists():
+            data = json.loads(p.read_text(encoding="utf-8"))
+            if isinstance(data, dict):
+                # Only keep known, editable prompt names with str values.
+                return {
+                    k: v
+                    for k, v in data.items()
+                    if k in DEFAULT_PROMPTS and isinstance(v, str)
+                }
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Failed to read persisted prompts: %s", exc)
+    return {}
+
+
+def _save_persisted(data: dict[str, str]) -> None:
+    """Write the overrides dict to disk (atomic-ish: write then rename)."""
+    p = _prompts_path()
+    tmp = p.with_suffix(".tmp")
+    try:
+        tmp.write_text(json.dumps(data, indent=2), encoding="utf-8")
+        tmp.replace(p)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Failed to persist prompts: %s", exc)
+
+
+# In-memory cache of customizations, hydrated from disk at import so GET/list
+# reflect persisted overrides immediately (the live agent push happens in
+# apply_persisted_prompts at startup).
+_custom_prompts: dict[str, str] = _load_persisted()
+
+
+def _push_to_agent(app: FastAPI, prompt_name: str, agent_kind: str, text: str) -> None:
+    """Apply a prompt override to the live agent.
+
+    Raises:
+        _AgentUnavailableError: the target agent is not on app.state.
+        ValueError: the agent rejected the prompt (unknown name / empty /
+            missing required placeholder).
+    """
+    attr = "fast_annotator" if agent_kind == "fast" else "reasoning_agent"
+    agent = getattr(app.state, attr, None)
+    if agent is None or not hasattr(agent, "set_system_prompt"):
+        raise _AgentUnavailableError(
+            f"{attr} is not initialised — prompt '{prompt_name}' was not applied"
+        )
+    agent.set_system_prompt(prompt_name, text)
+
+
+def apply_persisted_prompts(app: FastAPI) -> list[str]:
+    """Re-apply persisted prompt overrides to the live agents (startup hook).
+
+    Called from the app lifespan after the agents are constructed. Skips (and
+    logs) any override the agent rejects so one bad entry can't block startup.
+
+    Returns:
+        The list of prompt names successfully applied.
+    """
+    applied: list[str] = []
+    for name, text in _load_persisted().items():
+        default = DEFAULT_PROMPTS.get(name)
+        if default is None:
+            continue
+        try:
+            _push_to_agent(app, name, default.agent, text)
+            applied.append(name)
+        except (_AgentUnavailableError, ValueError) as exc:
+            logger.warning("Skipped persisted prompt '%s': %s", name, exc)
+    return applied
 
 
 @router.get(
@@ -209,23 +310,27 @@ async def update_prompt(
             detail=f"Prompt '{prompt_name}' is not editable",
         )
 
-    # Store customization
-    _custom_prompts[prompt_name] = body.prompt
-
-    logger.info(f"Updated prompt '{prompt_name}'")
-
-    # Update the agent's prompt if available
+    # Apply to the live agent FIRST and fail loudly: a 200 here must mean the
+    # edit is genuinely active, not silently dropped (the pre-W4 behaviour).
     try:
-        if default.agent == "fast":
-            fast_annotator = getattr(request.app.state, "fast_annotator", None)
-            if fast_annotator and hasattr(fast_annotator, "set_system_prompt"):
-                fast_annotator.set_system_prompt(prompt_name, body.prompt)
-        elif default.agent == "reasoning":
-            reasoning_agent = getattr(request.app.state, "reasoning_agent", None)
-            if reasoning_agent and hasattr(reasoning_agent, "set_system_prompt"):
-                reasoning_agent.set_system_prompt(prompt_name, body.prompt)
-    except Exception as e:
-        logger.warning(f"Failed to update agent prompt: {e}")
+        _push_to_agent(request.app, prompt_name, default.agent, body.prompt)
+    except ValueError as exc:
+        # Agent rejected the prompt (empty / missing required placeholder).
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        )
+    except _AgentUnavailableError as exc:
+        # Cannot verify application — do not half-persist; surface it.
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        )
+
+    # Applied successfully — now persist so it survives restart/redeploy.
+    _custom_prompts[prompt_name] = body.prompt
+    _save_persisted(_custom_prompts)
+    logger.info(f"Updated prompt '{prompt_name}' (applied + persisted)")
 
     return SystemPrompt(
         name=default.name,
@@ -246,6 +351,7 @@ async def reset_prompts(request: Request) -> PromptsListResponse:
     """Reset all prompts to their default values."""
     global _custom_prompts
     _custom_prompts = {}
+    _save_persisted(_custom_prompts)
 
     logger.info("Reset all prompts to defaults")
 
@@ -278,12 +384,21 @@ async def reset_single_prompt(request: Request, prompt_name: str) -> SystemPromp
             detail=f"Prompt '{prompt_name}' not found",
         )
 
-    # Remove customization
+    # Remove customization + clear the live override on the agent.
     _custom_prompts.pop(prompt_name, None)
+    _save_persisted(_custom_prompts)
+    try:
+        default = DEFAULT_PROMPTS[prompt_name]
+        attr = "fast_annotator" if default.agent == "fast" else "reasoning_agent"
+        agent = getattr(request.app.state, attr, None)
+        if agent is not None and hasattr(agent, "reset_prompts"):
+            agent.reset_prompts(prompt_name)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Failed to clear live override for '%s': %s", prompt_name, exc)
 
     logger.info(f"Reset prompt '{prompt_name}' to default")
 
     return await get_prompt(request, prompt_name)
 
 
-__all__ = ["router"]
+__all__ = ["router", "apply_persisted_prompts"]
