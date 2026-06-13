@@ -221,6 +221,87 @@ class TestConstitutionalValidator:
         assert isinstance(report.explanation, str)
 
 
+class TestActiveIncidentApprovalSemantics:
+    """D-item5: P1.2 ("...without explicit approval") + human-approval authorization.
+
+    These prove (a) an UNapproved Tier-1 violation still BLOCKS unconditionally
+    and (b) explicit human approval is the authorization for the confidence matrix
+    WITHOUT weakening Tier-1 non-overridability.
+    """
+
+    @pytest.fixture
+    def validator(self):
+        return ConstitutionalValidator()
+
+    def test_unapproved_restart_during_incident_blocks(self, validator):
+        """Tier-1 P1.2 still fires for an UNapproved restart during an active
+        incident (the audit's core safety guarantee)."""
+        report = validator.validate(
+            action_id="d5-1",
+            action_description="Restart during incident, no approval",
+            action_type="restart",
+            confidence=0.95,
+            context={"active_incident": True},  # no human_approved
+        )
+        assert report.tier1_passed is False
+        assert report.can_proceed is False
+        assert any(v.principle.id == "P1.2" for v in report.violations)
+
+    def test_approved_restart_during_incident_passes_tier1(self, validator):
+        """An operator-APPROVED restart during an active incident is exactly the
+        'explicit approval' P1.2 allows, so it does not violate Tier-1."""
+        report = validator.validate(
+            action_id="d5-2",
+            action_description="Restart during incident, approved",
+            action_type="restart",
+            confidence=0.85,
+            context={
+                "active_incident": True,
+                "human_approved": True,
+                "telemetry_evidence": True,
+                "audit_enabled": True,
+                "action_scope": "single",
+            },
+        )
+        assert report.tier1_passed is True
+        assert report.can_proceed is True
+
+    def test_human_approval_does_not_override_data_loss_tier1(self, validator):
+        """human_approved must NOT push a genuine Tier-1 violation (data loss)
+        past the gate — Tier-1 stays non-overridable."""
+        report = validator.validate(
+            action_id="d5-3",
+            action_description="Delete table, approved",
+            action_type="delete_table",
+            confidence=0.99,
+            context={"human_approved": True},
+        )
+        assert report.tier1_passed is False
+        assert report.can_proceed is False
+        assert any(v.principle.id == "P1.1" for v in report.violations)
+
+    def test_human_approval_authorizes_low_confidence_action(self, validator):
+        """With Tier-1/2 passing, explicit human approval authorizes even a
+        below-threshold (alert-only) confidence — so callers can carry the REAL
+        confidence instead of synthesizing the auto threshold."""
+        report = validator.validate(
+            action_id="d5-4",
+            action_description="Approved low-confidence restart",
+            action_type="restart",
+            confidence=0.55,  # would be ALERT_ONLY on its own
+            context={
+                "human_approved": True,
+                "telemetry_evidence": True,
+                "audit_enabled": True,
+                "action_scope": "single",
+            },
+        )
+        assert report.tier1_passed is True
+        assert report.can_proceed is True
+        # The TRUE confidence is recorded in the report (not synthesized to 0.90).
+        assert report.confidence == 0.55
+
+
 class TestValidationScenarios:
     """Integration tests for real-world validation scenarios."""
     

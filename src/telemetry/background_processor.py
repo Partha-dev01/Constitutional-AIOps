@@ -600,6 +600,26 @@ Provide a brief summary of system health and any concerning patterns."""
                 title, annotation_content, rca_content,
             )
 
+            episode_confidence = graph_result.get("confidence", 0.5)
+
+            # Thread the LLM-extracted semantic triplets from the FastAnnotator
+            # annotation into the Episode so the Entity/RELATES graph layer is
+            # actually populated. Previously this constructor never set triplets=,
+            # so episode_store._store_episode_graph iterated an empty list and the
+            # pink Entity layer was permanently empty in production. fast_annotator
+            # emits triplets with subject/relation/object but no per-triplet
+            # confidence, so stamp the episode confidence on each (documented
+            # contract) — this makes the MIN_TRIPLET_CONFIDENCE filter meaningful
+            # instead of silently falling back to episode.confidence per triplet.
+            raw_triplets = (annotation_data.get("metadata") or {}).get("triplets", []) or []
+            triplets: list[dict[str, Any]] = []
+            for triplet in raw_triplets:
+                if not isinstance(triplet, dict):
+                    continue
+                triplet = {**triplet}
+                triplet.setdefault("confidence", episode_confidence)
+                triplets.append(triplet)
+
             episode = Episode(
                 episode_id=correlation_id,
                 incident_id=correlation_id,
@@ -616,8 +636,9 @@ Provide a brief summary of system health and any concerning patterns."""
                     if rca_data else "unknown"
                 ),
                 causal_chain=graph_result.get("steps_completed", []),
-                confidence=graph_result.get("confidence", 0.5),
+                confidence=episode_confidence,
                 outcome=outcome,
+                triplets=triplets,
             )
 
             if self.episode_store:

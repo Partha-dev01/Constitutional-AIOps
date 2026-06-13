@@ -189,7 +189,21 @@ class ConstitutionalValidator:
             can_proceed = False
             requires_approval = False
             explanation += " (low confidence - alert only)"
-        
+
+        # Explicit human approval IS the authorization for the confidence matrix.
+        # This lets callers carry the REAL evidence-based confidence into the
+        # report (so the audit trail records the true number) instead of
+        # synthesizing the auto-threshold just to clear the matrix. It applies
+        # ONLY when Tier-1 safety passed — a Tier-1 violation still BLOCKS
+        # unconditionally (human_approved is never consulted in that branch), so
+        # Tier-1 remains non-overridable. Tier-2 operational violations are what
+        # human approval is for, so an approved action proceeds past them too.
+        if context.get("human_approved") and tier1_passed:
+            can_proceed = True
+            requires_approval = False
+            if authorization_level != AuthorizationLevel.AUTOMATIC:
+                explanation += " (authorized by explicit human approval)"
+
         return ValidationReport(
             action_id=action_id,
             action_description=action_description,
@@ -243,9 +257,22 @@ class ConstitutionalValidator:
                 reason = f"Action '{action_type}' could cause data loss"
         
         elif principle.id == "P1.2":  # Active Incident Safety
-            if context.get("active_incident") and action_type in ["restart", "deploy", "scale_down"]:
+            # P1.2 description: "Never take destructive actions during active
+            # incidents WITHOUT EXPLICIT APPROVAL." An operator-approved
+            # remediation (human_approved=True) is exactly that explicit approval,
+            # so it is NOT a violation. An UNapproved destructive action during an
+            # active incident still violates unconditionally — this is faithful to
+            # the principle text, not a human_approved override of a real violation
+            # (the validator core still blocks Tier-1 violations regardless of
+            # human_approved). Without this, wiring active_incident into the live
+            # remediation context would block the very approve-to-run path it guards.
+            if (
+                context.get("active_incident")
+                and action_type in ["restart", "deploy", "scale_down"]
+                and not context.get("human_approved")
+            ):
                 violated = True
-                reason = "Destructive action during active incident"
+                reason = "Destructive action during active incident without explicit approval"
         
         elif principle.id == "P1.3":  # Cascade Prevention
             if context.get("resource_usage", 0) > 90:

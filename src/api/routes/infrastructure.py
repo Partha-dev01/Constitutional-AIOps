@@ -619,12 +619,15 @@ async def get_remote_hosts(request: Request) -> RemoteHostsResponse:
     hosts_map: dict[str, dict] = {}
     sources_used: list[str] = []
 
-    # ── Prometheus: discover edge labels via `count by (edge) (up)` ──────────
+    # ── Prometheus: discover edge labels via `count by (edge) (up == 1)` ─────
+    # The `up` series exists for DOWN targets too (value 0), so `count(up)` would
+    # count a fully-down host as "up". Filter to `up == 1` so targets_up only
+    # counts healthy scrape targets; the total (up + down) is fetched separately.
     try:
         prom_url = telemetry_collector.prometheus_url
         response = await telemetry_collector._client.get(
             f"{prom_url}/api/v1/query",
-            params={"query": "count by (edge) (up)"},
+            params={"query": "count by (edge) (up == 1)"},
         )
         if response.status_code == 200:
             data = response.json()
@@ -642,17 +645,28 @@ async def get_remote_hosts(request: Request) -> RemoteHostsResponse:
                 })
                 hosts_map[edge]["targets_up"] = targets_up
 
-            # Second pass: total targets per edge (up + down)
+            # Second pass: total targets per edge (up + down). `count by (edge)(up)`
+            # counts every target regardless of value, so it is the real total.
+            # This pass also DISCOVERS edges whose targets are all down (absent from
+            # the `up == 1` pass above) and seeds them with targets_up=0 so a fully
+            # down host still surfaces — as unhealthy, not green.
             total_resp = await telemetry_collector._client.get(
                 f"{prom_url}/api/v1/query",
-                params={"query": "count by (edge) (up or vector(0))"},
+                params={"query": "count by (edge) (up)"},
             )
             if total_resp.status_code == 200:
                 total_data = total_resp.json()
                 for result in total_data.get("data", {}).get("result", []):
                     edge = result.get("metric", {}).get("edge", "")
-                    if edge and edge in hosts_map:
-                        hosts_map[edge]["targets_total"] = int(float(result.get("value", [0, "0"])[1]))
+                    if not edge:
+                        continue
+                    hosts_map.setdefault(edge, {
+                        "targets_up": 0,
+                        "targets_total": 0,
+                        "recent_log_lines": 0,
+                        "last_seen": None,
+                    })
+                    hosts_map[edge]["targets_total"] = int(float(result.get("value", [0, "0"])[1]))
 
             # Get last-seen timestamp for each edge (max timestamp of any `up` series)
             ts_resp = await telemetry_collector._client.get(

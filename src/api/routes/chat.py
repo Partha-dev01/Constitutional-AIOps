@@ -763,6 +763,10 @@ async def _maybe_propose_remediation(
             "conversation_id": conversation_id,
             "created_at": time.time(),
             "proposed_action": action,
+            # Carry the real evidence-based chat confidence so that when the user
+            # later approves this action (decide_action), the constitutional gate
+            # records the TRUE confidence instead of a synthesized auto-threshold.
+            "confidence": confidence,
         }
         _pending_actions[action["id"]] = entry
         _persist_save_pending_action(action["id"], entry)
@@ -1175,15 +1179,23 @@ async def decide_action(
     tool_name = entry["tool_name"]
     parameters = entry["parameters"]
 
-    # Human approval IS the authorization. Pass a confidence at the live auto
-    # threshold + telemetry evidence so the constitutional gate authorizes an
-    # approved, evidence-backed remediation instead of hard-blocking it on the
-    # default 0.5/no-evidence context. The gate still enforces the Tier-1 safety
-    # principles independently — a data-loss/security action refuses even when
-    # approved.
+    # Human approval IS the authorization. The validator now treats
+    # human_approved=True as the matrix authorization (Tier-1 still blocks
+    # unconditionally), so we carry the REAL evidence-based chat confidence that
+    # was cached with the proposed action instead of synthesizing the auto
+    # threshold just to clear the matrix — the audit trail then records the true
+    # number. Falls back to the approval threshold (neutral, non-inflated) for
+    # older cached entries that predate this field. A data-loss/security action
+    # still refuses even when approved (Tier-1).
     validator = getattr(request.app.state, "validator", None)
-    auto_threshold = getattr(validator, "confidence_threshold_auto", 0.9) or 0.9
-    exec_parameters = {**parameters, "confidence": float(auto_threshold)}
+    approval_threshold = getattr(validator, "confidence_threshold_approval", 0.7) or 0.7
+    cached_confidence = entry.get("confidence")
+    real_confidence = (
+        float(cached_confidence)
+        if isinstance(cached_confidence, (int, float))
+        else float(approval_threshold)
+    )
+    exec_parameters = {**parameters, "confidence": real_confidence}
     exec_context = {
         "telemetry_evidence": True,
         "audit_enabled": True,

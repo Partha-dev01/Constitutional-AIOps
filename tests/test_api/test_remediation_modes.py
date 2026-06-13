@@ -479,7 +479,7 @@ class TestChatModes:
 # ---------------------------------------------------------------------------
 
 class TestDecisionEndpoint:
-    def _seed_pending(self, owner="admin", service="nextcloud-db"):
+    def _seed_pending(self, owner="admin", service="nextcloud-db", confidence=0.82):
         action = _build_proposed_action(
             {"service_name": service, "reason": "restart it"},
             mode="approve",
@@ -492,6 +492,10 @@ class TestDecisionEndpoint:
             "conversation_id": "conv-1",
             "created_at": __import__("time").time(),
             "proposed_action": action,
+            # The real evidence-based chat confidence cached with the proposal;
+            # decide_action carries this through to the gate (D5: no longer
+            # synthesized to the auto threshold).
+            "confidence": confidence,
         }
         return action["id"]
 
@@ -517,10 +521,11 @@ class TestDecisionEndpoint:
         async def fake_exec(request, tool_name, parameters, context=None):
             assert tool_name == "restart_service"
             assert parameters["service_name"] == "nextcloud-db"
-            # Human approval forwards a confidence at the auto threshold + the
-            # telemetry-evidence/human-approved context so the constitutional
-            # gate can authorize (otherwise it hard-blocks on the 0.5 default).
-            assert parameters.get("confidence", 0) >= 0.9
+            # D5: human approval no longer synthesizes a 0.90 confidence. The REAL
+            # evidence-based confidence cached with the proposal (0.82 here) is
+            # carried through; human_approved=True is the matrix authorization, so
+            # the gate still authorizes even below the auto threshold.
+            assert parameters.get("confidence") == 0.82
             assert context is not None
             assert context.get("telemetry_evidence") is True
             assert context.get("human_approved") is True

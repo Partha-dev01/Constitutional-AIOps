@@ -303,6 +303,15 @@ class ModelRouter:
             "seed": seed,  # For deterministic outputs
             **kwargs,
         }
+        # vLLM + Qwen3 has thinking ON by default when --reasoning-parser qwen3 is
+        # set, so the 14B leaks chain-of-thought into chat/RCA answers (which
+        # _fix_thinking_response then promotes into the visible content). Mirror
+        # fast_completion: suppress thinking for the production colon-free vLLM
+        # model UNLESS this call explicitly asked for extended thinking. Ollama's
+        # instruct tuning (colon in the model name) handles suppression itself, so
+        # only the no-colon vLLM path needs the kwarg.
+        if not enable_thinking and ":" not in _cfg_module.config.llm.reasoning_agent_model:
+            payload["chat_template_kwargs"] = {"enable_thinking": False}
 
         start_time = time.perf_counter()
         success = True
@@ -387,6 +396,11 @@ class ModelRouter:
             # No seed parameter - intentionally non-deterministic
             **kwargs,
         }
+        # Same vLLM thinking-suppression contract as reasoning_completion: the
+        # colon-free production model leaks CoT unless we disable thinking, and
+        # this method has no system prompt so a leak would be entirely raw CoT.
+        if not enable_thinking and ":" not in _cfg_module.config.llm.reasoning_agent_model:
+            payload["chat_template_kwargs"] = {"enable_thinking": False}
 
         start_time = time.perf_counter()
         success = True
