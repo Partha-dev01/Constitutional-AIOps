@@ -124,7 +124,7 @@ function transformGraphData(data: GraphData): { nodes: GraphNode[]; links: Graph
   const links: GraphLink[] = []
 
   // Add episode nodes
-  for (const episode of data.episodes) {
+  for (const episode of data.episodes ?? []) {
     nodes.push({
       id: `episode-${episode.id}`,
       label: episode.title,
@@ -140,7 +140,7 @@ function transformGraphData(data: GraphData): { nodes: GraphNode[]; links: Graph
   }
 
   // Add root cause nodes
-  for (const rc of data.root_causes) {
+  for (const rc of data.root_causes ?? []) {
     nodes.push({
       id: `root_cause-${rc.id}`,
       label: rc.name,
@@ -153,7 +153,7 @@ function transformGraphData(data: GraphData): { nodes: GraphNode[]; links: Graph
   }
 
   // Add action nodes
-  for (const action of data.actions) {
+  for (const action of data.actions ?? []) {
     nodes.push({
       id: `action-${action.id}`,
       label: action.name,
@@ -166,7 +166,7 @@ function transformGraphData(data: GraphData): { nodes: GraphNode[]; links: Graph
   }
 
   // Add service nodes
-  for (const service of data.services) {
+  for (const service of data.services ?? []) {
     nodes.push({
       id: `service-${service.name}`,
       label: service.name,
@@ -179,7 +179,7 @@ function transformGraphData(data: GraphData): { nodes: GraphNode[]; links: Graph
   }
 
   // Add entity nodes
-  for (const entity of data.entities) {
+  for (const entity of data.entities ?? []) {
     nodes.push({
       id: `entity-${entity.id}`,
       label: entity.name,
@@ -190,7 +190,7 @@ function transformGraphData(data: GraphData): { nodes: GraphNode[]; links: Graph
   }
 
   // Add edges
-  for (const edge of data.edges) {
+  for (const edge of data.edges ?? []) {
     links.push({
       source: edge.source,
       target: edge.target,
@@ -259,7 +259,7 @@ export function Graph() {
         <div>
           <h1 className="text-xl font-semibold text-slate-200">Episodic Knowledge Graph</h1>
           <p className="text-sm text-slate-400">
-            {data?.stats.total_episodes || 0} episodes, {data?.stats.total_edges || 0} edges
+            {data?.stats?.total_episodes || 0} episodes, {data?.stats?.total_edges || 0} edges
           </p>
         </div>
         <button

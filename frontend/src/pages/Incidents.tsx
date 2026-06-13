@@ -313,7 +313,7 @@ function IncidentCard({
             <div className="flex flex-wrap items-center gap-2 mt-1 text-sm text-muted-foreground">
               <span>{incident.id}</span>
               <span>•</span>
-              <span>{incident.affected_services.map(s => s.name).join(', ')}</span>
+              <span>{(incident.affected_services ?? []).map(s => s.name).join(', ')}</span>
               <span>•</span>
               <span>{formatRelativeTime(new Date(incident.created_at))}</span>
             </div>
@@ -339,12 +339,12 @@ function IncidentCard({
       </div>
 
       {/* RCA Result if available */}
-      {incident.rca_result && (
+      {incident.rca && (
         <div className="mt-4 p-3 bg-muted/50 rounded-lg">
           <p className="text-sm font-medium">Root Cause Analysis</p>
-          <p className="text-sm text-muted-foreground mt-1">{incident.rca_result.root_cause}</p>
+          <p className="text-sm text-muted-foreground mt-1">{incident.rca.root_cause}</p>
           <p className="text-xs text-muted-foreground mt-1">
-            Confidence: {Math.round(incident.rca_result.confidence * 100)}%
+            Confidence: {Math.round(incident.rca.confidence * 100)}%
           </p>
         </div>
       )}
@@ -411,7 +411,7 @@ function IncidentDetailModal({ incident, onClose }: { incident: Incident; onClos
           <div>
             <p className="text-sm text-muted-foreground mb-2">Affected Services</p>
             <div className="flex flex-wrap gap-2">
-              {incident.affected_services.map((service, i) => (
+              {(incident.affected_services ?? []).map((service, i) => (
                 <span key={i} className="px-2 py-1 bg-muted rounded text-sm">
                   {service.name}
                 </span>
@@ -419,18 +419,18 @@ function IncidentDetailModal({ incident, onClose }: { incident: Incident; onClos
             </div>
           </div>
 
-          {incident.rca_result && (
+          {incident.rca && (
             <div className="p-4 bg-muted/50 rounded-lg">
               <h4 className="font-semibold mb-2">Root Cause Analysis</h4>
-              <p className="text-sm">{incident.rca_result.root_cause}</p>
+              <p className="text-sm">{incident.rca.root_cause}</p>
               <p className="text-xs text-muted-foreground mt-2">
-                Confidence: {Math.round(incident.rca_result.confidence * 100)}%
+                Confidence: {Math.round(incident.rca.confidence * 100)}%
               </p>
-              {incident.rca_result.contributing_factors.length > 0 && (
+              {(incident.rca.causal_chain?.length ?? 0) > 0 && (
                 <div className="mt-3">
-                  <p className="text-sm font-medium">Contributing Factors:</p>
+                  <p className="text-sm font-medium">Causal Chain:</p>
                   <ul className="list-disc list-inside text-sm text-muted-foreground">
-                    {incident.rca_result.contributing_factors.map((factor, i) => (
+                    {(incident.rca.causal_chain ?? []).map((factor, i) => (
                       <li key={i}>{factor}</li>
                     ))}
                   </ul>
@@ -443,14 +443,16 @@ function IncidentDetailModal({ incident, onClose }: { incident: Incident; onClos
             <div className="p-4 bg-muted/50 rounded-lg">
               <h4 className="font-semibold mb-2">Remediation Plan</h4>
               <div className="space-y-2">
-                {incident.remediation_plan.steps.map((step) => (
-                  <div key={step.step_number} className="flex items-start gap-2">
+                {(incident.remediation_plan.steps ?? []).map((step, i) => (
+                  <div key={step.order ?? i} className="flex items-start gap-2">
                     <span className="w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center">
-                      {step.step_number}
+                      {step.order ?? i + 1}
                     </span>
                     <div>
                       <p className="text-sm font-medium">{step.action}</p>
-                      <p className="text-xs text-muted-foreground">{step.description}</p>
+                      {step.command && (
+                        <p className="text-xs text-muted-foreground font-mono">{step.command}</p>
+                      )}
                     </div>
                   </div>
                 ))}
