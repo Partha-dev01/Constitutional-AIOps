@@ -30,6 +30,16 @@ interface HoverState {
 
 interface SchemaGraphProps {
   height?: number
+  /**
+   * Embedded (cockpit) mode: the canvas fills its container height (measured
+   * via ResizeObserver), the docked Ask-AI panel and the time scrubber are
+   * dropped, and selection changes are surfaced through `onSelectionChange`
+   * so a host page (the Console) can feed them to its own chat as context.
+   * The default (non-embedded) path is byte-identical to before.
+   */
+  embedded?: boolean
+  /** Embedded mode only: notified whenever the canvas selection set changes. */
+  onSelectionChange?: (items: SelectedItem[]) => void
 }
 
 /**
@@ -38,7 +48,7 @@ interface SchemaGraphProps {
  * the detail drawer. All scrub binding is DERIVED (useMemo) — scrubbing never
  * refetches and never recomputes the layered layout.
  */
-export default function SchemaGraph({ height = 520 }: SchemaGraphProps) {
+export default function SchemaGraph({ height = 520, embedded = false, onSelectionChange }: SchemaGraphProps) {
   const [data, setData] = useState<TopologyResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -47,6 +57,8 @@ export default function SchemaGraph({ height = 520 }: SchemaGraphProps) {
   const [activeBucket, setActiveBucket] = useState<number | null>(null)
   const [drawer, setDrawer] = useState<FocusTarget | null>(null)
   const [hover, setHover] = useState<HoverState | null>(null)
+  // Embedded mode: the canvas tracks its flex container's height live.
+  const [measuredHeight, setMeasuredHeight] = useState(height)
 
   const hostRef = useRef<HTMLDivElement>(null)
 
@@ -69,6 +81,26 @@ export default function SchemaGraph({ height = 520 }: SchemaGraphProps) {
   useEffect(() => {
     void fetchTopology()
   }, [fetchTopology])
+
+  // Embedded mode: keep the canvas height pinned to its flex container so the
+  // graph fills the cockpit's left pane (and re-fits when that pane resizes,
+  // e.g. when the chat/incidents column or the browser window changes size).
+  useEffect(() => {
+    if (!embedded) return
+    const el = hostRef.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver((entries) => {
+      const h = entries[0]?.contentRect.height
+      if (h && h > 0) setMeasuredHeight(Math.round(h))
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [embedded])
+
+  // Embedded mode: surface selection changes to the host (Console → chat ctx).
+  useEffect(() => {
+    if (embedded) onSelectionChange?.([...selection.values()])
+  }, [embedded, onSelectionChange, selection])
 
   // Layered-DAG layout — memoized on topology identity inside layoutTopology,
   // so scrub/hover/selection re-renders reuse the cached result.
@@ -223,8 +255,8 @@ export default function SchemaGraph({ height = 520 }: SchemaGraphProps) {
   if (loading && !data) {
     return (
       <div
-        className="flex items-center justify-center rounded-lg bg-gradient-to-br from-slate-900/50 to-slate-800/50"
-        style={{ height }}
+        className={`flex items-center justify-center rounded-lg bg-gradient-to-br from-slate-900/50 to-slate-800/50 ${embedded ? 'h-full' : ''}`}
+        style={embedded ? undefined : { height }}
       >
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
@@ -235,8 +267,8 @@ export default function SchemaGraph({ height = 520 }: SchemaGraphProps) {
     // Never blank: explicit fallback with a retry affordance.
     return (
       <div
-        className="flex flex-col items-center justify-center rounded-lg border border-slate-800 bg-gradient-to-br from-slate-900/40 to-slate-800/40 text-muted-foreground"
-        style={{ height }}
+        className={`flex flex-col items-center justify-center rounded-lg border border-slate-800 bg-gradient-to-br from-slate-900/40 to-slate-800/40 text-muted-foreground ${embedded ? 'h-full' : ''}`}
+        style={embedded ? undefined : { height }}
         data-testid="schema-empty-state"
       >
         <Network className="mb-3 h-12 w-12 opacity-50" />
@@ -260,6 +292,85 @@ export default function SchemaGraph({ height = 520 }: SchemaGraphProps) {
   const serviceCount = data.nodes.filter((n) => !isEdgeHostNode(n)).length
   const edgeHostCount = data.nodes.length - serviceCount
   const windowDays = Math.round(data.window_hours / 24)
+
+  // Embedded (cockpit) layout: a compact strip + a height-filling canvas. No
+  // docked Ask-AI panel (the Console hosts the chat) and no time scrubber, so
+  // the canvas can fill the left pane cleanly. Ctrl-click still multi-selects
+  // and the selection is surfaced to the Console via onSelectionChange.
+  if (embedded) {
+    return (
+      <div className="flex h-full flex-col gap-2" data-testid="schema-graph-embedded">
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-medium text-slate-300">
+              {serviceCount} services · {data.edges.length} links
+            </span>
+            {edgeHostCount > 0 && (
+              <span className="rounded-full border border-cyan-500/40 bg-cyan-500/10 px-2 py-0.5 text-cyan-300">
+                {edgeHostCount} edge host{edgeHostCount === 1 ? '' : 's'}
+              </span>
+            )}
+            <span className="rounded-full border border-slate-700 bg-slate-800/70 px-2 py-0.5">
+              {data.stats.episodes_in_window} episodes · {windowDays}d
+            </span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="hidden items-center gap-2 xl:flex">
+              <span className="flex items-center gap-1">
+                <span className="h-2 w-2 rounded-full bg-green-500" /> healthy
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="h-2 w-2 rounded-full bg-amber-500" /> warning
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="h-2 w-2 rounded-full bg-red-500" /> critical
+              </span>
+            </span>
+            <button
+              type="button"
+              onClick={() => void fetchTopology()}
+              disabled={loading}
+              aria-label="Refresh topology"
+              className="rounded-md border border-slate-700 bg-slate-800/80 p-1.5 text-slate-300 hover:bg-slate-700 disabled:opacity-50"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
+        </div>
+
+        <div
+          ref={hostRef}
+          className="schema-stage relative min-h-0 flex-1 overflow-hidden rounded-lg border border-slate-700/60 ring-1 ring-inset ring-white/5"
+        >
+          <SchemaCanvas
+            height={measuredHeight}
+            layout={layout}
+            nodes={data.nodes}
+            edges={data.edges}
+            nodeDerived={nodeDerived}
+            edgeDerived={edgeDerived}
+            selectedKeys={selectedKeys}
+            onNodeClick={handleNodeClick}
+            onEdgeClick={handleEdgeClick}
+            onNodeHover={handleNodeHover}
+            onEdgeHover={handleEdgeHover}
+            onBackgroundClick={handleBackgroundClick}
+          />
+          {hover && !drawer && <HoverCard target={hover.target} x={hover.x} y={hover.y} />}
+          {drawer && (
+            <DetailDrawer
+              target={drawer}
+              inContext={selectedKeys.has(
+                drawer.type === 'node' ? nodeKey(drawer.node.id) : edgeKey(drawer.edge.id),
+              )}
+              onClose={() => setDrawer(null)}
+              onToggleAskAi={handleToggleAskAi}
+            />
+          )}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-2">

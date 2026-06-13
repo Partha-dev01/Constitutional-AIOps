@@ -50,7 +50,16 @@ interface ActionState {
  * Open in Chat (hands the incident to the assistant for deeper investigation).
  * Polls every 12s; resolved/closed incidents drop off on the next poll.
  */
-export function ActiveIncidentsPanel({ className = '' }: { className?: string }) {
+interface ActiveIncidentsPanelProps {
+  className?: string
+  /**
+   * When provided (the Console cockpit), "Open in Chat" hands the prompt to the
+   * embedded chat instead of navigating to /chat?ask=. Default = navigate.
+   */
+  onOpenInChat?: (prompt: string) => void
+}
+
+export function ActiveIncidentsPanel({ className = '', onOpenInChat }: ActiveIncidentsPanelProps) {
   const navigate = useNavigate()
   const [incidents, setIncidents] = useState<Incident[]>([])
   const [loading, setLoading] = useState(true)
@@ -116,7 +125,8 @@ export function ActiveIncidentsPanel({ className = '' }: { className?: string })
   const openInChat = (inc: Incident) => {
     const service = inc.affected_services?.[0]?.name ?? 'the affected service'
     const prompt = `Investigate ${inc.id} (${inc.title}). Diagnose the root cause and recommend remediation for ${service}.`
-    navigate(`/chat?ask=${encodeURIComponent(prompt)}`)
+    if (onOpenInChat) onOpenInChat(prompt)
+    else navigate(`/chat?ask=${encodeURIComponent(prompt)}`)
   }
 
   return (
