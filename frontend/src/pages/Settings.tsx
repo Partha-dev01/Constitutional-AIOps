@@ -89,6 +89,11 @@ export function Settings() {
   const [promptsLoading, setPromptsLoading] = useState(false)
   const [editingPrompt, setEditingPrompt] = useState<string | null>(null)
   const [editedPromptText, setEditedPromptText] = useState('')
+  // Loud feedback for prompt save/reset: the backend now fails with a 5xx
+  // when an edit cannot actually be applied to the live agent, so a non-2xx
+  // must surface as a visible error (never silent false-success).
+  const [promptError, setPromptError] = useState<string | null>(null)
+  const [promptNotice, setPromptNotice] = useState<string | null>(null)
 
   // ── load persisted settings on mount ────────────────────────────────────
   const fetchSettings = useCallback(async () => {
@@ -132,7 +137,25 @@ export function Settings() {
     }
   }
 
+  /** Pull a human-readable error out of a non-2xx prompts response. */
+  const promptFailureDetail = async (response: Response): Promise<string> => {
+    let detail = `HTTP ${response.status}`
+    try {
+      const data: unknown = await response.json()
+      if (data && typeof data === 'object') {
+        const obj = data as Record<string, unknown>
+        if (typeof obj.detail === 'string') detail = obj.detail
+        else if (typeof obj.message === 'string') detail = obj.message
+      }
+    } catch {
+      // Non-JSON error body — keep the status code message.
+    }
+    return detail
+  }
+
   const handleSavePrompt = async (promptName: string) => {
+    setPromptError(null)
+    setPromptNotice(null)
     try {
       const response = await fetch(`/api/v1/prompts/${promptName}`, {
         method: 'PUT',
@@ -140,26 +163,45 @@ export function Settings() {
         body: JSON.stringify({ prompt: editedPromptText }),
       })
       if (response.ok) {
+        // Success only on 2xx: the edit was applied to the live agent and
+        // persisted. Confirm explicitly so "saved" actually means saved.
         setEditingPrompt(null)
         fetchPrompts()
-        setSaved(true)
-        setTimeout(() => setSaved(false), 2000)
+        setPromptNotice(`Prompt "${promptName}" applied to the live agent and persisted.`)
+        setTimeout(() => setPromptNotice(null), 5000)
+      } else {
+        // Keep the editor open so the user's text isn't lost.
+        const detail = await promptFailureDetail(response)
+        setPromptError(`Failed to apply prompt "${promptName}": ${detail}`)
       }
     } catch (err) {
       console.error('Failed to save prompt:', err)
+      setPromptError(
+        `Failed to save prompt "${promptName}": ${err instanceof Error ? err.message : 'network error'}`,
+      )
     }
   }
 
   const handleResetPrompt = async (promptName: string) => {
+    setPromptError(null)
+    setPromptNotice(null)
     try {
       const response = await fetch(`/api/v1/prompts/${promptName}/reset`, {
         method: 'POST',
       })
       if (response.ok) {
         fetchPrompts()
+        setPromptNotice(`Prompt "${promptName}" reset to its default.`)
+        setTimeout(() => setPromptNotice(null), 5000)
+      } else {
+        const detail = await promptFailureDetail(response)
+        setPromptError(`Failed to reset prompt "${promptName}": ${detail}`)
       }
     } catch (err) {
       console.error('Failed to reset prompt:', err)
+      setPromptError(
+        `Failed to reset prompt "${promptName}": ${err instanceof Error ? err.message : 'network error'}`,
+      )
     }
   }
 
@@ -761,6 +803,26 @@ export function Settings() {
         {/* ━━ System Prompts ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
         {activeTab === 'prompts' && (
           <div className="space-y-6">
+            {/* Loud prompt feedback: errors stay until the next action. */}
+            {promptError && (
+              <div
+                className="flex items-start gap-2 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-red-500"
+                role="alert"
+                data-testid="prompt-error-banner"
+              >
+                <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                <span className="text-sm">{promptError}</span>
+              </div>
+            )}
+            {promptNotice && !promptError && (
+              <div
+                className="flex items-start gap-2 rounded-lg border border-green-500/30 bg-green-500/10 p-3 text-green-600"
+                data-testid="prompt-success-banner"
+              >
+                <CheckCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                <span className="text-sm">{promptNotice}</span>
+              </div>
+            )}
             <div className="bg-card rounded-lg border border-border p-6">
               <div className="flex items-center justify-between mb-4">
                 <div>
@@ -882,9 +944,10 @@ export function Settings() {
                     planning. Changes take effect immediately for new requests.
                   </p>
                   <p className="text-xs text-blue-600/60 mt-2">
-                    Persisted in-process via <code>/api/v1/prompts/</code> (resets on restart).
-                    Use Save Settings above to persist Constitutional / Notification / Telemetry
-                    configuration across restarts.
+                    Saved via <code>/api/v1/prompts/</code>: a save succeeds only when the edit is
+                    applied to the live agent and persisted; failures surface as an error banner
+                    above. Use Save Settings above for Constitutional / Notification / Telemetry
+                    configuration.
                   </p>
                 </div>
               </div>

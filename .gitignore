@@ -110,7 +110,10 @@ benchmark/datasets/raw/
 # Playwright test artifacts
 frontend/playwright-report/
 frontend/playwright-report-live/
+frontend/playwright-report-graph/
+frontend/playwright-report-schema/
 frontend/test-results/
+frontend/e2e/__screenshots__/
 .playwright-mcp/
 
 # Nested project copy (tarball extraction artifact)

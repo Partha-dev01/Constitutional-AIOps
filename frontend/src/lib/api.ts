@@ -4,6 +4,8 @@
  * Type-safe API client for communicating with the backend.
  */
 
+import type { TopologyResponse } from '../components/schema/types';
+
 // Use relative URL for nginx proxy, fallback to localhost:8080 for development without proxy
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
@@ -668,6 +670,18 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ everywhere }),
       }),
+  },
+
+  // Graph — schema-mode platform topology (FROZEN payload contract; see
+  // components/schema/types.ts and e2e/fixtures/topology.json).
+  graph: {
+    topology: (params?: { window_hours?: number; buckets?: number }) => {
+      const searchParams = new URLSearchParams();
+      if (params?.window_hours) searchParams.set('window_hours', String(params.window_hours));
+      if (params?.buckets) searchParams.set('buckets', String(params.buckets));
+      const qs = searchParams.toString();
+      return request<TopologyResponse>(`/graph/topology${qs ? `?${qs}` : ''}`);
+    },
   },
 
   // Settings
