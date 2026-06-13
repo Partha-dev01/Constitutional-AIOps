@@ -4,6 +4,7 @@ Constitutional AIOps - Infrastructure API Routes
 Provides endpoints for infrastructure/container status with dynamic Docker discovery.
 """
 
+import asyncio
 import json
 import logging
 import os
@@ -124,13 +125,122 @@ class BulkMonitorRequest(BaseModel):
 
 
 def _get_docker_client():
-    """Get Docker client, handling different environments."""
+    """Get Docker client, handling different environments (sync — call from a thread)."""
     try:
         import docker
         return docker.from_env()
     except Exception as e:
         logger.warning(f"Failed to connect to Docker: {e}")
         return None
+
+
+def _collect_container_status(
+    monitored: set[str],
+) -> tuple[list[ContainerInfo], int, int]:
+    """Synchronous helper: list containers and read their attrs.
+
+    Called via ``asyncio.to_thread`` so the blocking Docker SDK socket I/O never
+    runs on the event loop.  Returns (containers, healthy_count, unhealthy_count).
+    Raises on unrecoverable errors so the caller can fall back to the static list.
+    """
+    import docker  # guarded inside helper; callers catch ImportError
+
+    docker_client = docker.from_env()
+    try:
+        all_containers = docker_client.containers.list(all=True)
+        containers: list[ContainerInfo] = []
+        healthy_count = 0
+        unhealthy_count = 0
+
+        for container in all_containers:
+            name = container.name
+            if name not in monitored:
+                continue
+
+            c_status = container.status
+            health: str | None = None
+            health_state = container.attrs.get("State", {}).get("Health", {})
+            if health_state:
+                health = health_state.get("Status", "unknown")
+
+            image = (
+                container.image.tags[0]
+                if container.image.tags
+                else str(container.image.id)[:12]
+            )
+            ports = _format_ports(container.ports)
+            service = (
+                name.replace("aiops-", "") if name.startswith("aiops-") else name
+            )
+
+            if c_status == "running":
+                if health in ("healthy", None):
+                    healthy_count += 1
+                    if health is None:
+                        health = "healthy"
+                else:
+                    unhealthy_count += 1
+            else:
+                unhealthy_count += 1
+                if health is None:
+                    health = "unhealthy"
+
+            containers.append(
+                ContainerInfo(
+                    name=name,
+                    service=service,
+                    status=c_status,
+                    health=health,
+                    port=ports,
+                    image=image,
+                    description=_get_container_description(service),
+                    monitored=True,
+                )
+            )
+    finally:
+        docker_client.close()
+
+    return containers, healthy_count, unhealthy_count
+
+
+def _discover_all_containers(monitored: set[str]) -> list[DiscoveredContainer]:
+    """Synchronous helper: discover all containers via the Docker SDK.
+
+    Called via ``asyncio.to_thread``.
+    """
+    import docker
+
+    docker_client = docker.from_env()
+    try:
+        all_containers = docker_client.containers.list(all=True)
+        discovered: list[DiscoveredContainer] = []
+        for container in all_containers:
+            name = container.name
+            image = (
+                container.image.tags[0]
+                if container.image.tags
+                else str(container.image.id)[:12]
+            )
+            ports = _format_ports(container.ports)
+            created = (
+                container.attrs.get("Created", "")[:19]
+                if container.attrs.get("Created")
+                else None
+            )
+            discovered.append(
+                DiscoveredContainer(
+                    name=name,
+                    image=image,
+                    status=container.status,
+                    ports=ports,
+                    created=created,
+                    monitored=name in monitored,
+                )
+            )
+    finally:
+        docker_client.close()
+
+    return discovered
 
 
 def _format_ports(ports: dict) -> str | None:
@@ -158,71 +268,18 @@ async def get_containers(request: Request) -> InfrastructureResponse:
     """
     Get status of monitored infrastructure containers.
 
-    Uses Docker SDK to get real-time container status.
+    Uses Docker SDK to get real-time container status.  The blocking Docker SDK
+    calls run in a thread via ``asyncio.to_thread`` so the event loop is never
+    stalled while waiting for the Docker daemon.
     """
-    containers: list[ContainerInfo] = []
-    healthy_count = 0
-    unhealthy_count = 0
-
-    docker_client = _get_docker_client()
-
-    if docker_client:
-        try:
-            all_containers = docker_client.containers.list(all=True)
-
-            for container in all_containers:
-                name = container.name
-                if name not in _monitored_containers:
-                    continue
-
-                # Get container details
-                status = container.status  # running, exited, paused, restarting
-                health = None
-                health_state = container.attrs.get("State", {}).get("Health", {})
-                if health_state:
-                    health = health_state.get("Status", "unknown")
-
-                # Get image and ports
-                image = container.image.tags[0] if container.image.tags else str(container.image.id)[:12]
-                ports = _format_ports(container.ports)
-
-                # Determine service name
-                service = name.replace("aiops-", "") if name.startswith("aiops-") else name
-
-                # Count health and normalize health status
-                if status == "running":
-                    if health in ("healthy", None):
-                        healthy_count += 1
-                        # Treat running containers without HEALTHCHECK as healthy
-                        if health is None:
-                            health = "healthy"
-                    else:
-                        unhealthy_count += 1
-                else:
-                    unhealthy_count += 1
-                    # Non-running containers are unhealthy
-                    if health is None:
-                        health = "unhealthy"
-
-                containers.append(ContainerInfo(
-                    name=name,
-                    service=service,
-                    status=status,
-                    health=health,
-                    port=ports,
-                    image=image,
-                    description=_get_container_description(service),
-                    monitored=True,
-                ))
-
-            docker_client.close()
-
-        except Exception as e:
-            logger.error(f"Failed to get container status: {e}")
-            # Fall back to static list if Docker fails
-            return await _get_static_containers(request)
-    else:
-        # Fall back to static list
+    try:
+        # Capture the monitored set snapshot for the thread (avoids sharing mutable state).
+        monitored_snapshot = frozenset(_monitored_containers)
+        containers, healthy_count, unhealthy_count = await asyncio.to_thread(
+            _collect_container_status, monitored_snapshot
+        )
+    except Exception as e:
+        logger.error(f"Failed to get container status: {e}")
         return await _get_static_containers(request)
 
     return InfrastructureResponse(
@@ -243,48 +300,24 @@ async def discover_containers() -> DiscoveryResponse:
     """
     Discover all Docker containers on the host.
 
-    Returns all containers regardless of monitoring status.
+    Returns all containers regardless of monitoring status.  The blocking Docker
+    SDK calls run in a thread via ``asyncio.to_thread`` so the event loop is not
+    stalled while waiting for the Docker daemon.
     """
-    docker_client = _get_docker_client()
-
-    if not docker_client:
+    try:
+        monitored_snapshot = frozenset(_monitored_containers)
+        discovered = await asyncio.to_thread(_discover_all_containers, monitored_snapshot)
+    except Exception as e:
+        logger.error(f"Failed to discover containers: {e}")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Docker daemon not available",
         )
 
-    try:
-        all_containers = docker_client.containers.list(all=True)
-        discovered = []
-
-        for container in all_containers:
-            name = container.name
-            image = container.image.tags[0] if container.image.tags else str(container.image.id)[:12]
-            ports = _format_ports(container.ports)
-            created = container.attrs.get("Created", "")[:19] if container.attrs.get("Created") else None
-
-            discovered.append(DiscoveredContainer(
-                name=name,
-                image=image,
-                status=container.status,
-                ports=ports,
-                created=created,
-                monitored=name in _monitored_containers,
-            ))
-
-        docker_client.close()
-
-        return DiscoveryResponse(
-            containers=sorted(discovered, key=lambda c: c.name),
-            total=len(discovered),
-        )
-
-    except Exception as e:
-        logger.error(f"Failed to discover containers: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to discover containers: {str(e)}",
-        )
+    return DiscoveryResponse(
+        containers=sorted(discovered, key=lambda c: c.name),
+        total=len(discovered),
+    )
 
 
 @router.post(
@@ -301,20 +334,28 @@ async def add_monitored_container(request_body: MonitorRequest) -> dict[str, Any
     """
     container_name = request_body.container_name
 
-    # Verify container exists
-    docker_client = _get_docker_client()
-    if docker_client:
+    # Verify container exists (blocking lookup offloaded to thread)
+    def _check_container_exists(name: str) -> bool:
+        """Return True if the container exists; False if Docker is unavailable."""
+        client = _get_docker_client()
+        if client is None:
+            return True  # Docker unavailable — allow add anyway
         try:
-            docker_client.containers.get(container_name)
-            docker_client.close()
-        except Exception:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Container '{container_name}' not found",
-            )
-    else:
-        # If Docker not available, still add to list
-        pass
+            client.containers.get(name)
+            return True
+        finally:
+            client.close()
+
+    try:
+        found = await asyncio.to_thread(_check_container_exists, container_name)
+    except Exception:
+        found = False
+
+    if not found:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Container '{container_name}' not found",
+        )
 
     _monitored_containers.add(container_name)
     logger.info(f"Added container to monitoring: {container_name}")
@@ -339,49 +380,47 @@ async def start_monitoring(request: Request, request_body: BulkMonitorRequest) -
         request: FastAPI request with app state
         request_body: List of container names to monitor
     """
-    added = []
-    not_found = []
+    added: list[str] = []
+    not_found: list[str] = []
     logs_collected = 0
 
-    docker_client = _get_docker_client()
     fast_annotator = getattr(request.app.state, "fast_annotator", None)
 
+    def _fetch_container_logs(name: str) -> list[str] | None:
+        """Return the last 20 log lines for *name*, or None if not found/unavailable."""
+        client = _get_docker_client()
+        if client is None:
+            return []  # Docker unavailable — allow add with no logs
+        try:
+            container = client.containers.get(name)
+            raw = container.logs(tail=50, timestamps=True).decode("utf-8", errors="ignore")
+            return raw.strip().split("\n")[-20:] if raw.strip() else []
+        except Exception:
+            return None  # container not found
+        finally:
+            client.close()
+
     for container_name in request_body.containers:
-        # Verify container exists if Docker is available
-        if docker_client:
-            try:
-                container = docker_client.containers.get(container_name)
+        # Blocking Docker log fetch offloaded to thread pool.
+        log_lines = await asyncio.to_thread(_fetch_container_logs, container_name)
 
-                # Collect recent logs from the container
-                if fast_annotator:
-                    try:
-                        # Get last 50 log lines from container
-                        logs = container.logs(tail=50, timestamps=True).decode('utf-8', errors='ignore')
-                        log_lines = logs.strip().split('\n')
-
-                        for log_line in log_lines[-20:]:  # Process last 20 lines
-                            if log_line.strip():
-                                # Process log through Fast Agent
-                                await _process_container_log(
-                                    fast_annotator,
-                                    container_name,
-                                    log_line,
-                                )
-                                logs_collected += 1
-
-                    except Exception as e:
-                        logger.warning(f"Failed to collect logs from {container_name}: {e}")
-
-            except Exception:
-                not_found.append(container_name)
-                continue
+        if log_lines is None:
+            # _fetch_container_logs returns None only when the container is absent.
+            not_found.append(container_name)
+            continue
 
         _monitored_containers.add(container_name)
         added.append(container_name)
         logger.info(f"Added container to monitoring: {container_name}")
 
-    if docker_client:
-        docker_client.close()
+        if fast_annotator and log_lines:
+            for log_line in log_lines:
+                if log_line.strip():
+                    try:
+                        await _process_container_log(fast_annotator, container_name, log_line)
+                        logs_collected += 1
+                    except Exception as e:
+                        logger.warning(f"Failed to collect logs from {container_name}: {e}")
 
     return {
         "status": "success",

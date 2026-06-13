@@ -6,6 +6,7 @@ Incidents are stored in Neo4j graph-episodic memory.
 """
 
 import logging
+import os
 import uuid
 from datetime import datetime
 from typing import Any
@@ -37,6 +38,12 @@ router = APIRouter()
 # also correlated into Neo4j graph memory via /{id}/similar).
 _incidents: dict[str, Incident] = {}
 
+# Maximum number of incidents kept in the in-memory fast-path dict.  Eviction
+# drops the oldest resolved/closed incidents first, then the oldest active ones,
+# so hot/open incidents are not flushed while they are being worked.  Evicted
+# incidents remain loadable from SQLite persistence.
+_MAX_INCIDENTS: int = int(os.getenv("INCIDENTS_MAX", "500"))
+
 # Counter for incident IDs (persisted via persistence_store.set_counter so IDs
 # keep advancing across restarts and never collide with pre-restart references).
 _incident_counter = 0
@@ -65,6 +72,64 @@ def _persist_incident_counter() -> None:
         persistence_store.set_counter(_INCIDENT_COUNTER_NAME, _incident_counter)
     except Exception as exc:  # noqa: BLE001
         logger.warning("Failed to persist incident counter: %s", exc)
+
+
+def _evict_stale_incidents() -> None:
+    """Drop the oldest incidents once the in-memory store exceeds _MAX_INCIDENTS.
+
+    Eviction strategy:
+    1. Prefer dropping resolved/closed incidents (finished work) ordered by
+       ``updated_at`` ascending (oldest first).
+    2. If still over cap, drop the oldest active incidents by ``updated_at``.
+
+    Evicted incidents are NOT deleted from SQLite — they remain loadable via
+    ``_load_incident_from_persistence`` if a direct GET is requested later.
+    """
+    overflow = len(_incidents) - _MAX_INCIDENTS
+    if overflow <= 0:
+        return
+
+    terminal = {IncidentStatus.RESOLVED, IncidentStatus.CLOSED}
+    candidates_terminal = sorted(
+        [i for i in _incidents.values() if i.status in terminal],
+        key=lambda i: i.updated_at,
+    )
+    candidates_active = sorted(
+        [i for i in _incidents.values() if i.status not in terminal],
+        key=lambda i: i.updated_at,
+    )
+    eviction_order = candidates_terminal + candidates_active
+
+    evicted = 0
+    for incident in eviction_order:
+        if evicted >= overflow:
+            break
+        _incidents.pop(incident.id, None)
+        evicted += 1
+
+    logger.info("Evicted %d incident(s) from in-memory cache (cap %d)", evicted, _MAX_INCIDENTS)
+
+
+def _load_incident_from_persistence(incident_id: str) -> Incident | None:
+    """Try to load a single incident from the SQLite store (cache-miss path).
+
+    Returns the incident (and re-populates the in-memory cache) or None if not
+    found in persistence.  This ensures that incidents evicted from the fast-path
+    dict are still reachable via GET /{id}.
+    """
+    try:
+        all_persisted = persistence_store.load_all_incidents()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Failed to query persistence for incident %s: %s", incident_id, exc)
+        return None
+
+    incident = all_persisted.get(incident_id)
+    if incident is not None:
+        # Warm the cache so subsequent accesses are in-memory fast-path.
+        _incidents[incident_id] = incident
+        _evict_stale_incidents()
+        logger.debug("Loaded evicted incident %s from persistence", incident_id)
+    return incident
 
 
 def _generate_incident_id() -> str:
@@ -119,6 +184,7 @@ async def create_incident(
 
     _incidents[incident_id] = incident
     _persist_save_incident(incident)
+    _evict_stale_incidents()
     logger.info(f"Created incident: {incident_id}")
 
     # Trigger auto-analysis if requested
@@ -274,19 +340,27 @@ async def get_incident(incident_id: str) -> Incident:
     """
     Get incident by ID.
 
+    First checks the in-memory fast-path; if absent (evicted by the LRU cap)
+    falls back to the SQLite persistence layer so no incident is silently lost.
+
     Args:
         incident_id: Unique incident identifier
 
     Returns:
         Incident details
     """
-    if incident_id not in _incidents:
+    incident = _incidents.get(incident_id)
+    if incident is None:
+        # Cache miss — may have been evicted; try persistence.
+        incident = _load_incident_from_persistence(incident_id)
+
+    if incident is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Incident {incident_id} not found",
         )
 
-    return _incidents[incident_id]
+    return incident
 
 
 @router.patch(
@@ -309,13 +383,12 @@ async def update_incident(
     Returns:
         Updated incident
     """
-    if incident_id not in _incidents:
+    incident = _incidents.get(incident_id) or _load_incident_from_persistence(incident_id)
+    if incident is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Incident {incident_id} not found",
         )
-
-    incident = _incidents[incident_id]
     update_data = incident_update.model_dump(exclude_unset=True)
 
     for field, value in update_data.items():
@@ -345,13 +418,15 @@ async def delete_incident(incident_id: str) -> None:
     Args:
         incident_id: Unique incident identifier
     """
+    # Check in-memory then persistence (handles evicted incidents).
     if incident_id not in _incidents:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Incident {incident_id} not found",
-        )
+        if _load_incident_from_persistence(incident_id) is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Incident {incident_id} not found",
+            )
 
-    del _incidents[incident_id]
+    _incidents.pop(incident_id, None)
     _persist_delete_incident(incident_id)
     logger.info(f"Deleted incident: {incident_id}")
 
@@ -379,13 +454,12 @@ async def analyze_incident(
     Returns:
         Updated incident with RCA results
     """
-    if incident_id not in _incidents:
+    incident = _incidents.get(incident_id) or _load_incident_from_persistence(incident_id)
+    if incident is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Incident {incident_id} not found",
         )
-
-    incident = _incidents[incident_id]
     incident.status = IncidentStatus.ANALYZING
     incident.updated_at = datetime.utcnow()
 
@@ -418,13 +492,13 @@ async def remediate_incident(request: Request, incident_id: str) -> dict[str, An
     success, or back to PENDING_APPROVAL when the gate/executor declines so the
     incident stays actionable (retry / open in chat).
     """
-    if incident_id not in _incidents:
+    incident = _incidents.get(incident_id) or _load_incident_from_persistence(incident_id)
+    if incident is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Incident {incident_id} not found",
         )
 
-    incident = _incidents[incident_id]
     prior_status = incident.status
 
     # Anti-storm / idempotency: refuse a second remediation while one is already
@@ -606,13 +680,12 @@ async def remediate_incident(request: Request, incident_id: str) -> dict[str, An
 )
 async def dismiss_incident(incident_id: str) -> Incident:
     """Operator rejected the remediation: archive the incident (CLOSED)."""
-    if incident_id not in _incidents:
+    incident = _incidents.get(incident_id) or _load_incident_from_persistence(incident_id)
+    if incident is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Incident {incident_id} not found",
         )
-
-    incident = _incidents[incident_id]
     incident.status = IncidentStatus.CLOSED
     if incident.resolved_at is None:
         incident.resolved_at = datetime.utcnow()
@@ -642,7 +715,7 @@ async def find_similar_incidents(
     Returns:
         List of similar incidents with similarity scores
     """
-    if incident_id not in _incidents:
+    if _incidents.get(incident_id) is None and _load_incident_from_persistence(incident_id) is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Incident {incident_id} not found",
