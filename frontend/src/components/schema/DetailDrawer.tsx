@@ -1,4 +1,4 @@
-import { MessageSquarePlus, X } from 'lucide-react'
+import { Check, MessageSquarePlus, X } from 'lucide-react'
 import { FocusTarget, SchemaSeverity, kindAccent } from './types'
 
 const SEVERITY_CHIP: Record<SchemaSeverity, string> = {
@@ -17,8 +17,10 @@ const HEALTH_TEXT: Record<string, string> = {
 
 interface DetailDrawerProps {
   target: FocusTarget
+  /** True when this node/edge is already in the Ask-AI context set. */
+  inContext: boolean
   onClose: () => void
-  onAddToAskAi: (target: FocusTarget) => void
+  onToggleAskAi: (target: FocusTarget) => void
 }
 
 function Row({ label, value }: { label: string; value: string | number }) {
@@ -34,7 +36,7 @@ function Row({ label, value }: { label: string; value: string | number }) {
  * Right slide-in drawer with the full detail of the clicked node or edge,
  * recent episodes with severity chips, and an "Add to Ask AI" hand-off.
  */
-export function DetailDrawer({ target, onClose, onAddToAskAi }: DetailDrawerProps) {
+export function DetailDrawer({ target, inContext, onClose, onToggleAskAi }: DetailDrawerProps) {
   const isNode = target.type === 'node'
   const title = isNode ? target.node.label : `${target.edge.source} → ${target.edge.target}`
 
@@ -143,12 +145,26 @@ export function DetailDrawer({ target, onClose, onAddToAskAi }: DetailDrawerProp
       <div className="border-t border-slate-800 p-3">
         <button
           type="button"
-          onClick={() => onAddToAskAi(target)}
+          onClick={() => onToggleAskAi(target)}
           data-testid="schema-add-to-askai"
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          aria-pressed={inContext}
+          className={`flex w-full items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+            inContext
+              ? 'border border-blue-500/40 bg-blue-500/10 text-blue-300 hover:bg-blue-500/20'
+              : 'bg-primary text-primary-foreground hover:bg-primary/90'
+          }`}
         >
-          <MessageSquarePlus className="h-4 w-4" />
-          Add to Ask AI
+          {inContext ? (
+            <>
+              <Check className="h-4 w-4" />
+              In Ask AI · remove
+            </>
+          ) : (
+            <>
+              <MessageSquarePlus className="h-4 w-4" />
+              Add to Ask AI
+            </>
+          )}
         </button>
       </div>
     </div>
