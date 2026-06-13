@@ -40,6 +40,15 @@ dependencies = [
     # only in requirements.txt, which `pip install -e ".[dev]"` (used by CI)
     # does not read — leaving CI without numpy and failing 4 tests + coverage.
     "numpy>=1.26.0",
+    # langgraph is top-level-imported by src/orchestration/graph.py (line 30:
+    # `from langgraph.graph import END, START, StateGraph`). Without it,
+    # `src/main.py` is unimportable in CI and orchestration/* sits at 0%
+    # coverage. Moved from requirements.txt (P0 #6 fix).
+    "langgraph>=0.2.0",
+    # python-multipart is required by FastAPI for any form/file upload handling.
+    # Its absence from pyproject means CI cannot fully validate the app's
+    # request-parsing capabilities. Moved from requirements.txt (P0 #6 fix).
+    "python-multipart>=0.0.6",
 ]
 
 [project.optional-dependencies]
@@ -112,9 +121,12 @@ omit = [
 ]
 
 [tool.coverage.report]
-# Ratchet floor (2026-05-30): measured 28.76% ex-benchmark with the suite green
-# (104 passing). Raise this over subsequent passes toward the ~70% target; never lower it.
-fail_under = 28
+# Ratchet floor (2026-06-14): measured 54.69% with 487 passing (incl. new
+# test_app_boot.py) after moving langgraph+python-multipart into pyproject deps
+# and unlocking src/main.py + src/orchestration/* coverage. Floor set to 53
+# (floor(actual) - 2) per spec. Previous floor was 28 (stale since 2026-05-30
+# with 104 passing). Raise toward ~70% target; never lower it.
+fail_under = 53
 show_missing = true
 exclude_lines = [
     "pragma: no cover",
