@@ -1,20 +1,42 @@
-import { useEffect } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { Loader2 } from 'lucide-react'
 import { Layout } from './components/Layout'
 import { RequireAuth } from './components/RequireAuth'
 import { ErrorBoundary } from './components/ErrorBoundary'
+// First-paint-critical pages — kept eager
 import { Landing } from './pages/Landing'
 import { Login } from './pages/Login'
 import { Dashboard } from './pages/Dashboard'
-import { Console } from './pages/Console'
-import { Agents } from './pages/Agents'
-import { Infrastructure } from './pages/Infrastructure'
-import { Incidents } from './pages/Incidents'
-import { Chat } from './pages/Chat'
-import { Metrics } from './pages/Metrics'
-import { Benchmark } from './pages/Benchmark'
-import { Settings } from './pages/Settings'
 import { useAuthStore } from './lib/auth'
+
+// Heavy pages — code-split so they don't bloat the initial bundle
+const Console = lazy(() => import('./pages/Console').then((m) => ({ default: m.Console })))
+const Agents = lazy(() => import('./pages/Agents').then((m) => ({ default: m.Agents })))
+const Infrastructure = lazy(() =>
+  import('./pages/Infrastructure').then((m) => ({ default: m.Infrastructure })),
+)
+const Incidents = lazy(() =>
+  import('./pages/Incidents').then((m) => ({ default: m.Incidents })),
+)
+const Chat = lazy(() => import('./pages/Chat').then((m) => ({ default: m.Chat })))
+const Metrics = lazy(() => import('./pages/Metrics').then((m) => ({ default: m.Metrics })))
+const Benchmark = lazy(() =>
+  import('./pages/Benchmark').then((m) => ({ default: m.Benchmark })),
+)
+const Settings = lazy(() =>
+  import('./pages/Settings').then((m) => ({ default: m.Settings })),
+)
+
+/** On-theme loading fallback for lazy-loaded route chunks */
+function PageFallback() {
+  return (
+    <div className="flex items-center justify-center h-full min-h-[40dvh]">
+      <Loader2 className="h-8 w-8 motion-safe:animate-spin text-muted-foreground" aria-hidden="true" />
+      <span className="sr-only">Loading page…</span>
+    </div>
+  )
+}
 
 /**
  * Public root gate: logged-out visitors (with enforcement on) see the public
@@ -66,16 +88,18 @@ function App() {
                     the fallback in the content area WITHOUT killing the
                     sidebar/shell, and navigating away resets the error. */}
                 <ErrorBoundary resetKey={location.pathname}>
-                  <Routes>
-                    <Route path="/console" element={<Console />} />
-                    <Route path="/agents" element={<Agents />} />
-                    <Route path="/infrastructure" element={<Infrastructure />} />
-                    <Route path="/incidents" element={<Incidents />} />
-                    <Route path="/chat" element={<Chat />} />
-                    <Route path="/metrics" element={<Metrics />} />
-                    <Route path="/benchmark" element={<Benchmark />} />
-                    <Route path="/settings" element={<Settings />} />
-                  </Routes>
+                  <Suspense fallback={<PageFallback />}>
+                    <Routes>
+                      <Route path="/console" element={<Console />} />
+                      <Route path="/agents" element={<Agents />} />
+                      <Route path="/infrastructure" element={<Infrastructure />} />
+                      <Route path="/incidents" element={<Incidents />} />
+                      <Route path="/chat" element={<Chat />} />
+                      <Route path="/metrics" element={<Metrics />} />
+                      <Route path="/benchmark" element={<Benchmark />} />
+                      <Route path="/settings" element={<Settings />} />
+                    </Routes>
+                  </Suspense>
                 </ErrorBoundary>
               </Layout>
             </RequireAuth>

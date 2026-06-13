@@ -16,6 +16,8 @@ import {
   TestTube
 } from 'lucide-react'
 import { cn } from '../lib/utils'
+import { Tabs, TabPanel } from '../components/ui/Tabs'
+import { useToast } from '../components/ui/toast'
 
 // Types for metrics data
 interface LatencyStats {
@@ -132,7 +134,17 @@ interface ValidationReport {
 
 const API_BASE_URL = '/api/v1/metrics'
 
+const METRICS_TABS = [
+  { id: 'overview',   label: 'Overview'   },
+  { id: 'benchmark',  label: 'Benchmark'  },
+  { id: 'validation', label: 'Validation' },
+  { id: 'export',     label: 'Export'     },
+] as const
+
+type MetricsTab = (typeof METRICS_TABS)[number]['id']
+
 export function Metrics() {
+  const { showConfirm } = useToast()
   const [metrics, setMetrics] = useState<MetricsSnapshot | null>(null)
   const [latencyHistory, setLatencyHistory] = useState<LatencyRecord[]>([])
   const [loading, setLoading] = useState(true)
@@ -153,7 +165,7 @@ export function Metrics() {
   const [validationReport, setValidationReport] = useState<ValidationReport | null>(null)
 
   // Active tab
-  const [activeTab, setActiveTab] = useState<'overview' | 'benchmark' | 'validation' | 'export'>('overview')
+  const [activeTab, setActiveTab] = useState<MetricsTab>('overview')
 
   const fetchMetrics = useCallback(async () => {
     setLoading(true)
@@ -251,7 +263,11 @@ export function Metrics() {
   }
 
   const clearMetrics = async () => {
-    if (!confirm('Are you sure you want to clear all metrics history?')) return
+    const confirmed = await showConfirm(
+      'Clear all metrics history?',
+      'This will permanently delete all recorded latency and request data. This cannot be undone.'
+    )
+    if (!confirmed) return
 
     try {
       const res = await fetch(`${API_BASE_URL}/clear`, { method: 'DELETE' })
@@ -304,11 +320,13 @@ export function Metrics() {
             onClick={fetchMetrics}
             disabled={loading}
             className="p-2 rounded-lg hover:bg-muted disabled:opacity-50"
+            aria-label="Refresh metrics"
+            title="Refresh"
           >
             {loading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="h-4 w-4 motion-safe:animate-spin" aria-hidden="true" />
             ) : (
-              <RefreshCw className="h-4 w-4" />
+              <RefreshCw className="h-4 w-4" aria-hidden="true" />
             )}
           </button>
         </div>
@@ -320,26 +338,14 @@ export function Metrics() {
         </div>
       )}
 
-      {/* Tabs */}
-      <div className="flex border-b border-border overflow-x-auto">
-        {(['overview', 'benchmark', 'validation', 'export'] as const).map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={cn(
-              'px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors whitespace-nowrap',
-              activeTab === tab
-                ? 'border-primary text-primary'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-            )}
-          >
-            {tab.charAt(0).toUpperCase() + tab.slice(1)}
-          </button>
-        ))}
-      </div>
-
+      {/* Accessible Tabs */}
+      <Tabs
+        value={activeTab}
+        onChange={(id) => setActiveTab(id as MetricsTab)}
+        tabs={METRICS_TABS}
+      >
       {/* Tab Content */}
-      {activeTab === 'overview' && (
+      <TabPanel id="overview" activeTab={activeTab} className="pt-6">
         <div className="space-y-6">
           {/* Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -468,9 +474,9 @@ export function Metrics() {
             </div>
           </div>
         </div>
-      )}
+      </TabPanel>
 
-      {activeTab === 'benchmark' && (
+      <TabPanel id="benchmark" activeTab={activeTab} className="pt-6">
         <div className="space-y-6">
           {/* Benchmark Controls */}
           <div className="bg-card rounded-lg border border-border p-6">
@@ -660,9 +666,9 @@ export function Metrics() {
             )}
           </div>
         </div>
-      )}
+      </TabPanel>
 
-      {activeTab === 'validation' && (
+      <TabPanel id="validation" activeTab={activeTab} className="pt-6">
         <div className="space-y-6">
           {validationReport ? (
             <>
@@ -757,14 +763,14 @@ export function Metrics() {
             </>
           ) : (
             <div className="text-center py-12 text-muted-foreground">
-              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+              <Loader2 className="h-8 w-8 motion-safe:animate-spin mx-auto mb-4" />
               Loading validation report...
             </div>
           )}
         </div>
-      )}
+      </TabPanel>
 
-      {activeTab === 'export' && (
+      <TabPanel id="export" activeTab={activeTab} className="pt-6">
         <div className="space-y-6">
           <div className="bg-card rounded-lg border border-border p-6">
             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
@@ -819,7 +825,8 @@ export function Metrics() {
             </button>
           </div>
         </div>
-      )}
+      </TabPanel>
+      </Tabs>
     </div>
   )
 }
