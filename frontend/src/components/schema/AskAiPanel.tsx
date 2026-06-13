@@ -163,12 +163,12 @@ export function AskAiPanel({ selection, onRemoveSelection, windowHours, maxHeigh
         {messages.map((m) => (
           <div
             key={m.id}
-            className={`overflow-hidden rounded-lg px-2.5 py-1.5 text-xs leading-relaxed [overflow-wrap:anywhere] ${
+            className={`overflow-hidden rounded-2xl px-3 py-2 text-xs leading-relaxed [overflow-wrap:anywhere] ${
               m.role === 'user'
-                ? 'ml-6 bg-primary/15 text-slate-200'
+                ? 'ml-6 rounded-br-md bg-gradient-to-br from-primary to-primary/85 text-primary-foreground shadow-sm'
                 : m.isError
-                  ? 'mr-2 border border-red-500/30 bg-red-500/10 text-red-300'
-                  : 'mr-2 bg-slate-800/70 text-slate-300'
+                  ? 'mr-2 rounded-tl-md border border-red-500/30 bg-red-500/10 text-red-300'
+                  : 'mr-2 rounded-tl-md border border-slate-700/60 bg-slate-800/70 text-slate-300'
             }`}
           >
             {m.role === 'assistant' && !m.isError ? (
@@ -181,9 +181,9 @@ export function AskAiPanel({ selection, onRemoveSelection, windowHours, maxHeigh
           </div>
         ))}
         {loading && (
-          <div className="mr-2 flex items-center gap-2 rounded-lg bg-slate-800/70 px-2.5 py-1.5 text-xs text-slate-400">
-            <Loader2 className="h-3 w-3 animate-spin" />
-            Analyzing selection…
+          <div className="mr-2 flex items-center gap-2 rounded-2xl rounded-tl-md border border-slate-700/60 bg-slate-800/70 px-3 py-2 text-xs text-slate-400">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            <span className="thinking-shimmer">Analyzing selection…</span>
           </div>
         )}
       </div>
@@ -205,8 +205,9 @@ export function AskAiPanel({ selection, onRemoveSelection, windowHours, maxHeigh
         ))}
       </div>
 
-      {/* Input row (deliberately not a <form>: no submit-button semantics). */}
-      <div className="flex items-center gap-2 border-t border-slate-800 p-2.5">
+      {/* Input row — a /chat-style glass composer. Kept as a div (not a <form>)
+          so the schema graph keeps a single <select> and one submit surface. */}
+      <div className="composer-glow m-2.5 flex items-center gap-2 rounded-2xl border border-slate-700/60 bg-slate-900/70 p-1.5 pl-3.5 shadow-sm backdrop-blur-sm">
         <input
           ref={inputRef}
           data-testid="askai-input"
@@ -216,7 +217,7 @@ export function AskAiPanel({ selection, onRemoveSelection, windowHours, maxHeigh
             if (e.key === 'Enter') void send(input)
           }}
           placeholder="Ask about your selection..."
-          className="min-w-0 flex-1 rounded-lg border border-slate-700 bg-slate-950/60 px-2.5 py-1.5 text-xs text-slate-200 placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="h-9 min-w-0 flex-1 border-0 bg-transparent text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none"
         />
         <button
           type="button"
@@ -224,9 +225,9 @@ export function AskAiPanel({ selection, onRemoveSelection, windowHours, maxHeigh
           onClick={() => void send(input)}
           disabled={loading || !input.trim()}
           aria-label="Send to assistant"
-          className="rounded-lg bg-primary p-1.5 text-primary-foreground hover:bg-primary/90 disabled:opacity-40"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-md transition-all hover:scale-105 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
         >
-          <Send className="h-3.5 w-3.5" />
+          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
         </button>
       </div>
     </div>
