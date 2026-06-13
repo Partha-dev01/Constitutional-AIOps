@@ -428,7 +428,7 @@ export function Agents() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Cpu className="h-6 w-6" />
@@ -477,7 +477,7 @@ export function Agents() {
         {/* Fast Agent Tab */}
         {activeTab === 'fast' && (
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2 className="text-lg font-semibold flex items-center gap-2">
                   <Zap className="h-5 w-5 text-yellow-500" />
@@ -597,7 +597,7 @@ export function Agents() {
         {/* Reasoning Agent Tab */}
         {activeTab === 'reasoning' && (
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2 className="text-lg font-semibold flex items-center gap-2">
                   <Brain className="h-5 w-5 text-purple-500" />
@@ -718,7 +718,7 @@ export function Agents() {
         {/* Telemetry Tab */}
         {activeTab === 'telemetry' && (
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2 className="text-lg font-semibold flex items-center gap-2">
                   <Network className="h-5 w-5 text-blue-500" />
@@ -739,7 +739,7 @@ export function Agents() {
             </div>
 
             {/* Log Level Filter */}
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {['all', 'ERROR', 'WARN', 'INFO', 'DEBUG'].map((level) => (
                 <button
                   key={level}
@@ -757,17 +757,17 @@ export function Agents() {
 
             {/* Logs Table */}
             <div className="bg-card rounded-lg border border-border">
-              <div className="p-4 border-b border-border flex items-center justify-between">
+              <div className="p-4 border-b border-border flex flex-wrap items-center justify-between gap-3">
                 <h3 className="font-semibold flex items-center gap-2">
                   <FileText className="h-4 w-4" />
                   Recent Logs
                 </h3>
-                <div className="relative">
+                <div className="relative w-full sm:w-auto">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <input
                     type="text"
                     placeholder="Filter logs..."
-                    className="pl-9 pr-3 py-1.5 text-sm rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="w-full pl-9 pr-3 py-1.5 text-sm rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>
               </div>
@@ -834,7 +834,7 @@ export function Agents() {
         {/* Graph Explorer Tab */}
         {activeTab === 'graph' && (
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2 className="text-lg font-semibold flex items-center gap-2">
                   <GitBranch className="h-5 w-5 text-cyan-500" />
@@ -904,7 +904,7 @@ export function Agents() {
         {/* MCP Tools Tab */}
         {activeTab === 'tools' && (
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2 className="text-lg font-semibold flex items-center gap-2">
                   <Wrench className="h-5 w-5 text-orange-500" />
