@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import axios from 'axios'
 import { EpisodicGraphExplorer } from '../components/EpisodicGraphExplorer'
 import { Loader2, RefreshCw } from 'lucide-react'
 
@@ -210,13 +209,12 @@ export function Graph() {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['episodic-graph', refreshKey],
     queryFn: async () => {
-      const response = await axios.get<GraphData>('/api/v1/graph/episodes', {
-        params: {
-          limit: 50,
-          since_hours: 168, // 7 days
-        },
-      })
-      return response.data
+      const url = '/api/v1/graph/episodes?limit=50&since_hours=168'
+      const response = await fetch(url, { credentials: 'same-origin' })
+      if (!response.ok) {
+        throw new Error(`Graph fetch failed: ${response.status}`)
+      }
+      return response.json() as Promise<GraphData>
     },
     staleTime: 30000, // 30 seconds
     refetchOnWindowFocus: false,
@@ -230,21 +228,21 @@ export function Graph() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-        <span className="ml-2 text-slate-400">Loading graph...</span>
+        <Loader2 className="w-8 h-8 motion-safe:animate-spin text-primary" />
+        <span className="ml-2 text-muted-foreground">Loading graph...</span>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-red-400">
+      <div className="flex flex-col items-center justify-center h-full text-destructive">
         <p>Error loading graph data</p>
         <button
           onClick={handleRefresh}
-          className="mt-4 px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-md flex items-center gap-2"
+          className="mt-4 px-4 py-2 bg-muted hover:bg-muted/80 text-foreground rounded-md flex items-center gap-2"
         >
-          <RefreshCw className="w-4 h-4" />
+          <RefreshCw className="w-4 h-4" aria-hidden="true" />
           Retry
         </button>
       </div>
@@ -255,18 +253,18 @@ export function Graph() {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="flex items-center justify-between p-4 border-b border-slate-700">
+      <div className="flex items-center justify-between p-4 border-b border-border">
         <div>
-          <h1 className="text-xl font-semibold text-slate-200">Episodic Knowledge Graph</h1>
-          <p className="text-sm text-slate-400">
-            {data?.stats?.total_episodes || 0} episodes, {data?.stats?.total_edges || 0} edges
+          <h1 className="text-xl font-semibold text-foreground">Episodic Knowledge Graph</h1>
+          <p className="text-sm text-muted-foreground">
+            {data?.stats?.total_episodes ?? 0} episodes, {data?.stats?.total_edges ?? 0} edges
           </p>
         </div>
         <button
           onClick={handleRefresh}
-          className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 rounded-md flex items-center gap-2 text-sm"
+          className="px-3 py-1.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-md flex items-center gap-2 text-sm"
         >
-          <RefreshCw className="w-4 h-4" />
+          <RefreshCw className="w-4 h-4" aria-hidden="true" />
           Refresh
         </button>
       </div>

@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react'
-import { AlertTriangle, CheckCircle, Clock, Search, Plus, Eye, Play, X, Loader2, RefreshCw } from 'lucide-react'
+import { AlertTriangle, CheckCircle, Clock, Search, Plus, Eye, Play, Loader2, RefreshCw } from 'lucide-react'
 import { formatRelativeTime } from '../lib/utils'
 import api, { Incident, IncidentSeverity, IncidentStatus, Action, IncidentCreate } from '../lib/api'
 import { ActiveIncidentsPanel } from '../components/incidents/ActiveIncidentsPanel'
+import { Modal } from '../components/ui/Modal'
+import { useToast } from '../components/ui/toast'
 
 export function Incidents() {
+  const { showToast } = useToast()
   const [incidents, setIncidents] = useState<Incident[]>([])
   const [pendingActions, setPendingActions] = useState<Action[]>([])
   const [searchQuery, setSearchQuery] = useState('')
@@ -66,7 +69,7 @@ export function Incidents() {
       fetchData()
     } catch (err) {
       console.error('Approval error:', err)
-      alert('Failed to process approval')
+      showToast('Failed to process approval', 'error')
     }
   }
 
@@ -76,7 +79,7 @@ export function Incidents() {
       fetchData()
     } catch (err) {
       console.error('Analysis error:', err)
-      alert('Failed to trigger analysis')
+      showToast('Failed to trigger analysis', 'error')
     }
   }
 
@@ -88,7 +91,7 @@ export function Incidents() {
       fetchData()
     } catch (err) {
       console.error('Create error:', err)
-      alert('Failed to create incident')
+      showToast('Failed to create incident', 'error')
     } finally {
       setCreating(false)
     }
@@ -108,14 +111,20 @@ export function Incidents() {
             onClick={fetchData}
             disabled={loading}
             className="p-2 rounded-lg hover:bg-muted disabled:opacity-50"
+            aria-label="Refresh incidents"
+            title="Refresh"
           >
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+            {loading ? (
+              <Loader2 className="h-4 w-4 motion-safe:animate-spin" aria-hidden="true" />
+            ) : (
+              <RefreshCw className="h-4 w-4" aria-hidden="true" />
+            )}
           </button>
           <button
             onClick={() => setShowCreateModal(true)}
             className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90"
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="h-4 w-4" aria-hidden="true" />
             New Incident
           </button>
         </div>
@@ -128,7 +137,7 @@ export function Incidents() {
       {pendingActions.length > 0 && (
         <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
           <div className="flex items-center gap-3">
-            <Clock className="h-5 w-5 text-yellow-500" />
+            <Clock className="h-5 w-5 text-yellow-500" aria-hidden="true" />
             <div className="flex-1">
               <h3 className="font-semibold text-yellow-600">
                 {pendingActions.length} Actions Awaiting Approval
@@ -165,7 +174,7 @@ export function Incidents() {
       )}
 
       {error && (
-        <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-600 text-sm">
+        <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-600 text-sm" role="alert">
           Error: {error}. Please check that the backend is running.
         </div>
       )}
@@ -173,8 +182,10 @@ export function Incidents() {
       {/* Filters */}
       <div className="flex gap-4 flex-wrap">
         <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
+          <label htmlFor="incident-search" className="sr-only">Search incidents</label>
           <input
+            id="incident-search"
             type="text"
             placeholder="Search incidents..."
             value={searchQuery}
@@ -182,7 +193,9 @@ export function Incidents() {
             className="w-full pl-10 pr-4 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
           />
         </div>
+        <label htmlFor="status-filter" className="sr-only">Filter by status</label>
         <select
+          id="status-filter"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
           className="px-4 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
@@ -195,7 +208,9 @@ export function Incidents() {
           <option value="resolved">Resolved</option>
           <option value="closed">Closed</option>
         </select>
+        <label htmlFor="severity-filter" className="sr-only">Filter by severity</label>
         <select
+          id="severity-filter"
           value={severityFilter}
           onChange={(e) => setSeverityFilter(e.target.value)}
           className="px-4 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
@@ -213,18 +228,19 @@ export function Incidents() {
       <div className="space-y-4">
         {loading ? (
           <div className="flex items-center justify-center p-8">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <Loader2 className="h-8 w-8 motion-safe:animate-spin text-muted-foreground" aria-hidden="true" />
+            <span className="sr-only">Loading incidents…</span>
           </div>
         ) : filteredIncidents.length === 0 ? (
           <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-8">
             <div className="flex flex-col items-center text-center">
-              <CheckCircle className="h-12 w-12 text-green-500 mb-4" />
+              <CheckCircle className="h-12 w-12 text-green-500 mb-4" aria-hidden="true" />
               <h3 className="text-lg font-semibold text-green-600 mb-2">All Systems Operational</h3>
               <p className="text-muted-foreground mb-4">
                 No active incidents. Your infrastructure is running smoothly.
               </p>
               <p className="text-sm text-muted-foreground">
-                Click <strong>"New Incident"</strong> to create a test incident, or use <strong>"Demo Mode"</strong> from the Agent Hub to trigger real anomalies.
+                Click <strong>"New Incident"</strong> to create a test incident, or use <strong>"Demo Mode"</strong> from the Agents page to trigger real anomalies.
               </p>
             </div>
           </div>
@@ -241,34 +257,50 @@ export function Incidents() {
       </div>
 
       {/* Incident Detail Modal */}
-      {selectedIncident && (
-        <IncidentDetailModal
-          incident={selectedIncident}
-          onClose={() => setSelectedIncident(null)}
-        />
-      )}
+      <Modal
+        open={!!selectedIncident}
+        onClose={() => setSelectedIncident(null)}
+        title={selectedIncident?.id ?? ''}
+        titleId="incident-detail-title"
+        maxWidth="max-w-2xl"
+      >
+        {selectedIncident && (
+          <IncidentDetailContent incident={selectedIncident} />
+        )}
+      </Modal>
 
       {/* Approval Modal */}
-      {showApprovalModal && selectedAction && (
-        <ApprovalModal
-          action={selectedAction}
-          onApprove={(comments) => handleApprove(selectedAction, true, comments)}
-          onReject={(comments) => handleApprove(selectedAction, false, comments)}
+      {selectedAction && (
+        <Modal
+          open={showApprovalModal}
           onClose={() => {
             setShowApprovalModal(false)
             setSelectedAction(null)
           }}
-        />
+          title="Review Action"
+          titleId="approval-modal-title"
+        >
+          <ApprovalContent
+            action={selectedAction}
+            onApprove={(comments) => handleApprove(selectedAction, true, comments)}
+            onReject={(comments) => handleApprove(selectedAction, false, comments)}
+          />
+        </Modal>
       )}
 
       {/* Create Incident Modal */}
-      {showCreateModal && (
-        <CreateIncidentModal
+      <Modal
+        open={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        title="Create New Incident"
+        titleId="create-incident-title"
+      >
+        <CreateIncidentContent
           onSubmit={handleCreateIncident}
           onClose={() => setShowCreateModal(false)}
           loading={creating}
         />
-      )}
+      </Modal>
     </div>
   )
 }
@@ -306,7 +338,7 @@ function IncidentCard({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-start gap-3 min-w-0">
           <div className={`p-2 rounded-lg shrink-0 ${severityColors[incident.severity] || severityColors.info}`}>
-            <StatusIcon className="h-5 w-5" />
+            <StatusIcon className="h-5 w-5" aria-hidden="true" />
           </div>
           <div className="min-w-0">
             <h3 className="font-semibold">{incident.title}</h3>
@@ -361,7 +393,7 @@ function IncidentCard({
             onClick={onAnalyze}
             className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90"
           >
-            <Play className="h-4 w-4 inline mr-1" />
+            <Play className="h-4 w-4 inline mr-1" aria-hidden="true" />
             Run Analysis
           </button>
         )}
@@ -370,206 +402,186 @@ function IncidentCard({
   )
 }
 
-function IncidentDetailModal({ incident, onClose }: { incident: Incident; onClose: () => void }) {
+/** Content of the Incident Detail modal (Modal primitive supplies the wrapper + header) */
+function IncidentDetailContent({ incident }: { incident: Incident }) {
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-card rounded-lg border border-border p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold">{incident.id}</h2>
-          <button onClick={onClose} className="p-2 hover:bg-muted rounded-lg">
-            <X className="h-5 w-5" />
-          </button>
+    <div className="space-y-4">
+      <div>
+        <h3 className="font-semibold text-lg">{incident.title}</h3>
+        {incident.description && (
+          <p className="text-muted-foreground mt-1">{incident.description}</p>
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <p className="text-sm text-muted-foreground">Status</p>
+          <p className="font-medium capitalize">{incident.status}</p>
         </div>
-
-        <div className="space-y-4">
-          <div>
-            <h3 className="font-semibold text-lg">{incident.title}</h3>
-            {incident.description && (
-              <p className="text-muted-foreground mt-1">{incident.description}</p>
-            )}
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm text-muted-foreground">Status</p>
-              <p className="font-medium capitalize">{incident.status}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Severity</p>
-              <p className="font-medium capitalize">{incident.severity}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Category</p>
-              <p className="font-medium capitalize">{incident.category || 'Unknown'}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Created</p>
-              <p className="font-medium">{new Date(incident.created_at).toLocaleString()}</p>
-            </div>
-          </div>
-
-          <div>
-            <p className="text-sm text-muted-foreground mb-2">Affected Services</p>
-            <div className="flex flex-wrap gap-2">
-              {(incident.affected_services ?? []).map((service, i) => (
-                <span key={i} className="px-2 py-1 bg-muted rounded text-sm">
-                  {service.name}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          {incident.rca && (
-            <div className="p-4 bg-muted/50 rounded-lg">
-              <h4 className="font-semibold mb-2">Root Cause Analysis</h4>
-              <p className="text-sm">{incident.rca.root_cause}</p>
-              <p className="text-xs text-muted-foreground mt-2">
-                Confidence: {Math.round(incident.rca.confidence * 100)}%
-              </p>
-              {(incident.rca.causal_chain?.length ?? 0) > 0 && (
-                <div className="mt-3">
-                  <p className="text-sm font-medium">Causal Chain:</p>
-                  <ul className="list-disc list-inside text-sm text-muted-foreground">
-                    {(incident.rca.causal_chain ?? []).map((factor, i) => (
-                      <li key={i}>{factor}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          )}
-
-          {incident.remediation_plan && (
-            <div className="p-4 bg-muted/50 rounded-lg">
-              <h4 className="font-semibold mb-2">Remediation Plan</h4>
-              <div className="space-y-2">
-                {(incident.remediation_plan.steps ?? []).map((step, i) => (
-                  <div key={step.order ?? i} className="flex items-start gap-2">
-                    <span className="w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center">
-                      {step.order ?? i + 1}
-                    </span>
-                    <div>
-                      <p className="text-sm font-medium">{step.action}</p>
-                      {step.command && (
-                        <p className="text-xs text-muted-foreground font-mono">{step.command}</p>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+        <div>
+          <p className="text-sm text-muted-foreground">Severity</p>
+          <p className="font-medium capitalize">{incident.severity}</p>
+        </div>
+        <div>
+          <p className="text-sm text-muted-foreground">Category</p>
+          <p className="font-medium capitalize">{incident.category || 'Unknown'}</p>
+        </div>
+        <div>
+          <p className="text-sm text-muted-foreground">Created</p>
+          <p className="font-medium">{new Date(incident.created_at).toLocaleString()}</p>
         </div>
       </div>
+
+      <div>
+        <p className="text-sm text-muted-foreground mb-2">Affected Services</p>
+        <div className="flex flex-wrap gap-2">
+          {(incident.affected_services ?? []).map((service, i) => (
+            <span key={i} className="px-2 py-1 bg-muted rounded text-sm">
+              {service.name}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {incident.rca && (
+        <div className="p-4 bg-muted/50 rounded-lg">
+          <h4 className="font-semibold mb-2">Root Cause Analysis</h4>
+          <p className="text-sm">{incident.rca.root_cause}</p>
+          <p className="text-xs text-muted-foreground mt-2">
+            Confidence: {Math.round(incident.rca.confidence * 100)}%
+          </p>
+          {(incident.rca.causal_chain?.length ?? 0) > 0 && (
+            <div className="mt-3">
+              <p className="text-sm font-medium">Causal Chain:</p>
+              <ul className="list-disc list-inside text-sm text-muted-foreground">
+                {(incident.rca.causal_chain ?? []).map((factor, i) => (
+                  <li key={i}>{factor}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+
+      {incident.remediation_plan && (
+        <div className="p-4 bg-muted/50 rounded-lg">
+          <h4 className="font-semibold mb-2">Remediation Plan</h4>
+          <div className="space-y-2">
+            {(incident.remediation_plan.steps ?? []).map((step, i) => (
+              <div key={step.order ?? i} className="flex items-start gap-2">
+                <span className="w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center">
+                  {step.order ?? i + 1}
+                </span>
+                <div>
+                  <p className="text-sm font-medium">{step.action}</p>
+                  {step.command && (
+                    <p className="text-xs text-muted-foreground font-mono">{step.command}</p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 
-function ApprovalModal({
+/** Content of the Approval modal */
+function ApprovalContent({
   action,
   onApprove,
   onReject,
-  onClose,
 }: {
   action: Action
   onApprove: (comments?: string) => void
   onReject: (comments?: string) => void
-  onClose: () => void
 }) {
   const [comments, setComments] = useState('')
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-card rounded-lg border border-border p-6 max-w-lg w-full mx-4">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold">Review Action</h2>
-          <button onClick={onClose} className="p-2 hover:bg-muted rounded-lg">
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        <div className="space-y-4">
-          <div className="p-4 bg-muted/50 rounded-lg">
-            <p className="font-semibold">{action.description}</p>
-            <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
-              <div>
-                <span className="text-muted-foreground">Type:</span>{' '}
-                <span className="capitalize">{action.action_type.replace('_', ' ')}</span>
-              </div>
-              <div>
-                <span className="text-muted-foreground">Target:</span>{' '}
-                {action.target_service}
-              </div>
-              <div>
-                <span className="text-muted-foreground">Confidence:</span>{' '}
-                {Math.round(action.confidence * 100)}%
-              </div>
-              <div>
-                <span className="text-muted-foreground">Risk:</span>{' '}
-                <span className="capitalize">
-                  {action.validation?.authorization_level || 'medium'}
-                </span>
-              </div>
-            </div>
+    <div className="space-y-4">
+      <div className="p-4 bg-muted/50 rounded-lg">
+        <p className="font-semibold">{action.description}</p>
+        <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
+          <div>
+            <span className="text-muted-foreground">Type:</span>{' '}
+            <span className="capitalize">{action.action_type.replace('_', ' ')}</span>
           </div>
+          <div>
+            <span className="text-muted-foreground">Target:</span>{' '}
+            {action.target_service}
+          </div>
+          <div>
+            <span className="text-muted-foreground">Confidence:</span>{' '}
+            {Math.round(action.confidence * 100)}%
+          </div>
+          <div>
+            <span className="text-muted-foreground">Risk:</span>{' '}
+            <span className="capitalize">
+              {action.validation?.authorization_level || 'medium'}
+            </span>
+          </div>
+        </div>
+      </div>
 
-          {action.validation && (
-            <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-              <p className="font-semibold text-blue-600 mb-2">Constitutional AI Validation</p>
-              <p className="text-sm">{action.validation.explanation}</p>
-              <div className="mt-2 flex gap-2">
-                <span className={`px-2 py-1 rounded text-xs ${action.validation.tier1_passed ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
-                  Tier 1: {action.validation.tier1_passed ? 'Pass' : 'Fail'}
-                </span>
-                <span className={`px-2 py-1 rounded text-xs ${action.validation.tier2_passed ? 'bg-green-500/10 text-green-500' : 'bg-yellow-500/10 text-yellow-500'}`}>
-                  Tier 2: {action.validation.tier2_passed ? 'Pass' : 'Review'}
-                </span>
-              </div>
-              {action.validation.warnings.length > 0 && (
-                <div className="mt-2 text-sm text-yellow-600">
-                  <p className="font-medium">Warnings:</p>
-                  <ul className="list-disc list-inside">
-                    {action.validation.warnings.map((w, i) => (
-                      <li key={i}>{w}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+      {action.validation && (
+        <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+          <p className="font-semibold text-blue-600 mb-2">Constitutional AI Validation</p>
+          <p className="text-sm">{action.validation.explanation}</p>
+          <div className="mt-2 flex gap-2">
+            <span className={`px-2 py-1 rounded text-xs ${action.validation.tier1_passed ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
+              Tier 1: {action.validation.tier1_passed ? 'Pass' : 'Fail'}
+            </span>
+            <span className={`px-2 py-1 rounded text-xs ${action.validation.tier2_passed ? 'bg-green-500/10 text-green-500' : 'bg-yellow-500/10 text-yellow-500'}`}>
+              Tier 2: {action.validation.tier2_passed ? 'Pass' : 'Review'}
+            </span>
+          </div>
+          {action.validation.warnings.length > 0 && (
+            <div className="mt-2 text-sm text-yellow-600">
+              <p className="font-medium">Warnings:</p>
+              <ul className="list-disc list-inside">
+                {action.validation.warnings.map((w, i) => (
+                  <li key={i}>{w}</li>
+                ))}
+              </ul>
             </div>
           )}
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Comments (optional)</label>
-            <textarea
-              value={comments}
-              onChange={(e) => setComments(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-              rows={3}
-              placeholder="Add any notes or conditions..."
-            />
-          </div>
-
-          <div className="flex gap-2 justify-end">
-            <button
-              onClick={() => onReject(comments)}
-              className="px-4 py-2 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600"
-            >
-              Reject
-            </button>
-            <button
-              onClick={() => onApprove(comments)}
-              className="px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-medium hover:bg-green-600"
-            >
-              Approve & Execute
-            </button>
-          </div>
         </div>
+      )}
+
+      <div>
+        <label htmlFor="approval-comments" className="block text-sm font-medium mb-1">Comments (optional)</label>
+        <textarea
+          id="approval-comments"
+          value={comments}
+          onChange={(e) => setComments(e.target.value)}
+          className="w-full px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+          rows={3}
+          placeholder="Add any notes or conditions..."
+        />
+      </div>
+
+      <div className="flex gap-2 justify-end">
+        <button
+          onClick={() => onReject(comments)}
+          className="px-4 py-2 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600"
+        >
+          Reject
+        </button>
+        <button
+          onClick={() => onApprove(comments)}
+          className="px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-medium hover:bg-green-600"
+        >
+          Approve &amp; Execute
+        </button>
       </div>
     </div>
   )
 }
 
-function CreateIncidentModal({
+/** Content of the Create Incident modal */
+function CreateIncidentContent({
   onSubmit,
   onClose,
   loading,
@@ -601,119 +613,113 @@ function CreateIncidentModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-card rounded-lg border border-border p-6 max-w-lg w-full mx-4">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold">Create New Incident</h2>
-          <button onClick={onClose} className="p-2 hover:bg-muted rounded-lg">
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Title *</label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-              placeholder="e.g., High CPU usage on database server"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Description</label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-              rows={3}
-              placeholder="Describe the incident in detail..."
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">Severity</label>
-              <select
-                value={severity}
-                onChange={(e) => setSeverity(e.target.value as IncidentSeverity)}
-                className="w-full px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-              >
-                <option value="critical">Critical</option>
-                <option value="high">High</option>
-                <option value="medium">Medium</option>
-                <option value="low">Low</option>
-                <option value="info">Info</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Category</label>
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-              >
-                <option value="infrastructure">Infrastructure</option>
-                <option value="application">Application</option>
-                <option value="database">Database</option>
-                <option value="network">Network</option>
-                <option value="security">Security</option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Affected Service</label>
-            <input
-              type="text"
-              value={serviceName}
-              onChange={(e) => setServiceName(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-              placeholder="e.g., nextcloud, backend, neo4j"
-            />
-          </div>
-
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="autoAnalyze"
-              checked={autoAnalyze}
-              onChange={(e) => setAutoAnalyze(e.target.checked)}
-              className="rounded border-border"
-            />
-            <label htmlFor="autoAnalyze" className="text-sm">
-              Auto-analyze with AI (triggers RCA after creation)
-            </label>
-          </div>
-
-          <div className="flex gap-2 justify-end pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 bg-muted text-muted-foreground rounded-lg text-sm font-medium hover:bg-muted/80"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading || !title.trim()}
-              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin inline mr-2" />
-                  Creating...
-                </>
-              ) : (
-                'Create Incident'
-              )}
-            </button>
-          </div>
-        </form>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label htmlFor="incident-title" className="block text-sm font-medium mb-1">Title *</label>
+        <input
+          id="incident-title"
+          type="text"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          className="w-full px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+          placeholder="e.g., High CPU usage on database server"
+          required
+        />
       </div>
-    </div>
+
+      <div>
+        <label htmlFor="incident-description" className="block text-sm font-medium mb-1">Description</label>
+        <textarea
+          id="incident-description"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          className="w-full px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+          rows={3}
+          placeholder="Describe the incident in detail..."
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label htmlFor="incident-severity" className="block text-sm font-medium mb-1">Severity</label>
+          <select
+            id="incident-severity"
+            value={severity}
+            onChange={(e) => setSeverity(e.target.value as IncidentSeverity)}
+            className="w-full px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+          >
+            <option value="critical">Critical</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+            <option value="info">Info</option>
+          </select>
+        </div>
+        <div>
+          <label htmlFor="incident-category" className="block text-sm font-medium mb-1">Category</label>
+          <select
+            id="incident-category"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            className="w-full px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+          >
+            <option value="infrastructure">Infrastructure</option>
+            <option value="application">Application</option>
+            <option value="database">Database</option>
+            <option value="network">Network</option>
+            <option value="security">Security</option>
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label htmlFor="incident-service" className="block text-sm font-medium mb-1">Affected Service</label>
+        <input
+          id="incident-service"
+          type="text"
+          value={serviceName}
+          onChange={(e) => setServiceName(e.target.value)}
+          className="w-full px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+          placeholder="e.g., nextcloud, backend, neo4j"
+        />
+      </div>
+
+      <div className="flex items-center gap-2">
+        <input
+          type="checkbox"
+          id="autoAnalyze"
+          checked={autoAnalyze}
+          onChange={(e) => setAutoAnalyze(e.target.checked)}
+          className="rounded border-border"
+        />
+        <label htmlFor="autoAnalyze" className="text-sm">
+          Auto-analyze with AI (triggers RCA after creation)
+        </label>
+      </div>
+
+      <div className="flex gap-2 justify-end pt-4">
+        <button
+          type="button"
+          onClick={onClose}
+          className="px-4 py-2 bg-muted text-muted-foreground rounded-lg text-sm font-medium hover:bg-muted/80"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={loading || !title.trim()}
+          className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
+        >
+          {loading ? (
+            <>
+              <Loader2 className="h-4 w-4 motion-safe:animate-spin inline mr-2" aria-hidden="true" />
+              Creating...
+            </>
+          ) : (
+            'Create Incident'
+          )}
+        </button>
+      </div>
+    </form>
   )
 }

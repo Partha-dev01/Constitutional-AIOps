@@ -24,6 +24,7 @@ import {
 } from 'lucide-react'
 import apiClient from '../lib/api'
 import type { DemoScenario, DemoStatus } from '../lib/api'
+import { useToast } from '../components/ui/toast'
 
 // Container info type (moved from Agents.tsx)
 interface ContainerInfo {
@@ -72,6 +73,8 @@ function isPlatformContainer(name: string): boolean {
 }
 
 export function Infrastructure() {
+  const { showToast, showConfirm } = useToast()
+
   // --- Local container monitoring state (moved from Agents.tsx) ---
   const [containers, setContainers] = useState<ContainerInfo[]>([])
   const [containersLoading, setContainersLoading] = useState(false)
@@ -160,15 +163,12 @@ export function Infrastructure() {
   }, [])
 
   const dismissRemoteHost = useCallback(async (edgeLabel: string) => {
-    if (
-      !window.confirm(
-        `Remove "${edgeLabel}" from the monitored hosts list?\n\n` +
-          'The list is auto-derived from live telemetry. If this host keeps shipping ' +
-          'it will stay hidden until restored.'
-      )
-    ) {
-      return
-    }
+    const confirmed = await showConfirm(
+      `Remove "${edgeLabel}" from the monitored hosts list?`,
+      'The list is auto-derived from live telemetry. If this host keeps shipping logs it will reappear until restored.'
+    )
+    if (!confirmed) return
+
     try {
       const response = await fetch(
         `/api/v1/infrastructure/remote-hosts/${encodeURIComponent(edgeLabel)}`,
@@ -182,7 +182,7 @@ export function Infrastructure() {
     } catch (err) {
       console.error('Failed to dismiss host:', err)
     }
-  }, [])
+  }, [showConfirm])
 
   // --- Demo / Chaos: scenario catalog + live status ---
   const fetchDemoScenarios = useCallback(async () => {
@@ -291,11 +291,11 @@ export function Infrastructure() {
         await fetchContainers()
       } else {
         const data = await response.json()
-        alert(`Failed to start monitoring: ${data.message || 'Unknown error'}`)
+        showToast(`Failed to start monitoring: ${data.message || 'Unknown error'}`, 'error')
       }
     } catch (err) {
       console.error('Failed to start monitoring:', err)
-      alert(`Failed to start monitoring: ${err instanceof Error ? err.message : 'Unknown error'}`)
+      showToast(`Failed to start monitoring: ${err instanceof Error ? err.message : 'Unknown error'}`, 'error')
     } finally {
       setMonitoringStarting(false)
     }
@@ -312,11 +312,11 @@ export function Infrastructure() {
         await fetchContainers()
       } else {
         const data = await response.json()
-        alert(`Failed to stop monitoring: ${data.message || 'Unknown error'}`)
+        showToast(`Failed to stop monitoring: ${data.message || 'Unknown error'}`, 'error')
       }
     } catch (err) {
       console.error('Failed to stop monitoring:', err)
-      alert(`Failed to stop monitoring: ${err instanceof Error ? err.message : 'Unknown error'}`)
+      showToast(`Failed to stop monitoring: ${err instanceof Error ? err.message : 'Unknown error'}`, 'error')
     }
   }
 

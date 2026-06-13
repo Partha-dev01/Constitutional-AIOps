@@ -668,7 +668,7 @@ export const api = {
       request<void>(`/incidents/${id}`, { method: 'DELETE' }),
 
     analyze: (id: string) =>
-      request<{ rca: RCAResult; plan: RemediationPlan }>(`/incidents/${id}/analyze`, {
+      request<Incident>(`/incidents/${id}/analyze`, {
         method: 'POST',
       }),
 
@@ -698,7 +698,7 @@ export const api = {
   // Actions
   actions: {
     create: (action: ActionCreate) =>
-      request<Action>('/actions', {
+      request<Action>('/actions/', {
         method: 'POST',
         body: JSON.stringify(action),
       }),
