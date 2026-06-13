@@ -1187,6 +1187,38 @@ async def _execute_restart_service(
             execution_time_ms=(time.time() - start_time) * 1000,
         )
 
+    # Remote routing: containers that live on the t3 host (default nextcloud-db)
+    # cannot be reached by the local docker daemon, so dispatch their restart to
+    # the t3 control agent over HTTP. nextcloud stays LOCAL by default.
+    from src.remediation.executor import resolve_remediation_target
+
+    if resolve_remediation_target(service_name) == "t3":
+        from src.remediation import t3_client
+
+        remote = await t3_client.restart_remote(service_name)
+        if remote.get("success"):
+            return ToolCallResponse(
+                success=True,
+                data={
+                    "service": service_name,
+                    "container": remote.get("container", service_name),
+                    "action": "restart",
+                    "status": "completed",
+                    "graceful": params.get("graceful", True),
+                    "reason": params.get("reason", "No reason provided"),
+                },
+                execution_time_ms=(time.time() - start_time) * 1000,
+                metadata={"source": "t3"},
+            )
+        return ToolCallResponse(
+            success=False,
+            data=None,
+            error=f"t3 restart failed: {remote.get('error', 'unknown error')}",
+            error_code="execution_failed",
+            execution_time_ms=(time.time() - start_time) * 1000,
+            metadata={"source": "t3"},
+        )
+
     container_name = _resolve_action_container(service_name)
     if container_name is None:
         return ToolCallResponse(

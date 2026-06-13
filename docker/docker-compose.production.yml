@@ -153,6 +153,14 @@ services:
       # SUBPATH so the EBS mount below does NOT shadow the image-baked, read-only
       # benchmark mirror at /app/data/benchmark (COPY data/ in Dockerfile.backend).
       - AIOPS_DATA_DIR=/app/data/state
+      # Action tools + demo/remediation. All default EMPTY/OFF so a bare deploy
+      # changes nothing; set these in the VM's .env.production to enable.
+      - AIOPS_ENABLE_ACTION_TOOLS=${AIOPS_ENABLE_ACTION_TOOLS:-}
+      - AIOPS_ACTION_CONTAINER_WHITELIST=${AIOPS_ACTION_CONTAINER_WHITELIST:-}
+      - AIOPS_ENABLE_DEMO=${AIOPS_ENABLE_DEMO:-}
+      - DEMO_TARGET_URL=${DEMO_TARGET_URL:-}
+      - DEMO_AGENT_TOKEN=${DEMO_AGENT_TOKEN:-}
+      - DEMO_REMOTE_CONTAINERS=${DEMO_REMOTE_CONTAINERS:-nextcloud-db}
     volumes:
       # Mount EBS at /app/data/state (NOT /app/data) — mounting over /app/data
       # hides the shipped /app/data/benchmark and empties the Benchmark page.

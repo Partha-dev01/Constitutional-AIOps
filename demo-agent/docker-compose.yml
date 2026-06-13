@@ -1,0 +1,22 @@
+# Deploy the t3 chaos/remediation control agent ON the t3 host (next to the
+# nextcloud + nextcloud-db containers). The agent shells out to the docker CLI
+# against the mounted host socket, so it can stop/start/exec those containers.
+#
+#   cp .env.example .env   # then set DEMO_AGENT_TOKEN to a long random secret
+#   docker compose up -d
+#
+# Open TCP 8889 in the t3's security group ONLY from the GPU VM public IP /32.
+services:
+  demo-agent:
+    build: .
+    image: aiops-demo-agent:latest
+    container_name: aiops-demo-agent
+    env_file: .env
+    ports:
+      # Publish the agent port (default 8889) so the backend on the GPU VM can
+      # reach it. The container always listens on 8889 internally.
+      - "${DEMO_AGENT_PORT:-8889}:8889"
+    volumes:
+      # The agent needs the host docker daemon to act on nextcloud/nextcloud-db.
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
