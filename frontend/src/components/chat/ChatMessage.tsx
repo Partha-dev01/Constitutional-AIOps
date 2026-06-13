@@ -56,7 +56,7 @@ export function ChatMessage({ message, isTyping, displayedContent, insights }: C
           }`}
         >
           <div
-            className={`text-sm prose prose-sm max-w-none prose-p:leading-relaxed prose-headings:font-semibold prose-code:before:content-none prose-code:after:content-none prose-pre:bg-background/80 prose-pre:border prose-pre:border-border/60 ${
+            className={`text-sm prose prose-sm max-w-none break-words prose-p:leading-relaxed prose-headings:font-semibold prose-code:whitespace-pre-wrap prose-code:break-words prose-code:before:content-none prose-code:after:content-none prose-pre:overflow-x-auto prose-pre:whitespace-pre-wrap prose-pre:border prose-pre:border-border/60 prose-pre:bg-background/80 ${
               isUser ? 'prose-invert' : 'dark:prose-invert'
             }`}
           >
