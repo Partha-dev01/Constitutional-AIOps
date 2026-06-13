@@ -40,10 +40,15 @@ test('system health footer reports the backend as healthy', async ({ page }) => 
   await page.goto('/')
   // The Layout polls /api/v1/health on mount; a healthy live backend flips
   // the footer text. This proves frontend -> Caddy -> backend wiring works.
-  await expect(page.getByText('System Healthy')).toBeVisible({ timeout: 30_000 })
+  // The sidebar markup renders twice (desktop column + mobile drawer); at the
+  // desktop gate viewport the mobile copy is display:none, so scope to the
+  // VISIBLE footer to avoid a strict-mode match on both.
+  await expect(page.locator('span:visible', { hasText: 'System Healthy' })).toBeVisible({
+    timeout: 30_000,
+  })
   // The agent status lines split text across nodes ("Fast Agent: ● Online"),
-  // so assert against the combined text of their container.
-  const agentStatus = page.locator('div', { hasText: 'Fast Agent:' }).last()
+  // so assert against the combined text of their (visible) container.
+  const agentStatus = page.locator('div:visible', { hasText: 'Fast Agent:' }).last()
   await expect(agentStatus).toContainText('Fast Agent:')
   await expect(agentStatus).toContainText('Reasoning Agent:')
   await expect(agentStatus).toContainText('Online')
