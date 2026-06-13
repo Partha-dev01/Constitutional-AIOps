@@ -211,7 +211,7 @@ class TestMaybeProposeRemediation:
 
     @pytest.mark.asyncio
     async def test_auto_executes_when_interlocks_pass(self):
-        async def fake_exec(request, tool_name, parameters):
+        async def fake_exec(request, tool_name, parameters, context=None):
             assert tool_name == "restart_service"
             return {
                 "success": True,
@@ -281,7 +281,7 @@ class TestMaybeProposeRemediation:
 
     @pytest.mark.asyncio
     async def test_auto_executes_without_evidence_when_not_required(self):
-        async def fake_exec(request, tool_name, parameters):
+        async def fake_exec(request, tool_name, parameters, context=None):
             return {"success": True, "data": {"status": "completed"}}
 
         with patch.object(chat_module, "execute_tool_call", new=fake_exec):
@@ -302,7 +302,7 @@ class TestMaybeProposeRemediation:
     @pytest.mark.asyncio
     async def test_auto_degrades_when_gate_requires_approval(self):
         """The constitutional gate may return approval_required -> never forced."""
-        async def fake_exec(request, tool_name, parameters):
+        async def fake_exec(request, tool_name, parameters, context=None):
             return {
                 "success": False,
                 "error_code": "approval_required",
@@ -330,7 +330,7 @@ class TestMaybeProposeRemediation:
     @pytest.mark.asyncio
     async def test_auto_blocked_when_kill_switch_disabled(self):
         """Disabled action tools (kill-switch) surface as blocked, cached for retry."""
-        async def fake_exec(request, tool_name, parameters):
+        async def fake_exec(request, tool_name, parameters, context=None):
             return {
                 "success": False,
                 "error_code": "action_tools_disabled",
@@ -431,9 +431,13 @@ class TestChatModes:
         request = _make_request(reasoning_agent=reasoning_agent, telemetry_collector=collector)
         chat_request = ChatRequest(message="analyze nextcloud error logs and fix it")
 
-        async def fake_exec(request, tool_name, parameters):
+        captured: dict = {}
+
+        async def fake_exec(request, tool_name, parameters, context=None):
             # The read-only analyze_logs tool also routes here; only assert on restart.
             if tool_name == "restart_service":
+                captured["parameters"] = parameters
+                captured["context"] = context
                 return {"success": True, "data": {"status": "completed"}}
             return {"success": True, "data": {"summary": {"total_logs": 1, "error_count": 1}}}
 
@@ -447,6 +451,9 @@ class TestChatModes:
         assert pa is not None
         assert pa["status"] == "auto_executed"
         assert pa["execution_result"]["status"] == "completed"
+        # The gate received the forwarded confidence + telemetry evidence.
+        assert "confidence" in captured["parameters"]
+        assert captured["context"]["telemetry_evidence"] is True
 
     @pytest.mark.asyncio
     async def test_remediation_failure_never_breaks_chat(self):
@@ -507,9 +514,16 @@ class TestDecisionEndpoint:
     async def test_approve_executes_and_maps_success(self):
         aid = self._seed_pending()
 
-        async def fake_exec(request, tool_name, parameters):
+        async def fake_exec(request, tool_name, parameters, context=None):
             assert tool_name == "restart_service"
             assert parameters["service_name"] == "nextcloud-db"
+            # Human approval forwards a confidence at the auto threshold + the
+            # telemetry-evidence/human-approved context so the constitutional
+            # gate can authorize (otherwise it hard-blocks on the 0.5 default).
+            assert parameters.get("confidence", 0) >= 0.9
+            assert context is not None
+            assert context.get("telemetry_evidence") is True
+            assert context.get("human_approved") is True
             return {
                 "success": True,
                 "data": {"service": "nextcloud-db", "action": "restart", "status": "completed"},
@@ -530,7 +544,7 @@ class TestDecisionEndpoint:
     async def test_approve_maps_gate_refusal(self):
         aid = self._seed_pending()
 
-        async def fake_exec(request, tool_name, parameters):
+        async def fake_exec(request, tool_name, parameters, context=None):
             return {
                 "success": False,
                 "error_code": "approval_required",

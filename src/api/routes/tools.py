@@ -1595,6 +1595,7 @@ async def execute_tool_call(
     request: Any,
     tool_name: str,
     parameters: dict[str, Any],
+    context: Optional[dict[str, Any]] = None,
 ) -> dict[str, Any]:
     """
     Programmatic tool execution for internal use (e.g., from chat.py).
@@ -1603,6 +1604,9 @@ async def execute_tool_call(
         request: FastAPI request with app state
         tool_name: Name of the tool to execute
         parameters: Tool parameters
+        context: Optional validation context forwarded to the constitutional
+            gate for action tools (e.g. ``telemetry_evidence`` for an
+            evidence-backed, human-approved or high-confidence remediation).
 
     Returns:
         Dictionary with tool results
@@ -1629,7 +1633,7 @@ async def execute_tool_call(
             # it through the same gate + audit pipeline as the REST endpoint.
             result = await _run_action_tool(
                 request,
-                ToolCallRequest(tool_name=tool_name, parameters=parameters),
+                ToolCallRequest(tool_name=tool_name, parameters=parameters, context=context),
                 start_time,
             )
         elif tool_name == "query_recent_logs":
@@ -1641,13 +1645,15 @@ async def execute_tool_call(
         else:
             return {"success": False, "error": f"Unknown tool: {tool_name}"}
 
-        # Convert ToolCallResponse to dict
+        # Convert ToolCallResponse to dict. Carry metadata through so callers
+        # (chat.py) can surface the constitutional verdict in metadata.constitutional.
         return {
             "success": result.success,
             "data": result.data,
             "error": result.error,
             "error_code": result.error_code,
             "execution_time_ms": result.execution_time_ms,
+            "metadata": getattr(result, "metadata", None),
         }
 
     except Exception as e:
