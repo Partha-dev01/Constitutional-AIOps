@@ -6,6 +6,7 @@ import { ChatComposer } from '../components/chat/ChatComposer'
 import { ChatMessage } from '../components/chat/ChatMessage'
 import type { ChatMessageData } from '../components/chat/ChatMessage'
 import type { MessageInsights } from '../components/chat/InsightCards'
+import type { ProposedAction } from '../lib/api'
 import { ConversationSidebar } from '../components/chat/ConversationSidebar'
 import { SuggestedPrompts } from '../components/chat/SuggestedPrompts'
 import { ToolCallTimeline } from '../components/chat/ToolCallTimeline'
@@ -40,6 +41,9 @@ export function Chat() {
    *  no longer vanish when loading ends). */
   const [toolStepsById, setToolStepsById] = useState<Record<string, ToolStep[]>>({})
   const [insightsById, setInsightsById] = useState<Record<string, MessageInsights>>({})
+  /** AI-proposed remediation actions keyed by assistant message id, so the
+   *  approve-to-run card persists beneath its turn. */
+  const [proposedById, setProposedById] = useState<Record<string, ProposedAction>>({})
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [prompts, setPrompts] = useState<string[]>(() => selectPrompts())
 
@@ -241,6 +245,13 @@ export function Chat() {
           },
         }))
 
+        // Stash any AI-proposed remediation against this assistant turn so the
+        // approve-to-run card renders (and persists) beneath the reply.
+        if (response.proposed_action) {
+          const proposed = response.proposed_action
+          setProposedById((prev) => ({ ...prev, [messageId]: proposed }))
+        }
+
         commitToolSteps(messageId, 'done', {
           confidence: response.confidence,
           related_incidents: response.related_incidents,
@@ -296,6 +307,7 @@ export function Chat() {
     setConversationId(null)
     setMessages([welcomeMessage()])
     setInsightsById({})
+    setProposedById({})
     setToolSteps([])
     setToolStepsById({})
     setError(null)
@@ -322,6 +334,7 @@ export function Chat() {
           }))
         setConversationId(id)
         setInsightsById({})
+        setProposedById({})
         setMessages(loaded.length > 0 ? loaded : [welcomeMessage()])
       } catch (err) {
         console.error('Failed to load conversation:', err)
@@ -431,6 +444,7 @@ export function Chat() {
                   isTyping={typingMessageId === message.id}
                   displayedContent={displayedContent}
                   insights={insightsById[message.id]}
+                  proposedAction={proposedById[message.id]}
                 />
               </div>
             ))}
