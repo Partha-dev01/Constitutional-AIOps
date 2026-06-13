@@ -23,7 +23,6 @@ import { JsonView } from '../components/JsonView'
 import { McpToolList } from '../components/mcp/McpToolList'
 import { McpExecutePanel } from '../components/mcp/McpExecutePanel'
 import type { McpToolInfo } from '../components/mcp/types'
-import { ActiveIncidentsPanel } from '../components/incidents/ActiveIncidentsPanel'
 
 // The interactive Platform Architecture (schema) graph is lazy-loaded so the
 // main bundle chunk doesn't grow; it is only fetched when the Architecture tab
@@ -920,22 +919,18 @@ export function Agents() {
               </div>
             </div>
 
-            {/* Active incidents — deal with them right here: approve & remediate
-                (gated executor / t3 heal), reject, or open in chat. */}
-            <ActiveIncidentsPanel />
-
             <div className="bg-card rounded-lg border border-border p-4">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold">Platform Architecture</h3>
               </div>
               <Suspense
                 fallback={
-                  <div className="flex items-center justify-center h-[460px] bg-gradient-to-br from-slate-900/50 to-slate-800/50 rounded-lg">
+                  <div className="flex items-center justify-center h-[520px] bg-gradient-to-br from-slate-900/50 to-slate-800/50 rounded-lg">
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                   </div>
                 }
               >
-                <SchemaGraph height={460} />
+                <SchemaGraph height={520} />
               </Suspense>
             </div>
           </div>
