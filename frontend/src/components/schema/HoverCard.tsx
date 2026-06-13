@@ -1,4 +1,4 @@
-import { FocusTarget } from './types'
+import { FocusTarget, kindAccent } from './types'
 
 const HEALTH_TEXT: Record<string, string> = {
   healthy: 'text-green-400',
@@ -30,7 +30,13 @@ export function HoverCard({ target, x, y }: HoverCardProps) {
         <>
           <div className="flex items-center gap-2">
             <span className="font-semibold text-slate-100">{target.node.label}</span>
-            <span className="rounded bg-slate-700/70 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-slate-300">
+            <span
+              className="rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide"
+              style={{
+                backgroundColor: `hsl(${kindAccent(target.node.kind)} / 0.16)`,
+                color: `hsl(${kindAccent(target.node.kind)})`,
+              }}
+            >
               {target.node.kind}
             </span>
           </div>

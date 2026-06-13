@@ -53,6 +53,32 @@
   }
 }
 
+/* ------------------------------- Stage ---------------------------------- */
+
+/* The schema canvas backdrop: a deep blue-black base, two soft coloured glows
+ * (primary top, telemetry-cyan bottom-right) and a faint grid masked to fade
+ * at the edges, so nodes read as floating above an instrument panel. Static —
+ * no animation, so it stays out of the reduced-motion kill block. */
+.schema-stage {
+  background:
+    radial-gradient(1100px 460px at 50% -12%, hsl(var(--primary) / 0.12), transparent 62%),
+    radial-gradient(760px 380px at 108% 118%, hsl(190 92% 50% / 0.08), transparent 58%),
+    linear-gradient(165deg, hsl(222 47% 9%), hsl(223 50% 5%));
+}
+
+.schema-stage::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(hsl(217 33% 32% / 0.16) 1px, transparent 1px),
+    linear-gradient(90deg, hsl(217 33% 32% / 0.16) 1px, transparent 1px);
+  background-size: 34px 34px;
+  -webkit-mask-image: radial-gradient(ellipse 78% 78% at 50% 42%, #000 38%, transparent 100%);
+  mask-image: radial-gradient(ellipse 78% 78% at 50% 42%, #000 38%, transparent 100%);
+}
+
 /* ------------------------------- Edges ---------------------------------- */
 
 /* Animated flow overlay on static DEPENDS_ON edges. */

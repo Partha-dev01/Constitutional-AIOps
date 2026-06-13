@@ -197,7 +197,7 @@ export function SchemaCanvas({
           markerHeight="7"
           orient="auto-start-reverse"
         >
-          <path d="M 0 1 L 9 5 L 0 9 z" fill="#5b6b82" />
+          <path d="M 0 1 L 9 5 L 0 9 z" fill="hsl(217 24% 56%)" />
         </marker>
         <marker
           id="schemaArrowActive"

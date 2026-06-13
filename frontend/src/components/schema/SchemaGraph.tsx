@@ -319,7 +319,7 @@ export default function SchemaGraph({ height = 520 }: SchemaGraphProps) {
         <div className="min-w-0 flex-1">
           <div
             ref={hostRef}
-            className="relative overflow-hidden rounded-lg border border-slate-800 bg-gradient-to-br from-slate-900/80 to-slate-800/80"
+            className="schema-stage relative overflow-hidden rounded-lg border border-slate-700/60 ring-1 ring-inset ring-white/5"
             style={{ height }}
           >
             <SchemaCanvas

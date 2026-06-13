@@ -39,14 +39,14 @@ function SchemaEdgeInner({
 
   const dynamic = edge.kind === 'dynamic' || edge.relationship === 'SHIPS_TELEMETRY'
   const width = 1.25 + Math.min(2.5, coCount * 0.6) + (selected ? 0.75 : 0)
-  const baseOpacity = Math.min(0.95, (dynamic ? 0.55 : 0.45) + activity * 0.2 + (selected ? 0.25 : 0))
+  const baseOpacity = Math.min(0.95, (dynamic ? 0.6 : 0.52) + activity * 0.2 + (selected ? 0.25 : 0))
   const dashDur = activity > 0 ? Math.max(0.7, 2.4 - activity * 0.6) : dynamic ? 2.8 : 2.4
 
   const stroke = selected
     ? 'hsl(var(--primary))'
     : dynamic
-      ? 'hsl(190 95% 50% / 0.75)'
-      : '#5b6b82'
+      ? 'hsl(190 95% 50% / 0.8)'
+      : 'hsl(217 24% 56%)'
   const marker = dynamic ? 'url(#schemaArrowDynamic)' : selected ? 'url(#schemaArrowActive)' : 'url(#schemaArrow)'
 
   return (
