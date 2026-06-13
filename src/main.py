@@ -74,6 +74,10 @@ from src.utils.websocket import manager as ws_manager, EventType, WebSocketEvent
 logger = logging.getLogger(__name__)
 
 
+class _BodyTooLarge(Exception):
+    """Internal signal: a streamed /api/* request body exceeded the size cap."""
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
@@ -345,6 +349,17 @@ async def lifespan(app: FastAPI):
     logger.info("Constitutional AIOps shutdown complete")
 
 
+# Interactive docs / OpenAPI schema are dev-only (Batch F #5). In production
+# (ENVIRONMENT=production) we publish no machine-readable API map: passing None
+# disables /docs, /redoc and /openapi.json. They stay on everywhere else so
+# local dev keeps its Swagger UI. Same prod flag as WS_TOKEN/secret guards.
+_IS_PRODUCTION = os.getenv("ENVIRONMENT", "local").lower() == "production"
+
+# Max request body for /api/* endpoints (Batch F #5). Mirrors the Caddy
+# /ingest body cap so a caller past the auth wall can't stream a huge JSON body
+# at /api/* to pressure memory. Overridable via env; defaults to 10MB.
+_MAX_API_BODY_BYTES = max(1, int(os.getenv("MAX_API_BODY_MB", "10"))) * 1024 * 1024
+
 # Create FastAPI application
 app = FastAPI(
     title="Constitutional AIOps",
@@ -354,10 +369,57 @@ app = FastAPI(
     ),
     version=__version__,
     lifespan=lifespan,
-    docs_url="/docs",
-    redoc_url="/redoc",
-    openapi_url="/openapi.json",
+    docs_url=None if _IS_PRODUCTION else "/docs",
+    redoc_url=None if _IS_PRODUCTION else "/redoc",
+    openapi_url=None if _IS_PRODUCTION else "/openapi.json",
 )
+
+
+# Request-body-size cap for /api/* (Batch F #5). Pure-ASGI middleware, no new
+# dep. Rejects oversize bodies with 413 BEFORE the route buffers/parses them:
+# we trust a present Content-Length, and also defend against a missing/lying
+# Content-Length by counting streamed bytes and aborting once the cap is passed.
+@app.middleware("http")
+async def _limit_api_body_size(request, call_next):
+    if request.url.path.startswith("/api/"):
+        from starlette.responses import JSONResponse
+
+        content_length = request.headers.get("content-length")
+        if content_length is not None:
+            try:
+                if int(content_length) > _MAX_API_BODY_BYTES:
+                    return JSONResponse(
+                        status_code=413,
+                        content={"detail": "Request body too large"},
+                    )
+            except ValueError:
+                return JSONResponse(
+                    status_code=400, content={"detail": "Invalid Content-Length"}
+                )
+
+        # Guard against a missing/under-reported Content-Length: wrap receive()
+        # and tally the actual streamed bytes, aborting if they exceed the cap.
+        total = 0
+
+        async def _capped_receive():
+            nonlocal total
+            message = await request._receive()
+            if message["type"] == "http.request":
+                total += len(message.get("body", b""))
+                if total > _MAX_API_BODY_BYTES:
+                    raise _BodyTooLarge()
+            return message
+
+        request._receive = _capped_receive
+        try:
+            return await call_next(request)
+        except _BodyTooLarge:
+            return JSONResponse(
+                status_code=413, content={"detail": "Request body too large"}
+            )
+
+    return await call_next(request)
+
 
 # Configure CORS
 app.add_middleware(

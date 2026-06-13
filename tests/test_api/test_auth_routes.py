@@ -112,13 +112,46 @@ class TestLogin:
         assert result["user"]["username"] == "alice"
 
     @pytest.mark.asyncio
-    async def test_throttle_uses_first_forwarded_ip(self, auth_env):
+    async def test_throttle_uses_trusted_proxy_hop_not_spoofed_prefix(self, auth_env):
+        # Behind a single trusted Caddy hop the REAL client IP is the right-most
+        # XFF entry (the one Caddy appends), NOT the left-most attacker-supplied
+        # one. The throttle must key off the trusted (right-most) value.
         bad = auth_routes.LoginRequest(username="ghost", password="whatever-pass")
         headers = {"x-forwarded-for": "203.0.113.7, 10.0.0.2"}
         for _ in range(5):
             with pytest.raises(HTTPException):
                 await auth_routes.login(_request(headers=headers), bad, Response())
-        assert "203.0.113.7" in auth_routes._failed_logins
+        # Keyed on the trusted hop (10.0.0.2), NOT the spoofable left prefix.
+        assert "10.0.0.2" in auth_routes._failed_logins
+        assert "203.0.113.7" not in auth_routes._failed_logins
+
+    @pytest.mark.asyncio
+    async def test_spoofed_xff_cannot_dodge_lockout(self, auth_env):
+        # An attacker behind the same Caddy hop rotates the LEFT (spoofable) XFF
+        # entry on every request to try to dodge the per-IP lockout. Because the
+        # throttle keys on the right-most trusted hop, all attempts collapse to
+        # the same key and the lockout still trips on the 6th try.
+        store.create_user("alice", "alices-long-password")
+        good = auth_routes.LoginRequest(username="alice", password="alices-long-password")
+        bad = auth_routes.LoginRequest(username="alice", password="wrong-password")
+        for i in range(5):
+            spoofed = {"x-forwarded-for": f"1.2.3.{i}, 10.0.0.9"}
+            with pytest.raises(HTTPException) as exc_info:
+                await auth_routes.login(_request(headers=spoofed), bad, Response())
+            assert exc_info.value.status_code == 401
+        # 6th attempt with GOOD creds but the same trusted hop: still locked.
+        locked = {"x-forwarded-for": "9.9.9.9, 10.0.0.9"}
+        with pytest.raises(HTTPException) as exc_info:
+            await auth_routes.login(_request(headers=locked), good, Response())
+        assert exc_info.value.status_code == 429
+        # Only the trusted hop accumulated failures.
+        assert "10.0.0.9" in auth_routes._failed_logins
+        assert all(k == "10.0.0.9" for k in auth_routes._failed_logins)
+
+    @pytest.mark.asyncio
+    async def test_client_ip_falls_back_to_peer_without_xff(self, auth_env):
+        # No XFF header at all -> use the TCP peer (request.client.host).
+        assert auth_routes._client_ip(_request(ip="198.51.100.5")) == "198.51.100.5"
 
     @pytest.mark.asyncio
     async def test_successful_login_clears_failures(self, auth_env):
