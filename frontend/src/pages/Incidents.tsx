@@ -96,7 +96,7 @@ export function Incidents() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">Incidents</h1>
           <p className="text-muted-foreground">
@@ -303,14 +303,14 @@ function IncidentCard({
 
   return (
     <div className="bg-card rounded-lg border border-border p-4">
-      <div className="flex items-start justify-between">
-        <div className="flex items-start gap-3">
-          <div className={`p-2 rounded-lg ${severityColors[incident.severity] || severityColors.info}`}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex items-start gap-3 min-w-0">
+          <div className={`p-2 rounded-lg shrink-0 ${severityColors[incident.severity] || severityColors.info}`}>
             <StatusIcon className="h-5 w-5" />
           </div>
-          <div>
+          <div className="min-w-0">
             <h3 className="font-semibold">{incident.title}</h3>
-            <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-2 mt-1 text-sm text-muted-foreground">
               <span>{incident.id}</span>
               <span>•</span>
               <span>{incident.affected_services.map(s => s.name).join(', ')}</span>
@@ -322,7 +322,7 @@ function IncidentCard({
             )}
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <span className={`px-2 py-1 rounded-full text-xs capitalize ${
             incident.status === 'resolved' || incident.status === 'closed'
               ? 'bg-green-500/10 text-green-500'

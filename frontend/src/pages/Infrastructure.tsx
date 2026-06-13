@@ -377,7 +377,7 @@ export function Infrastructure() {
   return (
     <div className="space-y-6">
       {/* A) Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Server className="h-6 w-6 text-green-500" />
@@ -420,7 +420,7 @@ export function Infrastructure() {
         {/* Container List — split into Platform (aiops-*) vs Client/other */}
         <div className="bg-card rounded-lg border border-border">
           <div className="p-4 border-b border-border">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <h3 className="font-semibold flex items-center gap-2">
                 <Box className="h-4 w-4" />
                 Docker Containers
@@ -576,7 +576,7 @@ export function Infrastructure() {
           {/* Start Monitoring Button */}
           {containers.length > 0 && (
             <div className="p-4 border-t border-border bg-muted/30">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-3">
                 <p className="text-sm text-muted-foreground">
                   {selectedContainers.size === 0
                     ? 'Select containers to start monitoring'
@@ -691,7 +691,7 @@ export function Infrastructure() {
 
         {/* Ingest endpoints */}
         <div className="bg-card rounded-lg border border-border p-4 space-y-3">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <h3 className="font-semibold flex items-center gap-2">
               <Link2 className="h-4 w-4" />
               Ingest Endpoints
@@ -702,7 +702,7 @@ export function Infrastructure() {
                 type="text"
                 value={domain}
                 onChange={(e) => setDomain(e.target.value)}
-                className="px-2 py-1 rounded border border-border bg-background text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-primary w-56"
+                className="px-2 py-1 rounded border border-border bg-background text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-primary w-full sm:w-56"
               />
             </label>
           </div>
@@ -891,7 +891,7 @@ export function Infrastructure() {
           above are untouched. */}
       <div className="bg-card rounded-lg border border-border" data-testid="demo-panel">
         <div className="p-4 border-b border-border">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <h3 className="font-semibold flex items-center gap-2">
                 <Zap className="h-4 w-4 text-yellow-500" />
