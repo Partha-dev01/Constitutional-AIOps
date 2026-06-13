@@ -203,15 +203,22 @@ def scenario_active(scenario: str) -> bool:
         return not container_running(db)
 
     if scenario == "cpu_stress":
+        # The leading char class ('[w]hile') is the classic self-exclusion trick:
+        # it matches the real busy loop ("while :; do :; done") but NOT pgrep's
+        # own wrapper cmdline (which contains the literal "[w]hile"), so the check
+        # doesn't false-positive on itself. "; do :" keeps it distinct from the
+        # mem loop (which also contains "while :").
         rc, out, _ = _run(
-            ["docker", "exec", nc, "sh", "-c", "pgrep -f 'while :' || true"],
+            ["docker", "exec", nc, "sh", "-c", "pgrep -f '[w]hile :; do :' || true"],
             timeout=10,
         )
         return rc == 0 and bool(out.strip())
 
     if scenario == "mem_stress":
+        # Same self-exclusion trick; '.' stands in for '$' (an ERE anchor) so the
+        # pattern matches the real growth loop's "a=$a$a" without self-matching.
         rc, out, _ = _run(
-            ["docker", "exec", nc, "sh", "-c", "pgrep -f 'a=$a$a' || true"],
+            ["docker", "exec", nc, "sh", "-c", "pgrep -f '[a]=.a.a' || true"],
             timeout=10,
         )
         return rc == 0 and bool(out.strip())
