@@ -26,5 +26,17 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // React core + router + query — shared by every route
+          vendor: ['react', 'react-dom', 'react-router-dom', '@tanstack/react-query'],
+          // Heavy graph renderer — only Graph/Agents/Console use it
+          'force-graph': ['react-force-graph-2d'],
+          // Markdown renderer — chat and insight cards
+          markdown: ['react-markdown', 'remark-gfm'],
+        },
+      },
+    },
   },
 })
