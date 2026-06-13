@@ -98,12 +98,14 @@ async function gotoGraphTab(page: Page) {
 }
 
 async function gotoSchemaMode(page: Page) {
-  await gotoGraphTab(page)
-  // The Architecture toggle renders in the card header independently of the
-  // Episodes-mode canvas, so we don't depend on episode data being present.
-  const toggle = page.locator('button:has-text("Architecture")')
-  await toggle.waitFor({ state: 'visible', timeout: 15000 })
-  await toggle.click()
+  await interceptAllApis(page)
+  await page.goto('/agents')
+  // Architecture is now its own Agent-Hub tab (split out of the old Graph
+  // Explorer Episodes/Architecture toggle), so navigate straight to it.
+  const tab = page.getByRole('tab', { name: /architecture/i }).first()
+  await tab.click().catch(async () => {
+    await page.locator('button:has-text("Architecture")').first().click()
+  })
   await page.waitForSelector('[data-testid="schema-canvas"]', { timeout: 15000 })
 }
 
@@ -113,7 +115,7 @@ test.describe('Graph Schema mode', () => {
     await expect(page.locator('canvas')).toBeVisible({ timeout: 15000 })
   })
 
-  test('toggle to Architecture renders the SVG schema with all fixture nodes', async ({ page }) => {
+  test('Architecture tab renders the SVG schema with all fixture nodes', async ({ page }) => {
     await gotoSchemaMode(page)
     await expect(page.locator('[data-testid="schema-canvas"]')).toBeVisible()
     const nodes = page.locator('[data-testid^="schema-node-"]')
