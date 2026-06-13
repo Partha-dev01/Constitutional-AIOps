@@ -247,6 +247,24 @@ class ReasoningAgent(BaseAgent):
     Supports multiple modes: RCA, Chat, Planning.
     """
     
+    # Prompt names accepted by set_system_prompt/reset_prompts. The prompts
+    # API exposes "reasoning_*" names; internally each maps to a mode.
+    PROMPT_NAME_TO_MODE: dict[str, str] = {
+        "rca": "rca",
+        "reasoning_rca": "rca",
+        "chat": "chat",
+        "reasoning_chat": "chat",
+        "planning": "planning",
+        "reasoning_planning": "planning",
+    }
+
+    # Literal placeholders a custom prompt MUST keep per mode: the chat path
+    # injects live runtime context into "{runtime_context}" (_build_prompt) —
+    # an edit that drops it would silently disable runtime grounding.
+    REQUIRED_PLACEHOLDERS: dict[str, tuple[str, ...]] = {
+        "chat": ("{runtime_context}",),
+    }
+
     def __init__(self, model_router: Optional[ModelRouter] = None):
         """
         Initialize the reasoning agent.
@@ -256,6 +274,12 @@ class ReasoningAgent(BaseAgent):
         """
         super().__init__(AgentRole.REASONING)
         self.model_router = model_router or ModelRouter()
+
+        # Per-mode system prompt overrides (session-14 W4). Empty dict means
+        # the baked module constants are used. Populated via set_system_prompt
+        # (live push from PUT /prompts/{name} + persisted-override replay at
+        # startup); cleared via reset_prompts.
+        self._prompt_overrides: dict[str, str] = {}
 
         # Activity logging for API visibility
         self.activity_log: list[dict[str, Any]] = []
@@ -268,11 +292,65 @@ class ReasoningAgent(BaseAgent):
             "_latency_sum": 0.0,
             "_first_request_time": None,
         }
-    
+
+    def set_system_prompt(self, name: str, prompt: str) -> None:
+        """
+        Override the system prompt for a mode (live, takes effect immediately).
+
+        Args:
+            name: Prompt name — "reasoning_rca" | "reasoning_chat" |
+                "reasoning_planning" (or the bare mode "rca"/"chat"/"planning").
+            prompt: The new system prompt text.
+
+        Raises:
+            ValueError: Unknown prompt name, empty prompt, or a required
+                placeholder (e.g. ``{runtime_context}`` for chat) is missing.
+        """
+        mode = self.PROMPT_NAME_TO_MODE.get(name)
+        if mode is None:
+            raise ValueError(
+                f"Unknown reasoning prompt '{name}' "
+                f"(expected one of {sorted(self.PROMPT_NAME_TO_MODE)})"
+            )
+        if not prompt or not prompt.strip():
+            raise ValueError("System prompt must not be empty")
+        for placeholder in self.REQUIRED_PLACEHOLDERS.get(mode, ()):
+            if placeholder not in prompt:
+                raise ValueError(
+                    f"Prompt '{name}' must contain the literal placeholder "
+                    f"{placeholder} — live runtime context is injected there"
+                )
+        self._prompt_overrides[mode] = prompt
+        self.logger.info(f"System prompt override applied for mode '{mode}'")
+
+    def reset_prompts(self, name: Optional[str] = None) -> None:
+        """
+        Clear prompt overrides, restoring the baked module constants.
+
+        Args:
+            name: A specific prompt name to reset, or None to reset all.
+
+        Raises:
+            ValueError: Unknown prompt name.
+        """
+        if name is None:
+            self._prompt_overrides.clear()
+            self.logger.info("All system prompt overrides cleared")
+            return
+        mode = self.PROMPT_NAME_TO_MODE.get(name)
+        if mode is None:
+            raise ValueError(
+                f"Unknown reasoning prompt '{name}' "
+                f"(expected one of {sorted(self.PROMPT_NAME_TO_MODE)})"
+            )
+        self._prompt_overrides.pop(mode, None)
+        self.logger.info(f"System prompt override cleared for mode '{mode}'")
+
     def get_system_prompt(self, mode: str = "chat") -> str:
         """
-        Get the system prompt for the specified mode.
-        
+        Get the ACTIVE system prompt for the specified mode: a live override
+        when one has been applied, else the baked module constant.
+
         Args:
             mode: "rca" | "chat" | "planning"
         """
@@ -281,7 +359,11 @@ class ReasoningAgent(BaseAgent):
             "chat": CHAT_SYSTEM_PROMPT,
             "planning": PLANNING_SYSTEM_PROMPT,
         }
-        return prompts.get(mode, CHAT_SYSTEM_PROMPT)
+        effective_mode = mode if mode in prompts else "chat"
+        override = self._prompt_overrides.get(effective_mode)
+        if override is not None:
+            return override
+        return prompts[effective_mode]
     
     async def process(self, input_data: dict[str, Any]) -> AgentResponse:
         """

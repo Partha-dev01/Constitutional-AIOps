@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import ForceGraph2D, { ForceGraphMethods, NodeObject, LinkObject } from 'react-force-graph-2d'
-import { Loader2, ZoomIn, ZoomOut, Maximize2, Play, Pause, RotateCcw, Filter } from 'lucide-react'
+import { Loader2, ZoomIn, ZoomOut, Maximize2, Play, Pause, RotateCcw, Filter, Search } from 'lucide-react'
 import { useResizeObserver } from '../hooks/useResizeObserver'
 
 // Graph node with episodic memory data
@@ -161,6 +161,9 @@ export function EpisodicGraphExplorer({
   const [showSimilarTo, setShowSimilarTo] = useState(true)
   const [showEntities, setShowEntities] = useState(true)
   const [layoutMode, setLayoutMode] = useState<'force' | 'dag'>('force')
+  // Label search (input only — deliberately NOT a <select>; the episode
+  // filter select must stay the single select in the graph tab).
+  const [search, setSearch] = useState('')
 
   // Filter nodes based on type
   // Memoized so the force-config effect / ForceGraph don't see new array refs every render.
@@ -173,8 +176,13 @@ export function EpisodicGraphExplorer({
       result = result.filter(n => n.type !== 'entity')
     }
 
+    const query = search.trim().toLowerCase()
+    if (query) {
+      result = result.filter(n => n.label.toLowerCase().includes(query))
+    }
+
     return result
-  }, [nodes, filterType, showEntities])
+  }, [nodes, filterType, showEntities, search])
 
   // Filter links based on edge visibility toggles (memoized)
   const filteredLinks = useMemo(() => {
@@ -202,6 +210,18 @@ export function EpisodicGraphExplorer({
       return true
     })
   }, [links, filteredNodes, showSimilarTo, showEntities])
+
+  // Degree per node (for size-by-connectivity), rebuilt on link changes only.
+  const degreeMap = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const link of filteredLinks) {
+      const srcId = typeof link.source === 'string' ? link.source : (link.source as EpisodicNode)?.id
+      const tgtId = typeof link.target === 'string' ? link.target : (link.target as EpisodicNode)?.id
+      if (srcId) map.set(srcId, (map.get(srcId) ?? 0) + 1)
+      if (tgtId) map.set(tgtId, (map.get(tgtId) ?? 0) + 1)
+    }
+    return map
+  }, [filteredLinks])
 
   // Build neighbor sets for hover-highlighting (memoized, rebuilt on link changes only)
   const neighborMap = useMemo(() => {
@@ -312,11 +332,16 @@ export function EpisodicGraphExplorer({
     const isNeighbor = hoveredNode ? neighborMap.get(hoveredNode.id)?.has(node.id) : false
     const isDimmed = hoveredNode !== null && !isHovered && !isNeighbor
 
-    // Variable node sizes by type for visual hierarchy
-    const baseSize = node.type === 'episode' ? 9 :
+    // Variable node sizes: type hierarchy + connectivity (degree) + recency.
+    const typeSize = node.type === 'episode' ? 9 :
                      node.type === 'root_cause' ? 7 :
                      node.type === 'service' ? 6 :
                      node.type === 'entity' ? 6 : 5
+    const degree = degreeMap.get(node.id) ?? 0
+    const isRecent = node.timestamp
+      ? Date.now() - new Date(node.timestamp).getTime() < 24 * 3600 * 1000
+      : false
+    const baseSize = typeSize + Math.min(3.5, degree * 0.35) + (isRecent ? 1 : 0)
     const size = isSelected ? baseSize + 4 : isHovered ? baseSize + 2 : baseSize
 
     // FIX: Only draw labels when zoomed in enough (threshold raised to 1.5) to
@@ -344,6 +369,15 @@ export function EpisodicGraphExplorer({
     ctx.strokeStyle = isSelected ? '#fff' : '#00000040'
     ctx.lineWidth = isSelected ? 2 : 1
     ctx.stroke()
+
+    // Severity ring on high-impact episodes (critical red / high orange).
+    if (node.type === 'episode' && (node.severity === 'critical' || node.severity === 'high')) {
+      ctx.beginPath()
+      ctx.arc(node.x || 0, node.y || 0, size + 3, 0, 2 * Math.PI)
+      ctx.strokeStyle = node.severity === 'critical' ? '#ef4444' : '#f97316'
+      ctx.lineWidth = 1.5
+      ctx.stroke()
+    }
 
     // Node type icon
     ctx.fillStyle = '#fff'
@@ -380,7 +414,7 @@ export function EpisodicGraphExplorer({
     }
 
     ctx.globalAlpha = 1.0
-  }, [hoveredNode, selectedNode, neighborMap])
+  }, [hoveredNode, selectedNode, neighborMap, degreeMap])
 
   // Custom link rendering with hover-dimming
   const linkCanvasObject = useCallback((link: EpisodicLink, ctx: CanvasRenderingContext2D, globalScale: number) => {
@@ -398,35 +432,45 @@ export function EpisodicGraphExplorer({
 
     ctx.globalAlpha = isDimmed ? 0.1 : 0.6
 
+    // Typed edge rendering: DEPENDS_ON-style edges stay solid with arrows,
+    // SIMILAR_TO is dashed (undirected), MENTIONS/RELATES draw thin.
+    const linkTypeName = (link.type || '').toLowerCase()
+    const isSimilar = linkTypeName === 'similar_to'
+    const isThin = linkTypeName === 'mentions' || linkTypeName === 'relates'
+
     // Draw line
     ctx.beginPath()
     ctx.moveTo(source.x, source.y)
     ctx.lineTo(target.x, target.y)
     ctx.strokeStyle = getLinkColor(link)
-    ctx.lineWidth = (link.weight || 1) * 1.5
+    ctx.lineWidth = isThin ? 0.6 : (link.weight || 1) * 1.5
+    if (isSimilar) ctx.setLineDash([5, 4])
     ctx.stroke()
+    if (isSimilar) ctx.setLineDash([])
 
     ctx.globalAlpha = isDimmed ? 0.1 : 1.0
 
-    // Draw arrow at midpoint
+    // Draw arrow at midpoint (skipped for undirected SIMILAR_TO edges)
     const angle = Math.atan2(target.y - source.y, target.x - source.x)
-    const arrowSize = 6
+    const arrowSize = isThin ? 4 : 6
     const midX = (source.x + target.x) / 2
     const midY = (source.y + target.y) / 2
 
-    ctx.beginPath()
-    ctx.moveTo(midX, midY)
-    ctx.lineTo(
-      midX - arrowSize * Math.cos(angle - Math.PI / 6),
-      midY - arrowSize * Math.sin(angle - Math.PI / 6)
-    )
-    ctx.lineTo(
-      midX - arrowSize * Math.cos(angle + Math.PI / 6),
-      midY - arrowSize * Math.sin(angle + Math.PI / 6)
-    )
-    ctx.closePath()
-    ctx.fillStyle = getLinkColor(link)
-    ctx.fill()
+    if (!isSimilar) {
+      ctx.beginPath()
+      ctx.moveTo(midX, midY)
+      ctx.lineTo(
+        midX - arrowSize * Math.cos(angle - Math.PI / 6),
+        midY - arrowSize * Math.sin(angle - Math.PI / 6)
+      )
+      ctx.lineTo(
+        midX - arrowSize * Math.cos(angle + Math.PI / 6),
+        midY - arrowSize * Math.sin(angle + Math.PI / 6)
+      )
+      ctx.closePath()
+      ctx.fillStyle = getLinkColor(link)
+      ctx.fill()
+    }
 
     // Link label — only when zoomed in enough and not dimmed
     const relationLabel = link.label || link.type
@@ -626,6 +670,20 @@ export function EpisodicGraphExplorer({
             <option value="service">Services</option>
             <option value="entity">Entities (LLM)</option>
           </select>
+        </div>
+
+        {/* Label search — an <input>, deliberately NOT a <select>, so the
+            graph touch-sim contract (single episode-type <select>) holds. */}
+        <div className="flex items-center gap-2">
+          <Search className="h-4 w-4 text-slate-400" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search nodes…"
+            aria-label="Search nodes by label"
+            className="text-xs bg-slate-800/90 text-slate-300 border border-slate-700 rounded-md px-2 py-1 w-40 focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder:text-slate-500"
+          />
         </div>
 
         {/* Edge Visibility Toggles */}
