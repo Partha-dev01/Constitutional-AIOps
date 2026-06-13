@@ -36,6 +36,23 @@ export interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
   content: string;
   timestamp?: string;
+  /**
+   * Per-assistant-turn metadata the backend persists on each stored message so
+   * a conversation reloaded from history can replay its tool-call timeline +
+   * insight/proposed cards (otherwise reloaded chats show only the text).
+   * Absent on user turns and on conversations created before this was added.
+   */
+  metadata?: ChatMessageMetadata | null;
+}
+
+/** The replay payload stored on a persisted assistant message (see ChatMessage). */
+export interface ChatMessageMetadata {
+  confidence?: number | null;
+  suggested_actions?: string[] | null;
+  related_incidents?: string[] | null;
+  proposed_action?: ProposedAction | null;
+  /** The same ChatResponse.metadata (tools, model_used, tokens_used) for the turn. */
+  metadata?: ChatResponseMetadata | null;
 }
 
 export interface ChatRequest {
