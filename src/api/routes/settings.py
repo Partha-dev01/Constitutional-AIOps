@@ -16,7 +16,7 @@ import json
 import logging
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
@@ -100,6 +100,12 @@ DEFAULT_SETTINGS: dict[str, Any] = {
         "tempoUrl": "http://tempo:3200",
         "retentionDays": 30,
     },
+    "remediation": {
+        "mode": "diagnose",
+        "autoConfidenceThreshold": 90,
+        "requireEvidenceForAuto": True,
+        "demoTargetUrl": "",
+    },
 }
 
 
@@ -115,6 +121,16 @@ def _merge_with_defaults(persisted: dict[str, Any]) -> dict[str, Any]:
         else:
             result[key] = persisted.get(key, default_val)
     return result
+
+
+def get_remediation_settings() -> dict[str, Any]:
+    """Return the merged ``remediation`` settings section.
+
+    Exported for the chat path (Lane B mode logic) and Lane A's demo helpers.
+    ``_merge_with_defaults`` deep-merges persisted values over the defaults so
+    an older persisted file that predates this section still upgrades cleanly.
+    """
+    return _merge_with_defaults(_load_persisted())["remediation"]
 
 
 # ---------------------------------------------------------------------------
@@ -150,10 +166,26 @@ class TelemetrySettingsModel(BaseModel):
     retentionDays: int = Field(30, ge=7, le=365)
 
 
+class RemediationSettingsModel(BaseModel):
+    """AI-remediation behaviour (Lane B demo/chaos feature).
+
+    ``mode`` selects how a proposed restart-style action is handled:
+      * ``diagnose`` (default) — never attach/execute anything; pure analysis.
+      * ``approve``  — attach a proposed action; execute only on user approval.
+      * ``auto``     — attempt gated execution when the interlocks all pass.
+    ``demoTargetUrl`` is shared with Lane A (chaos demo target endpoint).
+    """
+    mode: Literal["diagnose", "approve", "auto"] = "diagnose"
+    autoConfidenceThreshold: int = Field(90, ge=70, le=99)
+    requireEvidenceForAuto: bool = True
+    demoTargetUrl: str = ""
+
+
 class AllSettings(BaseModel):
     constitutional: ConstitutionalSettingsModel = ConstitutionalSettingsModel()
     notifications: NotificationSettingsModel = NotificationSettingsModel()
     telemetry: TelemetrySettingsModel = TelemetrySettingsModel()
+    remediation: RemediationSettingsModel = RemediationSettingsModel()
 
 
 # ---------------------------------------------------------------------------
@@ -275,4 +307,4 @@ async def reset_settings() -> AllSettings:
     return AllSettings()
 
 
-__all__ = ["router"]
+__all__ = ["router", "get_remediation_settings"]

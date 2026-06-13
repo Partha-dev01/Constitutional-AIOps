@@ -66,6 +66,77 @@ class TestStorageHelpers:
 
 
 # ---------------------------------------------------------------------------
+# Remediation section (Lane B)
+# ---------------------------------------------------------------------------
+
+class TestRemediationSettings:
+    def test_defaults_present_in_default_settings(self):
+        from src.api.routes.settings import DEFAULT_SETTINGS
+        rem = DEFAULT_SETTINGS["remediation"]
+        assert rem == {
+            "mode": "diagnose",
+            "autoConfidenceThreshold": 90,
+            "requireEvidenceForAuto": True,
+            "demoTargetUrl": "",
+        }
+
+    def test_get_remediation_settings_returns_defaults(self, tmp_settings_dir):
+        from src.api.routes.settings import get_remediation_settings
+        rem = get_remediation_settings()
+        assert rem["mode"] == "diagnose"
+        assert rem["autoConfidenceThreshold"] == 90
+        assert rem["requireEvidenceForAuto"] is True
+        assert rem["demoTargetUrl"] == ""
+
+    def test_get_remediation_settings_overlays_persisted(self, tmp_settings_dir):
+        from src.api.routes.settings import get_remediation_settings, _save_persisted
+        _save_persisted({"remediation": {"mode": "auto", "demoTargetUrl": "http://t3:8080"}})
+        rem = get_remediation_settings()
+        # Overridden keys win...
+        assert rem["mode"] == "auto"
+        assert rem["demoTargetUrl"] == "http://t3:8080"
+        # ...and missing keys still come from defaults (deep-merge upgrade path).
+        assert rem["autoConfidenceThreshold"] == 90
+        assert rem["requireEvidenceForAuto"] is True
+
+    def test_legacy_file_without_remediation_upgrades(self, tmp_settings_dir):
+        """A persisted file predating this section must still expose remediation."""
+        from src.api.routes.settings import get_remediation_settings, _save_persisted
+        _save_persisted({"constitutional": {"autoThreshold": 88}})  # no remediation key
+        rem = get_remediation_settings()
+        assert rem["mode"] == "diagnose"
+        assert rem["autoConfidenceThreshold"] == 90
+
+    def test_model_default_and_validation_bounds(self):
+        from src.api.routes.settings import RemediationSettingsModel
+        import pytest as _pytest
+        from pydantic import ValidationError
+
+        default = RemediationSettingsModel()
+        assert default.mode == "diagnose"
+        assert default.autoConfidenceThreshold == 90
+        assert default.requireEvidenceForAuto is True
+        assert default.demoTargetUrl == ""
+
+        # Valid custom values.
+        ok = RemediationSettingsModel(
+            mode="auto", autoConfidenceThreshold=70, requireEvidenceForAuto=False,
+            demoTargetUrl="http://x",
+        )
+        assert ok.mode == "auto"
+        assert ok.autoConfidenceThreshold == 70
+
+        # mode must be one of the three literals.
+        with _pytest.raises(ValidationError):
+            RemediationSettingsModel(mode="nuke")
+        # autoConfidenceThreshold bounds: ge=70, le=99.
+        with _pytest.raises(ValidationError):
+            RemediationSettingsModel(autoConfidenceThreshold=69)
+        with _pytest.raises(ValidationError):
+            RemediationSettingsModel(autoConfidenceThreshold=100)
+
+
+# ---------------------------------------------------------------------------
 # FastAPI endpoint tests via async invocation
 # ---------------------------------------------------------------------------
 
@@ -89,6 +160,15 @@ class TestGetSettings:
         result = await get_settings()
         assert result.constitutional.autoThreshold == 95
         assert result.constitutional.enableAuditLog is False
+
+    @pytest.mark.asyncio
+    async def test_get_includes_remediation_defaults(self, tmp_settings_dir):
+        from src.api.routes.settings import get_settings, DEFAULT_SETTINGS
+        result = await get_settings()
+        assert result.remediation.mode == DEFAULT_SETTINGS["remediation"]["mode"]
+        assert result.remediation.autoConfidenceThreshold == 90
+        assert result.remediation.requireEvidenceForAuto is True
+        assert result.remediation.demoTargetUrl == ""
 
 
 class TestPutSettings:
@@ -118,6 +198,36 @@ class TestPutSettings:
         # Verify written to disk
         disk = _load_persisted()
         assert disk["constitutional"]["autoThreshold"] == 88
+
+    @pytest.mark.asyncio
+    async def test_save_remediation_roundtrips(self, tmp_settings_dir):
+        from src.api.routes.settings import (
+            save_settings,
+            get_remediation_settings,
+            AllSettings,
+            RemediationSettingsModel,
+        )
+
+        mock_request = MagicMock()
+        mock_request.app.state = MagicMock(spec=[])  # no validator attr
+
+        body = AllSettings(
+            remediation=RemediationSettingsModel(
+                mode="approve",
+                autoConfidenceThreshold=85,
+                requireEvidenceForAuto=False,
+                demoTargetUrl="http://t3:9000",
+            ),
+        )
+        result = await save_settings(mock_request, body)
+        assert result.remediation.mode == "approve"
+
+        # Persisted + readable through the exported helper.
+        rem = get_remediation_settings()
+        assert rem["mode"] == "approve"
+        assert rem["autoConfidenceThreshold"] == 85
+        assert rem["requireEvidenceForAuto"] is False
+        assert rem["demoTargetUrl"] == "http://t3:9000"
 
     @pytest.mark.asyncio
     async def test_save_updates_live_validator(self, tmp_settings_dir):
