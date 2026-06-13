@@ -22,7 +22,10 @@ compactor:
   compaction:
     compaction_window: 1h
     max_block_bytes: 100000000
-    block_retention: 48h
+    # Align trace retention with Loki (720h) and Prometheus (30d) so that
+    # retrospective RCA can correlate all three signals over the same window.
+    # Previously 48h caused traces to age out while logs/metrics still existed.
+    block_retention: 720h
     compacted_block_retention: 1h
 
 storage:

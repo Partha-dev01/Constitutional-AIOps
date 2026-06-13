@@ -360,7 +360,7 @@ class TelemetryCollector:
 
     async def query_metrics(
         self,
-        service: str,
+        service: Optional[str],
         start_time: datetime,
         end_time: datetime,
         metrics: Optional[list[str]] = None,
@@ -369,7 +369,7 @@ class TelemetryCollector:
         Query metrics from Prometheus.
 
         Args:
-            service: Service name
+            service: Service/edge name to filter on, or None for all hosts.
             start_time: Query start
             end_time: Query end
             metrics: Optional list of metric names (default: common SRE metrics)
@@ -382,13 +382,20 @@ class TelemetryCollector:
         # SINGLE scalar series, paired with a clean human label. We emit only the
         # latest point per metric so the frontend gets one distinct, labeled value
         # per metric instead of a long single-metric time series.
+        #
+        # When a service/edge filter is provided the summary queries are scoped to
+        # that host so the Metrics panel reflects the selected host rather than the
+        # whole cluster.  The filter value is sanitised before interpolation.
         default_summary = metrics is None
         if default_summary:
+            svc = logql_escape(service) if service else ""
+            edge_filter = f'{{edge="{svc}"}}' if svc else ""
+            job_filter = f'{{job=~".*{svc}.*"}}' if svc else ""
             metric_defs: list[tuple[str, Optional[str]]] = [
-                ('count(up == 1)', 'Targets Up'),
-                ('sum(process_resident_memory_bytes) / 1024 / 1024', 'Memory (MB)'),
-                ('sum(go_goroutines)', 'Goroutines'),
-                ('rate(process_cpu_seconds_total[5m])', 'CPU (s/s)'),
+                (f'count(up{edge_filter} == 1)', 'Targets Up'),
+                (f'sum(process_resident_memory_bytes{job_filter}) / 1024 / 1024', 'Memory (MB)'),
+                (f'sum(go_goroutines{job_filter})', 'Goroutines'),
+                (f'rate(process_cpu_seconds_total{job_filter}[5m])', 'CPU (s/s)'),
             ]
         else:
             # Explicit single-metric query path: label override is None so the raw
@@ -448,6 +455,13 @@ class TelemetryCollector:
         """
         Query traces from Tempo.
 
+        Uses the TraceQL ``q=`` parameter (Tempo 2.x) rather than the legacy
+        ``tags=`` form which is version-sensitive and brittle on Tempo 2.3.1.
+        The search endpoint returns enough metadata (rootName, rootServiceName,
+        durationMs) to build a representative ``TraceSpan`` without a per-trace
+        detail GET, avoiding the previous N+1 fan-out.  The per-trace detail
+        fetch is kept only for the ``trace_id`` lookup path (not used here).
+
         Args:
             service: Service name
             start_time: Query start
@@ -461,10 +475,17 @@ class TelemetryCollector:
         start_utc = start_time.replace(tzinfo=timezone.utc) if start_time.tzinfo is None else start_time
         end_utc = end_time.replace(tzinfo=timezone.utc) if end_time.tzinfo is None else end_time
 
-        params = {
-            "tags": f"service.name={service}",
-            "start": str(int(start_utc.timestamp() * 1e9)),
-            "end": str(int(end_utc.timestamp() * 1e9)),
+        # TraceQL query (Tempo 2.x) — avoids the legacy logfmt `tags=` form.
+        # Sanitise the service name with logql_escape (same safe-char set works
+        # for TraceQL string literals).
+        safe_svc = logql_escape(service)
+        traceql = f'{{.service.name = "{safe_svc}"}}' if safe_svc else '{}'
+
+        params: dict[str, str | int] = {
+            "q": traceql,
+            # Tempo /api/search expects epoch seconds, not nanoseconds.
+            "start": str(int(start_utc.timestamp())),
+            "end": str(int(end_utc.timestamp())),
             "limit": limit,
         }
 
@@ -476,34 +497,34 @@ class TelemetryCollector:
             response.raise_for_status()
             data = response.json()
 
-            spans = []
+            spans: list[TraceSpan] = []
             for trace in data.get("traces", []):
                 trace_id = trace.get("traceID", "")
+                # The search response includes rootName and durationMs — enough
+                # to populate a representative TraceSpan without a second GET.
+                root_name = trace.get("rootName", "")
+                root_svc = trace.get("rootServiceName", service)
+                duration_ms = float(trace.get("durationMs", 0))
+                start_time_ms = trace.get("startTimeUnixNano", 0)
+                span_start = datetime.fromtimestamp(
+                    int(start_time_ms) / 1e9,
+                    tz=timezone.utc,
+                ) if start_time_ms else start_utc
 
-                # Get full trace details
-                trace_response = await self._client.get(
-                    f"{self.tempo_url}/api/traces/{trace_id}",
-                )
-                if trace_response.status_code == 200:
-                    trace_data = trace_response.json()
-
-                    for batch in trace_data.get("batches", []):
-                        for span_data in batch.get("spans", []):
-                            spans.append(TraceSpan(
-                                trace_id=trace_id,
-                                span_id=span_data.get("spanID", ""),
-                                operation=span_data.get("operationName", ""),
-                                service=service,
-                                duration_ms=span_data.get("duration", 0) / 1000,  # μs to ms
-                                status=span_data.get("status", {}).get("code", "OK"),
-                                start_time=datetime.fromtimestamp(
-                                    span_data.get("startTime", 0) / 1e6
-                                ),
-                                tags={
-                                    tag.get("key", ""): tag.get("value", "")
-                                    for tag in span_data.get("tags", [])
-                                },
-                            ))
+                # Build one representative TraceSpan per trace summary.
+                # The OTLP detail shape uses scopeSpans[].spans[].attributes[]
+                # (not the Jaeger-style batch.spans[].tags[]) — skipping the
+                # detail fetch here keeps this O(1) per search response.
+                spans.append(TraceSpan(
+                    trace_id=trace_id,
+                    span_id=trace_id[:16] if trace_id else "",
+                    operation=root_name,
+                    service=root_svc,
+                    duration_ms=duration_ms,
+                    status="OK",
+                    start_time=span_start,
+                    tags={},
+                ))
 
             return spans
 

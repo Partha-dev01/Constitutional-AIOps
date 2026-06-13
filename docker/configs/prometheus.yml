@@ -28,10 +28,18 @@ scrape_configs:
       - targets: ['neo4j:2004']
     metrics_path: /metrics
 
-  # OpenTelemetry Collector
+  # OpenTelemetry Collector — internal self-telemetry (health counters)
   - job_name: 'otel-collector'
     static_configs:
       - targets: ['otel-collector:8888']
+
+  # OpenTelemetry Collector — app/pipeline metrics exported via the
+  # Prometheus exporter (namespace "aiops", otel-collector.yaml:51-53).
+  # Port 8889 is the exporter address; 8888 is only the collector's own
+  # health telemetry.  Without this job aiops_* series are never ingested.
+  - job_name: 'otel-collector-app'
+    static_configs:
+      - targets: ['otel-collector:8889']
 
   # Grafana
   - job_name: 'grafana'
