@@ -24,21 +24,54 @@ from src.api.schemas.incident import (
     ServiceInfo,
 )
 
+# Durable persistence (write-through): the in-memory _incidents dict below stays
+# the read fast-path; these helpers mirror each mutation into SQLite so incidents
+# and the incident-id counter survive a backend restart/redeploy.
+from src.persistence import store as persistence_store
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-# In-memory incident store (replace with Neo4j in production)
+# In-memory incident store (durable write-through to SQLite under AIOPS_DATA_DIR;
+# also correlated into Neo4j graph memory via /{id}/similar).
 _incidents: dict[str, Incident] = {}
 
-# Counter for incident IDs
+# Counter for incident IDs (persisted via persistence_store.set_counter so IDs
+# keep advancing across restarts and never collide with pre-restart references).
 _incident_counter = 0
+
+# Name of the persisted counter row backing _incident_counter.
+_INCIDENT_COUNTER_NAME = "incident"
+
+
+def _persist_save_incident(incident: Incident) -> None:
+    """Best-effort durable write of an incident — never break the request path."""
+    try:
+        persistence_store.save_incident(incident)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Failed to persist incident %s: %s", incident.id, exc)
+
+
+def _persist_delete_incident(incident_id: str) -> None:
+    try:
+        persistence_store.delete_incident(incident_id)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Failed to delete persisted incident %s: %s", incident_id, exc)
+
+
+def _persist_incident_counter() -> None:
+    try:
+        persistence_store.set_counter(_INCIDENT_COUNTER_NAME, _incident_counter)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Failed to persist incident counter: %s", exc)
 
 
 def _generate_incident_id() -> str:
     """Generate unique incident ID."""
     global _incident_counter
     _incident_counter += 1
+    _persist_incident_counter()
     year = datetime.utcnow().year
     return f"INC-{year}-{_incident_counter:04d}"
 
@@ -85,11 +118,14 @@ async def create_incident(
     )
 
     _incidents[incident_id] = incident
+    _persist_save_incident(incident)
     logger.info(f"Created incident: {incident_id}")
 
     # Trigger auto-analysis if requested
     if incident_create.auto_analyze:
         await _trigger_analysis(request, incident)
+        # _trigger_analysis mutates status/rca/updated_at in place — re-persist.
+        _persist_save_incident(incident)
 
     return incident
 
@@ -291,6 +327,7 @@ async def update_incident(
     if incident_update.status == IncidentStatus.RESOLVED and incident.resolved_at is None:
         incident.resolved_at = datetime.utcnow()
 
+    _persist_save_incident(incident)
     logger.info(f"Updated incident: {incident_id}")
     return incident
 
@@ -315,6 +352,7 @@ async def delete_incident(incident_id: str) -> None:
         )
 
     del _incidents[incident_id]
+    _persist_delete_incident(incident_id)
     logger.info(f"Deleted incident: {incident_id}")
 
 
@@ -352,6 +390,8 @@ async def analyze_incident(
     incident.updated_at = datetime.utcnow()
 
     await _trigger_analysis(request, incident, enable_thinking)
+    # _trigger_analysis mutates status/rca/updated_at in place — persist the result.
+    _persist_save_incident(incident)
 
     return incident
 
@@ -403,6 +443,7 @@ async def remediate_incident(request: Request, incident_id: str) -> dict[str, An
 
     incident.status = IncidentStatus.REMEDIATING
     incident.updated_at = datetime.utcnow()
+    _persist_save_incident(incident)
 
     # Demo incidents heal via the t3 agent (the action that truly clears them).
     from src.api.routes.demo import _SCENARIO_IDS
@@ -433,6 +474,7 @@ async def remediate_incident(request: Request, incident_id: str) -> dict[str, An
         if not service:
             incident.status = prior_status
             incident.updated_at = datetime.utcnow()
+            _persist_save_incident(incident)
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="Incident has no affected service to remediate",
@@ -465,6 +507,7 @@ async def remediate_incident(request: Request, incident_id: str) -> dict[str, An
             logger.error("Remediation for %s raised: %s", incident_id, exc)
             incident.status = IncidentStatus.PENDING_APPROVAL
             incident.updated_at = datetime.utcnow()
+            _persist_save_incident(incident)
             return {
                 "incident_id": incident_id,
                 "status": "refused",
@@ -497,6 +540,7 @@ async def remediate_incident(request: Request, incident_id: str) -> dict[str, An
         # Keep it actionable so the operator can retry / open it in chat.
         incident.status = IncidentStatus.PENDING_APPROVAL
     incident.updated_at = datetime.utcnow()
+    _persist_save_incident(incident)
     logger.info(
         "Remediation for %s via %s -> success=%s", incident_id, method, success
     )
@@ -532,6 +576,7 @@ async def dismiss_incident(incident_id: str) -> Incident:
     if incident.resolved_at is None:
         incident.resolved_at = datetime.utcnow()
     incident.updated_at = datetime.utcnow()
+    _persist_save_incident(incident)
     logger.info("Dismissed incident: %s", incident_id)
     return incident
 
