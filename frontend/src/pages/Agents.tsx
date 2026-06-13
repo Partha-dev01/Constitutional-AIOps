@@ -1,11 +1,10 @@
-import { useState, useEffect, lazy, Suspense } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Cpu,
   Zap,
   Brain,
   Network,
   GitBranch,
-  Waypoints,
   Wrench,
   RefreshCw,
   Loader2,
@@ -24,13 +23,12 @@ import { McpToolList } from '../components/mcp/McpToolList'
 import { McpExecutePanel } from '../components/mcp/McpExecutePanel'
 import type { McpToolInfo } from '../components/mcp/types'
 
-// The interactive Platform Architecture (schema) graph is lazy-loaded so the
-// main bundle chunk doesn't grow; it is only fetched when the Architecture tab
-// is opened. The Neo4j episodic Graph Explorer is its own separate tab.
-const SchemaGraph = lazy(() => import('../components/schema/SchemaGraph'))
+// The interactive Platform Architecture (schema) graph now lives in its own
+// top-level Command Center page (/console); the Neo4j episodic Graph Explorer
+// below is a separate view that stays here.
 
 // Tab type
-type AgentTab = 'fast' | 'reasoning' | 'telemetry' | 'graph' | 'architecture' | 'tools'
+type AgentTab = 'fast' | 'reasoning' | 'telemetry' | 'graph' | 'tools'
 
 // Activity item type for agent activity streams
 interface AgentActivity {
@@ -59,7 +57,7 @@ interface MetricPoint {
 }
 
 export function Agents() {
-  const [activeTab, setActiveTab] = useState<AgentTab>('architecture')
+  const [activeTab, setActiveTab] = useState<AgentTab>('tools')
   const [health, setHealth] = useState<HealthResponse | null>(null)
 
   // Fast Agent state
@@ -123,7 +121,6 @@ export function Agents() {
   }
 
   const tabs = [
-    { id: 'architecture' as const, label: 'Architecture', icon: Waypoints, description: 'Live platform topology' },
     { id: 'tools' as const, label: 'MCP Tools', icon: Wrench, description: 'Tool Configuration' },
     { id: 'fast' as const, label: 'Fast Agent', icon: Zap, description: 'Telemetry annotation' },
     { id: 'reasoning' as const, label: 'Reasoning Agent', icon: Brain, description: 'RCA & Planning' },
@@ -900,38 +897,6 @@ export function Agents() {
                   </button>
                 </div>
               )}
-            </div>
-          </div>
-        )}
-
-        {/* Architecture Tab — interactive platform topology (schema graph) */}
-        {activeTab === 'architecture' && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-semibold flex items-center gap-2">
-                  <Waypoints className="h-5 w-5 text-cyan-500" />
-                  Architecture
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  Live platform topology, health and episode evolution
-                </p>
-              </div>
-            </div>
-
-            <div className="bg-card rounded-lg border border-border p-4">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold">Platform Architecture</h3>
-              </div>
-              <Suspense
-                fallback={
-                  <div className="flex items-center justify-center h-[520px] bg-gradient-to-br from-slate-900/50 to-slate-800/50 rounded-lg">
-                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                  </div>
-                }
-              >
-                <SchemaGraph height={520} />
-              </Suspense>
             </div>
           </div>
         )}
