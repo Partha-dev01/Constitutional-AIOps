@@ -3,6 +3,8 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { InsightCards } from './InsightCards'
 import type { MessageInsights } from './InsightCards'
+import { ProposedActionCard } from './ProposedActionCard'
+import type { ProposedAction } from '../../lib/api'
 
 export interface ChatMessageData {
   id: string
@@ -19,6 +21,8 @@ interface ChatMessageProps {
   displayedContent: string
   /** Optional insights rendered beneath an assistant bubble (once not typing). */
   insights?: MessageInsights
+  /** Optional AI-proposed remediation rendered as a card beneath the bubble. */
+  proposedAction?: ProposedAction
 }
 
 /**
@@ -30,7 +34,7 @@ interface ChatMessageProps {
  * The `prose` wrapper here is the ONLY element carrying `prose` for assistant
  * bodies — the live e2e test reads `.prose`.last().innerText().
  */
-export function ChatMessage({ message, isTyping, displayedContent, insights }: ChatMessageProps) {
+export function ChatMessage({ message, isTyping, displayedContent, insights, proposedAction }: ChatMessageProps) {
   const isUser = message.role === 'user'
 
   return (
@@ -80,6 +84,13 @@ export function ChatMessage({ message, isTyping, displayedContent, insights }: C
 
         {message.role === 'assistant' && !isTyping && insights && (
           <InsightCards insights={insights} />
+        )}
+
+        {/* Proposed-action card: a SIBLING of the bubble, OUTSIDE the `.prose`
+            wrapper, so the live e2e reading `.prose`.last().innerText() is
+            unaffected. Only rendered when this assistant turn carries one. */}
+        {message.role === 'assistant' && !isTyping && proposedAction && (
+          <ProposedActionCard action={proposedAction} />
         )}
       </div>
     </div>
