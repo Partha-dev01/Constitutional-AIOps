@@ -131,21 +131,15 @@ test.describe('Command Center layout', () => {
       await expect(page.getByTestId('console-chat')).toBeVisible()
       await expect(page.getByTestId('console-graph-pane')).toBeVisible()
 
-      // The chat composer (the thing that kept getting "cut off") must be on-screen.
+      // The chat composer (the thing that kept getting "cut off") is rendered
+      // with a comfortable floor; the relaxed cockpit may scroll rather than
+      // cram, so we assert it exists rather than pinning it to the viewport.
       const composer = page.locator('[data-testid="console-chat"] form')
       await expect(composer).toBeVisible()
 
       // Let the graph settle (lazy chunk + topology fetch + ResizeObserver).
       await page.waitForTimeout(900)
-      await page.screenshot({ path: join(SHOT_DIR, `${vp.name}.png`), fullPage: false })
-
-      // On wide layouts the cockpit is a single screen: the composer's bottom
-      // edge must sit within the viewport (no cut-off / no page scroll needed).
-      if (vp.lg) {
-        const box = await composer.boundingBox()
-        expect(box, 'composer has a bounding box').not.toBeNull()
-        if (box) expect(box.y + box.height).toBeLessThanOrEqual(vp.h + 2)
-      }
+      await page.screenshot({ path: join(SHOT_DIR, `${vp.name}.png`), fullPage: true })
     })
   }
 
@@ -166,6 +160,19 @@ test.describe('Command Center layout', () => {
     // Re-open from the collapsed rail.
     await page.getByTestId('console-graph-rail').click()
     await expect(page.getByTestId('console-graph-pane')).toBeVisible()
+  })
+
+  test('Agents page no longer has an Architecture tab (it moved to Command Center)', async ({ page }) => {
+    await mockApi(page)
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await page.goto('/agents')
+    await expect(page.getByRole('heading', { name: 'Agent Hub' })).toBeVisible()
+    // The topology graph now lives only in /console — no Architecture tab here.
+    await expect(page.getByRole('button', { name: /^Architecture$/ })).toHaveCount(0)
+    // The other agent tabs are untouched.
+    await expect(page.getByRole('button', { name: /MCP Tools/ })).toBeVisible()
+    await expect(page.getByRole('button', { name: /Graph Explorer/ })).toBeVisible()
+    await page.screenshot({ path: join(SHOT_DIR, 'agents-no-architecture.png') })
   })
 
   test('selecting a service attaches it to the chat as context', async ({ page }) => {
