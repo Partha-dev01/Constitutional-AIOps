@@ -258,6 +258,40 @@ class TestStoreGraphResultQuality:
         processor = _make_processor()
         assert processor._extract_services_from_window(_empty_window()) == []
 
+    @pytest.mark.asyncio
+    async def test_llm_triplets_threaded_onto_episode(self):
+        """D-item4: the LLM-extracted semantic triplets from the FastAnnotator
+        annotation are threaded onto the stored Episode (previously they were
+        dropped, leaving the Entity/RELATES graph layer permanently empty). Each
+        triplet inherits the episode confidence so MIN_TRIPLET_CONFIDENCE is real."""
+        processor = _make_processor()
+        graph_result = {
+            "annotation": {
+                "content": "Elevated error rate on backend",
+                "metadata": {
+                    "category": "error",
+                    "triplets": [
+                        {"subject": "backend", "relation": "EXPERIENCED", "object": "pool_exhaustion"},
+                        {"subject": "backend", "relation": "IMPACTED", "object": "frontend"},
+                    ],
+                },
+            },
+            "rca_result": None,
+            "correlation_id": "corr-trip",
+            "severity": 6,
+            "confidence": 0.83,
+            "steps_completed": ["annotate"],
+        }
+        await processor._store_graph_result_as_episode(graph_result, _empty_window())
+
+        episode: Episode = processor.episode_store.store_episode.await_args.args[0]
+        assert len(episode.triplets) == 2
+        subjects = {t["subject"] for t in episode.triplets}
+        assert subjects == {"backend"}
+        # Each triplet carries a confidence (the episode confidence) so the
+        # MIN_TRIPLET_CONFIDENCE filter in _store_episode_graph is meaningful.
+        assert all(t["confidence"] == 0.83 for t in episode.triplets)
+
 
 class TestRoutineTrendPath:
 

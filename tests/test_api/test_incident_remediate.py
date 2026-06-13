@@ -55,13 +55,40 @@ def _seed(
     return inc
 
 
+def _validator_request(*, can_proceed=True):
+    """A request whose validator returns a report with the given can_proceed and
+    whose validate() captures the context it received."""
+    captured = {}
+
+    report = MagicMock()
+    report.can_proceed = can_proceed
+    report.requires_approval = False
+    report.authorization_level = MagicMock(value="automatic")
+    report.overall_result = MagicMock(value="passed" if can_proceed else "violated")
+    report.confidence = 0.9
+    report.tier1_passed = can_proceed
+    report.tier2_passed = True
+    report.tier3_passed = True
+    report.violations = []
+    report.warnings = []
+    report.explanation = "ok" if can_proceed else "Tier 1 (Safety) violation - action BLOCKED"
+
+    validator = MagicMock()
+    validator.confidence_threshold_auto = 0.9
+    validator.confidence_threshold_approval = 0.7
+    validator.validate.side_effect = lambda **kw: captured.update(kw) or report
+    req = MagicMock()
+    req.app.state.validator = validator
+    return req, captured, validator
+
+
 @pytest.mark.asyncio
 async def test_remediate_demo_incident_heals_via_t3() -> None:
     from src.api.routes.incidents import remediate_incident
     from src.api.schemas.incident import IncidentStatus
 
     inc = _seed(demo=True, scenario="cpu_stress")
-    req = MagicMock()
+    req, _captured, _validator = _validator_request(can_proceed=True)
     with patch(
         "src.remediation.t3_client.chaos_heal",
         new=AsyncMock(return_value={"success": True, "detail": "healed"}),
@@ -74,6 +101,48 @@ async def test_remediate_demo_incident_heals_via_t3() -> None:
     assert out["status"] == "resolved"
     assert inc.status == IncidentStatus.RESOLVED
     assert inc.resolved_at is not None
+
+
+@pytest.mark.asyncio
+async def test_demo_heal_goes_through_constitutional_gate() -> None:
+    """D-item5: the demo heal is validated + audited (no silent bypass) and the
+    real verdict is surfaced to the UI instead of None."""
+    from src.api.routes.incidents import remediate_incident
+
+    inc = _seed(demo=True, scenario="cpu_stress")
+    req, captured, validator = _validator_request(can_proceed=True)
+    with patch(
+        "src.remediation.t3_client.chaos_heal",
+        new=AsyncMock(return_value={"success": True, "detail": "healed"}),
+    ):
+        out = await remediate_incident(req, inc.id)
+
+    # The validator actually ran for the heal action.
+    validator.validate.assert_called_once()
+    assert captured["context"]["active_incident"] is True
+    assert captured["context"]["human_approved"] is True
+    # A real verdict is surfaced (not None as before).
+    assert out["verdict"] is not None
+    assert out["verdict"]["can_proceed"] is True
+
+
+@pytest.mark.asyncio
+async def test_demo_heal_blocked_by_validator_does_not_heal() -> None:
+    """If constitutional validation refuses the heal, chaos_heal is NOT called and
+    the incident stays actionable."""
+    from src.api.routes.incidents import remediate_incident
+    from src.api.schemas.incident import IncidentStatus
+
+    inc = _seed(demo=True, scenario="cpu_stress")
+    req, _captured, _validator = _validator_request(can_proceed=False)
+    heal = AsyncMock(return_value={"success": True})
+    with patch("src.remediation.t3_client.chaos_heal", new=heal):
+        out = await remediate_incident(req, inc.id)
+
+    heal.assert_not_awaited()
+    assert out["success"] is False
+    assert out["error_code"] == "validation_blocked"
+    assert inc.status == IncidentStatus.PENDING_APPROVAL
 
 
 @pytest.mark.asyncio
@@ -182,6 +251,68 @@ async def test_remediate_refuses_when_already_remediating() -> None:
     assert out["success"] is False
     assert out["error_code"] == "already_remediating"
     assert inc.status == IncidentStatus.REMEDIATING
+
+
+@pytest.mark.asyncio
+async def test_analysis_automatic_does_not_deadlock_in_remediating() -> None:
+    """D-item5: a high-confidence ("automatic") RCA must NOT flip the incident to
+    REMEDIATING from analysis — there is no executor for that state, so the
+    anti-storm guard would then permanently lock the operator out of remediating.
+    It caps at PENDING_APPROVAL so the incident stays actionable."""
+    from src.api.routes.incidents import _trigger_analysis
+    from src.api.schemas.incident import IncidentStatus
+
+    inc = _seed(demo=False, service="nextcloud")
+    inc.status = IncidentStatus.ANALYZING
+
+    graph_result = {
+        "rca_result": {"metadata": {"root_cause": "rc", "causal_chain": ["a"]}},
+        "confidence": 0.97,
+        "authorization_level": "automatic",  # high-confidence verdict
+        "steps_completed": ["annotate", "reasoning", "validate"],
+    }
+    req = MagicMock()
+    req.app.state.incident_graph.ainvoke = AsyncMock(return_value=graph_result)
+
+    await _trigger_analysis(req, inc, enable_thinking=False)
+
+    # Capped at PENDING_APPROVAL, NOT REMEDIATING.
+    assert inc.status == IncidentStatus.PENDING_APPROVAL
+
+
+@pytest.mark.asyncio
+async def test_analysis_then_remediate_is_not_locked_out() -> None:
+    """End-to-end of the deadlock fix: after a high-confidence analysis the
+    operator can still remediate (the incident is PENDING_APPROVAL, not stuck in
+    REMEDIATING with already_remediating)."""
+    from src.api.routes.incidents import _trigger_analysis, remediate_incident
+    from src.api.schemas.incident import IncidentStatus
+
+    inc = _seed(demo=True, scenario="cpu_stress")
+    inc.status = IncidentStatus.ANALYZING
+
+    graph_result = {
+        "rca_result": {"metadata": {"root_cause": "rc", "causal_chain": ["a"]}},
+        "confidence": 0.97,
+        "authorization_level": "automatic",
+        "steps_completed": ["annotate", "reasoning", "validate"],
+    }
+    analyze_req = MagicMock()
+    analyze_req.app.state.incident_graph.ainvoke = AsyncMock(return_value=graph_result)
+    await _trigger_analysis(analyze_req, inc, enable_thinking=False)
+    assert inc.status == IncidentStatus.PENDING_APPROVAL
+
+    # Now remediate — must NOT be refused with already_remediating.
+    rem_req, _captured, _validator = _validator_request(can_proceed=True)
+    with patch(
+        "src.remediation.t3_client.chaos_heal",
+        new=AsyncMock(return_value={"success": True, "detail": "healed"}),
+    ):
+        out = await remediate_incident(rem_req, inc.id)
+
+    assert out.get("error_code") != "already_remediating"
+    assert out["success"] is True
+    assert inc.status == IncidentStatus.RESOLVED
 
 
 @pytest.mark.asyncio
