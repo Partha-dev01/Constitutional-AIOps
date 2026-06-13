@@ -154,7 +154,7 @@ export function ActiveIncidentsPanel({ className = '' }: { className?: string })
           No active incidents — all clear.
         </div>
       ) : (
-        <ul className="space-y-3">
+        <ul className="grid gap-2.5 sm:grid-cols-2 max-h-[320px] overflow-y-auto pr-0.5">
           {incidents.map((inc) => {
             const st = actions[inc.id]
             const service = inc.affected_services?.[0]?.name
@@ -163,9 +163,9 @@ export function ActiveIncidentsPanel({ className = '' }: { className?: string })
               <li
                 key={inc.id}
                 data-testid={`active-incident-${inc.id}`}
-                className="rounded-lg border border-border/70 bg-background/40 p-3"
+                className="rounded-lg border border-border/70 bg-background/40 p-2.5"
               >
-                <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-1.5">
                   <span
                     className={`text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded border ${
                       SEV_STYLE[inc.severity] ?? SEV_STYLE.info
@@ -176,15 +176,26 @@ export function ActiveIncidentsPanel({ className = '' }: { className?: string })
                   <span className="text-[11px] text-muted-foreground">
                     {STATUS_LABEL[inc.status] ?? inc.status}
                   </span>
-                  <span className="text-[11px] text-muted-foreground/60">{inc.id}</span>
+                  {service && (
+                    <span className="text-[11px] text-muted-foreground/80 truncate">· {service}</span>
+                  )}
+                  <span className="text-[11px] text-muted-foreground/50 ml-auto shrink-0">{inc.id}</span>
                 </div>
-                <p className="mt-1 text-sm font-medium text-foreground break-words">{inc.title}</p>
-                {service && <p className="text-xs text-muted-foreground">Service: {service}</p>}
-                {rca && <p className="mt-1 text-xs text-muted-foreground/90 line-clamp-2">{rca}</p>}
+                <p
+                  className="mt-0.5 text-sm font-medium text-foreground truncate"
+                  title={inc.title}
+                >
+                  {inc.title}
+                </p>
+                {rca && (
+                  <p className="text-[11px] text-muted-foreground/80 line-clamp-1" title={rca}>
+                    {rca}
+                  </p>
+                )}
 
                 {st?.result && (
                   <div
-                    className={`mt-2 flex items-start gap-1.5 text-xs ${
+                    className={`mt-1.5 flex items-start gap-1.5 text-[11px] ${
                       st.result.ok ? 'text-green-400' : 'text-amber-400'
                     }`}
                   >
@@ -197,17 +208,17 @@ export function ActiveIncidentsPanel({ className = '' }: { className?: string })
                   </div>
                 )}
 
-                <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                <div className="mt-2 flex items-center gap-1.5">
                   <button
                     onClick={() => void handleRemediate(inc)}
                     disabled={st?.busy != null}
                     data-testid={`incident-remediate-${inc.id}`}
-                    className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2 py-1 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
                   >
                     {st?.busy === 'remediate' ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <Loader2 className="h-3 w-3 animate-spin" />
                     ) : (
-                      <ShieldCheck className="h-3.5 w-3.5" />
+                      <ShieldCheck className="h-3 w-3" />
                     )}
                     Approve &amp; Remediate
                   </button>
@@ -215,21 +226,22 @@ export function ActiveIncidentsPanel({ className = '' }: { className?: string })
                     onClick={() => void handleDismiss(inc)}
                     disabled={st?.busy != null}
                     data-testid={`incident-dismiss-${inc.id}`}
-                    className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-md border border-border hover:bg-muted disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2 py-1 rounded-md border border-border hover:bg-muted disabled:opacity-50"
                   >
                     {st?.busy === 'dismiss' ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <Loader2 className="h-3 w-3 animate-spin" />
                     ) : (
-                      <XCircle className="h-3.5 w-3.5" />
+                      <XCircle className="h-3 w-3" />
                     )}
                     Reject
                   </button>
                   <button
                     onClick={() => openInChat(inc)}
-                    className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-md border border-border hover:bg-muted"
+                    title="Open in Chat"
+                    className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2 py-1 rounded-md border border-border hover:bg-muted"
                   >
-                    <MessageSquare className="h-3.5 w-3.5" />
-                    Open in Chat
+                    <MessageSquare className="h-3 w-3" />
+                    Chat
                   </button>
                 </div>
               </li>

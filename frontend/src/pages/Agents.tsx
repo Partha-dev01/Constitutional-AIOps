@@ -930,12 +930,12 @@ export function Agents() {
               </div>
               <Suspense
                 fallback={
-                  <div className="flex items-center justify-center h-[520px] bg-gradient-to-br from-slate-900/50 to-slate-800/50 rounded-lg">
+                  <div className="flex items-center justify-center h-[460px] bg-gradient-to-br from-slate-900/50 to-slate-800/50 rounded-lg">
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                   </div>
                 }
               >
-                <SchemaGraph height={520} />
+                <SchemaGraph height={460} />
               </Suspense>
             </div>
           </div>
