@@ -66,15 +66,31 @@ function SchemaNodeInner({
   const glow = Math.min(0.16, activity * 0.09)
   const subLabel = node.meta.port ? `${node.kind} · :${node.meta.port}` : node.kind
 
+  // AUDIT-C6 TODO: full keyboard graph navigation (arrow-key traversal between
+  // nodes, pan/zoom via keyboard) is deferred to a dedicated pass. For now we
+  // expose focus + Enter/Space to select so keyboard/SR users can at least
+  // reach and activate nodes.
+  const handleKeyDown = (e: React.KeyboardEvent<SVGGElement>) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      onClick(node, e as unknown as React.MouseEvent)
+    }
+  }
+
   return (
     <g
       className="schema-node"
       transform={`translate(${x}, ${y})`}
       data-testid={`schema-node-${node.id}`}
+      role="button"
+      tabIndex={0}
+      aria-label={`${node.label} — ${node.kind}${node.health ? `, ${node.health}` : ''}`}
+      aria-pressed={selected}
       onClick={(e) => {
         e.stopPropagation()
         onClick(node, e)
       }}
+      onKeyDown={handleKeyDown}
       onPointerDown={(e) => e.stopPropagation()}
       onPointerEnter={(e) => onHover(node, e)}
       onPointerMove={(e) => onHover(node, e)}
