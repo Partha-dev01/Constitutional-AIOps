@@ -15,6 +15,7 @@ which would require python-multipart — absent from the minimal CI install).
 """
 
 import logging
+import os
 import time
 from datetime import datetime, timezone
 from typing import Any, Optional
@@ -46,20 +47,43 @@ router = APIRouter()
 THROTTLE_MAX_FAILURES = 5
 THROTTLE_WINDOW_SECONDS = 15 * 60
 
+# Number of trusted reverse-proxy hops in front of the app. In the shipped
+# single-Caddy topology this is 1: Caddy is the only proxy and APPENDS the real
+# peer IP as the right-most entry of X-Forwarded-For. We therefore read the
+# Nth-from-the-right element, NOT the left-most (which is whatever the client
+# chose to send and is fully spoofable). Override only if you add more trusted
+# proxies (e.g. a CDN/LB) in front of Caddy.
+_TRUSTED_PROXY_HOPS = max(1, int(os.getenv("TRUSTED_PROXY_HOPS", "1")))
+
 _failed_logins: dict[str, list[float]] = {}
 
 
 def _client_ip(request: Request) -> str:
-    """First IP of x-forwarded-for (Caddy fronts the app), else client.host."""
+    """Resolve the real client IP for the login throttle key.
+
+    Security (Batch F #2): the login lockout MUST key off an address the
+    attacker cannot forge. A raw client-supplied ``X-Forwarded-For`` is fully
+    spoofable, so reading its left-most element let an attacker rotate the key
+    on every request and never trip the lockout. Behind our single trusted
+    Caddy hop the genuine peer is the value Caddy APPENDED to the RIGHT of the
+    header, so we parse from the right by ``_TRUSTED_PROXY_HOPS`` and ignore any
+    attacker-prepended entries. We fall back to ``request.client.host`` (the TCP
+    peer) when no forwarded header is present.
+    """
     forwarded = ""
     try:
         forwarded = request.headers.get("x-forwarded-for") or ""
     except Exception:  # noqa: BLE001 - tolerate mock/partial request objects
         forwarded = ""
     if forwarded:
-        first = forwarded.split(",")[0].strip()
-        if first:
-            return first
+        parts = [p.strip() for p in forwarded.split(",") if p.strip()]
+        if parts:
+            # Index from the right by the number of trusted hops. With 1 trusted
+            # Caddy hop this is parts[-1] (the address Caddy observed). If the
+            # client sent fewer hops than we trust, clamp to the left-most real
+            # entry rather than indexing out of range.
+            idx = max(0, len(parts) - _TRUSTED_PROXY_HOPS)
+            return parts[idx]
     client = getattr(request, "client", None)
     host = getattr(client, "host", None)
     return host if isinstance(host, str) and host else "unknown"
