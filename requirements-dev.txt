@@ -22,6 +22,6 @@ mkdocs>=1.5.0
 mkdocs-material>=9.5.0
 
 # Development Utilities
-ipython>=8.18.0
+ipython>=9.14.1
 rich>=13.7.0
 watchfiles>=0.21.0
