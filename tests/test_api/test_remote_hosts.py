@@ -158,6 +158,90 @@ class TestRemoteHostsEndpoint:
         assert host.targets_up == 2
 
     @pytest.mark.asyncio
+    async def test_down_host_reported_unhealthy(self):
+        """D-item2: a host whose scrape targets are all DOWN must report
+        status='down', not green. The up-count query uses `up == 1` so a down
+        target contributes 0 to targets_up; the total query (`count by (edge)(up)`)
+        still discovers the edge and reports its target count."""
+        from src.api.routes.infrastructure import get_remote_hosts
+        from src.telemetry.collector import TelemetryCollector
+
+        collector = TelemetryCollector(
+            loki_url="http://mock-loki:3100",
+            prometheus_url="http://mock-prom:9090",
+            tempo_url="http://mock-tempo:3200",
+        )
+
+        call_counter = {"n": 0}
+
+        async def fake_get(url, **kwargs):
+            resp = MagicMock()
+            resp.status_code = 200
+            resp.raise_for_status = MagicMock()
+            if "mock-prom" in url:
+                call_counter["n"] += 1
+                n = call_counter["n"]
+                if n == 1:
+                    # `count by (edge) (up == 1)`: the down host has NO up targets,
+                    # so it is absent from this result entirely.
+                    resp.json.return_value = _prom_count_response([])
+                elif n == 2:
+                    # `count by (edge) (up)`: total targets (up + down) — the down
+                    # host has 2 targets, both down.
+                    resp.json.return_value = _prom_count_response([("down-host", 2)])
+                else:
+                    resp.json.return_value = {"data": {"result": []}}
+            elif "label/edge/values" in url:
+                resp.json.return_value = {"data": []}
+            else:
+                resp.json.return_value = {"data": {"result": []}}
+            return resp
+
+        with patch.object(collector._client, "get", side_effect=fake_get):
+            req = _make_mock_request(collector=collector)
+            result = await get_remote_hosts(req)
+
+        await collector.close()
+
+        host = next(h for h in result.hosts if h.edge_label == "down-host")
+        assert host.status == "down"          # was wrongly "up" before the fix
+        assert host.targets_up == 0
+        assert host.targets_total == 2
+
+    @pytest.mark.asyncio
+    async def test_up_query_uses_up_equals_one(self):
+        """D-item2: the up-count PromQL is `count by (edge) (up == 1)` (excludes
+        down targets), not the old `count by (edge) (up)`."""
+        from src.api.routes.infrastructure import get_remote_hosts
+        from src.telemetry.collector import TelemetryCollector
+
+        collector = TelemetryCollector(
+            loki_url="http://mock-loki:3100",
+            prometheus_url="http://mock-prom:9090",
+            tempo_url="http://mock-tempo:3200",
+        )
+
+        queries: list[str] = []
+
+        async def fake_get(url, **kwargs):
+            resp = MagicMock()
+            resp.status_code = 200
+            resp.raise_for_status = MagicMock()
+            if "mock-prom" in url:
+                queries.append(kwargs.get("params", {}).get("query", ""))
+            resp.json.return_value = {"data": {"result": []}}
+            return resp
+
+        with patch.object(collector._client, "get", side_effect=fake_get):
+            req = _make_mock_request(collector=collector)
+            await get_remote_hosts(req)
+
+        await collector.close()
+
+        assert queries, "expected at least one Prometheus query"
+        assert queries[0] == "count by (edge) (up == 1)"
+
+    @pytest.mark.asyncio
     async def test_host_status_unknown_when_only_loki_data(self):
         """
         If Prometheus has no data for an edge label but Loki reports log lines,

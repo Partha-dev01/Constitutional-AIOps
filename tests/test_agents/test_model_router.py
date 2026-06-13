@@ -86,6 +86,64 @@ class TestModelRouter:
         assert "/think" in user_msg
 
     @pytest.mark.asyncio
+    async def test_reasoning_completion_suppresses_thinking_on_vllm(self, monkeypatch):
+        """D-item1 (T4): the reasoning path mirrors fast_completion and injects
+        chat_template_kwargs={"enable_thinking": False} for the colon-free
+        production vLLM model, so the 14B does not leak chain-of-thought into
+        chat/RCA answers. Default enable_thinking is False."""
+        import src.config as _cfg_module
+
+        monkeypatch.setattr(_cfg_module.config.llm, "reasoning_agent_model", "qwen3-14b")
+        router = ModelRouter(
+            fast_agent_url="http://test:8000/v1",
+            reasoning_agent_url="http://test:8001/v1",
+        )
+        router._reasoning_client.post = AsyncMock(return_value=_mock_response())
+
+        await router.reasoning_completion("test prompt")
+
+        payload = router._reasoning_client.post.call_args.kwargs["json"]
+        assert payload.get("chat_template_kwargs") == {"enable_thinking": False}
+
+    @pytest.mark.asyncio
+    async def test_reasoning_completion_keeps_thinking_when_requested(self, monkeypatch):
+        """When enable_thinking=True the suppression kwarg is NOT injected (the
+        caller explicitly opted into extended thinking)."""
+        import src.config as _cfg_module
+
+        monkeypatch.setattr(_cfg_module.config.llm, "reasoning_agent_model", "qwen3-14b")
+        router = ModelRouter(
+            fast_agent_url="http://test:8000/v1",
+            reasoning_agent_url="http://test:8001/v1",
+        )
+        router._reasoning_client.post = AsyncMock(return_value=_mock_response())
+
+        await router.reasoning_completion("test prompt", enable_thinking=True)
+
+        payload = router._reasoning_client.post.call_args.kwargs["json"]
+        assert "chat_template_kwargs" not in payload
+
+    @pytest.mark.asyncio
+    async def test_reasoning_completion_no_suppression_on_ollama(self, monkeypatch):
+        """A colon-bearing (Ollama local-dev) model name handles suppression via
+        instruct tuning, so the kwarg is not injected."""
+        import src.config as _cfg_module
+
+        monkeypatch.setattr(
+            _cfg_module.config.llm, "reasoning_agent_model", "qwen3:14b-instruct"
+        )
+        router = ModelRouter(
+            fast_agent_url="http://test:8000/v1",
+            reasoning_agent_url="http://test:8001/v1",
+        )
+        router._reasoning_client.post = AsyncMock(return_value=_mock_response())
+
+        await router.reasoning_completion("test prompt")
+
+        payload = router._reasoning_client.post.call_args.kwargs["json"]
+        assert "chat_template_kwargs" not in payload
+
+    @pytest.mark.asyncio
     async def test_health_check_returns_status(self):
         """Test health_check returns status for both agents."""
         router = ModelRouter(
