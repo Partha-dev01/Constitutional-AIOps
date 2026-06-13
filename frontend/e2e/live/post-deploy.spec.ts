@@ -204,10 +204,11 @@ test.describe('Post-deploy gate — interactions stay console-clean', () => {
     await expect(page.getByRole('heading', { name: 'Agent Hub' })).toBeVisible()
 
     // Tabs render their first word on narrow widths; on desktop the full label
-    // shows. Match by the always-present full label text of each tab button.
+    // shows. Match by the always-present full label text of each tab. The tabs
+    // are now an accessible ARIA tablist (role="tab"), not bare buttons.
     const tabLabels = ['MCP Tools', 'Graph Explorer', 'Fast Agent', 'Reasoning Agent', 'Telemetry']
     for (const label of tabLabels) {
-      await page.getByRole('button', { name: new RegExp(label, 'i') }).click()
+      await page.getByRole('tab', { name: new RegExp(label, 'i') }).click()
       // Each tab swaps in a section heading (h2) — wait for the panel to mount.
       await expect(page.locator('h2').first()).toBeVisible({ timeout: 20_000 })
       await page.waitForTimeout(800)
@@ -222,13 +223,13 @@ test.describe('Post-deploy gate — interactions stay console-clean', () => {
     await expect(page.getByRole('heading', { name: 'Benchmark' })).toBeVisible()
 
     for (const tab of ['Datasets', 'Run', 'Results', 'Compare']) {
-      await page.getByRole('button', { name: new RegExp(`^${tab}$`) }).click()
+      await page.getByRole('tab', { name: new RegExp(`^${tab}$`) }).click()
       await page.waitForTimeout(600)
       expectClean(capture, `Benchmark tab "${tab}"`)
     }
 
     // On the Run tab the native form controls must render DARK, not white.
-    await page.getByRole('button', { name: /^Run$/ }).click()
+    await page.getByRole('tab', { name: /^Run$/ }).click()
     const select = page.locator('select').first()
     const numberInput = page.locator('input[type="number"]').first()
     await expect(select).toBeVisible()
