@@ -14,6 +14,7 @@ import {
   FileText,
   RotateCcw,
   RotateCw,
+  Wrench,
 } from 'lucide-react'
 import api, {
   HealthResponse,
@@ -22,10 +23,12 @@ import api, {
   ConstitutionalSettings,
   NotificationSettings,
   TelemetrySettings,
+  RemediationSettings,
+  RemediationMode,
 } from '../lib/api'
 
 // ── re-export for tests / other imports ─────────────────────────────────────
-export type { ConstitutionalSettings, NotificationSettings, TelemetrySettings }
+export type { ConstitutionalSettings, NotificationSettings, TelemetrySettings, RemediationSettings }
 
 // ── interface for SystemPrompt (local, mirrors backend) ─────────────────────
 interface SystemPrompt {
@@ -66,10 +69,27 @@ const DEFAULT_TELEMETRY: TelemetrySettings = {
   retentionDays: 30,
 }
 
+const DEFAULT_REMEDIATION: RemediationSettings = {
+  mode: 'diagnose',
+  autoConfidenceThreshold: 90,
+  requireEvidenceForAuto: true,
+  demoTargetUrl: '',
+}
+
+// Helper copy for each remediation mode.
+const REMEDIATION_MODE_HELP: Record<RemediationMode, string> = {
+  diagnose:
+    'Diagnose only — the AI investigates and explains, but never proposes or runs a fix.',
+  approve:
+    'Approve to run — the AI proposes a fix in chat; nothing executes until you click Approve.',
+  auto:
+    'Auto-remediate — high-confidence fixes execute automatically once they pass the constitution.',
+}
+
 // ── main component ────────────────────────────────────────────────────────────
 export function Settings() {
   const [activeTab, setActiveTab] = useState<
-    'constitutional' | 'notifications' | 'telemetry' | 'models' | 'prompts'
+    'constitutional' | 'remediation' | 'notifications' | 'telemetry' | 'models' | 'prompts'
   >('constitutional')
   const [health, setHealth] = useState<HealthResponse | null>(null)
   const [loading, setLoading] = useState(false)
@@ -83,6 +103,7 @@ export function Settings() {
   const [notifications, setNotifications] =
     useState<NotificationSettings>(DEFAULT_NOTIFICATIONS)
   const [telemetry, setTelemetry] = useState<TelemetrySettings>(DEFAULT_TELEMETRY)
+  const [remediation, setRemediation] = useState<RemediationSettings>(DEFAULT_REMEDIATION)
 
   // System prompts state
   const [prompts, setPrompts] = useState<SystemPrompt[]>([])
@@ -103,6 +124,8 @@ export function Settings() {
       setConstitutional(data.constitutional)
       setNotifications(data.notifications)
       setTelemetry(data.telemetry)
+      // `remediation` is a newer block; tolerate a backend that omits it.
+      setRemediation(data.remediation ?? DEFAULT_REMEDIATION)
     } catch {
       // Backend not available → stay on defaults; this is expected in local-frontend-only dev
     } finally {
@@ -222,7 +245,7 @@ export function Settings() {
     setSaving(true)
     setSaveError(null)
     try {
-      const payload: AllSettings = { constitutional, notifications, telemetry }
+      const payload: AllSettings = { constitutional, notifications, telemetry, remediation }
       await api.settings.save(payload)
       setSaved(true)
       setTimeout(() => setSaved(false), 2500)
@@ -243,6 +266,7 @@ export function Settings() {
       setConstitutional(defaults.constitutional)
       setNotifications(defaults.notifications)
       setTelemetry(defaults.telemetry)
+      setRemediation(defaults.remediation ?? DEFAULT_REMEDIATION)
       setSaved(true)
       setTimeout(() => setSaved(false), 2500)
     } catch {
@@ -250,6 +274,7 @@ export function Settings() {
       setConstitutional(DEFAULT_CONSTITUTIONAL)
       setNotifications(DEFAULT_NOTIFICATIONS)
       setTelemetry(DEFAULT_TELEMETRY)
+      setRemediation(DEFAULT_REMEDIATION)
     } finally {
       setSaving(false)
     }
@@ -257,6 +282,7 @@ export function Settings() {
 
   const tabs = [
     { id: 'constitutional', label: 'Constitutional AI', icon: Shield },
+    { id: 'remediation', label: 'Remediation', icon: Wrench },
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'telemetry', label: 'Telemetry', icon: Network },
     { id: 'models', label: 'Models', icon: Cpu },
@@ -497,6 +523,129 @@ export function Settings() {
                   Constitutional thresholds are saved to the backend (
                   <code>GET/PUT /api/v1/settings/</code>) and applied live to the validator.
                   Changes survive restart.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ━━ Remediation ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+        {activeTab === 'remediation' && (
+          <div className="grid gap-6 lg:grid-cols-2">
+            {/* Mode + thresholds */}
+            <div className="bg-card rounded-lg border border-border p-6">
+              <h2 className="text-lg font-semibold mb-4">Remediation Mode</h2>
+              <div className="space-y-6">
+                {/* 3-way mode selector */}
+                <div>
+                  <label className="block text-sm font-medium mb-2">How fixes are handled</label>
+                  <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Remediation mode">
+                    {(['diagnose', 'approve', 'auto'] as const).map((mode) => (
+                      <button
+                        key={mode}
+                        type="button"
+                        role="radio"
+                        aria-checked={remediation.mode === mode}
+                        data-testid={`remediation-mode-${mode}`}
+                        onClick={() => setRemediation({ ...remediation, mode })}
+                        className={`px-3 py-2 rounded-lg text-sm font-medium capitalize transition-colors border ${
+                          remediation.mode === mode
+                            ? 'bg-primary text-primary-foreground border-primary'
+                            : 'bg-background text-muted-foreground border-border hover:bg-muted'
+                        }`}
+                      >
+                        {mode}
+                      </button>
+                    ))}
+                  </div>
+                  <p
+                    data-testid="remediation-mode-help"
+                    className="text-xs text-muted-foreground mt-2 flex items-start gap-1"
+                  >
+                    <Info className="h-3 w-3 mt-0.5 shrink-0" />
+                    {REMEDIATION_MODE_HELP[remediation.mode]}
+                  </p>
+                </div>
+
+                {/* Auto-confidence slider (only meaningful for auto) */}
+                <div className={remediation.mode === 'auto' ? '' : 'opacity-50'}>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-medium">Auto-execute Confidence</label>
+                    <span
+                      data-testid="remediation-confidence-value"
+                      className="text-sm font-semibold text-primary"
+                    >
+                      {remediation.autoConfidenceThreshold}%
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={70}
+                    max={99}
+                    value={remediation.autoConfidenceThreshold}
+                    data-testid="remediation-confidence"
+                    disabled={remediation.mode !== 'auto'}
+                    onChange={(e) =>
+                      setRemediation({
+                        ...remediation,
+                        autoConfidenceThreshold: Number(e.target.value),
+                      })
+                    }
+                    className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer disabled:cursor-not-allowed"
+                  />
+                  <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                    <span>70%</span>
+                    <span>99%</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Only auto-remediate fixes with confidence ≥{' '}
+                    {remediation.autoConfidenceThreshold}%
+                  </p>
+                </div>
+
+                {/* Require evidence toggle (only meaningful for auto) */}
+                <ToggleSetting
+                  label="Require telemetry evidence for auto"
+                  description="Block auto-remediation unless backed by live telemetry evidence"
+                  checked={remediation.requireEvidenceForAuto}
+                  testId="remediation-evidence"
+                  disabled={remediation.mode !== 'auto'}
+                  onChange={(checked) =>
+                    setRemediation({ ...remediation, requireEvidenceForAuto: checked })
+                  }
+                />
+              </div>
+            </div>
+
+            {/* Demo target + persistence note */}
+            <div className="bg-card rounded-lg border border-border p-6">
+              <h2 className="text-lg font-semibold mb-4">Demo Target</h2>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">t3 Demo Agent URL</label>
+                  <input
+                    type="url"
+                    value={remediation.demoTargetUrl}
+                    data-testid="remediation-demo-target"
+                    onChange={(e) =>
+                      setRemediation({ ...remediation, demoTargetUrl: e.target.value })
+                    }
+                    placeholder="http://t3-demo-agent:9099"
+                    className="w-full px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Base URL of the t3 demo agent that runs chaos scenarios and applies fixes.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-6 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg text-xs text-blue-600">
+                <p className="font-semibold mb-1">Persistence</p>
+                <p>
+                  Remediation settings are saved to the backend (
+                  <code>GET/PUT /api/v1/settings/</code>) and applied live. Use{' '}
+                  <strong>Approve</strong> to keep a human in the loop, or <strong>Auto</strong> to
+                  let high-confidence fixes run on their own.
                 </p>
               </div>
             </div>
