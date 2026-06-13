@@ -262,10 +262,10 @@ export interface Incident {
   created_at: string;
   updated_at: string;
   resolved_at?: string;
-  /** RCA blob as returned by the live API (root_cause + causal chain). */
-  rca?: { root_cause?: string; summary?: string; causal_chain?: string[] } | null;
-  rca_result?: RCAResult;
-  remediation_plan?: RemediationPlan;
+  /** Root-cause analysis as returned by the live API. Matches the backend
+   *  RCAResult schema (src/api/schemas/incident.py:129-138). */
+  rca?: RCAResult | null;
+  remediation_plan?: RemediationPlan | null;
 }
 
 /** Result of POST /incidents/{id}/remediate (approve-and-remediate). */
@@ -291,26 +291,38 @@ export interface IncidentCreate {
   auto_analyze?: boolean;
 }
 
+// Matches the backend RCAResult schema (src/api/schemas/incident.py:129-138).
 export interface RCAResult {
   root_cause: string;
+  causal_chain: string[];
   confidence: number;
-  contributing_factors: string[];
-  evidence: string[];
+  reasoning?: string | null;
+  similar_incidents?: string[] | null;
 }
 
+// Matches the backend RemediationStep schema (src/api/schemas/incident.py:141-150).
 export interface RemediationStep {
-  step_number: number;
+  order: number;
   action: string;
-  description: string;
-  estimated_duration_minutes?: number;
+  command?: string | null;
+  risk: 'low' | 'medium' | 'high';
   requires_approval: boolean;
+  status: 'pending' | 'in_progress' | 'completed' | 'failed' | 'skipped';
+  executed_at?: string | null;
+  result?: string | null;
 }
 
+// Matches the backend RemediationPlan schema (src/api/schemas/incident.py:153-163).
 export interface RemediationPlan {
   plan_id: string;
+  incident_id: string;
+  created_at: string;
   steps: RemediationStep[];
-  estimated_resolution_minutes: number;
-  confidence: number;
+  overall_risk: 'low' | 'medium' | 'high';
+  estimated_duration?: string | null;
+  requires_approval: boolean;
+  approved_by?: string | null;
+  approved_at?: string | null;
 }
 
 export interface IncidentList {
@@ -413,9 +425,11 @@ export interface ToolCallResult {
 
 export interface DashboardStats {
   incidents: {
-    open: number;
-    investigating: number;
-    resolved_today: number;
+    /** Active incidents = detecting + analyzing + pending_approval + remediating. */
+    active: number;
+    /** In-progress subset = analyzing + remediating. */
+    in_progress: number;
+    resolved_total: number;
     mttr_minutes: number | null;
   };
   actions: {
@@ -673,7 +687,12 @@ export const api = {
       request<Incident>(`/incidents/${id}/dismiss`, { method: 'POST' }),
 
     getStats: () =>
-      request<{ total: number; by_status: Record<string, number>; by_severity: Record<string, number> }>('/incidents/stats'),
+      request<{
+        total: number;
+        // by_status keys are IncidentStatus values (src/api/schemas/incident.py:24-31).
+        by_status: Partial<Record<IncidentStatus, number>>;
+        by_severity: Partial<Record<IncidentSeverity, number>>;
+      }>('/incidents/stats'),
   },
 
   // Actions
@@ -768,11 +787,21 @@ export const api = {
       const healthyComponents = health?.components?.filter((c: { healthy: boolean }) => c.healthy).length || 0;
       const totalComponents = health?.components?.length || 0;
 
+      // Map the real IncidentStatus buckets (src/api/schemas/incident.py:24-31).
+      // There is no 'open' / 'investigating' status backend-side.
+      const byStatus = incidentStats.by_status;
+      const activeIncidents =
+        (byStatus.detecting || 0) +
+        (byStatus.analyzing || 0) +
+        (byStatus.pending_approval || 0) +
+        (byStatus.remediating || 0);
+      const inProgressIncidents = (byStatus.analyzing || 0) + (byStatus.remediating || 0);
+
       return {
         incidents: {
-          open: incidentStats.by_status['open'] || 0,
-          investigating: incidentStats.by_status['investigating'] || 0,
-          resolved_today: incidentStats.by_status['resolved'] || 0,
+          active: activeIncidents,
+          in_progress: inProgressIncidents,
+          resolved_total: byStatus.resolved || 0,
           mttr_minutes: avgResponseTimeSec, // Actual LLM response time in seconds
         },
         actions: {

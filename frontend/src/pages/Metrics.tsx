@@ -442,7 +442,7 @@ export function Metrics() {
                             {record.agent}
                           </span>
                         </td>
-                        <td className="py-2 px-3">{record.latency_ms.toFixed(1)}ms</td>
+                        <td className="py-2 px-3">{record.latency_ms != null ? `${record.latency_ms.toFixed(1)}ms` : '—'}</td>
                         <td className="py-2 px-3">{record.tokens_generated}</td>
                         <td className="py-2 px-3">
                           {record.success ? (

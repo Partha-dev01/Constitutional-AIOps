@@ -1,7 +1,8 @@
 import { useEffect } from 'react'
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { Layout } from './components/Layout'
 import { RequireAuth } from './components/RequireAuth'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import { Landing } from './pages/Landing'
 import { Login } from './pages/Login'
 import { Dashboard } from './pages/Dashboard'
@@ -37,6 +38,7 @@ function RootGate() {
 
 function App() {
   const bootstrap = useAuthStore((s) => s.bootstrap)
+  const location = useLocation()
 
   // Establish auth state once at mount (config + session probe).
   useEffect(() => {
@@ -44,34 +46,43 @@ function App() {
   }, [bootstrap])
 
   return (
-    <Routes>
-      {/* Public login page rendered OUTSIDE the sidebar Layout */}
-      <Route path="/login" element={<Login />} />
-      {/* The landing page moved to the public root */}
-      <Route path="/welcome" element={<Navigate to="/" replace />} />
-      {/* Public root: Landing (logged out, enforcement on) or Dashboard */}
-      <Route path="/" element={<RootGate />} />
-      {/* Everything else lives inside the authed app shell */}
-      <Route
-        path="*"
-        element={
-          <RequireAuth>
-            <Layout>
-              <Routes>
-                <Route path="/console" element={<Console />} />
-                <Route path="/agents" element={<Agents />} />
-                <Route path="/infrastructure" element={<Infrastructure />} />
-                <Route path="/incidents" element={<Incidents />} />
-                <Route path="/chat" element={<Chat />} />
-                <Route path="/metrics" element={<Metrics />} />
-                <Route path="/benchmark" element={<Benchmark />} />
-                <Route path="/settings" element={<Settings />} />
-              </Routes>
-            </Layout>
-          </RequireAuth>
-        }
-      />
-    </Routes>
+    // Outer boundary: last-resort net for crashes in the shell itself
+    // (Layout, RootGate, login) so the user always gets a recovery card.
+    <ErrorBoundary>
+      <Routes>
+        {/* Public login page rendered OUTSIDE the sidebar Layout */}
+        <Route path="/login" element={<Login />} />
+        {/* The landing page moved to the public root */}
+        <Route path="/welcome" element={<Navigate to="/" replace />} />
+        {/* Public root: Landing (logged out, enforcement on) or Dashboard */}
+        <Route path="/" element={<RootGate />} />
+        {/* Everything else lives inside the authed app shell */}
+        <Route
+          path="*"
+          element={
+            <RequireAuth>
+              <Layout>
+                {/* Inner boundary keyed by route: a content-page crash shows
+                    the fallback in the content area WITHOUT killing the
+                    sidebar/shell, and navigating away resets the error. */}
+                <ErrorBoundary resetKey={location.pathname}>
+                  <Routes>
+                    <Route path="/console" element={<Console />} />
+                    <Route path="/agents" element={<Agents />} />
+                    <Route path="/infrastructure" element={<Infrastructure />} />
+                    <Route path="/incidents" element={<Incidents />} />
+                    <Route path="/chat" element={<Chat />} />
+                    <Route path="/metrics" element={<Metrics />} />
+                    <Route path="/benchmark" element={<Benchmark />} />
+                    <Route path="/settings" element={<Settings />} />
+                  </Routes>
+                </ErrorBoundary>
+              </Layout>
+            </RequireAuth>
+          }
+        />
+      </Routes>
+    </ErrorBoundary>
   )
 }
 
