@@ -10,12 +10,14 @@ import os
 import re
 import time
 import uuid
+from collections import deque
 from datetime import datetime, timedelta
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from src.auth.deps import User, coerce_user, require_user
+from src.api.routes.settings import get_remediation_settings
 from src.api.schemas.chat import (
     AnalysisRequest,
     AnalysisResponse,
@@ -24,6 +26,8 @@ from src.api.schemas.chat import (
     ChatResponse,
     ChatRole,
     ConversationHistory,
+    DecisionRequest,
+    DecisionResponse,
 )
 
 # Import MCP tool executor for automatic tool calls during chat
@@ -520,6 +524,270 @@ def _can_access(conversation: ConversationHistory, user: User) -> bool:
     return owner is None and user.role == "admin"
 
 
+# ---------------------------------------------------------------------------
+# Remediation (Lane B): proposed-action cache + auto-exec interlocks
+# ---------------------------------------------------------------------------
+
+# In-memory cache of remediation actions proposed in approve/auto mode but not
+# yet decided. Mirrors how _conversations is managed: capped + TTL-evicted on
+# each insert. Each entry: {tool_name, parameters, owner, conversation_id,
+# created_at, proposed_action}. The constitutional gate still runs inside
+# execute_tool_call at decision time — this cache holds intent only, never grants.
+_pending_actions: dict[str, dict[str, Any]] = {}
+
+# Cap + TTL so a long-lived process (and the e2e suites) can't grow it forever.
+_MAX_PENDING_ACTIONS = int(os.getenv("CHAT_MAX_PENDING_ACTIONS", "100"))
+_PENDING_ACTION_TTL_SECONDS = int(os.getenv("CHAT_PENDING_ACTION_TTL", "1800"))  # 30 min
+
+# Restart-style action tool we may propose. Read-only here; execution is gated
+# inside execute_tool_call (tools.py owns the whitelist + AIOPS_ENABLE_ACTION_TOOLS).
+_REMEDIATION_TOOL_NAME = "restart_service"
+
+# Container names we may propose a restart for. Kept deliberately small and
+# display-oriented; the REAL authority is tools.py's gate/whitelist.
+_REMEDIATION_WHITELIST = {"nextcloud", "nextcloud-db"}
+
+# Simple in-process auto-exec rate limit: at most _AUTO_EXEC_MAX in the trailing
+# window. A module-level deque of recent auto-exec timestamps (monotonic).
+_AUTO_EXEC_MAX = int(os.getenv("CHAT_AUTO_EXEC_MAX_PER_MIN", "5"))
+_AUTO_EXEC_WINDOW_SECONDS = 60.0
+_auto_exec_times: deque[float] = deque()
+
+# Detects an explicit "restart <container>" instruction in RCA / suggested text.
+_RESTART_RE = re.compile(
+    r"\brestart(?:ing|\s+the)?\s+(?:the\s+|container\s+)?"
+    r"([A-Za-z0-9][A-Za-z0-9_.-]*)",
+    re.IGNORECASE,
+)
+
+
+def _evict_stale_pending_actions() -> None:
+    """Drop expired (TTL) pending actions, then the oldest beyond the cap."""
+    now = time.time()
+    expired = [
+        aid
+        for aid, entry in _pending_actions.items()
+        if now - entry.get("created_at", now) > _PENDING_ACTION_TTL_SECONDS
+    ]
+    for aid in expired:
+        _pending_actions.pop(aid, None)
+    overflow = len(_pending_actions) - _MAX_PENDING_ACTIONS
+    if overflow > 0:
+        by_age = sorted(_pending_actions.items(), key=lambda kv: kv[1].get("created_at", 0.0))
+        for aid, _ in by_age[:overflow]:
+            _pending_actions.pop(aid, None)
+    if expired or overflow > 0:
+        logger.info(
+            "Evicted pending action(s): %d expired, %d over-cap",
+            len(expired), max(0, overflow),
+        )
+
+
+def _detect_remediation_action(
+    content: str,
+    suggested_actions: Optional[list[str]],
+    service: Optional[str],
+) -> Optional[dict[str, str]]:
+    """Detect a concrete restart-style remediation from the RCA reasoning.
+
+    Scans (a) the model's suggested actions and (b) the reply body for an
+    explicit "restart <container>" naming a whitelisted container. Returns
+    ``{"service_name": <container>, "reason": <line>}`` or None when no clear,
+    whitelisted restart action is present. Display-only detection: actual
+    authority to run lives behind execute_tool_call's constitutional gate.
+    """
+    candidates: list[str] = list(suggested_actions or [])
+    if content:
+        candidates.extend(content.split("\n"))
+
+    for line in candidates:
+        if not line or "restart" not in line.lower():
+            continue
+        m = _RESTART_RE.search(line)
+        if not m:
+            continue
+        target = m.group(1).strip().strip(".,:;").lower()
+        if target in _REMEDIATION_WHITELIST:
+            return {"service_name": target, "reason": line.strip()[:200]}
+
+    # Fall back to the named service when the model said "restart it/the service"
+    # without naming the container explicitly but the query subject is whitelisted.
+    if service and service in _REMEDIATION_WHITELIST:
+        for line in candidates:
+            if line and "restart" in line.lower():
+                return {"service_name": service, "reason": line.strip()[:200]}
+    return None
+
+
+def _action_target(service_name: str) -> str:
+    """Display-only routing metadata (mirrors Lane A's default: db -> t3)."""
+    return "t3" if service_name == "nextcloud-db" else "local"
+
+
+def _build_proposed_action(
+    detected: dict[str, str],
+    mode: str,
+    status_value: str,
+) -> dict[str, Any]:
+    """Assemble the proposed_action payload (CONTRACT 3)."""
+    service_name = detected["service_name"]
+    reason = detected.get("reason", "AI-proposed remediation")
+    return {
+        "id": f"act-{uuid.uuid4().hex[:12]}",
+        "tool_name": _REMEDIATION_TOOL_NAME,
+        "parameters": {"service_name": service_name, "reason": reason},
+        "target": _action_target(service_name),
+        "title": f"Restart {service_name}",
+        "rationale": reason,
+        "mode": mode,
+        "status": status_value,
+        "verdict": None,
+        "execution_result": None,
+    }
+
+
+def _auto_exec_rate_ok() -> bool:
+    """True when another auto-exec is within the rolling per-minute cap.
+
+    On success the caller records the timestamp via _record_auto_exec(); this
+    check is side-effect free so a failed interlock doesn't consume budget.
+    """
+    now = time.monotonic()
+    while _auto_exec_times and now - _auto_exec_times[0] > _AUTO_EXEC_WINDOW_SECONDS:
+        _auto_exec_times.popleft()
+    return len(_auto_exec_times) < _AUTO_EXEC_MAX
+
+
+def _record_auto_exec() -> None:
+    """Record an auto-exec attempt against the rate-limit window."""
+    _auto_exec_times.append(time.monotonic())
+
+
+def _extract_verdict(result: dict[str, Any]) -> Optional[dict[str, Any]]:
+    """Pull the constitutional verdict out of an execute_tool_call result.
+
+    execute_tool_call surfaces the verdict via metadata["constitutional"] when
+    present (and may also expose a top-level "verdict"); read both defensively
+    so the shape change in tools.py — if any — doesn't break us. None otherwise.
+    """
+    if not isinstance(result, dict):
+        return None
+    verdict = result.get("verdict")
+    if isinstance(verdict, dict):
+        return verdict
+    meta = result.get("metadata")
+    if isinstance(meta, dict) and isinstance(meta.get("constitutional"), dict):
+        return meta["constitutional"]
+    return None
+
+
+async def _maybe_propose_remediation(
+    request: Request,
+    *,
+    mode: str,
+    content: str,
+    suggested_actions: Optional[list[str]],
+    service: Optional[str],
+    confidence: Optional[float],
+    has_tool_data: bool,
+    remediation_settings: dict[str, Any],
+    owner: str,
+    conversation_id: str,
+) -> Optional[dict[str, Any]]:
+    """Build (and in auto mode, maybe execute) a proposed remediation action.
+
+    Returns the proposed_action dict to attach to the ChatResponse, or None in
+    diagnose mode / when no concrete whitelisted restart action was detected.
+
+    approve: status "proposed", cached, NOT executed.
+    auto:    if confidence >= threshold AND (evidence not required OR present)
+             AND rate-limit OK -> execute via the gated execute_tool_call. The
+             gate may DEGRADE the outcome to "proposed" (approval_required /
+             validation_blocked) — we never force past the validator. Otherwise
+             "auto_executed" (+verdict+execution_result). Any failed interlock
+             degrades to "proposed" (cached for later approval).
+    """
+    if mode == "diagnose":
+        return None
+
+    detected = _detect_remediation_action(content, suggested_actions, service)
+    if detected is None:
+        return None
+
+    proposed = _build_proposed_action(detected, mode, status_value="proposed")
+
+    def _cache(action: dict[str, Any]) -> None:
+        _pending_actions[action["id"]] = {
+            "tool_name": action["tool_name"],
+            "parameters": action["parameters"],
+            "owner": owner,
+            "conversation_id": conversation_id,
+            "created_at": time.time(),
+            "proposed_action": action,
+        }
+        _evict_stale_pending_actions()
+
+    if mode == "approve":
+        _cache(proposed)
+        return proposed
+
+    # mode == "auto": evaluate the interlocks.
+    threshold = float(remediation_settings.get("autoConfidenceThreshold", 90)) / 100.0
+    require_evidence = bool(remediation_settings.get("requireEvidenceForAuto", True))
+
+    confidence_ok = confidence is not None and confidence >= threshold
+    evidence_ok = (not require_evidence) or has_tool_data
+    rate_ok = _auto_exec_rate_ok()
+
+    if not (confidence_ok and evidence_ok and rate_ok):
+        logger.info(
+            "Auto-exec interlocks not met (confidence_ok=%s evidence_ok=%s rate_ok=%s); "
+            "degrading to proposed",
+            confidence_ok, evidence_ok, rate_ok,
+        )
+        _cache(proposed)
+        return proposed
+
+    # All interlocks held: attempt the gated execution. The constitutional gate
+    # + AIOPS_ENABLE_ACTION_TOOLS kill-switch both live inside execute_tool_call.
+    _record_auto_exec()
+    try:
+        result = await execute_tool_call(
+            request,
+            tool_name=proposed["tool_name"],
+            parameters=proposed["parameters"],
+        )
+    except Exception as exc:  # noqa: BLE001 - never let remediation break chat
+        logger.warning("Auto-exec call raised; degrading to proposed: %s", exc)
+        _cache(proposed)
+        return proposed
+
+    verdict = _extract_verdict(result)
+    error_code = result.get("error_code")
+
+    if result.get("success"):
+        proposed["status"] = "auto_executed"
+        proposed["verdict"] = verdict
+        proposed["execution_result"] = result.get("data")
+        # Executed: no pending entry needed (nothing left to approve).
+        return proposed
+
+    # Gate asked for a human or blocked the action: DEGRADE, never force past.
+    if error_code in ("approval_required", "validation_blocked"):
+        proposed["status"] = "proposed"
+        proposed["verdict"] = verdict
+        _cache(proposed)
+        return proposed
+
+    # Any other failure (disabled kill-switch, execution error, …): surface as
+    # blocked so the UI shows it didn't run, and cache for a manual retry.
+    proposed["status"] = "blocked"
+    proposed["verdict"] = verdict
+    proposed["execution_result"] = {"error": result.get("error"), "error_code": error_code}
+    _cache(proposed)
+    return proposed
+
+
 @router.post(
     "/",
     response_model=ChatResponse,
@@ -714,12 +982,37 @@ async def chat(
         if selection_context:
             metadata["selection_applied"] = True
 
+        suggested_actions = _extract_actions(content)
+
+        # Remediation (Lane B): read the mode AFTER RCA/tool gathering so the
+        # decision is based on the evidence we actually collected. diagnose
+        # (default) returns None here -> no behavior change on the default path.
+        proposed_action: Optional[dict[str, Any]] = None
+        try:
+            remediation_settings = get_remediation_settings()
+            proposed_action = await _maybe_propose_remediation(
+                request,
+                mode=remediation_settings.get("mode", "diagnose"),
+                content=content,
+                suggested_actions=suggested_actions,
+                service=service,
+                confidence=confidence,
+                has_tool_data=has_tool_data,
+                remediation_settings=remediation_settings,
+                owner=user.username,
+                conversation_id=conversation_id,
+            )
+        except Exception as exc:  # noqa: BLE001 - remediation must never break chat
+            logger.warning("Remediation proposal step failed (ignored): %s", exc)
+            proposed_action = None
+
         assistant_response = {
             "content": content,
             "confidence": confidence,
-            "suggested_actions": _extract_actions(content),
+            "suggested_actions": suggested_actions,
             "metadata": metadata,
             "tool_struct": tool_struct,
+            "proposed_action": proposed_action,
         }
 
     except HTTPException:
@@ -755,6 +1048,107 @@ async def chat(
         suggested_actions=assistant_response.get("suggested_actions"),
         related_incidents=related_incidents,
         metadata=assistant_response.get("metadata"),
+        proposed_action=assistant_response.get("proposed_action"),
+    )
+
+
+@router.post(
+    "/actions/{action_id}/decision",
+    response_model=DecisionResponse,
+    summary="Decide On A Proposed Remediation",
+    description=(
+        "Approve or reject a remediation action that the AI proposed in approve/auto "
+        "mode. On approval the cached action is executed through the constitutionally "
+        "gated path (execute_tool_call); on rejection nothing runs."
+    ),
+)
+async def decide_action(
+    request: Request,
+    action_id: str,
+    body: DecisionRequest,
+    user: User = Depends(require_user),
+) -> DecisionResponse:
+    """Act on a pending proposed remediation action (approve-to-run protocol).
+
+    * approved=False  -> status "rejected", drop the pending action, no execution.
+    * approved=True   -> look up the cached action (404 if missing/expired), call
+      the gated execute_tool_call, and map its return into DecisionResponse:
+        - success                       -> status "executed", success True
+        - error_code approval_required /
+          validation_blocked            -> status "refused" (gate declined)
+        - any other failure             -> status "refused" (e.g. disabled / exec error)
+    The constitutional gate + AIOPS_ENABLE_ACTION_TOOLS kill-switch run inside
+    execute_tool_call; this endpoint never bypasses them.
+    """
+    user = coerce_user(user)
+    _evict_stale_pending_actions()
+
+    entry = _pending_actions.get(action_id)
+    # An action owned by someone else is indistinguishable from a missing one
+    # (404, not 403) so action ids cannot be probed across users.
+    if entry is None or (entry.get("owner") not in (None, user.username)):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Proposed action {action_id} not found or expired",
+        )
+
+    if not body.approved:
+        # User declined: nothing executes; remove the pending action.
+        _pending_actions.pop(action_id, None)
+        logger.info("Proposed action %s rejected by %s", action_id, user.username)
+        return DecisionResponse(
+            action_id=action_id,
+            status="rejected",
+            success=False,
+            error_code=None,
+            verdict=None,
+            result=None,
+        )
+
+    # Approved: run through the gated programmatic path. The pending entry is
+    # consumed regardless of outcome (single-use approval).
+    _pending_actions.pop(action_id, None)
+    tool_name = entry["tool_name"]
+    parameters = entry["parameters"]
+
+    try:
+        result = await execute_tool_call(request, tool_name=tool_name, parameters=parameters)
+    except Exception as exc:  # noqa: BLE001
+        logger.error("Approved action %s execution raised: %s", action_id, exc)
+        return DecisionResponse(
+            action_id=action_id,
+            status="refused",
+            success=False,
+            error_code="execution_failed",
+            verdict=None,
+            result=None,
+        )
+
+    verdict = _extract_verdict(result)
+    error_code = result.get("error_code")
+
+    if result.get("success"):
+        logger.info("Proposed action %s executed by %s", action_id, user.username)
+        return DecisionResponse(
+            action_id=action_id,
+            status="executed",
+            success=True,
+            error_code=None,
+            verdict=verdict,
+            result=result.get("data"),
+        )
+
+    # The gate (or executor) declined / failed.
+    logger.info(
+        "Proposed action %s refused/failed (error_code=%s)", action_id, error_code
+    )
+    return DecisionResponse(
+        action_id=action_id,
+        status="refused",
+        success=False,
+        error_code=error_code,
+        verdict=verdict,
+        result=result.get("data"),
     )
 
 
