@@ -23,6 +23,8 @@ interface AskAiPanelProps {
   selection: SelectedItem[]
   onRemoveSelection: (key: string) => void
   windowHours: number
+  /** Cap so the panel matches the canvas+scrubber and the list scrolls. */
+  maxHeight: number
 }
 
 /**
@@ -31,7 +33,7 @@ interface AskAiPanelProps {
  * conversation exists. Sends the frozen schema-graph context payload with
  * every message.
  */
-export function AskAiPanel({ selection, onRemoveSelection, windowHours }: AskAiPanelProps) {
+export function AskAiPanel({ selection, onRemoveSelection, windowHours, maxHeight }: AskAiPanelProps) {
   const navigate = useNavigate()
   const [messages, setMessages] = useState<PanelMessage[]>([])
   const [input, setInput] = useState('')
@@ -90,7 +92,8 @@ export function AskAiPanel({ selection, onRemoveSelection, windowHours }: AskAiP
 
   return (
     <div
-      className="flex w-full shrink-0 flex-col rounded-lg border border-slate-700/60 bg-gradient-to-b from-slate-900/85 to-slate-950/70 ring-1 ring-inset ring-white/5 lg:w-80"
+      className="flex w-full shrink-0 flex-col overflow-hidden rounded-lg border border-slate-700/60 bg-gradient-to-b from-slate-900/85 to-slate-950/70 ring-1 ring-inset ring-white/5 lg:w-80"
+      style={{ maxHeight }}
       data-testid="askai-panel"
     >
       <div className="flex items-center justify-between border-b border-slate-800 bg-gradient-to-r from-primary/10 to-transparent px-3 py-2.5">
@@ -139,8 +142,8 @@ export function AskAiPanel({ selection, onRemoveSelection, windowHours }: AskAiP
           </div>
         ) : (
           <p className="text-[11px] leading-snug text-slate-500">
-            Click a service to inspect it; Ctrl-click services or links to add them here as
-            context for the assistant.
+            Click a service to inspect it, then <span className="text-slate-400">Add to Ask AI</span> —
+            or Ctrl-click services and links — to add them here as context for the assistant.
           </p>
         )}
       </div>
@@ -160,7 +163,7 @@ export function AskAiPanel({ selection, onRemoveSelection, windowHours }: AskAiP
         {messages.map((m) => (
           <div
             key={m.id}
-            className={`rounded-lg px-2.5 py-1.5 text-xs leading-relaxed ${
+            className={`overflow-hidden rounded-lg px-2.5 py-1.5 text-xs leading-relaxed [overflow-wrap:anywhere] ${
               m.role === 'user'
                 ? 'ml-6 bg-primary/15 text-slate-200'
                 : m.isError
@@ -169,7 +172,7 @@ export function AskAiPanel({ selection, onRemoveSelection, windowHours }: AskAiP
             }`}
           >
             {m.role === 'assistant' && !m.isError ? (
-              <div className="prose prose-invert max-w-none text-xs prose-p:my-1 prose-li:my-0">
+              <div className="prose prose-invert max-w-none break-words text-xs prose-p:my-1 prose-pre:overflow-x-auto prose-pre:whitespace-pre-wrap prose-li:my-0">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
               </div>
             ) : (

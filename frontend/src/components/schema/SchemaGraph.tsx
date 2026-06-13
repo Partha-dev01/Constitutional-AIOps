@@ -135,39 +135,39 @@ export default function SchemaGraph({ height = 520 }: SchemaGraphProps) {
   const selectionItems = useMemo(() => [...selection.values()], [selection])
 
   // ---- Interactions --------------------------------------------------------
-  const handleNodeClick = useCallback((node: TopologyNode, event: React.MouseEvent) => {
-    const item: SelectedItem = { key: nodeKey(node.id), type: 'node', node }
-    const additive = event.ctrlKey || event.metaKey
+  // Plain click = INSPECT (open the drawer) without touching the Ask-AI set, so
+  // the "Add to Ask AI" button and Ctrl-click are what build context and chips
+  // accumulate across services. Ctrl/⌘-click = additive toggle (no drawer).
+  const toggleSelection = useCallback((item: SelectedItem) => {
     setSelection((prev) => {
       const next = new Map(prev)
-      if (additive) {
-        if (next.has(item.key)) next.delete(item.key)
-        else next.set(item.key, item)
-        return next
-      }
-      next.clear()
-      next.set(item.key, item)
+      if (next.has(item.key)) next.delete(item.key)
+      else next.set(item.key, item)
       return next
     })
-    if (!additive) setDrawer({ type: 'node', node })
   }, [])
 
-  const handleEdgeClick = useCallback((edge: TopologyEdge, event: React.MouseEvent) => {
-    const item: SelectedItem = { key: edgeKey(edge.id), type: 'edge', edge }
-    const additive = event.ctrlKey || event.metaKey
-    setSelection((prev) => {
-      const next = new Map(prev)
-      if (additive) {
-        if (next.has(item.key)) next.delete(item.key)
-        else next.set(item.key, item)
-        return next
+  const handleNodeClick = useCallback(
+    (node: TopologyNode, event: React.MouseEvent) => {
+      if (event.ctrlKey || event.metaKey) {
+        toggleSelection({ key: nodeKey(node.id), type: 'node', node })
+        return
       }
-      next.clear()
-      next.set(item.key, item)
-      return next
-    })
-    if (!additive) setDrawer({ type: 'edge', edge })
-  }, [])
+      setDrawer({ type: 'node', node })
+    },
+    [toggleSelection],
+  )
+
+  const handleEdgeClick = useCallback(
+    (edge: TopologyEdge, event: React.MouseEvent) => {
+      if (event.ctrlKey || event.metaKey) {
+        toggleSelection({ key: edgeKey(edge.id), type: 'edge', edge })
+        return
+      }
+      setDrawer({ type: 'edge', edge })
+    },
+    [toggleSelection],
+  )
 
   const handleBackgroundClick = useCallback(() => {
     setSelection(new Map())
@@ -200,17 +200,16 @@ export default function SchemaGraph({ height = 520 }: SchemaGraphProps) {
     [placeHover],
   )
 
-  const handleAddToAskAi = useCallback((target: FocusTarget) => {
-    const item: SelectedItem =
-      target.type === 'node'
-        ? { key: nodeKey(target.node.id), type: 'node', node: target.node }
-        : { key: edgeKey(target.edge.id), type: 'edge', edge: target.edge }
-    setSelection((prev) => {
-      const next = new Map(prev)
-      next.set(item.key, item)
-      return next
-    })
-  }, [])
+  const handleToggleAskAi = useCallback(
+    (target: FocusTarget) => {
+      const item: SelectedItem =
+        target.type === 'node'
+          ? { key: nodeKey(target.node.id), type: 'node', node: target.node }
+          : { key: edgeKey(target.edge.id), type: 'edge', edge: target.edge }
+      toggleSelection(item)
+    },
+    [toggleSelection],
+  )
 
   const handleRemoveSelection = useCallback((key: string) => {
     setSelection((prev) => {
@@ -340,8 +339,11 @@ export default function SchemaGraph({ height = 520 }: SchemaGraphProps) {
             {drawer && (
               <DetailDrawer
                 target={drawer}
+                inContext={selectedKeys.has(
+                  drawer.type === 'node' ? nodeKey(drawer.node.id) : edgeKey(drawer.edge.id),
+                )}
                 onClose={() => setDrawer(null)}
-                onAddToAskAi={handleAddToAskAi}
+                onToggleAskAi={handleToggleAskAi}
               />
             )}
           </div>
@@ -360,6 +362,7 @@ export default function SchemaGraph({ height = 520 }: SchemaGraphProps) {
           selection={selectionItems}
           onRemoveSelection={handleRemoveSelection}
           windowHours={data.window_hours}
+          maxHeight={height + 72}
         />
       </div>
     </div>
