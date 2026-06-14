@@ -126,8 +126,9 @@ export function Tabs({
         })}
       </div>
 
-      {/* tab panels — only the active one is visible */}
-      {children}
+      {/* tab panels — only the active one is visible. mt-4 separates the panel
+          content from the tablist so it doesn't hug the tab bar. */}
+      <div className="mt-4">{children}</div>
     </div>
   )
 }

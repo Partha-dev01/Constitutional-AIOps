@@ -10,6 +10,12 @@ interface ToolCallTimelineProps {
   reducedMotionFallbackText?: string
 }
 
+/** A query string that should render as pretty JSON (object/array literal). */
+function looksLikeJson(s: string): boolean {
+  const t = s.trim()
+  return t.startsWith('{') || t.startsWith('[')
+}
+
 /**
  * Presentational vertical timeline of derived tool-call steps, shown while a
  * chat request is in flight. Header always renders the literal "Thinking..."
@@ -169,7 +175,7 @@ export function ToolCallTimeline({ steps, reducedMotionFallbackText }: ToolCallT
                       data-testid={`step-detail-${step.id}`}
                     >
                       {/* Static fields — always available immediately. */}
-                      <div className="space-y-0.5">
+                      <div className="space-y-1">
                         {detail.service && (
                           <p className="text-muted-foreground">
                             <span className="font-medium text-foreground">Service:</span>{' '}
@@ -180,10 +186,22 @@ export function ToolCallTimeline({ steps, reducedMotionFallbackText }: ToolCallT
                           <span className="font-medium text-foreground">Store:</span>{' '}
                           {detail.store}
                         </p>
-                        <p className="text-muted-foreground">
+                        {detail.model && (
+                          <p className="text-muted-foreground">
+                            <span className="font-medium text-foreground">Model:</span>{' '}
+                            {detail.model}
+                          </p>
+                        )}
+                        <div className="text-muted-foreground">
                           <span className="font-medium text-foreground">Query:</span>{' '}
-                          {detail.query}
-                        </p>
+                          {looksLikeJson(detail.query) ? (
+                            <div className="mt-1">
+                              <JsonView raw={detail.query} />
+                            </div>
+                          ) : (
+                            detail.query
+                          )}
+                        </div>
                       </div>
 
                       {/* Dynamic result — available after response arrives. */}

@@ -244,15 +244,31 @@ export function EpisodicGraphExplorer({
     return map
   }, [filteredLinks])
 
+  // In the DAG (hierarchy) layout every node with no edge becomes a top-level
+  // root, so isolated episodes pile into one flat row of dots across the top
+  // (the "string of dots" bug). Hide isolated nodes in DAG mode so the hierarchy
+  // shows only the connected causal trees; force mode keeps the full scatter.
+  const displayNodes = useMemo(() => {
+    if (layoutMode !== 'dag') return filteredNodes
+    const connected = new Set<string>()
+    for (const link of filteredLinks) {
+      const srcId = typeof link.source === 'string' ? link.source : (link.source as EpisodicNode)?.id
+      const tgtId = typeof link.target === 'string' ? link.target : (link.target as EpisodicNode)?.id
+      if (srcId) connected.add(srcId)
+      if (tgtId) connected.add(tgtId)
+    }
+    return filteredNodes.filter(n => connected.has(n.id))
+  }, [filteredNodes, filteredLinks, layoutMode])
+
   // Stable graphData reference. Passing a NEW { nodes, links } object literal on
   // every render (e.g. when hoveredNode/selectedNode state changes during a mouse
   // hover) makes react-force-graph re-ingest the data and REHEAT the simulation
   // (alpha→1), so the whole layout slowly drifts toward a corner on every hover.
   // Memoizing keeps the reference stable across hover/select re-renders — it only
-  // changes when the filtered node/link sets actually change (data refresh / filter).
+  // changes when the display node/link sets actually change (data refresh / filter).
   const graphData = useMemo(
-    () => ({ nodes: filteredNodes as NodeObject[], links: filteredLinks as LinkObject[] }),
-    [filteredNodes, filteredLinks],
+    () => ({ nodes: displayNodes as NodeObject[], links: filteredLinks as LinkObject[] }),
+    [displayNodes, filteredLinks],
   )
 
   // Configure d3 forces for better node separation across the full canvas area.
@@ -610,6 +626,9 @@ export function EpisodicGraphExplorer({
           maxZoom={10}
           dagMode={layoutMode === 'dag' ? (dagDirection ?? 'lr') : null}
           dagLevelDistance={100}
+          // Tolerate cycles (e.g. mutual SIMILAR_TO) instead of throwing and
+          // breaking the whole hierarchy layout — offending links are skipped.
+          onDagError={() => undefined}
         />
       </div>
 
@@ -747,7 +766,7 @@ export function EpisodicGraphExplorer({
 
       {/* Stats Overlay */}
       <div className="absolute bottom-3 right-3 text-xs text-slate-400 bg-slate-900/80 px-3 py-1.5 rounded-md border border-slate-700">
-        {filteredNodes.length} nodes | {filteredLinks.length} edges
+        {displayNodes.length} nodes shown · {filteredLinks.length} edges
         {filterType !== 'all' && ` (filtered: ${filterType})`}
       </div>
 

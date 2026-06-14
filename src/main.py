@@ -40,6 +40,7 @@ from src.api.routes.demo import router as demo_router
 from src.api.routes.metrics import router as metrics_router
 from src.api.routes.benchmark import router as benchmark_router
 from src.api.routes.settings import router as settings_router
+from src.api.routes.topology import router as topology_router
 
 # Import core components
 from src.agents.model_router import ModelRouter
@@ -490,6 +491,7 @@ app.include_router(demo_router, prefix="/api/v1/demo", tags=["demo"], dependenci
 app.include_router(metrics_router, prefix="/api/v1/metrics", tags=["metrics"], dependencies=_AUTHED)
 app.include_router(benchmark_router, prefix="/api/v1/benchmark", tags=["benchmark"], dependencies=_AUTHED)
 app.include_router(settings_router, prefix="/api/v1/settings", tags=["settings"], dependencies=_AUTHED)
+app.include_router(topology_router, prefix="/api/v1/topology", tags=["topology"], dependencies=_AUTHED)
 
 
 # WebSocket endpoint for real-time updates

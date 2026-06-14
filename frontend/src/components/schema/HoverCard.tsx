@@ -1,4 +1,4 @@
-import { FocusTarget, kindAccent } from './types'
+import { EpisodicDetail, FocusTarget, kindAccent } from './types'
 
 const HEALTH_TEXT: Record<string, string> = {
   healthy: 'text-green-400',
@@ -12,6 +12,12 @@ interface HoverCardProps {
   /** Position in px, relative to the svg host container. */
   x: number
   y: number
+  /**
+   * Episodic view only: pre-formatted detail for the hovered episodic node/edge.
+   * When present it REPLACES the service-centric body. Absent on the platform
+   * path → the hover card renders exactly as before.
+   */
+  episodic?: EpisodicDetail
 }
 
 /**
@@ -19,14 +25,39 @@ interface HoverCardProps {
  * the svg host (NOT a foreignObject), pointer-events disabled so it can never
  * steal canvas interactions.
  */
-export function HoverCard({ target, x, y }: HoverCardProps) {
+export function HoverCard({ target, x, y, episodic }: HoverCardProps) {
   return (
     <div
       className="schema-hover-card pointer-events-none absolute z-20 max-w-[240px] rounded-lg border border-slate-700/80 bg-slate-900/95 px-3 py-2 text-xs shadow-xl backdrop-blur-sm"
       style={{ left: x + 14, top: y + 10 }}
       data-testid="schema-hover-card"
     >
-      {target.type === 'node' ? (
+      {episodic ? (
+        <>
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-slate-100">{episodic.title}</span>
+            <span
+              className="rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide"
+              style={{
+                backgroundColor: `hsl(${episodic.accent} / 0.16)`,
+                color: `hsl(${episodic.accent})`,
+              }}
+            >
+              {episodic.chip}
+            </span>
+          </div>
+          <div className="mt-1 space-y-0.5 text-slate-400">
+            {episodic.rows.slice(0, 3).map((row) => (
+              <div key={row.label}>
+                {row.label}:{' '}
+                <span style={row.accent ? { color: `hsl(${row.accent})` } : undefined}>
+                  {row.value}
+                </span>
+              </div>
+            ))}
+          </div>
+        </>
+      ) : target.type === 'node' ? (
         <>
           <div className="flex items-center gap-2">
             <span className="font-semibold text-slate-100">{target.node.label}</span>

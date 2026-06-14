@@ -367,3 +367,30 @@ class TestExtractActions:
         )
         actions = _extract_actions(content)
         assert actions == ["You should restart the nextcloud container"]
+
+    def test_excludes_first_person_narration(self):
+        """The model narrating its own plan must NOT become suggested actions,
+        even though the sentences contain "recommendations" / "suggest"."""
+        from src.api.routes.chat import _extract_actions
+
+        content = (
+            'I will investigate the incident "INC-2026-0001" and provide a root '
+            "cause analysis and remediation recommendations.\n\n"
+            "First, I will examine the current status of the nextcloud-db "
+            "container and analyze any available telemetry data to determine the "
+            "cause of the database outage. I will then provide a detailed "
+            "analysis and suggest appropriate remediation steps."
+        )
+        assert _extract_actions(content) is None
+
+    def test_long_action_trimmed_at_word_boundary(self):
+        from src.api.routes.chat import _extract_actions
+
+        content = "You should " + "restart and verify the affected container " * 6
+        actions = _extract_actions(content.strip())
+        assert actions is not None and len(actions) == 1
+        action = actions[0]
+        # Word-boundary trim with ellipsis — never an abrupt mid-word cutoff.
+        assert len(action) <= 161
+        assert action.endswith("…")
+        assert not action.endswith(" …")

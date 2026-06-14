@@ -1,6 +1,7 @@
 import React from 'react'
 import {
   Activity,
+  AlertCircle,
   Box,
   Brain,
   Database,
@@ -8,6 +9,8 @@ import {
   Monitor,
   Radio,
   Server,
+  Sparkles,
+  Wrench,
 } from 'lucide-react'
 import { NODE_H, NODE_W } from './layout'
 import { TopologyNode, kindAccent } from './types'
@@ -28,6 +31,13 @@ const KIND_ICON: Record<string, typeof Server> = {
   observability: Activity,
   llm: Brain,
   edge: Radio,
+  // Episodic-memory kinds (Console episodic view) — additive, never used by
+  // the platform topology.
+  episode: AlertCircle,
+  root_cause: Activity,
+  action: Wrench,
+  service: Server,
+  entity: Sparkles,
 }
 
 const truncate = (text: string, max: number): string =>
@@ -44,6 +54,14 @@ export interface SchemaNodeProps {
   selected: boolean
   onClick: (node: TopologyNode, event: React.MouseEvent) => void
   onHover: (node: TopologyNode | null, event?: React.PointerEvent) => void
+  /**
+   * Episodic view only: a bare HSL accent triplet that overrides the
+   * kind-derived accent so a node can be coloured by episodic TYPE + STATUS
+   * (e.g. resolved → green). Omitted on the platform path → kindAccent(kind).
+   */
+  accent?: string
+  /** Episodic view only: overrides the kind/port sub-label line. */
+  subLabel?: string
 }
 
 /**
@@ -59,12 +77,15 @@ function SchemaNodeInner({
   selected,
   onClick,
   onHover,
+  accent: accentOverride,
+  subLabel: subLabelOverride,
 }: SchemaNodeProps) {
   const Icon = KIND_ICON[node.kind] ?? Box
   const healthColor = HEALTH_COLOR[node.health] ?? HEALTH_COLOR.unknown
-  const accent = kindAccent(node.kind)
+  const accent = accentOverride ?? kindAccent(node.kind)
   const glow = Math.min(0.16, activity * 0.09)
-  const subLabel = node.meta.port ? `${node.kind} · :${node.meta.port}` : node.kind
+  const subLabel =
+    subLabelOverride ?? (node.meta.port ? `${node.kind} · :${node.meta.port}` : node.kind)
 
   // AUDIT-C6 TODO: full keyboard graph navigation (arrow-key traversal between
   // nodes, pan/zoom via keyboard) is deferred to a dedicated pass. For now we
