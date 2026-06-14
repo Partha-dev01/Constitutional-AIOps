@@ -511,7 +511,7 @@ export function ChatPane({ variant = 'page', seedContext, injectedPrompt, classN
           )}
 
           {showSuggestions && (
-            <div className="flex flex-1 items-center justify-center">
+            <div className="flex flex-1 items-start justify-center px-2 pt-6 pb-4">
               <SuggestedPrompts prompts={prompts} onPick={handlePickPrompt} />
             </div>
           )}
@@ -538,15 +538,8 @@ export function ChatPane({ variant = 'page', seedContext, injectedPrompt, classN
       <div className={`flex h-full min-h-0 flex-col ${className}`} data-testid="chat-pane-embedded">
         <div className="mb-2 flex shrink-0 items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-blue-400 drop-shadow-[0_0_6px_hsl(var(--primary)/0.7)]" />
+            <Sparkles className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm font-semibold">Assistant</span>
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-card/60 px-2 py-0.5 text-[11px] text-muted-foreground">
-              <span className="relative flex h-1.5 w-1.5" aria-hidden>
-                <span className="absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75 motion-safe:animate-ping" />
-                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-green-500" />
-              </span>
-              Qwen3-14B
-            </span>
           </div>
           <button
             type="button"
@@ -592,15 +585,6 @@ export function ChatPane({ variant = 'page', seedContext, injectedPrompt, classN
             </button>
             <div>
               <h1 className="text-2xl font-bold">Chat</h1>
-              {/* Status pill — deliberately a SIBLING of the h1, never inside
-                  it, so the heading's accessible name stays exactly "Chat". */}
-              <span className="mt-1 inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-card/60 px-2.5 py-0.5 text-xs text-muted-foreground shadow-sm">
-                <span className="relative flex h-1.5 w-1.5" aria-hidden>
-                  <span className="absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75 motion-safe:animate-ping" />
-                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-green-500" />
-                </span>
-                Qwen3-14B · Reasoning Agent
-              </span>
             </div>
           </div>
           <button

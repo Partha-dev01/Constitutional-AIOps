@@ -685,16 +685,54 @@ def _build_proposed_action(
     }
 
 
+def _auto_exec_max_per_min() -> int:
+    """Resolve the per-minute auto-exec cap.
+
+    Honours the persisted ``constitutional.maxActionsPerMinute`` operator
+    setting (previously a dead no-op), falling back to the
+    ``CHAT_AUTO_EXEC_MAX_PER_MIN`` env / default when it is absent or
+    unreadable. The settings read is best-effort so a missing store never
+    breaks the rate check.
+    """
+    try:
+        from src.api.routes.settings import get_constitutional_settings
+
+        value = get_constitutional_settings().get("maxActionsPerMinute")
+        if isinstance(value, (int, float)) and value > 0:
+            return int(value)
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("Could not read persisted maxActionsPerMinute: %s", exc)
+    return _AUTO_EXEC_MAX
+
+
+def _audit_enabled() -> bool:
+    """Resolve the persisted ``constitutional.enableAuditLog`` toggle.
+
+    Previously a dead no-op (call sites hardcoded ``audit_enabled=True``). Reads
+    the persisted setting, defaulting to True (audit-on) when unset/unreadable —
+    auditing is the safe default for a constitutional system.
+    """
+    try:
+        from src.api.routes.settings import get_constitutional_settings
+
+        return bool(get_constitutional_settings().get("enableAuditLog", True))
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("Could not read persisted enableAuditLog: %s", exc)
+        return True
+
+
 def _auto_exec_rate_ok() -> bool:
     """True when another auto-exec is within the rolling per-minute cap.
 
     On success the caller records the timestamp via _record_auto_exec(); this
     check is side-effect free so a failed interlock doesn't consume budget.
+    The cap comes from the persisted constitutional settings (falling back to
+    the env/default).
     """
     now = time.monotonic()
     while _auto_exec_times and now - _auto_exec_times[0] > _AUTO_EXEC_WINDOW_SECONDS:
         _auto_exec_times.popleft()
-    return len(_auto_exec_times) < _AUTO_EXEC_MAX
+    return len(_auto_exec_times) < _auto_exec_max_per_min()
 
 
 def _record_auto_exec() -> None:
@@ -805,7 +843,7 @@ async def _maybe_propose_remediation(
             request,
             tool_name=proposed["tool_name"],
             parameters={**proposed["parameters"], "confidence": confidence},
-            context={"telemetry_evidence": bool(has_tool_data), "audit_enabled": True},
+            context={"telemetry_evidence": bool(has_tool_data), "audit_enabled": _audit_enabled()},
         )
     except Exception as exc:  # noqa: BLE001 - never let remediation break chat
         logger.warning("Auto-exec call raised; degrading to proposed: %s", exc)
@@ -1534,36 +1572,65 @@ def _looks_like_refusal(text: Optional[str]) -> bool:
 def _compute_chat_confidence(
     telemetry_struct: Optional[dict[str, Any]],
     tool_struct: dict[str, Any],
-) -> float:
-    """Evidence-based chat confidence (A1).
+) -> Optional[float]:
+    """Evidence-based chat confidence via the documented composite formula (A1).
 
-    Start at 0.5; +0.2 if telemetry returned real data (logs or metrics);
-    +0.15 if any tool (similar / dependencies / logs) returned non-empty data;
-    clamp to [0.5, 0.9].
+    Routes through ``src.agents.confidence.compute_confidence`` — the single,
+    tested code path implementing ``C = 0.4*C_LLM + 0.35*C_hist + 0.25*C_sim``
+    with weight renormalization over the present components. This replaces the
+    earlier coarse bucket that could only emit {0.5, 0.65, 0.7, 0.85}.
+
+    Component sourcing for the (stateless) chat path:
+      * ``c_sim``  = ``similarity_confidence(...)`` over the REAL similarity
+        scores returned by the find_similar tool (``tool_struct["similar"]
+        ["incidents"][].score``).
+      * ``c_hist`` = ``None`` — the find_similar results surfaced in chat carry
+        no per-incident resolution outcome, so there is no historical signal to
+        fold in here (the formula renormalizes over the remaining components).
+      * ``c_llm``  = ``None`` — the chat model does not self-report a calibrated
+        confidence (its placeholder is a neutral 0.5), so we omit it rather than
+        anchor the score to a meaningless value.
+
+    When at least telemetry OR a non-similarity tool returned data but no real
+    similarity score is available, fall back to a neutral evidence floor so a
+    data-rich answer still shows a sensible gauge (instead of ``None``).
     """
-    confidence = 0.5
+    from src.agents.confidence import compute_confidence, similarity_confidence
 
-    telemetry_has_data = False
-    if telemetry_struct:
-        if telemetry_struct.get("log_count", 0) > 0 or telemetry_struct.get("metrics"):
-            telemetry_has_data = True
-    if telemetry_has_data:
-        confidence += 0.2
+    # C_sim: real similarity scores from the find_similar tool results.
+    sim_scores: list[float] = []
+    similar = tool_struct.get("similar") or {}
+    for inc in similar.get("incidents") or []:
+        score = inc.get("score")
+        if isinstance(score, (int, float)) and not isinstance(score, bool):
+            sim_scores.append(float(score))
+    c_sim = similarity_confidence(sim_scores)
 
+    composite = compute_confidence(None, None, c_sim)
+    if composite is not None:
+        return composite
+
+    # No real similarity score available. Fall back to a neutral evidence-based
+    # floor so a data-rich (telemetry / dependency / logs) answer still surfaces
+    # a gauge rather than None.
+    telemetry_has_data = bool(
+        telemetry_struct
+        and (telemetry_struct.get("log_count", 0) > 0 or telemetry_struct.get("metrics"))
+    )
     tool_has_data = False
-    similar = tool_struct.get("similar")
-    if similar and similar.get("count", 0) > 0:
-        tool_has_data = True
     deps = tool_struct.get("dependencies")
     if deps and (deps.get("upstream") or deps.get("downstream")):
         tool_has_data = True
     logs = tool_struct.get("logs")
     if logs and (logs.get("total_logs", 0) > 0 or logs.get("top_errors")):
         tool_has_data = True
-    if tool_has_data:
-        confidence += 0.15
 
-    return max(0.5, min(0.9, confidence))
+    floor = 0.5
+    if telemetry_has_data:
+        floor += 0.2
+    if tool_has_data:
+        floor += 0.15
+    return max(0.5, min(0.9, floor))
 
 
 def _related_from_similar(tool_struct: dict[str, Any]) -> list[str] | None:

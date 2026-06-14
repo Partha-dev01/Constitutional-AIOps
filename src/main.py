@@ -179,6 +179,31 @@ async def lifespan(app: FastAPI):
     # Initialize Constitutional Validator
     app.state.validator = ConstitutionalValidator()
 
+    # Startup-load persisted constitutional thresholds (W2.1): the PUT
+    # /settings path patches the live validator, but without this the operator's
+    # saved auto/approval thresholds RESET to the ConstitutionalValidator
+    # defaults on every restart/redeploy. Mirror the persisted values onto the
+    # fresh validator here. Non-fatal: a missing/malformed settings file must
+    # never block startup — the validator simply keeps its defaults.
+    try:
+        from src.api.routes.settings import get_constitutional_settings
+
+        const_settings = get_constitutional_settings()
+        auto = const_settings.get("autoThreshold")
+        approval = const_settings.get("approvalThreshold")
+        if auto is not None:
+            app.state.validator.confidence_threshold_auto = float(auto) / 100.0
+        if approval is not None:
+            app.state.validator.confidence_threshold_approval = float(approval) / 100.0
+        if auto is not None or approval is not None:
+            logger.info(
+                "Restored persisted constitutional thresholds → auto=%.2f approval=%.2f",
+                app.state.validator.confidence_threshold_auto,
+                app.state.validator.confidence_threshold_approval,
+            )
+    except Exception as e:  # noqa: BLE001
+        logger.warning(f"Failed to apply persisted constitutional thresholds: {e}")
+
     # Initialize embedding service (lazy-loads model on first use)
     app.state.embedding_service = get_embedding_service()
     logger.info(f"Embedding service initialized (available: {app.state.embedding_service.is_available})")

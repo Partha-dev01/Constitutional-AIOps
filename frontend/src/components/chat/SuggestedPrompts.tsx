@@ -18,9 +18,6 @@ export function SuggestedPrompts({ prompts, onPick, title }: SuggestedPromptsPro
 
   return (
     <div className="mx-auto max-w-2xl text-center">
-      <div className="float-slow mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/25 via-primary/10 to-transparent text-primary shadow-[0_8px_30px_-6px_hsl(var(--primary)/0.35)]">
-        <Sparkles className="h-7 w-7" />
-      </div>
       <h2 className="text-lg font-semibold">{title ?? 'Try asking about'}</h2>
       <p className="mt-1 text-sm text-muted-foreground">
         Pick a prompt to get started, or type your own question below.

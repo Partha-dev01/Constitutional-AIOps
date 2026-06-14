@@ -264,10 +264,16 @@ async def agent_health(request: Request) -> dict[str, Any]:
 
 # Helper functions for health checks
 
-async def _check_fast_agent(request: Request) -> ComponentHealth:
-    """Check Fast Agent health."""
-    import time
+# Floor (ms) applied to a reachable agent's probe latency. A cached / very fast
+# probe can round to 0.0; the Dashboard "Avg Response Time" card then shows 0,
+# which reads as "no data". A reachable agent always took *some* round-trip, so
+# we floor the reported latency to a small positive value to keep the card
+# meaningful. Unreachable agents report no latency (None).
+_MIN_REACHABLE_LATENCY_MS: float = 0.01
 
+
+async def _check_fast_agent(request: Request) -> ComponentHealth:
+    """Check Fast Agent health (timed probe; latency_ms > 0 when reachable)."""
     try:
         model_router = getattr(request.app.state, "model_router", None)
         if model_router is None:
@@ -280,11 +286,16 @@ async def _check_fast_agent(request: Request) -> ComponentHealth:
         start = time.perf_counter()
         health = await model_router.health_check()
         latency = (time.perf_counter() - start) * 1000
+        healthy = health.get("fast_agent", False)
+
+        # Guarantee a present, positive latency for a reachable agent (a cached
+        # probe can round to 0.0, which the Dashboard reads as "no data").
+        latency_ms = max(round(latency, 2), _MIN_REACHABLE_LATENCY_MS) if healthy else round(latency, 2)
 
         return ComponentHealth(
             name="fast_agent",
-            healthy=health.get("fast_agent", False),
-            latency_ms=round(latency, 2),
+            healthy=healthy,
+            latency_ms=latency_ms,
         )
     except Exception as e:
         logger.warning(f"Fast agent health check failed: {e}")
@@ -296,9 +307,7 @@ async def _check_fast_agent(request: Request) -> ComponentHealth:
 
 
 async def _check_reasoning_agent(request: Request) -> ComponentHealth:
-    """Check Reasoning Agent health."""
-    import time
-
+    """Check Reasoning Agent health (timed probe; latency_ms > 0 when reachable)."""
     try:
         model_router = getattr(request.app.state, "model_router", None)
         if model_router is None:
@@ -311,11 +320,14 @@ async def _check_reasoning_agent(request: Request) -> ComponentHealth:
         start = time.perf_counter()
         health = await model_router.health_check()
         latency = (time.perf_counter() - start) * 1000
+        healthy = health.get("reasoning_agent", False)
+
+        latency_ms = max(round(latency, 2), _MIN_REACHABLE_LATENCY_MS) if healthy else round(latency, 2)
 
         return ComponentHealth(
             name="reasoning_agent",
-            healthy=health.get("reasoning_agent", False),
-            latency_ms=round(latency, 2),
+            healthy=healthy,
+            latency_ms=latency_ms,
         )
     except Exception as e:
         logger.warning(f"Reasoning agent health check failed: {e}")

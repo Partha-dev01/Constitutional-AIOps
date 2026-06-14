@@ -168,16 +168,38 @@ async def test_b2_analyze_logs_nested_key_read() -> None:
 # ---------------------------------------------------------------------------
 
 def test_compute_confidence_evidence_based() -> None:
+    # When NO real similarity score is present, the function falls back to the
+    # neutral evidence floor (the composite formula has no component to score).
     # No evidence -> floor 0.5
     assert _compute_chat_confidence(None, {}) == 0.5
     # Telemetry only -> +0.2
     tele = {"log_count": 5, "error_count": 1, "metrics": [{"name": "cpu", "value": 1.0}]}
     assert _compute_chat_confidence(tele, {}) == pytest.approx(0.7)
-    # Telemetry + a tool -> +0.2 +0.15, clamped to 0.85
+    # Telemetry + a non-similarity tool -> +0.2 +0.15, clamped to 0.85
     tools = {"dependencies": {"upstream": ["loki"], "downstream": []}}
     assert _compute_chat_confidence(tele, tools) == pytest.approx(0.85)
-    # Tool only -> +0.15
+    # Non-similarity tool only -> +0.15
     assert _compute_chat_confidence(None, tools) == pytest.approx(0.65)
+
+
+def test_compute_confidence_uses_real_similarity_score() -> None:
+    """A1 (genuine confidence): when the find_similar tool returns a REAL
+    similarity score, the composite formula uses it directly — no longer the
+    coarse {0.5, 0.65, 0.7, 0.85} bucket."""
+    tools = {
+        "similar": {
+            "count": 2,
+            "incidents": [
+                {"id": "INC-1", "summary": "x", "score": 0.62},
+                {"id": "INC-2", "summary": "y", "score": 0.83},
+            ],
+        }
+    }
+    # c_sim = max(0.62, 0.83) = 0.83; with only the sim component the formula
+    # renormalizes to that value.
+    result = _compute_chat_confidence(None, tools)
+    assert result == pytest.approx(0.83)
+    assert result not in {0.5, 0.65, 0.7, 0.85}
 
 
 def test_looks_like_refusal() -> None:
@@ -273,8 +295,10 @@ async def test_chat_metadata_tools_populated_when_tools_return_data() -> None:
     # C1: related_incidents come from the find_similar tool, not the fallback store.
     assert response.related_incidents == ["Nextcloud DB pool exhaustion (similarity: 0.82)"]
 
-    # A1: evidence-based confidence (telemetry + tools) -> 0.85.
-    assert response.confidence == pytest.approx(0.85)
+    # A1 (genuine confidence): the find_similar tool returned a REAL similarity
+    # score (0.82), so the composite formula now uses it directly instead of the
+    # old coarse 0.85 bucket.
+    assert response.confidence == pytest.approx(0.82)
 
 
 @pytest.mark.asyncio

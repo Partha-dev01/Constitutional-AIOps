@@ -16,7 +16,9 @@ import {
   UserCircle2,
   Menu,
   PanelLeftClose,
-  PanelLeftOpen,
+  Wrench,
+  Network,
+  GitBranch,
 } from 'lucide-react'
 import { cn } from '../lib/utils'
 import api, { HealthResponse, isComponentHealthy } from '../lib/api'
@@ -31,6 +33,9 @@ const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Command Center', href: '/console', icon: LayoutPanelLeft },
   { name: 'Agents', href: '/agents', icon: Cpu },
+  { name: 'MCP Tools', href: '/mcp', icon: Wrench },
+  { name: 'Telemetry', href: '/telemetry', icon: Network },
+  { name: 'Graph', href: '/graph', icon: GitBranch },
   { name: 'Infrastructure', href: '/infrastructure', icon: Server },
   { name: 'Incidents', href: '/incidents', icon: AlertTriangle },
   { name: 'Chat', href: '/chat', icon: MessageSquare },
@@ -136,32 +141,41 @@ export function Layout({ children }: LayoutProps) {
         )}
       >
         {isRail ? (
-          <Shield className="h-7 w-7 text-primary" aria-hidden="true" />
+          /* Rail mode: the Shield itself is the single centered expand control. */
+          <button
+            type="button"
+            data-testid="sidebar-toggle"
+            onClick={toggleCollapsed}
+            aria-label="Expand sidebar"
+            aria-expanded={false}
+            title="Expand sidebar"
+            className="flex items-center justify-center rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary/40"
+          >
+            <Shield className="h-7 w-7 text-primary" aria-hidden="true" />
+          </button>
         ) : (
-          <div className="flex min-w-0 items-center gap-2">
-            <Shield className="h-8 w-8 shrink-0 text-primary" aria-hidden="true" />
-            <div className="min-w-0">
-              <h1 className="truncate text-lg font-bold">Constitutional</h1>
-              <p className="text-xs text-muted-foreground">AIOps</p>
+          <>
+            <div className="flex min-w-0 items-center gap-2">
+              <Shield className="h-8 w-8 shrink-0 text-primary" aria-hidden="true" />
+              <div className="min-w-0">
+                <h1 className="truncate text-lg font-bold">Constitutional</h1>
+                <p className="text-xs text-muted-foreground">AIOps</p>
+              </div>
             </div>
-          </div>
+            {/* Desktop collapse toggle — hidden on mobile (drawer uses its own). */}
+            <button
+              type="button"
+              data-testid="sidebar-toggle"
+              onClick={toggleCollapsed}
+              aria-label="Collapse sidebar"
+              aria-expanded={true}
+              title="Collapse sidebar"
+              className="hidden shrink-0 items-center justify-center rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 md:inline-flex"
+            >
+              <PanelLeftClose className="h-5 w-5" aria-hidden="true" />
+            </button>
+          </>
         )}
-        {/* Desktop full/rail hamburger — hidden on mobile (drawer uses its own). */}
-        <button
-          type="button"
-          data-testid="sidebar-toggle"
-          onClick={toggleCollapsed}
-          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          aria-expanded={!collapsed}
-          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          className="hidden shrink-0 items-center justify-center rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 md:inline-flex"
-        >
-          {collapsed ? (
-            <PanelLeftOpen className="h-5 w-5" aria-hidden="true" />
-          ) : (
-            <PanelLeftClose className="h-5 w-5" aria-hidden="true" />
-          )}
-        </button>
       </div>
 
       {/* Navigation */}

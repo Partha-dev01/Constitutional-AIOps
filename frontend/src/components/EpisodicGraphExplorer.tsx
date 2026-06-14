@@ -55,6 +55,10 @@ interface EpisodicGraphExplorerProps {
   onRefresh?: () => void
   height?: number
   width?: number
+  // Initial layout mode. Defaults to 'force' so existing mounts are unchanged.
+  defaultLayoutMode?: 'force' | 'dag'
+  // DAG flow direction when in 'dag' layout. Defaults to 'lr' (left-to-right).
+  dagDirection?: 'td' | 'lr'
 }
 
 // Node color mapping by type and status
@@ -127,6 +131,8 @@ export function EpisodicGraphExplorer({
   onRefresh,
   height = 520,
   width = 800,
+  defaultLayoutMode = 'force',
+  dagDirection,
 }: EpisodicGraphExplorerProps) {
   const graphRef = useRef<ForceGraphMethods>(null)
 
@@ -160,7 +166,7 @@ export function EpisodicGraphExplorer({
   // v0.6.0: Visualization controls to prevent hairball
   const [showSimilarTo, setShowSimilarTo] = useState(true)
   const [showEntities, setShowEntities] = useState(true)
-  const [layoutMode, setLayoutMode] = useState<'force' | 'dag'>('force')
+  const [layoutMode, setLayoutMode] = useState<'force' | 'dag'>(defaultLayoutMode ?? 'force')
   // Label search (input only — deliberately NOT a <select>; the episode
   // filter select must stay the single select in the graph tab).
   const [search, setSearch] = useState('')
@@ -322,18 +328,13 @@ export function EpisodicGraphExplorer({
     node.fy = node.y
   }, [])
 
-  // Handle node click — gentle pan without zoom.
+  // Handle node click — open the detail drawer without panning. We intentionally
+  // do NOT re-center the clicked node: the detail drawer is a right-side overlay,
+  // and panning would slide the node beneath it.
   const handleNodeClick = useCallback((node: EpisodicNode) => {
     hasInteractedRef.current = true
     setSelectedNode(node)
     onNodeClick?.(node)
-
-    if (graphRef.current) {
-      isProgrammaticZoomRef.current = true
-      graphRef.current.centerAt(node.x, node.y, 800)
-      // Clear the programmatic flag after the animation completes
-      setTimeout(() => { isProgrammaticZoomRef.current = false }, 1000)
-    }
   }, [onNodeClick])
 
   // Custom node rendering with hover-dimming of non-neighbors
@@ -607,7 +608,7 @@ export function EpisodicGraphExplorer({
           backgroundColor="transparent"
           minZoom={0.1}
           maxZoom={10}
-          dagMode={layoutMode === 'dag' ? 'lr' : null}
+          dagMode={layoutMode === 'dag' ? (dagDirection ?? 'lr') : null}
           dagLevelDistance={100}
         />
       </div>
@@ -780,7 +781,7 @@ export function EpisodicGraphExplorer({
 
       {/* Selected Node Details */}
       {selectedNode && (
-        <div className="absolute top-14 left-3 bg-slate-900/95 border border-slate-700 rounded-lg p-3 max-w-sm shadow-lg">
+        <div className="absolute top-3 right-14 bottom-3 z-30 w-72 overflow-y-auto bg-slate-900/95 border border-slate-700 rounded-lg p-3 shadow-lg">
           <div className="flex items-start justify-between mb-2">
             <div>
               <h4 className="font-medium text-slate-200">{selectedNode.label}</h4>
