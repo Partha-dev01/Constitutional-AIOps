@@ -605,9 +605,17 @@ def _records_to_context_string(records: list[ToolCallRecord]) -> str:
     for rec in records:
         if rec.status == "needs_param":
             missing = (rec.result or {}).get("missing", []) if isinstance(rec.result, dict) else []
+            missing_text = ", ".join(missing) or "a required parameter"
+            # Advisory note, not a hard directive: the tool was skipped because a
+            # parameter could not be resolved. Answer from whatever OTHER data was
+            # gathered, and ask for the missing value ONLY if it is genuinely
+            # needed to proceed — so a turn with other evidence is not reduced to
+            # a bare "please provide the service name" clarification.
             blocks.append(
-                f"## Tool {rec.name}: needs parameter(s) {', '.join(missing) or 'unknown'}\n"
-                f"Ask the user to provide: {', '.join(missing) or 'the missing parameter'}."
+                f"## Tool {rec.name}: skipped (could not resolve {missing_text})\n"
+                f"This tool was not run because {missing_text} was not provided. "
+                f"If you need it to fully answer, briefly ask the user for {missing_text}; "
+                f"otherwise answer using the other information available."
             )
             continue
         if rec.status != "ok" or not isinstance(rec.result, dict):

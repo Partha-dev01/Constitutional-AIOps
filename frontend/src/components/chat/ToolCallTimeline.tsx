@@ -204,7 +204,12 @@ export function ToolCallTimeline({ steps, reducedMotionFallbackText }: ToolCallT
                         </div>
                       </div>
 
-                      {/* Dynamic result — available after response arrives. */}
+                      {/* Dynamic result — available after response arrives. A
+                          completed step with no structured result (e.g. the
+                          reasoning step when the answer carries no confidence /
+                          actions / incidents) intentionally shows NOTHING here
+                          rather than a hollow placeholder; the real answer is the
+                          chat bubble below the timeline. */}
                       {detail.result !== null ? (
                         <div>
                           <p className="font-medium text-foreground mb-1">Result:</p>
@@ -214,7 +219,7 @@ export function ToolCallTimeline({ steps, reducedMotionFallbackText }: ToolCallT
                         <p className="text-red-600 dark:text-red-400 italic">
                           This step did not complete — the request failed or timed out.
                         </p>
-                      ) : (
+                      ) : step.status === 'done' ? null : (
                         <p className="text-muted-foreground italic">Waiting for response…</p>
                       )}
                     </div>
