@@ -5,6 +5,7 @@ Incident management endpoints with CRUD operations.
 Incidents are stored in Neo4j graph-episodic memory.
 """
 
+import asyncio
 import logging
 import os
 import uuid
@@ -50,6 +51,121 @@ _incident_counter = 0
 
 # Name of the persisted counter row backing _incident_counter.
 _INCIDENT_COUNTER_NAME = "incident"
+
+# Demo remediation pacing (W4-B). Module constants so the staged-progress demo
+# has realistic spacing live, while tests can shrink them to run fast.
+#   _DEMO_STAGE_DELAYS: seconds slept between the 4 staged progress events.
+#   _DEMO_VERIFY_RETRIES / _DEMO_VERIFY_INTERVAL: t3_status verification poll.
+_DEMO_STAGE_DELAY_VALIDATE: float = 1.5
+_DEMO_STAGE_DELAY_EXECUTE: float = 2.0
+_DEMO_STAGE_DELAY_VERIFY: float = 1.5
+_DEMO_VERIFY_RETRIES: int = 5
+_DEMO_VERIFY_INTERVAL: float = 2.0
+
+
+def _audit_enabled() -> bool:
+    """Resolve the persisted ``constitutional.enableAuditLog`` toggle.
+
+    Previously a dead no-op (validator call sites hardcoded ``audit_enabled=
+    True``). Defaults to True (audit-on) when the setting is unset/unreadable —
+    auditing is the safe default for a constitutional system.
+    """
+    try:
+        from src.api.routes.settings import get_constitutional_settings
+
+        return bool(get_constitutional_settings().get("enableAuditLog", True))
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("Could not read persisted enableAuditLog: %s", exc)
+        return True
+
+
+async def _broadcast_incident_update(incident: Incident, stage: str | None = None) -> None:
+    """Push an incident status/progress update to the frontend over WebSocket.
+
+    Reuses the existing ``broadcast_incident_updated`` emitter + the
+    ``INCIDENT_UPDATED`` event type (src/utils/websocket.py). The serialized
+    incident is the payload; an optional ``stage`` (human-readable progress
+    label) is merged in so the UI can show the staged remediation steps. Failures
+    are swallowed — a missing/closed socket must never break remediation.
+    """
+    try:
+        from src.utils.websocket import broadcast_incident_updated
+
+        payload = incident.model_dump(mode="json")
+        if stage is not None:
+            payload["stage"] = stage
+        await broadcast_incident_updated(payload)
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("WS incident update broadcast failed (ignored): %s", exc)
+
+
+def _scenario_active(scenarios: dict, scenario: str) -> bool | None:
+    """Interpret a scenario's active flag from a t3 status map.
+
+    Returns True (still active), False (healed) or None (unknown — scenario not
+    present in the map). Tolerates both the dict form (``{"active": bool}``) and
+    a bare bool form.
+    """
+    if scenario not in scenarios:
+        return None
+    entry = scenarios.get(scenario)
+    if isinstance(entry, dict):
+        active = entry.get("active")
+        if isinstance(active, bool):
+            return active
+        return None
+    if isinstance(entry, bool):
+        return entry
+    if entry is None:  # key present but null -> treat as cleared
+        return False
+    return None
+
+
+async def _verify_scenario_healed(scenario: str, container: str | None) -> bool:
+    """Poll the t3 status until recovery is confirmed.
+
+    Recovery is confirmed when the scenario reads INACTIVE. The affected
+    container's ``running`` flag is used ONLY as a fallback signal when the
+    scenario is not present in the status map at all (so there is no direct
+    scenario signal to read) — it is NOT an independent success condition, so a
+    still-active scenario whose container happens to be running (e.g. cpu_stress)
+    is correctly treated as not-yet-healed.
+
+    Polls up to ``_DEMO_VERIFY_RETRIES`` times with a ``_DEMO_VERIFY_INTERVAL``
+    gap. Returns False if recovery is never confirmed — the caller then refuses
+    to mark the incident RESOLVED. Never raises (t3 calls fail closed).
+    """
+    from src.remediation import t3_client
+
+    for attempt in range(_DEMO_VERIFY_RETRIES):
+        if attempt > 0:
+            await asyncio.sleep(_DEMO_VERIFY_INTERVAL)
+        try:
+            status_result = await t3_client.t3_status()
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("t3_status probe raised during verify (ignored): %s", exc)
+            continue
+        if not status_result.get("success"):
+            continue
+
+        scenarios = status_result.get("scenarios") or {}
+        containers = status_result.get("containers") or {}
+
+        active = _scenario_active(scenarios, scenario)
+        if active is False:
+            return True
+        if active is True:
+            # Scenario is still active — explicitly not healed yet. Do NOT fall
+            # back to the container check (it may stay up during cpu/mem stress).
+            continue
+
+        # active is None: scenario not in the map -> use the container fallback.
+        if container is not None:
+            container_entry = containers.get(container)
+            if isinstance(container_entry, dict) and container_entry.get("running") is True:
+                return True
+
+    return False
 
 
 def _persist_save_incident(incident: Incident) -> None:
@@ -529,42 +645,14 @@ async def remediate_incident(request: Request, incident_id: str) -> dict[str, An
     error_code: Any = None
 
     if is_demo and scenario:
+        # ── PACED + STAGED + GATED + VERIFIED demo remediation (W4-B) ────────
         # The demo heal drives a real control action on the remote t3, so honour
         # the same production kill-switch the demo routes enforce.
         from src.api.routes.demo import _ensure_demo_allowed
-        from src.remediation import t3_client
 
         _ensure_demo_allowed()
 
-        # Run the demo heal THROUGH the constitutional gate so it is not a silent
-        # bypass: the system's thesis is "every action through the validator".
-        # The heal is a t3 chaos-reversal (not a container restart/scale), so it
-        # cannot use execute_tool_call's whitelist path; instead we validate the
-        # heal action directly with the live validator and audit it, surfacing a
-        # real verdict to the UI instead of None. Tier-1 still applies (a heal is
-        # a benign, operator-approved, reversible action so it passes).
-        verdict = _validate_and_audit_demo_heal(request, incident, scenario)
-        if verdict is not None and not verdict.get("can_proceed", True):
-            # Constitutional validation refused the heal — keep the incident
-            # actionable and surface why (mirrors the real-path refusal contract).
-            incident.status = IncidentStatus.PENDING_APPROVAL
-            incident.updated_at = datetime.utcnow()
-            _persist_save_incident(incident)
-            return {
-                "incident_id": incident_id,
-                "status": "refused",
-                "success": False,
-                "method": "demo_heal",
-                "error_code": "validation_blocked",
-                "detail": verdict.get("explanation") or "Demo heal blocked by constitutional validation.",
-                "verdict": verdict,
-                "incident": incident,
-            }
-
-        result = await t3_client.chaos_heal(scenario)
-        success = bool(result.get("success"))
-        detail = str(result.get("detail") or result.get("error") or "")
-        method = "demo_heal"
+        return await _run_demo_remediation(request, incident, scenario)
     else:
         service = (
             incident.affected_services[0].name
@@ -613,7 +701,7 @@ async def remediate_incident(request: Request, incident_id: str) -> dict[str, An
                     # incident has actually been analysed (carries an RCA),
                     # rather than hardcoding True regardless.
                     "telemetry_evidence": bool(incident.rca),
-                    "audit_enabled": True,
+                    "audit_enabled": _audit_enabled(),
                     "human_approved": True,
                     "source": "incident_remediate",
                 },
@@ -749,6 +837,77 @@ async def find_similar_incidents(
 
 # Helper functions
 
+_VALID_RISKS = {"low", "medium", "high"}
+
+
+def _build_remediation_plan(incident: Incident, rca_metadata: dict[str, Any]):
+    """Map the RCA's remediation steps into a ``RemediationPlan`` (W4-A).
+
+    The reasoning agent emits ``remediation_steps`` as a list of
+    ``{"action": <str>, "risk": "low|medium|high"}`` (see reasoning_agent.py's
+    RCA prompt). Each becomes a ``RemediationStep``. When no structured steps are
+    present, a minimal single-step plan describing the heal is built so the UI
+    still renders a plan. ``overall_risk`` is the highest step risk; the plan
+    requires approval whenever any step does or any step is medium/high risk.
+    """
+    from src.api.schemas.incident import RemediationPlan, RemediationStep
+
+    raw_steps = rca_metadata.get("remediation_steps") or []
+    steps: list[RemediationStep] = []
+    risk_rank = {"low": 0, "medium": 1, "high": 2}
+    highest = 0
+
+    for idx, raw in enumerate(raw_steps, start=1):
+        if not isinstance(raw, dict):
+            continue
+        action = str(raw.get("action") or "").strip()
+        if not action:
+            continue
+        risk = str(raw.get("risk") or "medium").strip().lower()
+        if risk not in _VALID_RISKS:
+            risk = "medium"
+        highest = max(highest, risk_rank[risk])
+        steps.append(
+            RemediationStep(
+                order=idx,
+                action=action,
+                risk=risk,
+                # Anything riskier than low needs an operator's nod.
+                requires_approval=risk != "low",
+            )
+        )
+
+    if not steps:
+        # Minimal 1-step fallback describing the heal.
+        affected = (
+            incident.affected_services[0].name
+            if incident.affected_services
+            else "the affected service"
+        )
+        steps.append(
+            RemediationStep(
+                order=1,
+                action=f"Remediate {affected} for incident {incident.id}",
+                risk="medium",
+                requires_approval=True,
+            )
+        )
+        highest = max(highest, risk_rank["medium"])
+
+    overall_risk = {0: "low", 1: "medium", 2: "high"}[highest]
+    requires_approval = any(s.requires_approval for s in steps)
+
+    now = datetime.utcnow()
+    return RemediationPlan(
+        plan_id=f"plan-{incident.id}-{uuid.uuid4().hex[:8]}",
+        incident_id=incident.id,
+        created_at=now,
+        steps=steps,
+        overall_risk=overall_risk,
+        requires_approval=requires_approval,
+    )
+
+
 def _validate_and_audit_demo_heal(
     request: Request,
     incident: Incident,
@@ -767,12 +926,29 @@ def _validate_and_audit_demo_heal(
     """
     validator = getattr(request.app.state, "validator", None)
 
+    # W4-B: gate with the REAL evidence-based confidence (the analysed incident's
+    # RCA confidence) instead of synthesizing the auto threshold (which always
+    # cleared the matrix). human_approved=True is the actual authorization (the
+    # operator clicked Approve), so Tier-1 still authorizes a benign reversible
+    # heal even when the RCA confidence is modest. Unanalysed incidents have no
+    # RCA confidence — fall back to the approval threshold as a neutral,
+    # non-inflated value rather than the auto threshold.
+    approval_threshold = (
+        getattr(validator, "confidence_threshold_approval", 0.7) or 0.7
+        if validator is not None
+        else 0.7
+    )
+    real_confidence = (
+        incident.rca.confidence
+        if incident.rca and incident.rca.confidence is not None
+        else float(approval_threshold)
+    )
+
     verdict = None
     if validator is not None:
         try:
             from src.api.routes.tools import _constitutional_verdict
 
-            auto_threshold = getattr(validator, "confidence_threshold_auto", 0.9) or 0.9
             report = validator.validate(
                 action_id=f"demo-heal-{incident.id}-{int(datetime.utcnow().timestamp() * 1000)}",
                 action_description=f"Demo chaos-heal '{scenario}' for incident {incident.id}",
@@ -780,12 +956,12 @@ def _validate_and_audit_demo_heal(
                 # restart/deploy/scale_down, so P1.2 does not classify it as a
                 # destructive action. It is operator-approved and reversible.
                 action_type="heal",
-                confidence=float(auto_threshold),
+                confidence=float(real_confidence),
                 context={
                     "active_incident": True,
                     "human_approved": True,
                     "telemetry_evidence": bool(incident.rca),
-                    "audit_enabled": True,
+                    "audit_enabled": _audit_enabled(),
                     "action_scope": "single",
                     "source": "demo_heal",
                 },
@@ -814,6 +990,142 @@ def _validate_and_audit_demo_heal(
         logger.warning("Demo-heal audit logging failed: %s", exc)
 
     return verdict
+
+
+async def _run_demo_remediation(
+    request: Request,
+    incident: Incident,
+    scenario: str,
+) -> dict[str, Any]:
+    """Paced + staged + gated + verified REAL demo remediation (W4-B).
+
+    Replaces the old instant rubber-stamp. The flow:
+      1. Mark REMEDIATING, persist, broadcast (already REMEDIATING on entry).
+      2. Stage 1 — validate against constitutional principles using the REAL
+         RCA confidence (``_validate_and_audit_demo_heal``). If blocked, set
+         PENDING_APPROVAL, persist, broadcast, and return the rejection — NO heal.
+      3. Stage 2 — execute the REAL t3 ``chaos_heal``.
+      4. Stage 3 — VERIFY recovery by polling ``t3_status`` until the scenario
+         reads inactive / the affected container is running. Only then resolve.
+      5. Stage 4 — RESOLVED & archived (set resolved_at so MTTR populates), or
+         leave REMEDIATING/FAILED with a clear detail if verification never
+         confirms — never a false resolve.
+
+    Pacing uses ``asyncio.sleep`` between stages so the UI shows real progress.
+    t3 failures fail closed (the client never raises); we surface them.
+    """
+    from src.remediation import t3_client
+
+    # The affected container: nextcloud-db for db_down, else the first affected
+    # service (the demo always tags the app container as nextcloud).
+    affected_container = (
+        incident.affected_services[0].name
+        if incident.affected_services
+        else ("nextcloud-db" if scenario == "db_down" else "nextcloud")
+    )
+
+    # Stage 1: constitutional validation (REAL confidence gate).
+    await _broadcast_incident_update(
+        incident, stage="Validating against constitutional principles"
+    )
+    await asyncio.sleep(_DEMO_STAGE_DELAY_VALIDATE)
+
+    verdict = _validate_and_audit_demo_heal(request, incident, scenario)
+    if verdict is not None and not verdict.get("can_proceed", True):
+        # Gate refused the heal — keep the incident actionable, surface why,
+        # do NOT heal (mirrors the real-path refusal contract).
+        incident.status = IncidentStatus.PENDING_APPROVAL
+        incident.updated_at = datetime.utcnow()
+        _persist_save_incident(incident)
+        await _broadcast_incident_update(incident, stage="Remediation blocked")
+        return {
+            "incident_id": incident.id,
+            "status": "refused",
+            "success": False,
+            "method": "demo_heal",
+            "error_code": "validation_blocked",
+            "detail": verdict.get("explanation")
+            or "Demo heal blocked by constitutional validation.",
+            "verdict": verdict,
+            "incident": incident,
+        }
+
+    # Stage 2: execute the REAL t3 heal.
+    heal_action = f"chaos-heal '{scenario}' on {affected_container}"
+    await _broadcast_incident_update(
+        incident, stage=f"Executing remediation — {heal_action}"
+    )
+    await asyncio.sleep(_DEMO_STAGE_DELAY_EXECUTE)
+
+    result = await t3_client.chaos_heal(scenario)
+    heal_ok = bool(result.get("success"))
+    detail = str(result.get("detail") or result.get("error") or "")
+
+    if not heal_ok:
+        # The t3 heal itself failed — never resolve; keep it actionable.
+        incident.status = IncidentStatus.PENDING_APPROVAL
+        incident.updated_at = datetime.utcnow()
+        _persist_save_incident(incident)
+        await _broadcast_incident_update(incident, stage="Remediation failed")
+        return {
+            "incident_id": incident.id,
+            "status": "refused",
+            "success": False,
+            "method": "demo_heal",
+            "error_code": "execution_failed",
+            "detail": detail or "t3 chaos-heal failed.",
+            "verdict": verdict,
+            "incident": incident,
+        }
+
+    # Stage 3: verify recovery before resolving.
+    await _broadcast_incident_update(incident, stage="Verifying recovery")
+    await asyncio.sleep(_DEMO_STAGE_DELAY_VERIFY)
+
+    verified = await _verify_scenario_healed(scenario, affected_container)
+
+    if not verified:
+        # Heal call succeeded but recovery never confirmed — DO NOT falsely
+        # resolve. Leave it actionable with a clear message.
+        incident.status = IncidentStatus.PENDING_APPROVAL
+        incident.updated_at = datetime.utcnow()
+        _persist_save_incident(incident)
+        await _broadcast_incident_update(incident, stage="Recovery not confirmed")
+        return {
+            "incident_id": incident.id,
+            "status": "refused",
+            "success": False,
+            "method": "demo_heal",
+            "error_code": "verification_failed",
+            "detail": (
+                "Heal command sent but recovery was not confirmed by the t3 "
+                "status within the verification window."
+            ),
+            "verdict": verdict,
+            "incident": incident,
+        }
+
+    # Stage 4: resolved & archived (set resolved_at so MTTR populates).
+    incident.status = IncidentStatus.RESOLVED
+    if incident.resolved_at is None:
+        incident.resolved_at = datetime.utcnow()
+    incident.updated_at = datetime.utcnow()
+    _persist_save_incident(incident)
+    await _broadcast_incident_update(incident, stage="Resolved & archived")
+    logger.info(
+        "Demo remediation for %s via demo_heal -> RESOLVED (verified)", incident.id
+    )
+
+    return {
+        "incident_id": incident.id,
+        "status": "resolved",
+        "success": True,
+        "method": "demo_heal",
+        "error_code": None,
+        "detail": detail or "Scenario healed and recovery verified.",
+        "verdict": verdict,
+        "incident": incident,
+    }
 
 
 async def _trigger_analysis(
@@ -867,6 +1179,20 @@ async def _trigger_analysis(
                 reasoning=rca_data["metadata"].get("reasoning"),
                 similar_incidents=rca_data["metadata"].get("similar_incidents"),
             )
+
+            # W4-A: build the remediation_plan the UI renders, from the RCA's
+            # remediation_steps (the reasoning agent emits a list of
+            # {"action": ..., "risk": "low|medium|high"}). Falls back to a
+            # minimal 1-step plan describing the heal when no structured steps
+            # are present. Plan-building must never break analysis.
+            try:
+                incident.remediation_plan = _build_remediation_plan(
+                    incident, rca_data["metadata"]
+                )
+            except Exception as exc:  # noqa: BLE001
+                logger.warning(
+                    "Failed to build remediation_plan for %s: %s", incident.id, exc
+                )
 
         # Use authorization level from constitutional validation.
         #

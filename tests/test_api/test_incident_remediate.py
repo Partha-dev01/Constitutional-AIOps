@@ -13,6 +13,31 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 
+@pytest.fixture(autouse=True)
+def _fast_demo_pacing(monkeypatch):
+    """Shrink the staged-demo pacing + verification poll so tests run instantly.
+
+    The live demo paces stages with multi-second sleeps and polls t3_status up to
+    5x; tests don't need real wall-clock pacing.
+    """
+    import src.api.routes.incidents as inc
+
+    monkeypatch.setattr(inc, "_DEMO_STAGE_DELAY_VALIDATE", 0.0, raising=True)
+    monkeypatch.setattr(inc, "_DEMO_STAGE_DELAY_EXECUTE", 0.0, raising=True)
+    monkeypatch.setattr(inc, "_DEMO_STAGE_DELAY_VERIFY", 0.0, raising=True)
+    monkeypatch.setattr(inc, "_DEMO_VERIFY_RETRIES", 2, raising=True)
+    monkeypatch.setattr(inc, "_DEMO_VERIFY_INTERVAL", 0.0, raising=True)
+
+
+def _healed_status(scenario="cpu_stress", container="nextcloud"):
+    """A t3_status payload confirming the scenario is inactive + container up."""
+    return {
+        "success": True,
+        "scenarios": {scenario: {"active": False}},
+        "containers": {container: {"running": True}},
+    }
+
+
 def _seed(
     *,
     demo: bool,
@@ -84,6 +109,8 @@ def _validator_request(*, can_proceed=True):
 
 @pytest.mark.asyncio
 async def test_remediate_demo_incident_heals_via_t3() -> None:
+    """W4-B: demo remediate goes REMEDIATING -> (gate) -> heal -> verify ->
+    RESOLVED. The heal only resolves AFTER t3_status confirms recovery."""
     from src.api.routes.incidents import remediate_incident
     from src.api.schemas.incident import IncidentStatus
 
@@ -92,10 +119,14 @@ async def test_remediate_demo_incident_heals_via_t3() -> None:
     with patch(
         "src.remediation.t3_client.chaos_heal",
         new=AsyncMock(return_value={"success": True, "detail": "healed"}),
-    ) as heal:
+    ) as heal, patch(
+        "src.remediation.t3_client.t3_status",
+        new=AsyncMock(return_value=_healed_status("cpu_stress")),
+    ) as status:
         out = await remediate_incident(req, inc.id)
 
     heal.assert_awaited_once_with("cpu_stress")
+    status.assert_awaited()  # verification ran
     assert out["success"] is True
     assert out["method"] == "demo_heal"
     assert out["status"] == "resolved"
@@ -104,16 +135,51 @@ async def test_remediate_demo_incident_heals_via_t3() -> None:
 
 
 @pytest.mark.asyncio
+async def test_remediate_demo_not_resolved_when_verification_fails() -> None:
+    """W4-B: if the heal call succeeds but t3_status never confirms recovery, the
+    incident is NOT falsely resolved — it stays actionable with a clear detail."""
+    from src.api.routes.incidents import remediate_incident
+    from src.api.schemas.incident import IncidentStatus
+
+    inc = _seed(demo=True, scenario="cpu_stress")
+    req, _captured, _validator = _validator_request(can_proceed=True)
+    # Scenario still active across every poll -> verification fails.
+    still_broken = {
+        "success": True,
+        "scenarios": {"cpu_stress": {"active": True}},
+        "containers": {"nextcloud": {"running": True}},
+    }
+    with patch(
+        "src.remediation.t3_client.chaos_heal",
+        new=AsyncMock(return_value={"success": True, "detail": "heal sent"}),
+    ) as heal, patch(
+        "src.remediation.t3_client.t3_status",
+        new=AsyncMock(return_value=still_broken),
+    ):
+        out = await remediate_incident(req, inc.id)
+
+    heal.assert_awaited_once()
+    assert out["success"] is False
+    assert out["error_code"] == "verification_failed"
+    # Never falsely resolved.
+    assert inc.status == IncidentStatus.PENDING_APPROVAL
+    assert inc.resolved_at is None
+
+
+@pytest.mark.asyncio
 async def test_demo_heal_goes_through_constitutional_gate() -> None:
     """D-item5: the demo heal is validated + audited (no silent bypass) and the
     real verdict is surfaced to the UI instead of None."""
     from src.api.routes.incidents import remediate_incident
 
-    inc = _seed(demo=True, scenario="cpu_stress")
+    inc = _seed(demo=True, scenario="cpu_stress", analyzed=True)
     req, captured, validator = _validator_request(can_proceed=True)
     with patch(
         "src.remediation.t3_client.chaos_heal",
         new=AsyncMock(return_value={"success": True, "detail": "healed"}),
+    ), patch(
+        "src.remediation.t3_client.t3_status",
+        new=AsyncMock(return_value=_healed_status("cpu_stress")),
     ):
         out = await remediate_incident(req, inc.id)
 
@@ -121,6 +187,9 @@ async def test_demo_heal_goes_through_constitutional_gate() -> None:
     validator.validate.assert_called_once()
     assert captured["context"]["active_incident"] is True
     assert captured["context"]["human_approved"] is True
+    # W4-B: the gate now receives the REAL RCA confidence (0.9 from _seed),
+    # not the hard-coded auto threshold.
+    assert captured["confidence"] == 0.9
     # A real verdict is surfaced (not None as before).
     assert out["verdict"] is not None
     assert out["verdict"]["can_proceed"] is True
@@ -281,6 +350,68 @@ async def test_analysis_automatic_does_not_deadlock_in_remediating() -> None:
 
 
 @pytest.mark.asyncio
+async def test_analysis_builds_remediation_plan_from_rca_steps() -> None:
+    """W4-A: after RCA, incident.remediation_plan is built from the RCA's
+    remediation_steps (the UI renders it)."""
+    from src.api.routes.incidents import _trigger_analysis
+
+    inc = _seed(demo=True, scenario="cpu_stress")
+    graph_result = {
+        "rca_result": {
+            "metadata": {
+                "root_cause": "rc",
+                "causal_chain": ["a"],
+                "remediation_steps": [
+                    {"action": "Throttle CPU-bound jobs", "risk": "low"},
+                    {"action": "Restart the nextcloud container", "risk": "high"},
+                ],
+            }
+        },
+        "confidence": 0.88,
+        "authorization_level": "approval",
+        "steps_completed": ["annotate", "reasoning", "validate"],
+    }
+    req = MagicMock()
+    req.app.state.incident_graph.ainvoke = AsyncMock(return_value=graph_result)
+
+    await _trigger_analysis(req, inc, enable_thinking=False)
+
+    plan = inc.remediation_plan
+    assert plan is not None
+    assert len(plan.steps) == 2
+    assert plan.steps[0].action == "Throttle CPU-bound jobs"
+    assert plan.steps[0].risk == "low"
+    assert plan.steps[1].risk == "high"
+    # Highest step risk wins overall; high-risk step requires approval.
+    assert plan.overall_risk == "high"
+    assert plan.requires_approval is True
+    assert plan.incident_id == inc.id
+
+
+@pytest.mark.asyncio
+async def test_analysis_builds_minimal_plan_when_no_steps() -> None:
+    """W4-A: with no structured remediation_steps, a minimal 1-step plan is built."""
+    from src.api.routes.incidents import _trigger_analysis
+
+    inc = _seed(demo=True, scenario="cpu_stress")
+    graph_result = {
+        "rca_result": {"metadata": {"root_cause": "rc", "causal_chain": ["a"]}},
+        "confidence": 0.9,
+        "authorization_level": "approval",
+        "steps_completed": ["reasoning"],
+    }
+    req = MagicMock()
+    req.app.state.incident_graph.ainvoke = AsyncMock(return_value=graph_result)
+
+    await _trigger_analysis(req, inc, enable_thinking=False)
+
+    plan = inc.remediation_plan
+    assert plan is not None
+    assert len(plan.steps) == 1
+    assert "nextcloud" in plan.steps[0].action
+
+
+@pytest.mark.asyncio
 async def test_analysis_then_remediate_is_not_locked_out() -> None:
     """End-to-end of the deadlock fix: after a high-confidence analysis the
     operator can still remediate (the incident is PENDING_APPROVAL, not stuck in
@@ -307,6 +438,9 @@ async def test_analysis_then_remediate_is_not_locked_out() -> None:
     with patch(
         "src.remediation.t3_client.chaos_heal",
         new=AsyncMock(return_value={"success": True, "detail": "healed"}),
+    ), patch(
+        "src.remediation.t3_client.t3_status",
+        new=AsyncMock(return_value=_healed_status("cpu_stress")),
     ):
         out = await remediate_incident(rem_req, inc.id)
 

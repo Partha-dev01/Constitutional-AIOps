@@ -162,7 +162,7 @@ export function Dashboard() {
           color="text-yellow-500"
         />
         <StatCard
-          title="Auto-Resolved"
+          title="Resolved"
           value={stats?.incidents.resolved_total?.toString() || '0'}
           icon={CheckCircle}
           trend="Resolved incidents"
@@ -170,7 +170,7 @@ export function Dashboard() {
         />
         <StatCard
           title="Avg Response Time"
-          value={stats?.incidents.mttr_minutes != null ? `${stats.incidents.mttr_minutes}s` : 'N/A'}
+          value={stats?.incidents.mttr_minutes != null ? `${stats.incidents.mttr_minutes}ms` : 'N/A'}
           icon={Clock}
           trend="LLM response latency"
           color="text-blue-500"
@@ -256,7 +256,7 @@ export function Dashboard() {
           <div className="text-center p-4 bg-muted/50 rounded-lg">
             <p className="text-3xl font-bold">
               {stats?.incidents.mttr_minutes != null
-                ? `${stats.incidents.mttr_minutes}s`
+                ? `${stats.incidents.mttr_minutes}ms`
                 : 'N/A'}
             </p>
             <p className="text-sm text-muted-foreground">Avg Response Time</p>

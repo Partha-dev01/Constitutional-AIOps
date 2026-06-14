@@ -133,6 +133,20 @@ def get_remediation_settings() -> dict[str, Any]:
     return _merge_with_defaults(_load_persisted())["remediation"]
 
 
+def get_constitutional_settings() -> dict[str, Any]:
+    """Return the merged ``constitutional`` settings section.
+
+    Exported so the live call sites can honour persisted operator choices that
+    were previously dead no-ops:
+      * ``maxActionsPerMinute`` — the chat auto-exec rate limiter.
+      * ``enableAuditLog``      — the validator-call audit toggle.
+      * ``autoThreshold`` / ``approvalThreshold`` — applied at startup so saved
+        thresholds survive a restart (see ``src/main.py`` lifespan).
+    Deep-merges persisted over defaults so a legacy file upgrades cleanly.
+    """
+    return _merge_with_defaults(_load_persisted())["constitutional"]
+
+
 # ---------------------------------------------------------------------------
 # Pydantic schemas
 # ---------------------------------------------------------------------------
@@ -312,4 +326,4 @@ async def reset_settings() -> AllSettings:
     return AllSettings()
 
 
-__all__ = ["router", "get_remediation_settings"]
+__all__ = ["router", "get_remediation_settings", "get_constitutional_settings"]

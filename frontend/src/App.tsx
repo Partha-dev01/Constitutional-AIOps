@@ -13,6 +13,11 @@ import { useAuthStore } from './lib/auth'
 // Heavy pages — code-split so they don't bloat the initial bundle
 const Console = lazy(() => import('./pages/Console').then((m) => ({ default: m.Console })))
 const Agents = lazy(() => import('./pages/Agents').then((m) => ({ default: m.Agents })))
+const Mcp = lazy(() => import('./pages/Mcp').then((m) => ({ default: m.Mcp })))
+const Telemetry = lazy(() =>
+  import('./pages/Telemetry').then((m) => ({ default: m.Telemetry })),
+)
+const Graph = lazy(() => import('./pages/Graph').then((m) => ({ default: m.Graph })))
 const Infrastructure = lazy(() =>
   import('./pages/Infrastructure').then((m) => ({ default: m.Infrastructure })),
 )
@@ -92,6 +97,9 @@ function App() {
                     <Routes>
                       <Route path="/console" element={<Console />} />
                       <Route path="/agents" element={<Agents />} />
+                      <Route path="/mcp" element={<Mcp />} />
+                      <Route path="/telemetry" element={<Telemetry />} />
+                      <Route path="/graph" element={<Graph />} />
                       <Route path="/infrastructure" element={<Infrastructure />} />
                       <Route path="/incidents" element={<Incidents />} />
                       <Route path="/chat" element={<Chat />} />

@@ -429,7 +429,14 @@ export interface DashboardStats {
     active: number;
     /** In-progress subset = analyzing + remediating. */
     in_progress: number;
+    /** Incidents resolved without human intervention (auto-resolved). */
     resolved_total: number;
+    /**
+     * Average LLM response latency in MILLISECONDS, sourced from the /health
+     * agent component checks. Null when no agent reported a latency (card shows
+     * "N/A"). Named `mttr_minutes` for historical reasons — it is the dashboard's
+     * "Avg Response Time" value, not an incident MTTR.
+     */
     mttr_minutes: number | null;
   };
   actions: {
@@ -692,6 +699,10 @@ export const api = {
         // by_status keys are IncidentStatus values (src/api/schemas/incident.py:24-31).
         by_status: Partial<Record<IncidentStatus, number>>;
         by_severity: Partial<Record<IncidentSeverity, number>>;
+        /** Incidents the system resolved without human intervention. */
+        auto_resolved_count: number;
+        /** Mean time to resolution in minutes (null when nothing has resolved). */
+        mean_time_to_resolution: number | null;
       }>('/incidents/stats'),
   },
 
@@ -776,12 +787,16 @@ export const api = {
       const fastAgentHealthy = isComponentHealthy(health, 'fast_agent');
       const reasoningAgentHealthy = isComponentHealthy(health, 'reasoning_agent');
 
-      // Calculate actual response time from LLM latencies (in seconds)
-      const fastLatency = health?.components?.find((c: { name: string }) => c.name === 'fast_agent')?.latency_ms || 0;
-      const reasoningLatency = health?.components?.find((c: { name: string }) => c.name === 'reasoning_agent')?.latency_ms || 0;
-      const avgResponseTimeMs = (fastLatency + reasoningLatency) / 2;
-      // Convert to seconds for display (mttr_minutes is actually seconds for response time)
-      const avgResponseTimeSec = avgResponseTimeMs > 0 ? Math.round(avgResponseTimeMs / 1000 * 10) / 10 : null;
+      // Real LLM response latency from the /health component checks (ms). Average
+      // only the agent latencies that actually reported a positive value; if none
+      // did, leave it null so the card shows "N/A" rather than a misleading 0.
+      const agentLatencies = ['fast_agent', 'reasoning_agent']
+        .map((name) => health?.components?.find((c: { name: string }) => c.name === name)?.latency_ms ?? 0)
+        .filter((ms) => ms > 0);
+      const avgResponseTimeMs =
+        agentLatencies.length > 0
+          ? Math.round(agentLatencies.reduce((sum, ms) => sum + ms, 0) / agentLatencies.length)
+          : null;
 
       // Count healthy components
       const healthyComponents = health?.components?.filter((c: { healthy: boolean }) => c.healthy).length || 0;
@@ -801,8 +816,12 @@ export const api = {
         incidents: {
           active: activeIncidents,
           in_progress: inProgressIncidents,
+          // Total incidents in the resolved state. Reflects demo heals (which
+          // are operator-approved, so they don't count as auto-resolved); the
+          // dedicated auto_resolved_count stays available on the stats type.
           resolved_total: byStatus.resolved || 0,
-          mttr_minutes: avgResponseTimeSec, // Actual LLM response time in seconds
+          // Real LLM response latency in milliseconds (null -> card shows "N/A").
+          mttr_minutes: avgResponseTimeMs,
         },
         actions: {
           pending_approval: actionStats.by_status['awaiting_approval'] || 0,

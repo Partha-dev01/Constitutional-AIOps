@@ -419,7 +419,21 @@ class ReasoningAgent(BaseAgent):
             # Parse based on mode
             if mode in ("rca", "planning"):
                 parsed = self._parse_json_response(content)
-                confidence = self._normalize_confidence(parsed.get("confidence", 0.7))
+                # Route the LLM self-report through the documented composite
+                # formula so RCA shares the single confidence code path with
+                # chat. Historical / similarity evidence is not available in this
+                # agent context (it is folded in by the orchestration pipeline's
+                # ConfidenceCalculator), so pass them as None — compute_confidence
+                # then returns the self-report clamped to [0,1] (weights
+                # renormalize over the single present component). _normalize_
+                # confidence still coerces percentage/out-of-range self-reports
+                # first so e.g. "95" becomes 0.95 before the formula.
+                from src.agents.confidence import compute_confidence
+
+                c_llm = self._normalize_confidence(parsed.get("confidence", 0.7))
+                confidence = compute_confidence(c_llm, None, None)
+                if confidence is None:  # defensive: c_llm is never None here
+                    confidence = c_llm
                 result = AgentResponse(
                     content=content,
                     confidence=confidence,
