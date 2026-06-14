@@ -218,7 +218,7 @@ describe('enrichToolStepsWithResponse', () => {
     expect(Array.isArray(q.synthesised_from)).toBe(true)
   })
 
-  it('low-evidence reasoning still yields a relevant result, never the bogus meta blob', () => {
+  it('low-evidence reasoning drops the Result entirely (never a placeholder answer)', () => {
     const steps = doneSteps('hello there')
     const enriched = enrichToolStepsWithResponse(steps, {
       confidence: null,
@@ -228,13 +228,24 @@ describe('enrichToolStepsWithResponse', () => {
       metadata: { model_used: 'qwen3-14b', tokens_used: 23, tools: {} },
     })
     const reasoning = enriched.find((s) => s.id === 'reasoning')!
-    const parsed = JSON.parse(reasoning.detail.result!)
-    expect(parsed.answer).toBeTruthy()
-    expect(parsed.model).toBeUndefined()
-    expect(parsed.tokens_used).toBeUndefined()
+    // No confidence / actions / incidents -> no Result row at all (null), and
+    // never the old hardcoded "Generated the response shown below." placeholder.
+    expect(reasoning.detail.result).toBeNull()
+    // The model/tokens line still renders on its own row.
     expect(reasoning.detail.model).toBe('qwen3-14b · 23 tokens')
     const q = JSON.parse(reasoning.detail.query)
     expect(q.synthesised_from[0]).toContain('model knowledge')
+  })
+
+  it('never emits the hardcoded "Generated the response shown below." placeholder', () => {
+    const steps = doneSteps('nextcloud status')
+    // Even with a real confidence present, the Result must not fabricate an answer line.
+    const enriched = enrichToolStepsWithResponse(steps, BASE_DATA)
+    const reasoning = enriched.find((s) => s.id === 'reasoning')!
+    expect(reasoning.detail.result).not.toContain('Generated the response shown below')
+    const parsed = JSON.parse(reasoning.detail.result!)
+    expect(parsed.answer).toBeUndefined()
+    expect(parsed.confidence).toBe(0.87)
   })
 
   it('attaches a concise at-a-glance summary per enriched step', () => {
@@ -325,6 +336,38 @@ describe('enrichToolStepsWithResponse — real tool_calls path', () => {
     // Query is the REAL arguments as JSON; Result is the REAL structured output.
     expect(JSON.parse(dep.detail.query).service_name).toBe('backend')
     expect(JSON.parse(dep.detail.result!).total).toBe(1)
+  })
+
+  it('renders a needs_param call as a clear skip note, never a raw JSON stub', () => {
+    const enriched = enrichToolStepsWithResponse(deriveToolSteps('whatever'), {
+      ...DATA,
+      metadata: {
+        model_used: 'qwen3-14b',
+        tokens_used: 5,
+        tool_calls: [
+          {
+            id: 'np1',
+            name: 'get_dependencies',
+            arguments: {},
+            status: 'needs_param' as const,
+            result: { status: 'needs_param', missing: ['service_name'] },
+            error: 'Missing required parameter(s): service_name',
+          },
+        ],
+      },
+    })
+    const step = enriched.find((s) => s.id === 'np1')!
+    // Not a hard error — it is a clean skip awaiting input.
+    expect(step.status).toBe('done')
+    expect(step.label).toContain('needs input')
+    expect(step.detail.summary).toBe('Needs parameters')
+    // Human-readable explanation, NOT the raw {"status":"needs_param",...} blob.
+    expect(step.detail.result).toContain('service_name')
+    expect(step.detail.result).not.toContain('"status"')
+    // A skipped tool did NOT feed the model -> excluded from synthesised_from.
+    const reasoning = enriched.find((s) => s.id === 'reasoning')!
+    const q = JSON.parse(reasoning.detail.query)
+    expect(q.synthesised_from[0]).toContain('model knowledge')
   })
 
   it('marks an errored tool call as error with its message', () => {

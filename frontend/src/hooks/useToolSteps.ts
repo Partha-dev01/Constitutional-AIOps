@@ -328,6 +328,18 @@ function serviceFromArguments(args: Record<string, unknown> | null | undefined):
   return null
 }
 
+/** Human-readable list of the params a needs_param call is missing. */
+function missingParamsText(call: ToolCallRecord): string {
+  const r = call.result
+  if (r && typeof r === 'object') {
+    const missing = (r as Record<string, unknown>).missing
+    if (Array.isArray(missing) && missing.length > 0) {
+      return missing.map((m) => String(m)).join(', ')
+    }
+  }
+  return 'a required parameter'
+}
+
 /** A concise at-a-glance line for an executed tool call. */
 function summariseToolCall(call: ToolCallRecord): string | null {
   if (call.status === 'error') return 'Failed'
@@ -356,13 +368,18 @@ function summariseToolCall(call: ToolCallRecord): string | null {
 /**
  * Build the final reasoning-step detail. The Query is the structured synthesis
  * INPUT as proper JSON (request + attached context + which tools fed the model);
- * the Result is the RELEVANT reasoning OUTCOME (confidence / actions / related),
- * never the model+tokens meta blob; the model+tokens line is returned separately.
+ * the Result is the genuine reasoning OUTCOME — the REAL evidence-based
+ * confidence plus any suggested actions / related incidents the backend
+ * actually returned. It NEVER fabricates an "answer" line (the real assistant
+ * reply already renders as the chat bubble below the timeline), so when there
+ * is no structured outcome to show the Result row is dropped entirely (`null`)
+ * rather than echoing a placeholder. The model+tokens line is returned
+ * separately and rendered on its own row.
  */
 function reasoningDetail(
   data: ToolStepResponseData,
   ranToolNames: string[],
-): { query: string; result: string; summary: string | null; model: string | null } {
+): { query: string; result: string | null; summary: string | null; model: string | null } {
   const model = data.metadata?.model_used ?? null
   const tokens = data.metadata?.tokens_used ?? null
   const modelLine = model ? (tokens != null ? `${model} · ${tokens} tokens` : model) : null
@@ -376,7 +393,11 @@ function reasoningDetail(
   queryObj.synthesised_from =
     ranToolNames.length > 0 ? ranToolNames : ['model knowledge — no tools matched this query']
 
-  const outcome: Record<string, unknown> = { answer: 'Generated the response shown below.' }
+  // The OUTCOME is only the real, evidence-based signals the backend returned.
+  // No synthetic "answer" string — the actual answer is the chat bubble. When
+  // none of these are present the Result is omitted (null) so the card never
+  // shows a hollow placeholder.
+  const outcome: Record<string, unknown> = {}
   if (typeof data.confidence === 'number' && Number.isFinite(data.confidence)) {
     outcome.confidence = data.confidence
   }
@@ -385,9 +406,11 @@ function reasoningDetail(
   const rel = data.related_incidents ?? []
   if (rel.length > 0) outcome.related_incidents = rel
 
+  const result = Object.keys(outcome).length > 0 ? JSON.stringify(outcome, null, 2) : null
+
   return {
     query: JSON.stringify(queryObj, null, 2),
-    result: JSON.stringify(outcome, null, 2),
+    result,
     summary: modelLine,
     model: modelLine,
   }
@@ -430,15 +453,25 @@ export function enrichToolStepsWithResponse(
   const toolCalls = data.metadata?.tool_calls
 
   if (Array.isArray(toolCalls) && toolCalls.length > 0) {
-    const ran = toolCalls.map((c) => c.name)
+    // `ran` feeds the reasoning step's "synthesised_from" — only tools that
+    // actually executed (not skipped-for-params) genuinely fed the model.
+    const ran = toolCalls.filter((c) => c.status !== 'needs_param').map((c) => c.name)
     const callSteps: ToolStep[] = toolCalls.map((call, i) => {
       const errored = call.status === 'error'
+      const needsParam = call.status === 'needs_param'
+      const baseLabel = TOOL_LABELS[call.name] ?? `Called ${titleCase(call.name)}`
+      // A skipped (needs_param) call never reached its executor, so it shows a
+      // plain-English explanation of WHY it was skipped — never a raw JSON stub
+      // and never a fake "Result". The model still answers from what it has.
       const result = errored
         ? (call.error ?? 'Tool returned an error.')
-        : JSON.stringify(call.result ?? {}, null, 2)
+        : needsParam
+          ? `Skipped — needs ${missingParamsText(call)} to run. ` +
+            'The assistant asked you to provide it below.'
+          : JSON.stringify(call.result ?? {}, null, 2)
       return {
         id: call.id ?? `tool-${i}-${call.name}`,
-        label: TOOL_LABELS[call.name] ?? `Called ${titleCase(call.name)}`,
+        label: needsParam ? `${baseLabel} (needs input)` : baseLabel,
         icon: TOOL_ICONS[call.name] ?? Wrench,
         status: errored ? 'error' : 'done',
         detail: {
