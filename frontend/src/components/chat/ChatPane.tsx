@@ -287,6 +287,8 @@ export function ChatPane({ variant = 'page', seedContext, injectedPrompt, classN
           related_incidents: response.related_incidents,
           suggested_actions: response.suggested_actions,
           metadata: response.metadata,
+          userMessage: trimmed,
+          attachedContext: seedContextRef.current,
         })
         setMessages((prev) => [...prev, assistantMessage])
         startTypewriter(messageId, response.message.content)
@@ -387,6 +389,7 @@ export function ChatPane({ variant = 'page', seedContext, injectedPrompt, classN
               related_incidents: meta.related_incidents,
               suggested_actions: meta.suggested_actions,
               metadata: meta.metadata ?? undefined,
+              userMessage: lastUserText,
             })
             rebuiltInsights[msgId] = {
               confidence: meta.confidence ?? null,
@@ -512,7 +515,7 @@ export function ChatPane({ variant = 'page', seedContext, injectedPrompt, classN
 
           {showSuggestions && (
             <div className="flex flex-1 items-start justify-center px-2 pt-6 pb-4">
-              <SuggestedPrompts prompts={prompts} onPick={handlePickPrompt} />
+              <SuggestedPrompts prompts={prompts} onPick={handlePickPrompt} dense={embedded} />
             </div>
           )}
 

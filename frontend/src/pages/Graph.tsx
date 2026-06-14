@@ -138,10 +138,12 @@ function transformGraphData(data: GraphData): { nodes: GraphNode[]; links: Graph
     })
   }
 
-  // Add root cause nodes
+  // Add root cause nodes. The backend already prefixes these ids (rc.id is
+  // `rootcause-<type>`) and its edges reference that raw id — so use it directly
+  // rather than re-prefixing (the double-prefix dropped every causal edge).
   for (const rc of data.root_causes ?? []) {
     nodes.push({
-      id: `root_cause-${rc.id}`,
+      id: rc.id,
       label: rc.name,
       type: 'root_cause',
       frequency: rc.frequency,
@@ -151,10 +153,10 @@ function transformGraphData(data: GraphData): { nodes: GraphNode[]; links: Graph
     })
   }
 
-  // Add action nodes
+  // Add action nodes (action.id is already `action-<id>`; use it directly).
   for (const action of data.actions ?? []) {
     nodes.push({
-      id: `action-${action.id}`,
+      id: action.id,
       label: action.name,
       type: 'action',
       usedCount: action.used_count,
@@ -177,10 +179,10 @@ function transformGraphData(data: GraphData): { nodes: GraphNode[]; links: Graph
     })
   }
 
-  // Add entity nodes
+  // Add entity nodes (entity.id is already `entity-<name>`; use it directly).
   for (const entity of data.entities ?? []) {
     nodes.push({
-      id: `entity-${entity.id}`,
+      id: entity.id,
       label: entity.name,
       type: 'entity',
       relationCount: entity.relation_count,
@@ -252,23 +254,24 @@ export function Graph() {
   const graphData = data ? transformGraphData(data) : { nodes: [], links: [] }
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="flex items-center justify-between p-4 border-b border-border">
+    <div className="flex h-full min-h-0 flex-col gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-foreground">Episodic Knowledge Graph</h1>
+          <h1 className="text-2xl font-bold text-foreground">Episodic Knowledge Graph</h1>
           <p className="text-sm text-muted-foreground">
-            {data?.stats?.total_episodes ?? 0} episodes, {data?.stats?.total_edges ?? 0} edges
+            {graphData.nodes.length} nodes · {graphData.links.length} relationships ·{' '}
+            {data?.stats?.total_episodes ?? 0} episodes
           </p>
         </div>
         <button
           onClick={handleRefresh}
-          className="px-3 py-1.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-md flex items-center gap-2 text-sm"
+          className="flex items-center gap-2 rounded-lg bg-primary px-3 py-1.5 text-sm text-primary-foreground hover:bg-primary/90"
         >
-          <RefreshCw className="w-4 h-4" aria-hidden="true" />
+          <RefreshCw className="h-4 w-4" aria-hidden="true" />
           Refresh
         </button>
       </div>
-      <div className="flex-1 relative">
+      <div className="relative min-h-0 flex-1 overflow-hidden rounded-xl border border-border bg-card">
         <EpisodicGraphExplorer
           nodes={graphData.nodes}
           links={graphData.links}

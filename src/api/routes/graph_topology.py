@@ -461,6 +461,81 @@ def _bucket_index(
     return max(0, min(buckets - 1, int(frac * buckets)))
 
 
+def render_custom_topology(
+    schema: Any,
+    *,
+    window_hours: int,
+    buckets: int,
+    prom_health: dict[str, dict[str, Any]] | None = None,
+    docker_health: dict[str, str] | None = None,
+) -> TopologyResponse:
+    """Render an operator-applied custom ``TopologySchema`` into the FROZEN
+    ``TopologyResponse`` shape, byte-identically to the discovered path.
+
+    A custom schema carries only the EDITABLE subset (id/label/kind/tier/port/
+    description + source/target/relationship/kind); every runtime-derived field
+    (health, buckets, episode/co-episode counts, recent_episodes) is filled with
+    safe defaults here. Live health is overlaid onto matching node ids when the
+    Prometheus / Docker signals are cheaply available (custom schemas have no
+    episode history, so health never escalates on episodes). The result can
+    never be "blank": validation upstream guarantees ≥1 node.
+    """
+    now = datetime.utcnow()
+    bucket_minutes = round(window_hours * 60 / buckets, 2)
+    prom_health = prom_health or {}
+    docker_health = docker_health or {}
+
+    nodes_out: list[TopologyNode] = []
+    node_ids: set[str] = set()
+    for node in sorted(schema.nodes, key=lambda n: (n.tier, n.id)):
+        node_ids.add(node.id)
+        health, reason = _resolve_health(
+            node.id, prom_health, docker_health, has_recent_incident=False
+        )
+        nodes_out.append(TopologyNode(
+            id=node.id,
+            label=node.label or node.id,
+            kind=node.kind,
+            tier=node.tier,
+            health=health,
+            health_reason=reason,
+            episode_count=0,
+            incident_count=0,
+            last_episode_at=None,
+            buckets=[0] * buckets,
+            recent_episodes=[],
+            meta=TopologyNodeMeta(port=node.port, description=node.description),
+        ))
+
+    edges_out: list[TopologyEdge] = []
+    for edge in schema.edges:
+        if edge.source not in node_ids or edge.target not in node_ids:
+            continue
+        edges_out.append(TopologyEdge(
+            id=f"{edge.source}->{edge.target}",
+            source=edge.source,
+            target=edge.target,
+            relationship=edge.relationship,
+            kind=edge.kind,
+            co_episode_count=0,
+            buckets=[0] * buckets,
+        ))
+
+    return TopologyResponse(
+        generated_at=now.isoformat() + "Z",
+        window_hours=window_hours,
+        bucket_minutes=bucket_minutes,
+        nodes=nodes_out,
+        edges=edges_out,
+        stats=TopologyStats(
+            nodes=len(nodes_out),
+            edges=len(edges_out),
+            episodes_in_window=0,
+            source="custom",
+        ),
+    )
+
+
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
@@ -487,6 +562,41 @@ async def get_topology(
 
     neo4j_client = getattr(request.app.state, "neo4j_client", None)
     telemetry_collector = getattr(request.app.state, "telemetry_collector", None)
+
+    # Custom-schema mode: when an operator has applied a custom topology, serve
+    # it instead of the discovered one. We still overlay cheap live health onto
+    # matching node ids. A corrupt/invalid persisted schema fails soft to the
+    # discovered path below — the live view can never go blank. (Persistence and
+    # topology imports are local so this module stays importable in langgraph-
+    # free CI and never adds a hard dependency to the discovered path.)
+    try:
+        from src.persistence import store as persistence_store
+
+        if persistence_store.get_topology_mode() == persistence_store.TOPOLOGY_MODE_CUSTOM:
+            raw_schema = persistence_store.load_topology_schema()
+            if raw_schema is not None:
+                from src.topology.schema import (
+                    SchemaValidationError,
+                    validate_topology_schema,
+                )
+
+                try:
+                    custom_schema = validate_topology_schema(raw_schema)
+                    prom_health = await _prometheus_health(telemetry_collector)
+                    docker_health = _docker_health()
+                    return render_custom_topology(
+                        custom_schema,
+                        window_hours=window_hours,
+                        buckets=buckets,
+                        prom_health=prom_health,
+                        docker_health=docker_health,
+                    )
+                except SchemaValidationError as e:
+                    logger.warning(
+                        "Applied custom topology invalid; using discovered: %s", e.errors
+                    )
+    except Exception as e:  # noqa: BLE001 - custom mode must never break the live view
+        logger.warning(f"Custom topology resolution failed, using discovered: {e}")
 
     nodes_raw, dep_edges, source = await _load_topology_nodes(neo4j_client)
     episodes = await _load_episodes(neo4j_client, window_start)

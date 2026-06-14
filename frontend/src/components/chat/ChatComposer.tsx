@@ -48,29 +48,37 @@ export function ChatComposer({
   const [toolsError, setToolsError] = useState(false)
   const toolsWrapRef = useRef<HTMLDivElement>(null)
 
-  // Lazily fetch the MCP tool list on first open and cache it for the session.
+  // Fire the MCP tool fetch exactly once, on first open, and cache it for the
+  // session. A ref (not state) gates the fetch so kicking it off can't re-run
+  // this effect and cancel its own in-flight request — that self-cancel was the
+  // bug that left the popover stuck on "Loading tools…" forever. A mounted ref
+  // guards the late setState so we never touch state after unmount.
+  const toolsRequestedRef = useRef(false)
+  const mountedRef = useRef(true)
   useEffect(() => {
-    if (!toolsOpen || toolsLoaded || toolsLoading) return
-    let cancelled = false
+    return () => {
+      mountedRef.current = false
+    }
+  }, [])
+  useEffect(() => {
+    if (!toolsOpen || toolsRequestedRef.current) return
+    toolsRequestedRef.current = true
     setToolsLoading(true)
     setToolsError(false)
     fetch('/api/v1/tools/', { credentials: 'same-origin' })
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
       .then((data: { tools?: McpTool[] }) => {
-        if (cancelled) return
+        if (!mountedRef.current) return
         setTools(Array.isArray(data.tools) ? data.tools : [])
         setToolsLoaded(true)
       })
       .catch(() => {
-        if (!cancelled) setToolsError(true)
+        if (mountedRef.current) setToolsError(true)
       })
       .finally(() => {
-        if (!cancelled) setToolsLoading(false)
+        if (mountedRef.current) setToolsLoading(false)
       })
-    return () => {
-      cancelled = true
-    }
-  }, [toolsOpen, toolsLoaded, toolsLoading])
+  }, [toolsOpen])
 
   // Close the popover on outside click or Escape.
   useEffect(() => {

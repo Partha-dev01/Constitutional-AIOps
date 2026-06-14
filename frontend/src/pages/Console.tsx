@@ -2,7 +2,6 @@ import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRe
 import { AlertTriangle, Loader2, Sparkles, Waypoints, X } from 'lucide-react'
 import { ActiveIncidentsPanel } from '../components/incidents/ActiveIncidentsPanel'
 import { ChatPane } from '../components/chat/ChatPane'
-import { EpisodicGraphExplorer } from '../components/EpisodicGraphExplorer'
 import type { EpisodicLink, EpisodicNode } from '../components/EpisodicGraphExplorer'
 import { buildSchemaChatContext } from '../components/schema/types'
 import type { SelectedItem } from '../components/schema/types'
@@ -11,12 +10,19 @@ import type { SelectedItem } from '../components/schema/types'
 // only fetched when this page mounts.
 const SchemaGraph = lazy(() => import('../components/schema/SchemaGraph'))
 
+// The episodic view renders through the SAME schema stage as the platform
+// topology (top-down + episodic colours). Lazy so its chunk loads only when the
+// episodic toggle is first opened.
+const EpisodicSchemaGraph = lazy(() =>
+  import('../components/schema/EpisodicSchemaGraph').then((m) => ({ default: m.EpisodicSchemaGraph })),
+)
+
 // Matches the schema graph's default analysis window so the chat context that
 // rides along with a selection describes the same span the graph is showing.
 const WINDOW_HOURS = 168
 
-// EpisodicGraphExplorer needs an explicit numeric height; never feed it less
-// than this so the canvas stays usable even in a very short pane.
+// The episodic schema canvas needs an explicit numeric height; never feed it
+// less than this so the canvas stays usable even in a very short pane.
 const MIN_EPISODIC_HEIGHT = 280
 
 // Shape of the /api/v1/graph/episodes response we consume. Mirrors the transform
@@ -95,7 +101,9 @@ function transformEpisodes(data: EpisodesResponse): { nodes: EpisodicNode[]; lin
 
   for (const rc of data.root_causes ?? []) {
     nodes.push({
-      id: `root_cause-${rc.id}`,
+      // Backend already prefixes (rc.id = `rootcause-<type>`) and its edges
+      // reference that raw id — use it directly so causal edges actually match.
+      id: rc.id,
       label: rc.name,
       type: 'root_cause',
       frequency: rc.frequency,
@@ -107,7 +115,7 @@ function transformEpisodes(data: EpisodesResponse): { nodes: EpisodicNode[]; lin
 
   for (const action of data.actions ?? []) {
     nodes.push({
-      id: `action-${action.id}`,
+      id: action.id,
       label: action.name,
       type: 'action',
       usedCount: action.used_count,
@@ -131,7 +139,7 @@ function transformEpisodes(data: EpisodesResponse): { nodes: EpisodicNode[]; lin
 
   for (const entity of data.entities ?? []) {
     nodes.push({
-      id: `entity-${entity.id}`,
+      id: entity.id,
       label: entity.name,
       type: 'entity',
       relationCount: entity.relation_count,
@@ -177,7 +185,8 @@ export function Console() {
   const [injected, setInjected] = useState<{ text: string; key: number }>({ text: '', key: 0 })
 
   // Which topology the left pane shows. 'platform' is the schema graph (default);
-  // 'episodic' is the memory graph rendered top-down via EpisodicGraphExplorer.
+  // 'episodic' is the memory graph rendered top-down via EpisodicSchemaGraph
+  // (the same schema stage as the platform view).
   const [graphMode, setGraphMode] = useState<'platform' | 'episodic'>('platform')
 
   // Episodic graph data — fetched lazily the first time episodic mode is opened.
@@ -323,7 +332,11 @@ export function Console() {
                     </div>
                   }
                 >
-                  <SchemaGraph embedded onSelectionChange={handleSelectionChange} />
+                  <SchemaGraph
+                    embedded
+                    onSelectionChange={handleSelectionChange}
+                    onAskEpisode={handleOpenInChat}
+                  />
                 </Suspense>
               </div>
               <p className="mt-1.5 shrink-0 text-[11px] leading-snug text-muted-foreground/70">
@@ -332,20 +345,27 @@ export function Console() {
             </>
           ) : (
             <>
-              {/* Ref'd body whose measured height feeds the explorer; the explorer
+              {/* Ref'd body whose measured height feeds the graph; the canvas
                   needs an explicit numeric height (it can't size off flex alone). */}
               <div ref={episodicBodyRef} className="min-h-0 flex-1 overflow-hidden">
-                <EpisodicGraphExplorer
-                  nodes={episodic.nodes}
-                  links={episodic.links}
-                  loading={episodicLoading}
-                  height={episodicHeight}
-                  defaultLayoutMode="dag"
-                  dagDirection="td"
-                />
+                <Suspense
+                  fallback={
+                    <div className="flex h-full items-center justify-center rounded-lg bg-gradient-to-br from-slate-900/50 to-slate-800/50">
+                      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                    </div>
+                  }
+                >
+                  <EpisodicSchemaGraph
+                    nodes={episodic.nodes}
+                    links={episodic.links}
+                    loading={episodicLoading}
+                    height={episodicHeight}
+                    onSelectionChange={handleSelectionChange}
+                  />
+                </Suspense>
               </div>
               <p className="mt-1.5 shrink-0 text-[11px] leading-snug text-muted-foreground/70">
-                Episodic memory — incidents, root causes and the services they touched.
+                Episodic memory — incidents, root causes and the services they touched · Ctrl-click to attach to chat.
               </p>
             </>
           )}

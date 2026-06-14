@@ -98,11 +98,29 @@ export interface ChatToolResults {
   logs?: LogsToolResult;
 }
 
+/**
+ * A single tool the backend agent actually executed for a chat turn. The
+ * ordered list (`ChatResponseMetadata.tool_calls`) is the truthful source of
+ * what ran — the chat timeline renders these directly (real name + arguments +
+ * structured result) instead of a heuristic checklist.
+ */
+export interface ChatToolCall {
+  id?: string;
+  name: string;
+  arguments?: Record<string, unknown> | null;
+  status?: 'ok' | 'error' | 'needs_param' | string;
+  result?: unknown;
+  error?: string | null;
+  duration_ms?: number | null;
+}
+
 export interface ChatResponseMetadata {
   mode?: string;
   model_used?: string;
   tokens_used?: number | null;
   tools?: ChatToolResults;
+  /** Ordered list of every tool the agent ran this turn (source of truth). */
+  tool_calls?: ChatToolCall[];
   [key: string]: unknown;
 }
 

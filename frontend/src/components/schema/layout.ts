@@ -17,6 +17,20 @@ export const NODE_W = 150
 export const NODE_H = 56
 export const GAP_X = 90
 export const GAP_Y = 28
+/**
+ * Vertical gap between TIERS in the top-down (episodic) layout. Roomier than the
+ * platform's tight GAP_Y so the cascade reads as distinct rows rather than a
+ * cramped band. Only the 'td' transpose uses it — the platform 'lr' path is
+ * untouched.
+ */
+export const GAP_Y_TD = 84
+/**
+ * Max nodes per visual row in the top-down layout. A tier wider than this wraps
+ * into balanced sub-rows so a tier with many siblings (e.g. dozens of episodes)
+ * reads as a compact block with legible cards, instead of one long thin line
+ * that the canvas has to shrink to a sliver to fit. 'td' (episodic) only.
+ */
+export const MAX_TD_ROW = 6
 
 export interface LayoutPosition {
   id: string
@@ -37,11 +51,24 @@ export interface SchemaLayout {
   height: number
 }
 
-/** Identity key: node ids + tiers and edge ids only (scrub-independent). */
-function topologyKey(nodes: TopologyNode[], edges: TopologyEdge[]): string {
+/**
+ * Flow direction. 'lr' (default) lays layers out left→right by tier — the
+ * platform topology path, byte-identical to before this param existed. 'td'
+ * lays the SAME layered DAG out top→down by transposing the final coordinates
+ * (x↔y) and the content box (width↔height); the layering / crossing-reduction
+ * maths are shared, so cycle-safety and determinism carry over unchanged.
+ */
+export type LayoutDirection = 'lr' | 'td'
+
+/** Identity key: node ids + tiers, edge ids, and direction (scrub-independent). */
+function topologyKey(
+  nodes: TopologyNode[],
+  edges: TopologyEdge[],
+  direction: LayoutDirection,
+): string {
   const n = nodes.map((node) => `${node.id}:${node.tier}:${node.kind}`).join(',')
   const e = edges.map((edge) => `${edge.id}:${edge.relationship}`).join(',')
-  return `${n}||${e}`
+  return `${direction}||${n}||${e}`
 }
 
 let memoKey: string | null = null
@@ -50,13 +77,69 @@ let memoResult: SchemaLayout | null = null
 export function layoutTopology(
   nodes: TopologyNode[],
   edges: TopologyEdge[],
+  direction: LayoutDirection = 'lr',
 ): SchemaLayout {
-  const key = topologyKey(nodes, edges)
+  const key = topologyKey(nodes, edges, direction)
   if (memoKey === key && memoResult) return memoResult
-  const result = computeLayout(nodes, edges)
+  const lr = computeLayout(nodes, edges)
+  const result = direction === 'td' ? transpose(lr) : lr
   memoKey = key
   memoResult = result
   return result
+}
+
+/**
+ * Re-place an 'lr' layout top→down. The layering, back-edge set and per-layer
+ * order are direction-free, so we keep them and only re-assign coordinates:
+ * layer index → y (stepped by node HEIGHT), within-layer index → x (stepped by
+ * node WIDTH). A plain x/y swap would overlap horizontally (NODE_W > the y
+ * step), so each axis keeps the step that matches the node's own footprint.
+ * Pure — never mutates the input layout.
+ */
+function transpose(layout: SchemaLayout): SchemaLayout {
+  const layers = layout.layers
+  const rowWidth = (count: number) =>
+    count > 0 ? count * NODE_W + (count - 1) * GAP_X : 0
+  // Compact away EMPTY tiers, then WRAP any tier wider than MAX_TD_ROW into
+  // balanced sub-rows. Episodic graphs are often sparse vertically (episodes →
+  // services, no root_cause/action layer) but very wide (many sibling episodes);
+  // without this the cascade is a one-line sliver in a tall pane. Tier order is
+  // preserved so deeper tiers still sit below shallower ones.
+  const occupied = layers.filter((row) => row.length > 0)
+  const visualRows: string[][] = []
+  for (const row of occupied) {
+    if (row.length <= MAX_TD_ROW) {
+      visualRows.push(row)
+      continue
+    }
+    const subRows = Math.ceil(row.length / MAX_TD_ROW)
+    const per = Math.ceil(row.length / subRows) // balanced (e.g. 14 → 5,5,4)
+    for (let i = 0; i < row.length; i += per) {
+      visualRows.push(row.slice(i, i + per))
+    }
+  }
+
+  const contentWidth = visualRows.reduce((acc, row) => Math.max(acc, rowWidth(row.length)), 0)
+  const stepY = NODE_H + GAP_Y_TD
+  const contentHeight =
+    visualRows.length > 0 ? visualRows.length * NODE_H + (visualRows.length - 1) * GAP_Y_TD : 0
+
+  const positions = new Map<string, LayoutPosition>()
+  visualRows.forEach((row, li) => {
+    const y = li * stepY
+    const xStart = (contentWidth - rowWidth(row.length)) / 2
+    row.forEach((id, idx) => {
+      positions.set(id, { id, x: xStart + idx * (NODE_W + GAP_X), y, layer: li })
+    })
+  })
+
+  return {
+    positions,
+    backEdgeIds: layout.backEdgeIds,
+    layers,
+    width: contentWidth,
+    height: contentHeight,
+  }
 }
 
 function computeLayout(nodes: TopologyNode[], edges: TopologyEdge[]): SchemaLayout {

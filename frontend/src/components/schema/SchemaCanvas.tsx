@@ -28,6 +28,21 @@ interface SchemaCanvasProps {
   onNodeHover: (node: TopologyNode | null, event?: React.PointerEvent) => void
   onEdgeHover: (edge: TopologyEdge | null, event?: React.PointerEvent) => void
   onBackgroundClick: () => void
+  /**
+   * Episodic view only: per-node / per-edge accent (bare HSL triplet) and
+   * per-node sub-label resolvers, so the episodic renderer can colour by TYPE +
+   * STATUS / RELATIONSHIP. All optional — the platform path passes none and
+   * renders byte-identically to before.
+   */
+  nodeAccent?: (node: TopologyNode) => string | undefined
+  edgeAccent?: (edge: TopologyEdge) => string | undefined
+  nodeSubLabel?: (node: TopologyNode) => string | undefined
+  /**
+   * Flow direction of the laid-out graph. 'lr' (default) anchors edges on the
+   * node's left/right faces (platform). 'td' anchors on top/bottom faces so a
+   * top-down episodic layout cascades cleanly. Pan/zoom are unaffected.
+   */
+  orientation?: 'lr' | 'td'
 }
 
 /**
@@ -48,6 +63,10 @@ export function SchemaCanvas({
   onNodeHover,
   onEdgeHover,
   onBackgroundClick,
+  nodeAccent,
+  edgeAccent,
+  nodeSubLabel,
+  orientation = 'lr',
 }: SchemaCanvasProps) {
   const svgRef = useRef<SVGSVGElement>(null)
 
@@ -230,23 +249,41 @@ export function SchemaCanvas({
           const sp = layout.positions.get(edge.source)
           const tp = layout.positions.get(edge.target)
           if (!sp || !tp) return null
-          const forward = tp.x >= sp.x
-          const x1 = forward ? sp.x + NODE_W : sp.x
-          const x2 = forward ? tp.x : tp.x + NODE_W
           const derived = edgeDerived.get(edge.id)
+          // Anchor on left/right faces for 'lr', top/bottom faces for 'td', so
+          // the bezier always leaves and enters the node cleanly.
+          let x1: number
+          let y1: number
+          let x2: number
+          let y2: number
+          if (orientation === 'td') {
+            const downward = tp.y >= sp.y
+            x1 = sp.x + NODE_W / 2
+            y1 = downward ? sp.y + NODE_H : sp.y
+            x2 = tp.x + NODE_W / 2
+            y2 = downward ? tp.y : tp.y + NODE_H
+          } else {
+            const forward = tp.x >= sp.x
+            x1 = forward ? sp.x + NODE_W : sp.x
+            y1 = sp.y + NODE_H / 2
+            x2 = forward ? tp.x : tp.x + NODE_W
+            y2 = tp.y + NODE_H / 2
+          }
           return (
             <SchemaEdge
               key={edge.id}
               edge={edge}
               x1={x1}
-              y1={sp.y + NODE_H / 2}
+              y1={y1}
               x2={x2}
-              y2={tp.y + NODE_H / 2}
+              y2={y2}
               coCount={derived?.count ?? edge.co_episode_count}
               activity={derived?.activity ?? 0}
               selected={selectedKeys.has(`edge:${edge.id}`)}
               onClick={onEdgeClick}
               onHover={onEdgeHover}
+              accent={edgeAccent?.(edge)}
+              orientation={orientation}
             />
           )
         })}
@@ -269,6 +306,8 @@ export function SchemaCanvas({
               selected={selectedKeys.has(`node:${node.id}`)}
               onClick={onNodeClick}
               onHover={onNodeHover}
+              accent={nodeAccent?.(node)}
+              subLabel={nodeSubLabel?.(node)}
             />
           )
         })}

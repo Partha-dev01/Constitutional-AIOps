@@ -104,6 +104,18 @@ def init_db() -> None:
             )
             """
         )
+        # Editable platform-topology schema (single-document key/value rows).
+        # Holds the operator's applied custom schema (key "custom_schema") and
+        # the active mode flag (key "mode" ∈ {"discovered","custom"}). Additive:
+        # never touched by the conversation/incident/action/counter paths.
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS topology_state (
+                key TEXT PRIMARY KEY,
+                data_json TEXT NOT NULL
+            )
+            """
+        )
 
 
 def _iso(value: Any) -> Optional[str]:
@@ -309,6 +321,97 @@ def get_counter(name: str, default: int = 0) -> int:
         return default
 
 
+# ---------------------------------------------------------------------------
+# Editable platform-topology schema (single-document store)
+# ---------------------------------------------------------------------------
+
+# Row keys for the ``topology_state`` table.
+_TOPOLOGY_SCHEMA_KEY = "custom_schema"
+_TOPOLOGY_MODE_KEY = "mode"
+
+# Active-mode flag values.
+TOPOLOGY_MODE_DISCOVERED = "discovered"
+TOPOLOGY_MODE_CUSTOM = "custom"
+
+
+def save_topology_schema(schema: dict[str, Any]) -> None:
+    """Persist the applied custom topology schema and flip mode to ``custom``.
+
+    ``schema`` is the validated ``{"nodes": [...], "edges": [...]}`` document
+    (already strict-validated by the topology route). Insert-or-replace, so a
+    re-Apply overwrites the prior custom schema atomically.
+    """
+    init_db()
+    with closing(_connect()) as conn, conn:
+        conn.execute(
+            "INSERT INTO topology_state (key, data_json) VALUES (?, ?)"
+            " ON CONFLICT(key) DO UPDATE SET data_json = excluded.data_json",
+            (_TOPOLOGY_SCHEMA_KEY, json.dumps(schema)),
+        )
+        conn.execute(
+            "INSERT INTO topology_state (key, data_json) VALUES (?, ?)"
+            " ON CONFLICT(key) DO UPDATE SET data_json = excluded.data_json",
+            (_TOPOLOGY_MODE_KEY, json.dumps(TOPOLOGY_MODE_CUSTOM)),
+        )
+
+
+def load_topology_schema() -> Optional[dict[str, Any]]:
+    """Return the persisted custom topology schema dict, or ``None`` if absent/corrupt."""
+    init_db()
+    with closing(_connect()) as conn:
+        row = conn.execute(
+            "SELECT data_json FROM topology_state WHERE key = ?",
+            (_TOPOLOGY_SCHEMA_KEY,),
+        ).fetchone()
+    if row is None:
+        return None
+    try:
+        parsed = json.loads(row["data_json"])
+        if not isinstance(parsed, dict):
+            raise ValueError("topology schema row is not a JSON object")
+        return parsed
+    except Exception as exc:  # noqa: BLE001 - tolerate any bad/legacy row
+        logger.warning("Skipping corrupt topology schema row: %s", exc)
+        return None
+
+
+def get_topology_mode() -> str:
+    """Return the active topology mode (``discovered`` | ``custom``).
+
+    Defaults to ``discovered`` when unset/corrupt, and never reports ``custom``
+    without a persisted schema actually present — so a missing schema can never
+    leave the live endpoint pointing at nothing.
+    """
+    init_db()
+    with closing(_connect()) as conn:
+        row = conn.execute(
+            "SELECT data_json FROM topology_state WHERE key = ?",
+            (_TOPOLOGY_MODE_KEY,),
+        ).fetchone()
+    mode = TOPOLOGY_MODE_DISCOVERED
+    if row is not None:
+        try:
+            value = json.loads(row["data_json"])
+            if value == TOPOLOGY_MODE_CUSTOM:
+                mode = TOPOLOGY_MODE_CUSTOM
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Corrupt topology mode row; defaulting to discovered: %s", exc)
+    # Safety: only honour "custom" when a schema is actually persisted.
+    if mode == TOPOLOGY_MODE_CUSTOM and load_topology_schema() is None:
+        return TOPOLOGY_MODE_DISCOVERED
+    return mode
+
+
+def reset_topology_mode() -> None:
+    """Revert to discovered mode (drop the custom schema + mode rows)."""
+    init_db()
+    with closing(_connect()) as conn, conn:
+        conn.execute(
+            "DELETE FROM topology_state WHERE key IN (?, ?)",
+            (_TOPOLOGY_SCHEMA_KEY, _TOPOLOGY_MODE_KEY),
+        )
+
+
 __all__ = [
     "data_dir",
     "init_db",
@@ -323,4 +426,10 @@ __all__ = [
     "load_all_pending_actions",
     "set_counter",
     "get_counter",
+    "TOPOLOGY_MODE_DISCOVERED",
+    "TOPOLOGY_MODE_CUSTOM",
+    "save_topology_schema",
+    "load_topology_schema",
+    "get_topology_mode",
+    "reset_topology_mode",
 ]

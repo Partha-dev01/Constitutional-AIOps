@@ -193,15 +193,48 @@ describe('enrichToolStepsWithResponse', () => {
     }
   })
 
-  it('sets result on the reasoning step with model and confidence', () => {
+  it('reasoning result carries the relevant outcome (confidence) but NOT model/token meta', () => {
     const steps = doneSteps('nextcloud status')
     const enriched = enrichToolStepsWithResponse(steps, BASE_DATA)
-    const reasoning = enriched.find((s) => s.id === 'reasoning')
-    expect(reasoning!.detail.result).not.toBeNull()
-    const parsed = JSON.parse(reasoning!.detail.result!)
-    expect(parsed.model).toBe('qwen3-14b')
+    const reasoning = enriched.find((s) => s.id === 'reasoning')!
+    expect(reasoning.detail.result).not.toBeNull()
+    const parsed = JSON.parse(reasoning.detail.result!)
     expect(parsed.confidence).toBe(0.87)
-    expect(parsed.tokens_used).toBe(412)
+    // The model/tokens meta blob is GONE from the result — it lives on its own field.
+    expect(parsed.model).toBeUndefined()
+    expect(parsed.tokens_used).toBeUndefined()
+    expect(reasoning.detail.model).toBe('qwen3-14b · 412 tokens')
+  })
+
+  it('reasoning query is proper JSON carrying the request + synthesised inputs', () => {
+    const steps = doneSteps('show similar nextcloud incidents')
+    const enriched = enrichToolStepsWithResponse(steps, {
+      ...BASE_DATA,
+      userMessage: 'show similar nextcloud incidents',
+    })
+    const reasoning = enriched.find((s) => s.id === 'reasoning')!
+    const q = JSON.parse(reasoning.detail.query) // throws if not valid JSON
+    expect(q.request).toBe('show similar nextcloud incidents')
+    expect(Array.isArray(q.synthesised_from)).toBe(true)
+  })
+
+  it('low-evidence reasoning still yields a relevant result, never the bogus meta blob', () => {
+    const steps = doneSteps('hello there')
+    const enriched = enrichToolStepsWithResponse(steps, {
+      confidence: null,
+      suggested_actions: [],
+      related_incidents: [],
+      userMessage: 'hello there',
+      metadata: { model_used: 'qwen3-14b', tokens_used: 23, tools: {} },
+    })
+    const reasoning = enriched.find((s) => s.id === 'reasoning')!
+    const parsed = JSON.parse(reasoning.detail.result!)
+    expect(parsed.answer).toBeTruthy()
+    expect(parsed.model).toBeUndefined()
+    expect(parsed.tokens_used).toBeUndefined()
+    expect(reasoning.detail.model).toBe('qwen3-14b · 23 tokens')
+    const q = JSON.parse(reasoning.detail.query)
+    expect(q.synthesised_from[0]).toContain('model knowledge')
   })
 
   it('attaches a concise at-a-glance summary per enriched step', () => {
@@ -233,13 +266,14 @@ describe('enrichToolStepsWithResponse', () => {
     expect(parsed.suggested_actions).toEqual(['Restart nextcloud', 'Check loki'])
   })
 
-  it('reasoning model is null (not a fake fallback) when metadata is missing', () => {
+  it('reasoning model line is null (not a fake fallback) when metadata is missing', () => {
     const steps = doneSteps('nextcloud status')
     const enriched = enrichToolStepsWithResponse(steps, { ...BASE_DATA, metadata: null })
-    const reasoning = enriched.find((s) => s.id === 'reasoning')
-    const parsed = JSON.parse(reasoning!.detail.result!)
-    expect(parsed.model).toBeNull() // no fabricated 'qwen3-14b'
-    expect(parsed.tokens_used).toBeNull()
+    const reasoning = enriched.find((s) => s.id === 'reasoning')!
+    expect(reasoning.detail.model).toBeNull() // no fabricated 'qwen3-14b'
+    const parsed = JSON.parse(reasoning.detail.result!)
+    expect(parsed.model).toBeUndefined()
+    expect(parsed.tokens_used).toBeUndefined()
   })
 
   it('shows "No similar incidents returned." when tools.similar is absent', () => {
@@ -254,5 +288,58 @@ describe('enrichToolStepsWithResponse', () => {
     const original = JSON.stringify(steps)
     enrichToolStepsWithResponse(steps, BASE_DATA)
     expect(JSON.stringify(steps)).toBe(original)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// enrichToolStepsWithResponse — REAL executed tool_calls path
+// ---------------------------------------------------------------------------
+
+describe('enrichToolStepsWithResponse — real tool_calls path', () => {
+  const TOOL_CALLS = [
+    {
+      id: 'tc-1',
+      name: 'get_dependencies',
+      arguments: { service_name: 'backend' },
+      status: 'ok' as const,
+      result: { service: 'backend', dependencies: { upstream: ['neo4j'], downstream: [] }, total: 1 },
+      duration_ms: 42,
+    },
+  ]
+  const DATA = {
+    confidence: 0.5,
+    suggested_actions: [],
+    related_incidents: [],
+    userMessage: 'Use the get_dependencies tool to find all dependencies',
+    metadata: { model_used: 'qwen3-14b', tokens_used: 23, tool_calls: TOOL_CALLS },
+  }
+
+  it('rebuilds the timeline from the REAL executed tool calls + a reasoning step', () => {
+    const enriched = enrichToolStepsWithResponse(deriveToolSteps('whatever'), DATA)
+    const ids = enriched.map((s) => s.id)
+    expect(ids).toContain('tc-1')
+    expect(ids[ids.length - 1]).toBe('reasoning')
+    const dep = enriched.find((s) => s.id === 'tc-1')!
+    expect(dep.status).toBe('done')
+    expect(dep.detail.service).toBe('backend')
+    // Query is the REAL arguments as JSON; Result is the REAL structured output.
+    expect(JSON.parse(dep.detail.query).service_name).toBe('backend')
+    expect(JSON.parse(dep.detail.result!).total).toBe(1)
+  })
+
+  it('marks an errored tool call as error with its message', () => {
+    const enriched = enrichToolStepsWithResponse(deriveToolSteps('x'), {
+      ...DATA,
+      metadata: {
+        model_used: 'qwen3-14b',
+        tokens_used: 5,
+        tool_calls: [
+          { id: 'e1', name: 'query_metric', status: 'error' as const, error: 'Prometheus not available' },
+        ],
+      },
+    })
+    const step = enriched.find((s) => s.id === 'e1')!
+    expect(step.status).toBe('error')
+    expect(step.detail.result).toBe('Prometheus not available')
   })
 })
