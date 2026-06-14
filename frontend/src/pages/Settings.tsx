@@ -15,6 +15,7 @@ import {
   RotateCcw,
   RotateCw,
   Wrench,
+  Waypoints,
 } from 'lucide-react'
 import api, {
   HealthResponse,
@@ -26,6 +27,7 @@ import api, {
   RemediationSettings,
   RemediationMode,
 } from '../lib/api'
+import { TopologySchemaEditor } from '../components/TopologySchemaEditor'
 
 // ── re-export for tests / other imports ─────────────────────────────────────
 export type { ConstitutionalSettings, NotificationSettings, TelemetrySettings, RemediationSettings }
@@ -89,7 +91,7 @@ const REMEDIATION_MODE_HELP: Record<RemediationMode, string> = {
 // ── main component ────────────────────────────────────────────────────────────
 export function Settings() {
   const [activeTab, setActiveTab] = useState<
-    'constitutional' | 'remediation' | 'notifications' | 'telemetry' | 'models' | 'prompts'
+    'constitutional' | 'remediation' | 'notifications' | 'telemetry' | 'models' | 'prompts' | 'topology'
   >('constitutional')
   const [health, setHealth] = useState<HealthResponse | null>(null)
   const [loading, setLoading] = useState(false)
@@ -287,6 +289,7 @@ export function Settings() {
     { id: 'telemetry', label: 'Telemetry', icon: Network },
     { id: 'models', label: 'Models', icon: Cpu },
     { id: 'prompts', label: 'System Prompts', icon: FileText },
+    { id: 'topology', label: 'Topology Schema', icon: Waypoints },
   ] as const
 
   return (
@@ -1117,6 +1120,8 @@ export function Settings() {
             </div>
           </div>
         )}
+        {/* ━━ Topology Schema (editable + LLM-generated platform topology) ━━ */}
+        {activeTab === 'topology' && <TopologySchemaEditor />}
       </div>
     </div>
   )

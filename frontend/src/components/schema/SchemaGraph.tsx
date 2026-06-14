@@ -40,6 +40,12 @@ interface SchemaGraphProps {
   embedded?: boolean
   /** Embedded mode only: notified whenever the canvas selection set changes. */
   onSelectionChange?: (items: SelectedItem[]) => void
+  /**
+   * When provided, each "Recent episode" card in the detail drawer becomes a
+   * button that hands a ready-made investigation prompt to the host chat (the
+   * Console cockpit composer) — "click an episode to ask the LLM about it".
+   */
+  onAskEpisode?: (prompt: string) => void
 }
 
 /**
@@ -48,7 +54,7 @@ interface SchemaGraphProps {
  * the detail drawer. All scrub binding is DERIVED (useMemo) — scrubbing never
  * refetches and never recomputes the layered layout.
  */
-export default function SchemaGraph({ height = 520, embedded = false, onSelectionChange }: SchemaGraphProps) {
+export default function SchemaGraph({ height = 520, embedded = false, onSelectionChange, onAskEpisode }: SchemaGraphProps) {
   const [data, setData] = useState<TopologyResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -365,6 +371,7 @@ export default function SchemaGraph({ height = 520, embedded = false, onSelectio
               )}
               onClose={() => setDrawer(null)}
               onToggleAskAi={handleToggleAskAi}
+              onAskEpisode={onAskEpisode}
             />
           )}
         </div>
@@ -455,6 +462,7 @@ export default function SchemaGraph({ height = 520, embedded = false, onSelectio
                 )}
                 onClose={() => setDrawer(null)}
                 onToggleAskAi={handleToggleAskAi}
+                onAskEpisode={onAskEpisode}
               />
             )}
           </div>

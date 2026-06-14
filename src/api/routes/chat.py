@@ -5,6 +5,7 @@ Chat endpoints for interactive conversation with the Reasoning Agent.
 Supports general chat, RCA analysis, and remediation planning.
 """
 
+import json
 import logging
 import os
 import re
@@ -32,6 +33,17 @@ from src.api.schemas.chat import (
 
 # Import MCP tool executor for automatic tool calls during chat
 from src.api.routes.tools import execute_tool_call
+
+# Agentic tool-calling (LangChain-style tool loop) for the chat path. Routes
+# named/implied tools to the REAL executors in tools.py, runs a bounded model
+# loop, and produces the ordered metadata.tool_calls contract the UI consumes.
+from src.agents.tool_calling import (
+    ToolCallRecord,
+    ToolLoopResult,
+    plan_forced_tool_calls,
+    run_tool_calling_loop,
+)
+from src.agents.reasoning_agent import CHAT_SYSTEM_PROMPT
 
 # Durable persistence (write-through): the in-memory dicts below stay the read
 # fast-path; these helpers mirror each mutation into SQLite so conversations and
@@ -411,6 +423,290 @@ async def _invoke_mcp_tools_for_query(
         logger.info(f"MCP tools invoked for query, {len(tool_results)} results")
         return "\n".join(tool_results), structured
     return "", structured
+
+
+# ---------------------------------------------------------------------------
+# Agentic tool-calling integration (proper LangChain-style tool loop)
+# ---------------------------------------------------------------------------
+
+# Cap the model-driven tool rounds so chat latency stays bounded. Use ``or "3"``
+# so an empty-string env (compose declares CHAT_MAX_TOOL_ITERATIONS=${...:-})
+# falls back to the default instead of crashing on int("").
+_CHAT_MAX_TOOL_ITERATIONS = int(os.getenv("CHAT_MAX_TOOL_ITERATIONS") or "3")
+
+
+def _make_chat_executor(request: Request):
+    """Build the executor the tool loop calls: routes to the REAL tools.py.
+
+    Wraps ``execute_tool_call`` so every tool the agent runs hits live
+    Neo4j/Loki/Prometheus/Docker via the same code path the MCP page uses
+    (action tools still flow through the constitutional gate inside it).
+    """
+
+    from src.agents.tool_calling import TOOL_SPECS_BY_NAME
+
+    async def _executor(tool_name: str, arguments: dict[str, Any]) -> dict[str, Any]:
+        spec = TOOL_SPECS_BY_NAME.get(tool_name)
+        # Action tools carry evidence/audit context so the constitutional gate
+        # can evaluate them (mirrors _maybe_propose_remediation); read tools take
+        # the legacy 3-arg signature so existing call sites/mocks stay valid.
+        # Never force past the gate — execute_tool_call owns that.
+        if spec is not None and spec.is_action:
+            context = {
+                "source": "chat_agent",
+                "audit_enabled": _audit_enabled(),
+                "telemetry_evidence": True,
+            }
+            return await execute_tool_call(
+                request, tool_name=tool_name, parameters=arguments, context=context
+            )
+        return await execute_tool_call(
+            request, tool_name=tool_name, parameters=arguments
+        )
+
+    return _executor
+
+
+def _make_chat_completion(reasoning_agent: Any, *, enable_thinking: bool):
+    """Build the model-completion callable for the tool loop.
+
+    Prefers the raw ModelRouter (so the model can emit JSON / native tool calls
+    in a multi-turn transcript). Falls back to ``reasoning_agent.chat`` when the
+    router is unavailable or does not behave like one (e.g. test MagicMocks):
+    that path simply returns a single grounded answer from the model, which —
+    combined with deterministic pre-routing — still executes every named/implied
+    tool and answers WITH the data.
+    """
+    model_router = getattr(reasoning_agent, "model_router", None)
+    system_prompt_for_chat = None
+    try:
+        system_prompt_for_chat = reasoning_agent.get_system_prompt("chat")
+    except Exception:  # noqa: BLE001
+        system_prompt_for_chat = None
+
+    async def _completion(
+        system_prompt: str,
+        messages: list[dict[str, Any]],
+        tools: Optional[list[dict[str, Any]]],
+    ) -> dict[str, Any]:
+        # Flatten the transcript into a single user prompt for reasoning_completion
+        # (which takes prompt + system_prompt). The system prompt already carries
+        # the runtime context + tool-call protocol assembled by the loop.
+        prompt_lines: list[str] = []
+        for m in messages:
+            role = m.get("role", "user")
+            content = m.get("content", "")
+            if not content:
+                continue
+            prompt_lines.append(f"{role}: {content}")
+        prompt = "\n".join(prompt_lines) if prompt_lines else ""
+
+        completion_fn = getattr(model_router, "reasoning_completion", None)
+        if callable(completion_fn):
+            kwargs: dict[str, Any] = {
+                "prompt": prompt,
+                "max_tokens": 2048,
+                "temperature": 0.3,
+                "enable_thinking": enable_thinking,
+                "system_prompt": system_prompt,
+            }
+            if tools:
+                # Native vLLM tool-calling path (opt-in via AIOPS_NATIVE_TOOL_CALLING).
+                kwargs["tools"] = tools
+                kwargs["tool_choice"] = "auto"
+            try:
+                return await completion_fn(**kwargs)
+            except Exception as exc:  # noqa: BLE001 - fall back to .chat below
+                logger.debug("reasoning_completion failed, falling back to chat(): %s", exc)
+
+        # Fallback: drive the agent's chat() which injects runtime context itself.
+        agent_response = await reasoning_agent.chat(
+            message=messages[-1].get("content", "") if messages else "",
+            conversation_history=[m for m in messages[:-1]],
+            runtime_context=None,
+            enable_thinking=enable_thinking,
+        )
+        return {"choices": [{"message": {"content": getattr(agent_response, "content", "")}}]}
+
+    # The router path needs a real chat system prompt; the loop appends the tool
+    # catalogue. When we only have .chat (fallback), the agent injects its own.
+    _completion.system_prompt_for_chat = system_prompt_for_chat  # type: ignore[attr-defined]
+    return _completion
+
+
+def _tool_records_to_back_compat(
+    records: list[ToolCallRecord],
+) -> dict[str, Any]:
+    """Map executed ToolCallRecords to the legacy metadata['tools'] sub-object.
+
+    Keeps populating ``similar`` / ``dependencies`` / ``logs`` for back-compat so
+    existing UI cards keep working alongside the new ordered tool_calls list.
+    Only includes a key when that tool ran AND returned real data.
+    """
+    out: dict[str, Any] = {}
+    for rec in records:
+        if rec.status != "ok" or not isinstance(rec.result, dict):
+            continue
+        data = rec.result.get("data") or {}
+        if rec.name == "find_similar":
+            incidents = data.get("similar_incidents") or []
+            if incidents:
+                struct_incidents = []
+                for inc in incidents:
+                    score = inc.get("similarity_score")
+                    struct_incidents.append(
+                        {
+                            "id": inc.get("incident_id") or inc.get("episode_id") or "unknown",
+                            "summary": inc.get("title", "Unknown"),
+                            "score": float(score) if isinstance(score, (int, float)) else None,
+                        }
+                    )
+                out["similar"] = {"count": len(struct_incidents), "incidents": struct_incidents}
+        elif rec.name == "get_dependencies":
+            deps = data.get("dependencies", {}) or {}
+            upstream = deps.get("upstream", []) or []
+            downstream = deps.get("downstream", []) or []
+            if upstream or downstream:
+                out["dependencies"] = {
+                    "upstream": list(upstream),
+                    "downstream": list(downstream),
+                }
+        elif rec.name == "analyze_logs":
+            summary = data.get("summary", {}) or {}
+            top_errors_raw = data.get("top_errors", []) or []
+            out["logs"] = {
+                "total_logs": summary.get("total_logs", 0),
+                "error_count": summary.get("error_count", 0),
+                "warning_count": summary.get("warning_count", 0),
+                "top_errors": [
+                    {"pattern": str(e.get("pattern", "")), "count": e.get("count", 0)}
+                    for e in top_errors_raw
+                ],
+            }
+    return out
+
+
+# Enable the FULL model-driven tool loop (the 14B chooses extra tools itself)
+# on top of deterministic routing. Off by default so the proven single-answer
+# chat flow + refusal guard stays the source of truth; flip on once the model
+# router reliably emits the JSON/native tool protocol.
+def _agentic_loop_enabled() -> bool:
+    return os.getenv("CHAT_AGENTIC_TOOL_LOOP", "").strip().lower() in ("1", "true", "yes")
+
+
+def _records_to_context_string(records: list[ToolCallRecord]) -> str:
+    """Render executed tool results into an LLM context block (grounds the answer).
+
+    Mirrors the human-readable summaries the old _invoke_mcp_tools_for_query
+    produced, plus a structured needs_param note so the model can ask the user
+    for a missing parameter instead of narrating.
+    """
+    blocks: list[str] = []
+    for rec in records:
+        if rec.status == "needs_param":
+            missing = (rec.result or {}).get("missing", []) if isinstance(rec.result, dict) else []
+            blocks.append(
+                f"## Tool {rec.name}: needs parameter(s) {', '.join(missing) or 'unknown'}\n"
+                f"Ask the user to provide: {', '.join(missing) or 'the missing parameter'}."
+            )
+            continue
+        if rec.status != "ok" or not isinstance(rec.result, dict):
+            blocks.append(f"## Tool {rec.name} failed: {rec.error or 'no data'}")
+            continue
+        data = rec.result.get("data") or {}
+        if rec.name == "find_similar":
+            incidents = data.get("similar_incidents") or []
+            if incidents:
+                lines = ["## Similar Past Incidents (from Neo4j Memory)"]
+                for idx, inc in enumerate(incidents[:3], 1):
+                    lines.append(
+                        f"{idx}. {inc.get('title', 'Unknown')} "
+                        f"(Severity: {inc.get('severity', 'N/A')}, "
+                        f"Root Cause: {inc.get('root_cause', 'Unknown')})"
+                    )
+                blocks.append("\n".join(lines))
+            else:
+                blocks.append("## Similar Past Incidents\nNo similar incidents found in memory.")
+        elif rec.name == "get_dependencies":
+            deps = data.get("dependencies", {}) or {}
+            up = deps.get("upstream", []) or []
+            down = deps.get("downstream", []) or []
+            lines = [f"## Service Dependencies for {data.get('service', '')}"]
+            if up:
+                lines.append(f"- Upstream: {', '.join(up)}")
+            if down:
+                lines.append(f"- Downstream: {', '.join(down)}")
+            if not up and not down:
+                lines.append("- No dependencies found in graph")
+            blocks.append("\n".join(lines))
+        elif rec.name == "analyze_logs":
+            summary = data.get("summary", {}) or {}
+            top = data.get("top_errors", []) or []
+            lines = [
+                f"## Log Analysis for {data.get('service', '')}",
+                f"- Total logs: {summary.get('total_logs', 0)}",
+                f"- Error count: {summary.get('error_count', 0)}",
+            ]
+            patterns = [str(e.get("pattern", "")) for e in top[:3] if e.get("pattern")]
+            if patterns:
+                lines.append(f"- Top error patterns: {', '.join(patterns)}")
+            blocks.append("\n".join(lines))
+        else:
+            # Generic compact rendering for the remaining tools.
+            blocks.append(f"## Tool {rec.name} result\n{json.dumps(data, default=str)[:800]}")
+    return "\n\n".join(blocks)
+
+
+async def _execute_chat_tools(
+    request: Request,
+    reasoning_agent: Any,
+    *,
+    message: str,
+    conversation_history: list[dict[str, str]],
+    service: Optional[str],
+    runtime_context: str,
+    enable_thinking: bool,
+) -> ToolLoopResult:
+    """Run tool-calling for one chat turn and return the executed tool records.
+
+    Default mode: deterministic pre-routing only (every NAMED or clearly-IMPLIED
+    tool is executed against the REAL tools.py executors). When
+    ``CHAT_AGENTIC_TOOL_LOOP`` is enabled, the full model-driven loop also runs
+    so the 14B itself can request additional tools (app-layer JSON protocol, or
+    native vLLM tool-calling when AIOPS_NATIVE_TOOL_CALLING is set).
+
+    The grounded final ANSWER is still produced by the existing
+    ``reasoning_agent.chat`` flow in the caller (which carries the refusal
+    guard); this function's ``final_answer`` is only populated in agentic mode
+    and is treated as advisory.
+    """
+    executor = _make_chat_executor(request)
+    forced = plan_forced_tool_calls(message, service)
+
+    if not _agentic_loop_enabled():
+        # Deterministic routing only: execute the planned calls in order.
+        from src.agents.tool_calling import _execute_one  # local import: internal helper
+
+        result = ToolLoopResult()
+        for spec, args in forced:
+            result.tool_calls.append(await _execute_one(executor, spec, args))
+        return result
+
+    completion = _make_chat_completion(reasoning_agent, enable_thinking=enable_thinking)
+    base_system = getattr(completion, "system_prompt_for_chat", None) or CHAT_SYSTEM_PROMPT
+    system_prompt = base_system.replace(
+        "{runtime_context}", f"## Current System State\n{runtime_context}"
+    )
+    return await run_tool_calling_loop(
+        message=message,
+        system_prompt=system_prompt,
+        conversation_history=conversation_history,
+        service=service,
+        completion=completion,
+        executor=executor,
+        forced_calls=forced,
+        max_iterations=_CHAT_MAX_TOOL_ITERATIONS,
+    )
 
 
 async def _build_runtime_context(request: Request) -> str:
@@ -978,10 +1274,26 @@ async def chat(
             telemetry_context, telemetry_struct = await _build_telemetry_context(request, service)
             logger.info(f"Built telemetry context for service: {service}")
 
-        # Invoke MCP tools automatically based on query keywords
-        mcp_tool_context, tool_struct = await _invoke_mcp_tools_for_query(
-            request, chat_request.message, service
+        # Agentic tool-calling: deterministically route NAMED/IMPLIED tools to the
+        # REAL executors in tools.py (and optionally let the model drive extra
+        # tools when CHAT_AGENTIC_TOOL_LOOP is enabled). This replaces the old
+        # keyword-only _invoke_mcp_tools_for_query so a named tool ALWAYS runs.
+        loop_result = await _execute_chat_tools(
+            request,
+            reasoning_agent,
+            message=chat_request.message,
+            conversation_history=history[:-1],
+            service=service,
+            runtime_context=runtime_context,
+            enable_thinking=chat_request.enable_thinking,
         )
+        tool_call_records = loop_result.tool_calls
+        # Ordered tool_calls contract (THE UI source of truth).
+        tool_calls_meta = [rec.to_dict() for rec in tool_call_records]
+        # Human-readable context block grounding the model's answer.
+        mcp_tool_context = _records_to_context_string(tool_call_records)
+        # Back-compat structured tools (similar / dependencies / logs).
+        tool_struct = _tool_records_to_back_compat(tool_call_records)
 
         # Combine selection + telemetry + MCP tools + runtime context for the LLM.
         # The user's explicit selection leads so the model treats it as the subject.
@@ -1006,7 +1318,10 @@ async def chat(
             tools_meta["logs"] = tool_struct["logs"]
 
         # Did any tool / telemetry return real data? (used by the refusal guard + confidence)
-        has_tool_data = bool(tools_meta)
+        # tool_calls_meta on its own counts as evidence even when no back-compat
+        # key matched (e.g. list_containers / query_metric ran).
+        any_tool_ran = any(rec.status == "ok" for rec in tool_call_records)
+        has_tool_data = bool(tools_meta) or any_tool_ran
 
         # Get response from reasoning agent with full context (including real telemetry)
         agent_response = await reasoning_agent.chat(
@@ -1070,6 +1385,9 @@ async def chat(
         metadata.setdefault("mode", "chat")
         if tools_meta:
             metadata["tools"] = tools_meta
+        # THE CONTRACT: ordered list of EVERY tool the agent ran this turn. Always
+        # present (possibly empty) so the frontend timeline has a stable source.
+        metadata["tool_calls"] = tool_calls_meta
         if selection_context:
             metadata["selection_applied"] = True
 
@@ -1722,6 +2040,28 @@ def _strip_markdown_inline(text: str) -> str:
     return s
 
 
+# First-person process narration the model emits while describing what IT is
+# about to do ("I will examine…", "First, I will…", "Let me…"). These are NOT
+# recommendations for the operator to act on, but they were leaking into the
+# Suggested-actions card via substrings like "recommendations" / "suggest".
+_NARRATION_PREFIXES = (
+    "i will",
+    "i'll",
+    "i am going to",
+    "i'm going to",
+    "i am now",
+    "i would now",
+    "i plan to",
+    "first, i",
+    "first i ",
+    "next, i",
+    "next i ",
+    "then i ",
+    "then, i",
+    "let me",
+)
+
+
 def _extract_actions(content: str) -> list[str] | None:
     """Extract clean, human-readable suggested actions from response content.
 
@@ -1773,8 +2113,17 @@ def _extract_actions(content: str) -> list[str] | None:
             continue
         if len(line.split()) < 3:
             continue
+        # Skip the assistant narrating its OWN plan ("I will examine…", "First, I
+        # will…") — process descriptions, not actions to take. These leaked in via
+        # substrings like "recommendations" / "suggest" inside narration sentences.
+        if low.startswith(_NARRATION_PREFIXES):
+            continue
         if len(line) > 12 and line not in actions:
-            actions.append(line[:200])
+            # Trim long prose at a WORD boundary (never mid-word) with an ellipsis
+            # so the action card never shows an abrupt cutoff like "…I will then".
+            clean = line if len(line) <= 160 else line[:160].rsplit(" ", 1)[0].rstrip() + "…"
+            if clean not in actions:
+                actions.append(clean)
 
     return actions[:5] if actions else None
 

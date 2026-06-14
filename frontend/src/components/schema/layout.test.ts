@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { layoutTopology } from './layout'
+import { layoutTopology, GAP_X, GAP_Y_TD, MAX_TD_ROW, NODE_H, NODE_W } from './layout'
 import type { TopologyNode, TopologyEdge } from './types'
 
 function node(id: string, kind: string, tier: number): TopologyNode {
@@ -125,5 +125,114 @@ describe('layoutTopology', () => {
     for (const n of a.nodes) {
       expect(r2.positions.get(n.id)).toEqual(r1.positions.get(n.id))
     }
+  })
+
+  it("defaults to 'lr' and is unchanged by passing the default direction", () => {
+    const { nodes, edges } = platform()
+    const implicit = layoutTopology(nodes, edges)
+    const explicit = layoutTopology(nodes, edges, 'lr')
+    for (const n of nodes) {
+      expect(explicit.positions.get(n.id)).toEqual(implicit.positions.get(n.id))
+    }
+    expect(explicit.width).toBe(implicit.width)
+    expect(explicit.height).toBe(implicit.height)
+  })
+
+  it("'td' transposes the flow: deeper tiers move DOWN (greater y), not right", () => {
+    const { nodes, edges } = platform()
+    const td = layoutTopology(nodes, edges, 'td')
+    const lr = layoutTopology(nodes, edges, 'lr')
+    const caddy = td.positions.get('caddy')!
+    const backend = td.positions.get('backend')!
+    const neo4j = td.positions.get('neo4j')!
+    // Same layering (direction-free), but advancing along Y instead of X.
+    expect(td.layers).toEqual(lr.layers)
+    expect(backend.layer).toBeGreaterThan(caddy.layer)
+    expect(backend.y).toBeGreaterThan(caddy.y)
+    expect(neo4j.y).toBeGreaterThan(backend.y)
+    // Layer count drives td height; the widest layer drives td width.
+    expect(td.height).toBeGreaterThan(0)
+    expect(td.width).toBeGreaterThan(0)
+  })
+
+  it("'td' keeps every node finite and tolerates cycles", () => {
+    const nodes = [node('a', 'episode', 0), node('b', 'root_cause', 1), node('c', 'service', 3)]
+    const edges = [edge('a', 'b'), edge('b', 'c'), edge('c', 'a')]
+    let result!: ReturnType<typeof layoutTopology>
+    expect(() => {
+      result = layoutTopology(nodes, edges, 'td')
+    }).not.toThrow()
+    expect(result.positions.size).toBe(3)
+    for (const n of nodes) {
+      const p = result.positions.get(n.id)!
+      expect(Number.isFinite(p.x)).toBe(true)
+      expect(Number.isFinite(p.y)).toBe(true)
+    }
+  })
+
+  // --- Episodic causal-tree layout (td-only) ------------------------------
+  // The episodic view feeds layoutTopology a causal tree
+  // incident/episode → root_cause → action → service. These lock in the
+  // graceful 'td' rendering the Command Center relies on.
+
+  it("'td' lays out a full causal tree tier-by-tier, strictly downward", () => {
+    // episode(0) → root_cause(1) → action(2) → service(3): one node per tier.
+    const nodes = [
+      node('ep', 'episode', 0),
+      node('rc', 'root_cause', 1),
+      node('act', 'action', 2),
+      node('svc', 'service', 3),
+    ]
+    const edges = [edge('ep', 'rc'), edge('rc', 'act'), edge('act', 'svc')]
+    const td = layoutTopology(nodes, edges, 'td')
+    const ep = td.positions.get('ep')!
+    const rc = td.positions.get('rc')!
+    const act = td.positions.get('act')!
+    const svc = td.positions.get('svc')!
+    // Each causal step sits strictly below the previous one.
+    expect(rc.y).toBeGreaterThan(ep.y)
+    expect(act.y).toBeGreaterThan(rc.y)
+    expect(svc.y).toBeGreaterThan(act.y)
+    // Adjacent tiers are spaced by exactly one node height + the td gap (no overlap).
+    expect(rc.y - ep.y).toBe(svc.y - act.y)
+    expect(td.height).toBeGreaterThan(0)
+  })
+
+  it("'td' COMPACTS empty tiers (episode → service with no root_cause/action)", () => {
+    // Only tiers 0 and 3 are occupied; tiers 1 and 2 are empty. The transpose
+    // must collapse the gap so the two rows are adjacent, not separated by two
+    // blank bands (otherwise the cascade is a sliver in a tall pane).
+    const nodes = [node('ep', 'episode', 0), node('svc', 'service', 3)]
+    const edges = [edge('ep', 'svc')]
+    const td = layoutTopology(nodes, edges, 'td')
+    const ep = td.positions.get('ep')!
+    const svc = td.positions.get('svc')!
+    expect(svc.y).toBeGreaterThan(ep.y)
+    // Two occupied tiers collapse to two ADJACENT visual rows: exactly one
+    // (node height + td gap) apart, with the empty tiers 1 & 2 squeezed out.
+    expect(svc.y - ep.y).toBe(NODE_H + GAP_Y_TD)
+    // Total height spans exactly those two rows + the single gap between them.
+    expect(td.height).toBe(2 * NODE_H + GAP_Y_TD)
+  })
+
+  it("'td' WRAPS a tier wider than MAX_TD_ROW into balanced sub-rows", () => {
+    // A single tier with more than MAX_TD_ROW siblings (e.g. many episodes) must
+    // wrap into multiple visual rows instead of one long thin line.
+    const wide = MAX_TD_ROW + 3
+    const nodes = Array.from({ length: wide }, (_, i) => node(`e${i}`, 'episode', 0))
+    const td = layoutTopology(nodes, [], 'td')
+    // Distinct (x,y) for every node — nothing stacked on top of another card.
+    const seen = new Set<string>()
+    let maxY = 0
+    for (const n of nodes) {
+      const p = td.positions.get(n.id)!
+      seen.add(`${p.x},${p.y}`)
+      maxY = Math.max(maxY, p.y)
+    }
+    expect(seen.size).toBe(wide)
+    // Wrapped ⇒ more than one row ⇒ some node sits below the first row.
+    expect(maxY).toBeGreaterThan(0)
+    // Width reflects the widest SUB-row, not the full unwrapped tier.
+    expect(td.width).toBeLessThan(wide * NODE_W + (wide - 1) * GAP_X)
   })
 })

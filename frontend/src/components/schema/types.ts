@@ -111,6 +111,15 @@ export const KIND_ACCENT: Record<string, string> = {
   observability: '190 90% 56%', // cyan — telemetry (ties to dynamic edges)
   llm: '292 84% 70%', // fuchsia — the models
   edge: '345 85% 66%', // rose — external/remote hosts
+  // Episodic-memory kinds (Console episodic view). Additive only — the platform
+  // topology never emits these kinds, so its rendering is unchanged. HSL
+  // triplets mirror EpisodicGraphExplorer's getNodeColor palette by TYPE:
+  // episode=purple, root_cause=orange, action=cyan, service=blue, entity=pink.
+  episode: '271 91% 65%', // purple  (#a855f7)
+  root_cause: '25 95% 53%', // orange (#f97316)
+  action: '189 94% 43%', // cyan    (#06b6d4)
+  service: '217 91% 60%', // blue    (#3b82f6)
+  entity: '330 81% 60%', // pink     (#ec4899)
 }
 
 export const DEFAULT_ACCENT = '215 20% 65%'
@@ -123,6 +132,36 @@ export function kindAccent(kind: string): string {
 /** True for dynamically-discovered edge-host nodes (pinned to the last layer). */
 export function isEdgeHostNode(node: Pick<TopologyNode, 'id' | 'kind'>): boolean {
   return node.kind === 'edge' || node.id.startsWith('edge:')
+}
+
+// ---------------------------------------------------------------------------
+// Episodic detail payload. The Console's episodic view reuses the schema
+// drawer/hover card but those surfaces are service-centric; rather than label
+// episodic nodes with the wrong rows (e.g. "Episodes (window)"), the episodic
+// renderer hands the drawer/hover card a pre-formatted, optional detail block.
+// Absent on the platform path → those surfaces render exactly as before.
+// ---------------------------------------------------------------------------
+
+/** A label/value pair rendered as one row in the episodic detail block. */
+export interface EpisodicDetailRow {
+  label: string
+  value: string
+  /** Optional accent for the value text (bare HSL triplet). */
+  accent?: string
+}
+
+/** Pre-formatted detail for one episodic node/edge (drawer + hover card). */
+export interface EpisodicDetail {
+  /** Title shown in the drawer/hover header. */
+  title: string
+  /** Type/relationship chip text (e.g. "episode", "caused by"). */
+  chip: string
+  /** Accent (bare HSL triplet) for the chip + value emphasis. */
+  accent: string
+  /** Detail rows, in display order. */
+  rows: EpisodicDetailRow[]
+  /** Optional free-text note shown under the rows. */
+  note?: string
 }
 
 // ---------------------------------------------------------------------------

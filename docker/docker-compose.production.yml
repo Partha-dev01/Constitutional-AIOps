@@ -153,6 +153,13 @@ services:
       # SUBPATH so the EBS mount below does NOT shadow the image-baked, read-only
       # benchmark mirror at /app/data/benchmark (COPY data/ in Dockerfile.backend).
       - AIOPS_DATA_DIR=/app/data/state
+      # Chat agentic tool-calling. Deterministic pre-routing (named/implied tools)
+      # always runs; CHAT_AGENTIC_TOOL_LOOP=true additionally enables the full
+      # model-driven loop. AIOPS_NATIVE_TOOL_CALLING stays off (app-layer JSON loop
+      # needs no vLLM flags). All default EMPTY/OFF so a bare deploy is unchanged.
+      - CHAT_AGENTIC_TOOL_LOOP=${CHAT_AGENTIC_TOOL_LOOP:-}
+      - CHAT_MAX_TOOL_ITERATIONS=${CHAT_MAX_TOOL_ITERATIONS:-}
+      - AIOPS_NATIVE_TOOL_CALLING=${AIOPS_NATIVE_TOOL_CALLING:-}
       # Action tools + demo/remediation. All default EMPTY/OFF so a bare deploy
       # changes nothing; set these in the VM's .env.production to enable.
       - AIOPS_ENABLE_ACTION_TOOLS=${AIOPS_ENABLE_ACTION_TOOLS:-}

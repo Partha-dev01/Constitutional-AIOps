@@ -1,14 +1,28 @@
-import { Search, GitBranch, FileText, Brain } from 'lucide-react'
+import {
+  Search,
+  GitBranch,
+  FileText,
+  Brain,
+  Wrench,
+  Boxes,
+  Activity,
+  RotateCw,
+  Scale,
+} from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
 /**
  * Frontend-derived tool-call visualization.
  *
- * The backend does NOT report which MCP tools it ran for a given chat turn, so
- * this module mirrors the backend's keyword -> tool mapping (see
+ * While a request is IN FLIGHT the backend hasn't told us anything yet, so this
+ * module mirrors the backend's keyword -> tool mapping (see
  * `src/api/routes/chat.py`, `_invoke_mcp_tools_for_query` + `KNOWN_SERVICES`)
- * to derive a plausible, deterministic checklist of steps to animate while a
- * request is in flight. It is purely cosmetic — no network calls.
+ * to derive a plausible, deterministic checklist of steps to animate.
+ *
+ * Once the response arrives, `enrichToolStepsWithResponse` prefers the REAL
+ * list of tools the backend actually executed (`metadata.tool_calls`) and
+ * renders those truthfully; it falls back to enriching the derived checklist
+ * from `metadata.tools` for older responses that don't carry per-call records.
  */
 
 export type ToolStepStatus = 'pending' | 'running' | 'done' | 'error'
@@ -22,7 +36,7 @@ export interface ToolStepDetailStatic {
   service: string | null
   /** Human-readable description of the store / data source being hit. */
   store: string
-  /** What the step is querying / doing. */
+  /** What the step is querying / doing. May be a JSON string (rendered as JSON). */
   query: string
 }
 
@@ -40,6 +54,12 @@ export interface ToolStepDetailDynamic {
    * (undefined) before the response arrives.
    */
   summary?: string | null
+  /**
+   * The model + token line for the reasoning step, shown as its OWN labelled
+   * row in the dropdown (kept SEPARATE from the result, which now carries the
+   * relevant reasoning outcome rather than model metadata). Null for tool steps.
+   */
+  model?: string | null
 }
 
 export interface ToolStepDetail extends ToolStepDetailStatic, ToolStepDetailDynamic {}
@@ -91,7 +111,9 @@ function detectService(messageLower: string): string | null {
 
 /**
  * Derive the (pending) tool-call checklist for a user message. Pure and
- * deterministic; matches the backend's tool-gating logic exactly.
+ * deterministic; matches the backend's tool-gating logic exactly. Used only for
+ * the IN-FLIGHT animation; the final timeline is rebuilt from the real
+ * `metadata.tool_calls` when the response lands.
  */
 export function deriveToolSteps(message: string): ToolStep[] {
   const messageLower = message.toLowerCase()
@@ -172,7 +194,7 @@ export function deriveToolSteps(message: string): ToolStep[] {
     detail: {
       service,
       store: 'vLLM (Qwen3-14B-AWQ, constitutional reasoning agent)',
-      query: 'Synthesise telemetry + tool results → root-cause analysis and response',
+      query: 'Synthesise the request + any tool results into a constitutional analysis',
       result: null,
     },
   })
@@ -218,6 +240,21 @@ export interface ChatToolResults {
 }
 
 /**
+ * A single tool the backend agent actually executed this turn (the truthful,
+ * per-call record under `metadata.tool_calls`). Mirrors the api.ts `ChatToolCall`
+ * type; declared locally so this hook stays import-free of api.ts.
+ */
+export interface ToolCallRecord {
+  id?: string
+  name: string
+  arguments?: Record<string, unknown> | null
+  status?: 'ok' | 'error' | 'needs_param' | string
+  result?: unknown
+  error?: string | null
+  duration_ms?: number | null
+}
+
+/**
  * Subset of ChatResponse fields used for enrichment.
  * Typed locally so this hook has no direct dependency on api.ts.
  */
@@ -225,40 +262,210 @@ export interface ToolStepResponseData {
   confidence?: number | null
   related_incidents?: string[] | null
   suggested_actions?: string[] | null
+  /** The user's request for this turn (renders in the reasoning step's Query). */
+  userMessage?: string | null
+  /** Graph/cockpit context attached to the send (renders in the Query JSON). */
+  attachedContext?: Record<string, unknown> | null
   metadata?: {
     model_used?: string
     tokens_used?: number | null
     tools?: ChatToolResults
+    /** The REAL ordered list of tools the agent executed this turn. */
+    tool_calls?: ToolCallRecord[]
     [key: string]: unknown
   } | null
 }
 
+// ---------------------------------------------------------------------------
+// Rendering REAL executed tool calls (metadata.tool_calls).
+// ---------------------------------------------------------------------------
+
+const TOOL_LABELS: Record<string, string> = {
+  find_similar: 'Searched similar incidents',
+  get_dependencies: 'Fetched service dependencies',
+  analyze_logs: 'Analyzed logs',
+  query_recent_logs: 'Queried recent logs',
+  query_metric: 'Queried metrics',
+  list_containers: 'Listed containers',
+  analyze_time_series_anomaly: 'Detected metric anomalies',
+  restart_service: 'Restarted service',
+  scale_service: 'Scaled service',
+}
+
+const TOOL_ICONS: Record<string, LucideIcon> = {
+  find_similar: Search,
+  get_dependencies: GitBranch,
+  analyze_logs: FileText,
+  query_recent_logs: FileText,
+  query_metric: Activity,
+  analyze_time_series_anomaly: Activity,
+  list_containers: Boxes,
+  restart_service: RotateCw,
+  scale_service: Scale,
+}
+
+const TOOL_STORES: Record<string, string> = {
+  find_similar: 'Neo4j graph memory (find_similar)',
+  get_dependencies: 'Neo4j graph memory (get_dependencies)',
+  analyze_logs: 'Loki log store',
+  query_recent_logs: 'Loki log store',
+  query_metric: 'Prometheus metrics',
+  analyze_time_series_anomaly: 'Prometheus metrics',
+  list_containers: 'Docker engine',
+  restart_service: 'Docker engine · constitutional gate',
+  scale_service: 'Docker engine · constitutional gate',
+}
+
+function titleCase(name: string): string {
+  return name.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+}
+
+/** Pull a service-ish argument out of a tool call for the Service line. */
+function serviceFromArguments(args: Record<string, unknown> | null | undefined): string | null {
+  if (!args) return null
+  if (typeof args.service_name === 'string') return args.service_name
+  if (typeof args.service === 'string') return args.service
+  return null
+}
+
+/** A concise at-a-glance line for an executed tool call. */
+function summariseToolCall(call: ToolCallRecord): string | null {
+  if (call.status === 'error') return 'Failed'
+  if (call.status === 'needs_param') return 'Needs parameters'
+  const r = call.result
+  if (r && typeof r === 'object') {
+    const obj = r as Record<string, unknown>
+    // Executors wrap their payload as { success, data }; look inside data too.
+    const data =
+      obj.data && typeof obj.data === 'object' ? (obj.data as Record<string, unknown>) : obj
+    const numericKeys = [
+      'total_found',
+      'total_entries',
+      'total_points',
+      'anomalies_detected',
+      'total',
+      'count',
+    ]
+    for (const k of numericKeys) {
+      if (typeof data[k] === 'number') return `${data[k]} ${k.replace(/_/g, ' ')}`
+    }
+  }
+  return 'OK'
+}
+
 /**
- * Attach concrete backend results to the relevant derived steps.
+ * Build the final reasoning-step detail. The Query is the structured synthesis
+ * INPUT as proper JSON (request + attached context + which tools fed the model);
+ * the Result is the RELEVANT reasoning OUTCOME (confidence / actions / related),
+ * never the model+tokens meta blob; the model+tokens line is returned separately.
+ */
+function reasoningDetail(
+  data: ToolStepResponseData,
+  ranToolNames: string[],
+): { query: string; result: string; summary: string | null; model: string | null } {
+  const model = data.metadata?.model_used ?? null
+  const tokens = data.metadata?.tokens_used ?? null
+  const modelLine = model ? (tokens != null ? `${model} · ${tokens} tokens` : model) : null
+
+  const queryObj: Record<string, unknown> = {
+    request: data.userMessage ?? '(current message)',
+  }
+  if (data.attachedContext && Object.keys(data.attachedContext).length > 0) {
+    queryObj.attached_context = data.attachedContext
+  }
+  queryObj.synthesised_from =
+    ranToolNames.length > 0 ? ranToolNames : ['model knowledge — no tools matched this query']
+
+  const outcome: Record<string, unknown> = { answer: 'Generated the response shown below.' }
+  if (typeof data.confidence === 'number' && Number.isFinite(data.confidence)) {
+    outcome.confidence = data.confidence
+  }
+  const acts = data.suggested_actions ?? []
+  if (acts.length > 0) outcome.suggested_actions = acts
+  const rel = data.related_incidents ?? []
+  if (rel.length > 0) outcome.related_incidents = rel
+
+  return {
+    query: JSON.stringify(queryObj, null, 2),
+    result: JSON.stringify(outcome, null, 2),
+    summary: modelLine,
+    model: modelLine,
+  }
+}
+
+function makeReasoningStep(data: ToolStepResponseData, ranToolNames: string[]): ToolStep {
+  const rd = reasoningDetail(data, ranToolNames)
+  return {
+    id: 'reasoning',
+    label: 'Reasoning with Qwen3-14B',
+    icon: Brain,
+    status: 'done',
+    detail: {
+      service: null,
+      store: 'vLLM (Qwen3-14B-AWQ, constitutional reasoning agent)',
+      query: rd.query,
+      result: rd.result,
+      summary: rd.summary,
+      model: rd.model,
+    },
+  }
+}
+
+/**
+ * Attach concrete backend results to the timeline once the
+ * `POST /api/v1/chat/` response arrives. Returns a NEW steps array.
  *
- * Called once the `POST /api/v1/chat/` response arrives. Returns a new steps
- * array (immutable update) with `detail.result` filled in from the REAL
- * structured tool data the backend now returns under `metadata.tools`.
- *
- * Mapping (step id → data source):
- *  - "telemetry"    → metadata.tools.telemetry
- *  - "similar"      → metadata.tools.similar
- *  - "dependencies" → metadata.tools.dependencies
- *  - "logs"         → metadata.tools.logs
- *  - "reasoning"    → { model_used, tokens_used, confidence, suggested_actions }
- *
- * When a step has no matching tool data (the backend did not actually run that
- * tool), a truthful short line is shown instead of fabricated prose.
+ *  - PREFERRED: when the backend reports `metadata.tool_calls`, the timeline is
+ *    REBUILT from the tools that actually ran (truthful name / arguments /
+ *    structured result), followed by the reasoning step. This is what makes the
+ *    "use the X tool" turns show real JSON instead of bogus narration.
+ *  - FALLBACK: older responses with only `metadata.tools` enrich the derived
+ *    checklist in place. Either way the reasoning step shows the relevant
+ *    outcome (not the model/tokens meta blob), with the model line separate.
  */
 export function enrichToolStepsWithResponse(
   steps: ToolStep[],
   data: ToolStepResponseData,
 ): ToolStep[] {
+  const toolCalls = data.metadata?.tool_calls
+
+  if (Array.isArray(toolCalls) && toolCalls.length > 0) {
+    const ran = toolCalls.map((c) => c.name)
+    const callSteps: ToolStep[] = toolCalls.map((call, i) => {
+      const errored = call.status === 'error'
+      const result = errored
+        ? (call.error ?? 'Tool returned an error.')
+        : JSON.stringify(call.result ?? {}, null, 2)
+      return {
+        id: call.id ?? `tool-${i}-${call.name}`,
+        label: TOOL_LABELS[call.name] ?? `Called ${titleCase(call.name)}`,
+        icon: TOOL_ICONS[call.name] ?? Wrench,
+        status: errored ? 'error' : 'done',
+        detail: {
+          service: serviceFromArguments(call.arguments),
+          store: TOOL_STORES[call.name] ?? 'MCP tool',
+          query: JSON.stringify(call.arguments ?? {}, null, 2),
+          result,
+          summary: summariseToolCall(call),
+          model: null,
+        },
+      }
+    })
+    callSteps.push(makeReasoningStep(data, ran))
+    return callSteps
+  }
+
+  // FALLBACK PATH — enrich the derived checklist from metadata.tools.
   const tools = data.metadata?.tools
+  const ranLegacy = tools
+    ? Object.keys(tools).filter((k) => tools[k as keyof ChatToolResults] != null)
+    : []
 
   return steps.map((step) => {
     let result: string | null = null
     let summary: string | null = null
+    let model: string | null = null
+    let queryOverride: string | null = null
 
     switch (step.id) {
       case 'telemetry': {
@@ -306,25 +513,24 @@ export function enrichToolStepsWithResponse(
       }
 
       case 'reasoning': {
-        const model = data.metadata?.model_used ?? null
-        const tokens = data.metadata?.tokens_used ?? null
-        result = JSON.stringify(
-          {
-            model,
-            tokens_used: tokens,
-            confidence: data.confidence ?? null,
-            suggested_actions: data.suggested_actions ?? [],
-          },
-          null,
-          2,
-        )
-        if (model) {
-          summary = tokens != null ? `${model} · ${tokens} tokens` : model
-        }
+        const rd = reasoningDetail(data, ranLegacy)
+        queryOverride = rd.query
+        result = rd.result
+        summary = rd.summary
+        model = rd.model
         break
       }
     }
 
-    return { ...step, detail: { ...step.detail, result, summary } }
+    return {
+      ...step,
+      detail: {
+        ...step.detail,
+        ...(queryOverride != null ? { query: queryOverride } : {}),
+        result,
+        summary,
+        model,
+      },
+    }
   })
 }

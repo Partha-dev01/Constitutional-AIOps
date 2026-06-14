@@ -101,13 +101,13 @@ export function McpExecutePanel({ tool }: McpExecutePanelProps) {
   const confirmParams = tool ? coerceForApi(values, tool.parameters) : {}
 
   return (
-    <div className="bg-card rounded-lg border border-border">
-      <div className="p-4 border-b border-border">
+    <div className="flex h-full min-h-0 flex-col bg-card rounded-lg border border-border">
+      <div className="shrink-0 p-4 border-b border-border">
         <h3 className="font-semibold">
           {tool ? `Execute: ${tool.name}` : 'Tool Execution'}
         </h3>
       </div>
-      <div className="p-4">
+      <div className="min-h-0 flex-1 overflow-y-auto p-4">
         {!tool ? (
           <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
             <Wrench className="h-8 w-8 mb-2 opacity-50" />

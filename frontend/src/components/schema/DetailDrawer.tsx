@@ -1,5 +1,5 @@
 import { Check, MessageSquarePlus, X } from 'lucide-react'
-import { FocusTarget, SchemaSeverity, kindAccent } from './types'
+import { EpisodicDetail, FocusTarget, SchemaSeverity, kindAccent } from './types'
 
 const SEVERITY_CHIP: Record<SchemaSeverity, string> = {
   info: 'bg-blue-500/15 text-blue-400',
@@ -21,6 +21,19 @@ interface DetailDrawerProps {
   inContext: boolean
   onClose: () => void
   onToggleAskAi: (target: FocusTarget) => void
+  /**
+   * Episodic view only: pre-formatted detail for the clicked episodic node/edge.
+   * When present it REPLACES the service-centric body (so episodic nodes aren't
+   * mislabelled "Episodes (window)" etc.). Absent on the platform path → the
+   * drawer renders exactly as before. The Ask-AI hand-off is unchanged.
+   */
+  episodic?: EpisodicDetail
+  /**
+   * Platform view only: when provided, each "Recent episode" card becomes a
+   * button that hands a ready-made investigation prompt to the host chat (the
+   * Console cockpit) so an operator can ask the LLM about that exact episode.
+   */
+  onAskEpisode?: (prompt: string) => void
 }
 
 function Row({ label, value }: { label: string; value: string | number }) {
@@ -36,9 +49,13 @@ function Row({ label, value }: { label: string; value: string | number }) {
  * Right slide-in drawer with the full detail of the clicked node or edge,
  * recent episodes with severity chips, and an "Add to Ask AI" hand-off.
  */
-export function DetailDrawer({ target, inContext, onClose, onToggleAskAi }: DetailDrawerProps) {
+export function DetailDrawer({ target, inContext, onClose, onToggleAskAi, episodic, onAskEpisode }: DetailDrawerProps) {
   const isNode = target.type === 'node'
-  const title = isNode ? target.node.label : `${target.edge.source} → ${target.edge.target}`
+  const title = episodic
+    ? episodic.title
+    : isNode
+      ? target.node.label
+      : `${target.edge.source} → ${target.edge.target}`
 
   return (
     <div
@@ -51,15 +68,24 @@ export function DetailDrawer({ target, inContext, onClose, onToggleAskAi }: Deta
           <span
             className="mt-1 inline-block rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide"
             style={
-              isNode
+              episodic
                 ? {
-                    backgroundColor: `hsl(${kindAccent(target.node.kind)} / 0.16)`,
-                    color: `hsl(${kindAccent(target.node.kind)})`,
+                    backgroundColor: `hsl(${episodic.accent} / 0.16)`,
+                    color: `hsl(${episodic.accent})`,
                   }
-                : { backgroundColor: 'rgb(51 65 85 / 0.7)', color: 'rgb(203 213 225)' }
+                : isNode
+                  ? {
+                      backgroundColor: `hsl(${kindAccent(target.node.kind)} / 0.16)`,
+                      color: `hsl(${kindAccent(target.node.kind)})`,
+                    }
+                  : { backgroundColor: 'rgb(51 65 85 / 0.7)', color: 'rgb(203 213 225)' }
             }
           >
-            {isNode ? target.node.kind : `${target.edge.relationship} · ${target.edge.kind}`}
+            {episodic
+              ? episodic.chip
+              : isNode
+                ? target.node.kind
+                : `${target.edge.relationship} · ${target.edge.kind}`}
           </span>
         </div>
         <button
@@ -73,7 +99,30 @@ export function DetailDrawer({ target, inContext, onClose, onToggleAskAi }: Deta
       </div>
 
       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
-        {isNode ? (
+        {episodic ? (
+          <>
+            <div className="space-y-1.5 rounded-lg border border-slate-800 bg-slate-950/40 p-2.5">
+              {episodic.rows.length > 0 ? (
+                episodic.rows.map((row) => (
+                  <div key={row.label} className="flex items-start justify-between gap-3 text-xs">
+                    <span className="shrink-0 text-slate-500">{row.label}</span>
+                    <span
+                      className="text-right"
+                      style={row.accent ? { color: `hsl(${row.accent})` } : { color: 'rgb(203 213 225)' }}
+                    >
+                      {row.value}
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <p className="text-xs text-slate-500">No additional detail.</p>
+              )}
+            </div>
+            {episodic.note && (
+              <p className="text-xs leading-relaxed text-slate-400">{episodic.note}</p>
+            )}
+          </>
+        ) : isNode ? (
           <>
             <div className="space-y-1.5 rounded-lg border border-slate-800 bg-slate-950/40 p-2.5">
               <div className="flex items-start justify-between gap-3 text-xs">
@@ -104,24 +153,48 @@ export function DetailDrawer({ target, inContext, onClose, onToggleAskAi }: Deta
               </h5>
               {target.node.recent_episodes.length > 0 ? (
                 <ul className="space-y-1.5">
-                  {target.node.recent_episodes.map((ep) => (
-                    <li
-                      key={ep.id}
-                      className="rounded-lg border border-slate-800 bg-slate-950/40 p-2"
-                    >
-                      <div className="flex items-center gap-1.5">
-                        <span
-                          className={`rounded px-1.5 py-0.5 text-[10px] font-medium capitalize ${SEVERITY_CHIP[ep.severity] ?? SEVERITY_CHIP.info}`}
+                  {target.node.recent_episodes.map((ep) => {
+                    const askPrompt = `Investigate this ${target.node.label} episode from ${new Date(ep.at).toLocaleString()} (severity: ${ep.severity}): "${ep.title}". What is the likely root cause and the recommended remediation?`
+                    const body = (
+                      <>
+                        <div className="flex items-center gap-1.5">
+                          <span
+                            className={`rounded px-1.5 py-0.5 text-[10px] font-medium capitalize ${SEVERITY_CHIP[ep.severity] ?? SEVERITY_CHIP.info}`}
+                          >
+                            {ep.severity}
+                          </span>
+                          <span className="text-[10px] text-slate-500">
+                            {new Date(ep.at).toLocaleString()}
+                          </span>
+                          {onAskEpisode && (
+                            <span className="ml-auto flex items-center gap-0.5 text-[10px] text-blue-400 opacity-0 transition-opacity group-hover:opacity-100">
+                              <MessageSquarePlus className="h-3 w-3" /> Ask AI
+                            </span>
+                          )}
+                        </div>
+                        <p className="mt-1 text-xs leading-snug text-slate-300">{ep.title}</p>
+                      </>
+                    )
+                    return onAskEpisode ? (
+                      <li key={ep.id}>
+                        <button
+                          type="button"
+                          onClick={() => onAskEpisode(askPrompt)}
+                          data-testid="schema-ask-episode"
+                          className="group w-full rounded-lg border border-slate-800 bg-slate-950/40 p-2 text-left transition-colors hover:border-blue-500/50 hover:bg-blue-500/[0.06]"
                         >
-                          {ep.severity}
-                        </span>
-                        <span className="text-[10px] text-slate-500">
-                          {new Date(ep.at).toLocaleString()}
-                        </span>
-                      </div>
-                      <p className="mt-1 text-xs leading-snug text-slate-300">{ep.title}</p>
-                    </li>
-                  ))}
+                          {body}
+                        </button>
+                      </li>
+                    ) : (
+                      <li
+                        key={ep.id}
+                        className="rounded-lg border border-slate-800 bg-slate-950/40 p-2"
+                      >
+                        {body}
+                      </li>
+                    )
+                  })}
                 </ul>
               ) : (
                 <p className="text-xs text-slate-500">No episodes in this window.</p>
