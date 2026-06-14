@@ -361,11 +361,12 @@ export function Console() {
                     loading={episodicLoading}
                     height={episodicHeight}
                     onSelectionChange={handleSelectionChange}
+                    onAskEpisode={handleOpenInChat}
                   />
                 </Suspense>
               </div>
               <p className="mt-1.5 shrink-0 text-[11px] leading-snug text-muted-foreground/70">
-                Episodic memory — incidents, root causes and the services they touched · Ctrl-click to attach to chat.
+                Episodic memory — pick an incident to see its root cause and the services it touched · Ctrl-click a node to attach it to chat.
               </p>
             </>
           )}
