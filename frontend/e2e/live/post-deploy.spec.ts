@@ -104,6 +104,9 @@ const ROUTES: { path: string; slug: string; heading: RegExp }[] = [
   { path: '/', slug: 'dashboard', heading: /^Dashboard$/ },
   { path: '/console', slug: 'console', heading: /^Command Center$/ },
   { path: '/agents', slug: 'agents', heading: /^Agent Hub$/ },
+  { path: '/mcp', slug: 'mcp', heading: /^MCP Tools$/ },
+  { path: '/telemetry', slug: 'telemetry', heading: /^Telemetry$/ },
+  { path: '/graph', slug: 'graph', heading: /Episodic Knowledge Graph/ },
   { path: '/infrastructure', slug: 'infrastructure', heading: /^Infrastructure$/ },
   { path: '/incidents', slug: 'incidents', heading: /^Incidents$/ },
   { path: '/chat', slug: 'chat', heading: /^Chat$/ },
@@ -181,6 +184,9 @@ test.describe('Post-deploy gate — interactions stay console-clean', () => {
       'Dashboard',
       'Command Center',
       'Agents',
+      'MCP Tools',
+      'Telemetry',
+      'Graph',
       'Infrastructure',
       'Incidents',
       'Chat',
@@ -203,10 +209,10 @@ test.describe('Post-deploy gate — interactions stay console-clean', () => {
     await page.goto('/agents')
     await expect(page.getByRole('heading', { name: 'Agent Hub' })).toBeVisible()
 
-    // Tabs render their first word on narrow widths; on desktop the full label
-    // shows. Match by the always-present full label text of each tab. The tabs
-    // are now an accessible ARIA tablist (role="tab"), not bare buttons.
-    const tabLabels = ['MCP Tools', 'Graph Explorer', 'Fast Agent', 'Reasoning Agent', 'Telemetry']
+    // Agent Hub is now trimmed to just the two model surfaces; MCP Tools,
+    // Telemetry and the Graph Explorer moved to their own top-level sidebar
+    // routes. Tabs are an accessible ARIA tablist (role="tab"), not bare buttons.
+    const tabLabels = ['Fast Agent', 'Reasoning Agent']
     for (const label of tabLabels) {
       await page.getByRole('tab', { name: new RegExp(label, 'i') }).click()
       // Each tab swaps in a section heading (h2) — wait for the panel to mount.

@@ -38,6 +38,22 @@ from src.confidence import ConfidenceCalculator, ConfidenceBreakdown
 
 logger = logging.getLogger(__name__)
 
+
+def _audit_enabled() -> bool:
+    """Resolve the persisted ``constitutional.enableAuditLog`` toggle.
+
+    Previously a dead no-op (the validation context hardcoded ``audit_enabled=
+    True``). Defaults to True (audit-on) when unset/unreadable — auditing is the
+    safe default for a constitutional system.
+    """
+    try:
+        from src.api.routes.settings import get_constitutional_settings
+
+        return bool(get_constitutional_settings().get("enableAuditLog", True))
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("Could not read persisted enableAuditLog: %s", exc)
+        return True
+
 router = APIRouter()
 
 # In-memory action store (replace with persistent storage in production)
@@ -677,7 +693,7 @@ async def _validate_action(
             "action_scope": action.parameters.get("scope", "single") if action.parameters else "single",
             "active_incident": bool(action.incident_id),
             "confidence": action.confidence,
-            "audit_enabled": True,
+            "audit_enabled": _audit_enabled(),
             **evidence,
         }
 

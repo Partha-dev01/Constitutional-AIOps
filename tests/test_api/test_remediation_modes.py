@@ -149,13 +149,17 @@ class TestDetection:
 # ---------------------------------------------------------------------------
 
 def test_auto_exec_rate_limit():
+    # The cap now comes from the persisted constitutional.maxActionsPerMinute
+    # setting (W2.2), falling back to the env/default — use the resolved value.
     chat_module._auto_exec_times.clear()
+    cap = chat_module._auto_exec_max_per_min()
     assert _auto_exec_rate_ok() is True
-    for _ in range(chat_module._AUTO_EXEC_MAX):
+    for _ in range(cap):
         assert _auto_exec_rate_ok() is True
         _record_auto_exec()
     # Budget now exhausted.
     assert _auto_exec_rate_ok() is False
+    chat_module._auto_exec_times.clear()
 
 
 # ---------------------------------------------------------------------------
