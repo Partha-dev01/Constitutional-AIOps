@@ -15,12 +15,14 @@ Endpoints:
 import json
 import logging
 import os
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
+from src.agents.serving_profile import resolve_serving_profile
 from src.auth import store as user_store
 from src.auth.deps import User, coerce_user, is_synthetic, require_user
 
@@ -324,6 +326,162 @@ async def reset_settings() -> AllSettings:
     except Exception as exc:  # noqa: BLE001
         logger.warning("Failed to delete settings file: %s", exc)
     return AllSettings()
+
+
+# ---------------------------------------------------------------------------
+# Serving mode (Mode 1 ⇄ Mode 2) — swap-request channel
+# ---------------------------------------------------------------------------
+#
+# The backend cannot swap the serving stack itself: the swap recreates the
+# backend container, and production mounts no docker.sock (by design). So the
+# toggle works through a file-based request channel on the EBS-backed data dir
+# (AIOPS_DATA_DIR/mode-swap/, host-visible at /mnt/data/app/mode-swap/):
+#
+#   backend  → writes  request.json   {"requested_mode", "requested_at", "requested_by"}
+#   watcher  → reads   request.json, runs scripts/mode-swap.sh up-mode{N},
+#              writes  status.json    {"state": swapping|done|error, ...},
+#              deletes request.json
+#   backend  → GET merges the current ServingProfile with those files.
+#
+# The host-side executor is scripts/mode-swap-watcher.sh (installed as the
+# aiops-mode-swap systemd service on the VM). During the swap the backend is
+# recreated, so clients briefly get connection errors — the UI treats that
+# window as "swapping" and resumes polling.
+
+
+def _mode_swap_dir() -> Path:
+    """Directory for the swap request/status files (under AIOPS_DATA_DIR)."""
+    d = _settings_path().parent / "mode-swap"
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def _read_json_file(p: Path) -> Optional[dict[str, Any]]:
+    """Read a JSON object from disk; None when absent/corrupt (never raises)."""
+    try:
+        if p.exists():
+            data = json.loads(p.read_text(encoding="utf-8"))
+            return data if isinstance(data, dict) else None
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Failed to read %s: %s", p, exc)
+    return None
+
+
+def _write_json_file(p: Path, data: dict[str, Any]) -> None:
+    """Atomic-ish JSON write (write tmp, rename), mirroring _save_persisted."""
+    tmp = p.with_suffix(".tmp")
+    tmp.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    tmp.replace(p)
+
+
+class ServingModeRequest(BaseModel):
+    mode: Literal[1, 2]
+
+
+class ServingModeStatus(BaseModel):
+    """Current serving mode + the state of any in-flight swap request."""
+
+    mode: int
+    single_engine: bool
+    requested_mode: Optional[int] = None
+    swap_status: Literal["idle", "pending", "swapping", "error"] = "idle"
+    detail: Optional[str] = None
+    requested_at: Optional[str] = None
+    updated_at: Optional[str] = None
+
+
+def _current_serving_mode_status() -> ServingModeStatus:
+    """Merge the live ServingProfile with the request/status files."""
+    profile = resolve_serving_profile()
+    d = _mode_swap_dir()
+    stat = _read_json_file(d / "status.json")
+    req = _read_json_file(d / "request.json")
+
+    swap_status: str = "idle"
+    requested_mode: Optional[int] = None
+    detail: Optional[str] = None
+    requested_at: Optional[str] = None
+    updated_at: Optional[str] = None
+
+    if stat:
+        updated_at = stat.get("updated_at")
+        state = stat.get("state")
+        if state == "swapping":
+            swap_status = "swapping"
+            requested_mode = stat.get("target")
+        elif state == "error":
+            swap_status = "error"
+            detail = stat.get("detail")
+        # state == "done" → idle: the profile already reflects the result.
+
+    if req:
+        requested_mode = req.get("requested_mode")
+        requested_at = req.get("requested_at")
+        if swap_status != "swapping":
+            swap_status = "pending"
+
+    return ServingModeStatus(
+        mode=profile.mode,
+        single_engine=profile.single_engine,
+        requested_mode=requested_mode,
+        swap_status=swap_status,  # type: ignore[arg-type]
+        detail=detail,
+        requested_at=requested_at,
+        updated_at=updated_at,
+    )
+
+
+@router.get(
+    "/serving-mode",
+    response_model=ServingModeStatus,
+    summary="Get Serving Mode",
+    description="Current serving mode (1 = frozen dual-engine artifact, 2 = modernized stack) and any in-flight swap request.",
+)
+async def get_serving_mode(user: User = Depends(require_user)) -> ServingModeStatus:
+    return _current_serving_mode_status()
+
+
+@router.post(
+    "/serving-mode",
+    response_model=ServingModeStatus,
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Request Serving Mode Swap",
+    description="Write a mode-swap request for the host-side watcher. Admin only. The stack restarts (~3-5 min) while the swap runs.",
+)
+async def request_serving_mode(
+    body: ServingModeRequest,
+    user: User = Depends(require_user),
+) -> ServingModeStatus:
+    user = coerce_user(user)
+    if not is_synthetic(user) and user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins may switch the serving mode",
+        )
+
+    current = _current_serving_mode_status()
+    if body.mode == current.mode and current.swap_status in ("idle", "error"):
+        # Already there: clear any stale error/request so the UI settles.
+        try:
+            (_mode_swap_dir() / "request.json").unlink(missing_ok=True)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Could not clear stale mode-swap request: %s", exc)
+        return _current_serving_mode_status()
+    if current.swap_status in ("pending", "swapping"):
+        # One swap at a time; report the in-flight state instead of stacking.
+        return current
+
+    payload = {
+        "requested_mode": body.mode,
+        "requested_at": datetime.now(timezone.utc).isoformat(),
+        "requested_by": user.username,
+    }
+    _write_json_file(_mode_swap_dir() / "request.json", payload)
+    logger.info(
+        "Serving-mode swap requested: mode %s → %s (by %s)",
+        current.mode, body.mode, user.username,
+    )
+    return _current_serving_mode_status()
 
 
 __all__ = ["router", "get_remediation_settings", "get_constitutional_settings"]
