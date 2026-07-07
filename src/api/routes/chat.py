@@ -5,6 +5,7 @@ Chat endpoints for interactive conversation with the Reasoning Agent.
 Supports general chat, RCA analysis, and remediation planning.
 """
 
+import asyncio
 import json
 import logging
 import os
@@ -16,6 +17,7 @@ from datetime import datetime, timedelta
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.responses import StreamingResponse
 
 from src.auth.deps import User, coerce_user, require_user
 from src.api.routes.settings import get_remediation_settings
@@ -44,6 +46,14 @@ from src.agents.tool_calling import (
     run_tool_calling_loop,
 )
 from src.agents.reasoning_agent import CHAT_SYSTEM_PROMPT
+
+# Mode 2 stable-prefix prompt assembly (Phase 3). Only used when the resolved
+# serving profile is Mode 2; the Mode 1 string assembly below stays verbatim.
+from src.agents.prompt_layout import (
+    assemble_mode2_chat_prompt,
+    build_in_scope_directive,
+)
+from src.agents.serving_profile import resolve_serving_profile
 
 # Durable persistence (write-through): the in-memory dicts below stay the read
 # fast-path; these helpers mirror each mutation into SQLite so conversations and
@@ -594,13 +604,26 @@ def _agentic_loop_enabled() -> bool:
     return os.getenv("CHAT_AGENTIC_TOOL_LOOP", "").strip().lower() in ("1", "true", "yes")
 
 
-def _records_to_context_string(records: list[ToolCallRecord]) -> str:
+def _records_to_context_string(
+    records: list[ToolCallRecord],
+    *,
+    mode2: bool = False,
+) -> str:
     """Render executed tool results into an LLM context block (grounds the answer).
 
     Mirrors the human-readable summaries the old _invoke_mcp_tools_for_query
     produced, plus a structured needs_param note so the model can ask the user
     for a missing parameter instead of narrating.
+
+    ``mode2`` (Phase 3 items 4+7) applies per-tool budgets: episodic-memory
+    lines get per-episode caps (top-3 stays) and the generic JSON dump gets a
+    ~300-token budget. Defaults keep the Mode 1 rendering byte-identical.
     """
+    # Per-episode caps for find_similar (Phase 3 item 7): top-3 with a bounded
+    # line each, so one verbose historical episode can't flood the context.
+    title_cap = 120 if mode2 else None
+    root_cause_cap = 300 if mode2 else None
+    generic_cap = 1200 if mode2 else 800
     blocks: list[str] = []
     for rec in records:
         if rec.status == "needs_param":
@@ -627,10 +650,16 @@ def _records_to_context_string(records: list[ToolCallRecord]) -> str:
             if incidents:
                 lines = ["## Similar Past Incidents (from Neo4j Memory)"]
                 for idx, inc in enumerate(incidents[:3], 1):
+                    title = str(inc.get("title", "Unknown"))
+                    root_cause = str(inc.get("root_cause", "Unknown"))
+                    if title_cap is not None:
+                        title = title[:title_cap]
+                    if root_cause_cap is not None:
+                        root_cause = root_cause[:root_cause_cap]
                     lines.append(
-                        f"{idx}. {inc.get('title', 'Unknown')} "
+                        f"{idx}. {title} "
                         f"(Severity: {inc.get('severity', 'N/A')}, "
-                        f"Root Cause: {inc.get('root_cause', 'Unknown')})"
+                        f"Root Cause: {root_cause})"
                     )
                 blocks.append("\n".join(lines))
             else:
@@ -661,7 +690,9 @@ def _records_to_context_string(records: list[ToolCallRecord]) -> str:
             blocks.append("\n".join(lines))
         else:
             # Generic compact rendering for the remaining tools.
-            blocks.append(f"## Tool {rec.name} result\n{json.dumps(data, default=str)[:800]}")
+            blocks.append(
+                f"## Tool {rec.name} result\n{json.dumps(data, default=str)[:generic_cap]}"
+            )
     return "\n\n".join(blocks)
 
 
@@ -693,11 +724,51 @@ async def _execute_chat_tools(
 
     if not _agentic_loop_enabled():
         # Deterministic routing only: execute the planned calls in order.
-        from src.agents.tool_calling import _execute_one  # local import: internal helper
+        from src.agents import tool_calling as _tc  # local import: internal helper
 
         result = ToolLoopResult()
-        for spec, args in forced:
-            result.tool_calls.append(await _execute_one(executor, spec, args))
+        if _serving_mode(request) == 2 and len(forced) > 1:
+            # Phase 3 item 3: the planned READ tools are independent lookups
+            # (Loki/Prometheus/Neo4j/Docker) — run them concurrently with a
+            # per-tool timeout. ACTION tools stay strictly sequential and
+            # gated (the constitutional gate runs inside execute_tool_call).
+            # metadata.tool_calls keeps the PLANNED order regardless of
+            # completion order — the UI timeline contract is unchanged.
+            records: list[Optional[ToolCallRecord]] = [None] * len(forced)
+
+            async def _run_read(spec, args) -> ToolCallRecord:
+                try:
+                    return await asyncio.wait_for(
+                        _tc._execute_one(executor, spec, args),
+                        timeout=_CHAT_TOOL_TIMEOUT_SECONDS,
+                    )
+                except asyncio.TimeoutError:
+                    return ToolCallRecord(
+                        id=f"call-{uuid.uuid4().hex[:12]}",
+                        name=spec.name,
+                        arguments=args,
+                        status="error",
+                        error=f"timed out after {_CHAT_TOOL_TIMEOUT_SECONDS:.0f}s",
+                        duration_ms=_CHAT_TOOL_TIMEOUT_SECONDS * 1000,
+                    )
+
+            read_calls = [
+                (i, spec, args)
+                for i, (spec, args) in enumerate(forced)
+                if not spec.is_action
+            ]
+            gathered = await asyncio.gather(
+                *[_run_read(spec, args) for _, spec, args in read_calls]
+            )
+            for (i, _, _), rec in zip(read_calls, gathered):
+                records[i] = rec
+            for i, (spec, args) in enumerate(forced):
+                if spec.is_action:
+                    records[i] = await _tc._execute_one(executor, spec, args)
+            result.tool_calls.extend(r for r in records if r is not None)
+        else:
+            for spec, args in forced:
+                result.tool_calls.append(await _tc._execute_one(executor, spec, args))
         return result
 
     completion = _make_chat_completion(reasoning_agent, enable_thinking=enable_thinking)
@@ -801,6 +872,57 @@ async def _build_runtime_context(request: Request) -> str:
     )
 
     return "\n\n".join(context_parts) if context_parts else "## Runtime Context\nNo runtime data available"
+
+
+# ---------------------------------------------------------------------------
+# Mode 2 harness optimizations (Phase 3) — every branch below is gated on the
+# serving mode so the Mode 1 request path stays byte-identical.
+# ---------------------------------------------------------------------------
+
+
+def _serving_mode(request: Request) -> int:
+    """Serving mode for this request: prefer the live router's startup profile
+    (the same precedence GET /health/serving uses), falling back to a fresh
+    env resolve. Anything unexpected degrades to Mode 1 (fail-safe)."""
+    router_obj = getattr(getattr(request, "app", None), "state", None)
+    router_obj = getattr(router_obj, "model_router", None)
+    mode = getattr(getattr(router_obj, "profile", None), "mode", None)
+    if mode in (1, 2):
+        return mode
+    try:
+        return resolve_serving_profile().mode
+    except Exception:  # noqa: BLE001 - never let mode detection break chat
+        return 1
+
+
+# Runtime-context TTL cache (Phase 3 item 2). _build_runtime_context opens a
+# Docker client, lists ALL containers, and health-checks both LLM endpoints —
+# serially, on every turn. Container/agent state doesn't change turn-to-turn,
+# so Mode 2 reuses the rendered block for a short TTL. Mode 1 keeps the
+# per-turn rebuild (its measured baseline behavior).
+_RUNTIME_CTX_TTL_SECONDS = float(os.getenv("CHAT_RUNTIME_CONTEXT_TTL") or "20")
+_runtime_ctx_cache: dict[str, Any] = {"value": None, "expires_at": 0.0}
+
+
+async def _cached_runtime_context(request: Request) -> str:
+    if _serving_mode(request) != 2:
+        return await _build_runtime_context(request)
+    now = time.monotonic()
+    if (
+        _runtime_ctx_cache["value"] is not None
+        and now < _runtime_ctx_cache["expires_at"]
+    ):
+        return _runtime_ctx_cache["value"]
+    value = await _build_runtime_context(request)
+    _runtime_ctx_cache["value"] = value
+    _runtime_ctx_cache["expires_at"] = now + _RUNTIME_CTX_TTL_SECONDS
+    return value
+
+
+# Per-tool wall-clock cap for the Mode 2 PARALLEL read-tool execution (Phase 3
+# item 3). Read tools hit Loki/Prometheus/Neo4j/Docker; a hung backend must
+# not stall the whole turn.
+_CHAT_TOOL_TIMEOUT_SECONDS = float(os.getenv("CHAT_TOOL_TIMEOUT") or "15")
 
 router = APIRouter()
 
@@ -1180,35 +1302,14 @@ async def _maybe_propose_remediation(
     return proposed
 
 
-@router.post(
-    "/",
-    response_model=ChatResponse,
-    summary="Send Chat Message",
-    description="Send a message to the Reasoning Agent and get a response",
-)
-async def chat(
-    request: Request,
-    chat_request: ChatRequest,
-    user: User = Depends(require_user),
-) -> ChatResponse:
+def _open_conversation_turn(
+    chat_request: ChatRequest, user: User
+) -> tuple[ConversationHistory, str]:
+    """Get-or-create the conversation for a turn and append the user message.
+
+    Shared by POST /chat/ and POST /chat/stream so ownership checks, selection
+    refresh, eviction, and write-through stay identical on both endpoints.
     """
-    Send a message to the Reasoning Agent.
-
-    The agent can help with:
-    - Answering questions about incidents
-    - Explaining system behavior
-    - Suggesting remediation steps
-    - Providing context from graph memory
-
-    Args:
-        chat_request: User message and optional context
-
-    Returns:
-        Assistant's response with confidence and suggestions
-    """
-    user = coerce_user(user)
-
-    # Get or create conversation
     conversation_id = chat_request.conversation_id or f"conv-{uuid.uuid4().hex[:12]}"
 
     if conversation_id in _conversations:
@@ -1244,6 +1345,130 @@ async def chat(
     conversation.messages.append(user_message)
     conversation.updated_at = datetime.utcnow()
     _persist_save_conversation(conversation)
+    return conversation, conversation_id
+
+
+async def _finalize_chat_turn(
+    request: Request,
+    *,
+    user_message_text: str,
+    conversation: ConversationHistory,
+    conversation_id: str,
+    user: User,
+    service: Optional[str],
+    content: str,
+    confidence: Optional[float],
+    metadata: dict[str, Any],
+    tool_struct: dict[str, Any],
+    has_tool_data: bool,
+) -> ChatResponse:
+    """Shared post-LLM tail for POST /chat/ and POST /chat/stream: action
+    extraction, remediation proposal, related incidents, assistant-message
+    persistence, and the ChatResponse contract — one owner, no drift.
+    """
+    suggested_actions = _extract_actions(content)
+
+    # Remediation (Lane B): read the mode AFTER RCA/tool gathering so the
+    # decision is based on the evidence we actually collected. diagnose
+    # (default) returns None here -> no behavior change on the default path.
+    proposed_action: Optional[dict[str, Any]] = None
+    try:
+        remediation_settings = get_remediation_settings()
+        proposed_action = await _maybe_propose_remediation(
+            request,
+            mode=remediation_settings.get("mode", "diagnose"),
+            content=content,
+            suggested_actions=suggested_actions,
+            service=service,
+            confidence=confidence,
+            has_tool_data=has_tool_data,
+            remediation_settings=remediation_settings,
+            owner=user.username,
+            conversation_id=conversation_id,
+        )
+    except Exception as exc:  # noqa: BLE001 - remediation must never break chat
+        logger.warning("Remediation proposal step failed (ignored): %s", exc)
+        proposed_action = None
+
+    # C1: prefer the find_similar tool's incidents (so card + dropdown agree with
+    # the timeline that claims the find_similar tool); else fall back to
+    # _find_related_incidents.
+    related_incidents = _related_from_similar(tool_struct)
+    if related_incidents is None:
+        related_incidents = await _find_related_incidents(request, user_message_text)
+
+    # Create assistant message, persisting the per-turn metadata ON it so loading
+    # this conversation from history can replay the tool-call timeline + insight
+    # cards (otherwise reloaded chats show only the text). The shape mirrors the
+    # ChatResponse fields the frontend uses (enrichToolStepsWithResponse + insights).
+    assistant_message = ChatMessage(
+        role=ChatRole.ASSISTANT,
+        content=content,
+        timestamp=datetime.utcnow(),
+        metadata={
+            "confidence": confidence,
+            "suggested_actions": suggested_actions,
+            "related_incidents": related_incidents,
+            "proposed_action": proposed_action,
+            "metadata": metadata,
+        },
+    )
+    conversation.messages.append(assistant_message)
+    conversation.updated_at = datetime.utcnow()
+    # Write-through the completed turn (incl. the assistant_message.metadata) so a
+    # reloaded conversation can replay its reasoning timeline + insight cards.
+    _persist_save_conversation(conversation)
+
+    # confidence is Optional: None for a genuine off-domain refusal (the UI then
+    # hides the confidence gauge), an evidence-based 0.5–0.9 otherwise.
+    return ChatResponse(
+        conversation_id=conversation_id,
+        message=assistant_message,
+        confidence=confidence,
+        suggested_actions=suggested_actions,
+        related_incidents=related_incidents,
+        metadata=metadata,
+        proposed_action=proposed_action,
+    )
+
+
+@router.post(
+    "/",
+    response_model=ChatResponse,
+    summary="Send Chat Message",
+    description="Send a message to the Reasoning Agent and get a response",
+)
+async def chat(
+    request: Request,
+    chat_request: ChatRequest,
+    user: User = Depends(require_user),
+) -> ChatResponse:
+    """
+    Send a message to the Reasoning Agent.
+
+    The agent can help with:
+    - Answering questions about incidents
+    - Explaining system behavior
+    - Suggesting remediation steps
+    - Providing context from graph memory
+
+    Args:
+        chat_request: User message and optional context
+
+    Returns:
+        Assistant's response with confidence and suggestions
+    """
+    user = coerce_user(user)
+
+    # Phase 0 (Mode 2 plan): per-stage wall-clock timings for this turn, exposed
+    # as metadata["timings"]. Measurement only — no behavior change (Mode 1 stays
+    # the valid baseline; these numbers are what bench_mode.py records).
+    turn_start = time.perf_counter()
+    context_build_ms = 0.0
+    tools_ms = 0.0
+    llm_ms = 0.0
+
+    conversation, conversation_id = _open_conversation_turn(chat_request, user)
 
     # Get reasoning agent
     reasoning_agent = getattr(request.app.state, "reasoning_agent", None)
@@ -1262,8 +1487,14 @@ async def chat(
             for msg in conversation.messages[-5:]  # Last 5 messages
         ]
 
-        # Build runtime context with current system state
-        runtime_context = await _build_runtime_context(request)
+        # Serving mode for this turn (Phase 3): every Mode 2 branch below is
+        # gated on this; Mode 1 keeps the pre-Mode-2 path byte-identical.
+        serving_mode = _serving_mode(request)
+
+        # Build runtime context with current system state (Mode 2: TTL-cached —
+        # container/agent state doesn't change turn-to-turn).
+        _ctx_start = time.perf_counter()
+        runtime_context = await _cached_runtime_context(request)
 
         # Selection context from the Graph "Schema mode" (session-14). Prefer the
         # context on this turn; fall back to the conversation's stored selection.
@@ -1281,11 +1512,14 @@ async def chat(
         if service:
             telemetry_context, telemetry_struct = await _build_telemetry_context(request, service)
             logger.info(f"Built telemetry context for service: {service}")
+        # Pre-LLM context assembly time: runtime context + selection + telemetry.
+        context_build_ms = (time.perf_counter() - _ctx_start) * 1000
 
         # Agentic tool-calling: deterministically route NAMED/IMPLIED tools to the
         # REAL executors in tools.py (and optionally let the model drive extra
         # tools when CHAT_AGENTIC_TOOL_LOOP is enabled). This replaces the old
         # keyword-only _invoke_mcp_tools_for_query so a named tool ALWAYS runs.
+        _tools_start = time.perf_counter()
         loop_result = await _execute_chat_tools(
             request,
             reasoning_agent,
@@ -1295,11 +1529,14 @@ async def chat(
             runtime_context=runtime_context,
             enable_thinking=chat_request.enable_thinking,
         )
+        tools_ms = (time.perf_counter() - _tools_start) * 1000
         tool_call_records = loop_result.tool_calls
         # Ordered tool_calls contract (THE UI source of truth).
         tool_calls_meta = [rec.to_dict() for rec in tool_call_records]
         # Human-readable context block grounding the model's answer.
-        mcp_tool_context = _records_to_context_string(tool_call_records)
+        mcp_tool_context = _records_to_context_string(
+            tool_call_records, mode2=(serving_mode == 2)
+        )
         # Back-compat structured tools (similar / dependencies / logs).
         tool_struct = _tool_records_to_back_compat(tool_call_records)
 
@@ -1331,50 +1568,103 @@ async def chat(
         any_tool_ran = any(rec.status == "ok" for rec in tool_call_records)
         has_tool_data = bool(tools_meta) or any_tool_ran
 
-        # Get response from reasoning agent with full context (including real telemetry)
-        agent_response = await reasoning_agent.chat(
-            message=chat_request.message,
-            conversation_history=history[:-1],  # Exclude current message
-            runtime_context=full_context,
-            enable_thinking=chat_request.enable_thinking,  # B5
-        )
-
-        content = agent_response.content
-
-        # D1(b): deterministic over-refusal guard. The backend knows the query is
-        # in-domain when a known service was named OR any tool returned data. If the
-        # model still produced a refusal-shaped reply, re-issue ONCE with a forceful
-        # directive; if it STILL refuses, synthesize an answer from gathered data.
+        # The backend knows the query is in-domain BEFORE the LLM call: a known
+        # service was named, or a tool already returned data this turn.
         in_domain = service is not None or has_tool_data
-        if in_domain and _looks_like_refusal(content):
-            logger.info("Chat reply looked like a refusal for an in-domain query; re-issuing")
-            forced_context = full_context + (
-                "\n\n## IMPORTANT\n"
-                f"This request concerns the monitored service '{service or 'this system'}' "
-                "and IS in scope. Answer it fully using the data above. Do NOT decline."
+
+        _llm_start = time.perf_counter()
+        if serving_mode == 2:
+            # Phase 3 (Mode 2): stable-prefix layout — static system prompt,
+            # history then volatile blocks then query in the user message — and
+            # the in-scope directive issued in the FIRST call whenever the turn
+            # is known in-domain. ONE reasoning call per turn: a residual
+            # refusal falls back to the deterministic synthesis, never a
+            # second model call.
+            assembled = assemble_mode2_chat_prompt(
+                base_system=reasoning_agent.get_system_prompt("chat"),
+                message=chat_request.message,
+                history=history[:-1],
+                volatile_blocks=[
+                    selection_context,
+                    telemetry_context,
+                    mcp_tool_context,
+                    runtime_context,
+                ],
+                in_scope_directive=(
+                    build_in_scope_directive(service) if in_domain else ""
+                ),
             )
-            try:
-                retry_response = await reasoning_agent.chat(
-                    message=chat_request.message,
-                    conversation_history=history[:-1],
-                    runtime_context=forced_context,
-                    enable_thinking=chat_request.enable_thinking,
+            agent_response = await reasoning_agent.process(
+                {
+                    "mode": "chat",
+                    "query": chat_request.message,
+                    "prompt_override": (
+                        assembled.user_prompt,
+                        assembled.system_prompt,
+                    ),
+                    "enable_thinking": chat_request.enable_thinking,
+                }
+            )
+            content = agent_response.content
+            if in_domain and _looks_like_refusal(content):
+                logger.info(
+                    "Mode 2 chat reply looked like a refusal despite the "
+                    "pre-call directive; synthesizing from gathered data"
                 )
-                if not _looks_like_refusal(retry_response.content):
-                    agent_response = retry_response
-                    content = retry_response.content
-                else:
-                    # Still refusing: synthesize a concise answer from gathered data.
-                    content = _synthesize_answer_from_data(
-                        service, telemetry_struct, tool_struct
-                    )
-                    agent_response.content = content
-            except Exception as e:
-                logger.warning(f"Refusal re-issue failed: {e}")
                 content = _synthesize_answer_from_data(
                     service, telemetry_struct, tool_struct
                 )
                 agent_response.content = content
+        else:
+            # Get response from reasoning agent with full context (including real telemetry)
+            agent_response = await reasoning_agent.chat(
+                message=chat_request.message,
+                conversation_history=history[:-1],  # Exclude current message
+                runtime_context=full_context,
+                enable_thinking=chat_request.enable_thinking,  # B5
+            )
+
+            content = agent_response.content
+
+            # D1(b): deterministic over-refusal guard. If the model produced a
+            # refusal-shaped reply for an in-domain query, re-issue ONCE with a
+            # forceful directive; if it STILL refuses, synthesize an answer
+            # from gathered data.
+            if in_domain and _looks_like_refusal(content):
+                logger.info("Chat reply looked like a refusal for an in-domain query; re-issuing")
+                forced_context = full_context + (
+                    "\n\n## IMPORTANT\n"
+                    f"This request concerns the monitored service '{service or 'this system'}' "
+                    "and IS in scope. Answer it fully using the data above. Do NOT decline."
+                )
+                try:
+                    retry_response = await reasoning_agent.chat(
+                        message=chat_request.message,
+                        conversation_history=history[:-1],
+                        runtime_context=forced_context,
+                        enable_thinking=chat_request.enable_thinking,
+                    )
+                    if not _looks_like_refusal(retry_response.content):
+                        agent_response = retry_response
+                        content = retry_response.content
+                    else:
+                        # Still refusing: synthesize a concise answer from gathered data.
+                        content = _synthesize_answer_from_data(
+                            service, telemetry_struct, tool_struct
+                        )
+                        agent_response.content = content
+                except Exception as e:
+                    logger.warning(f"Refusal re-issue failed: {e}")
+                    content = _synthesize_answer_from_data(
+                        service, telemetry_struct, tool_struct
+                    )
+                    agent_response.content = content
+
+        # LLM stage time. In Mode 1 this includes the refusal-guard re-issue (a
+        # second full LLM call) when it fired — that double-call cost is exactly
+        # what the Mode 2 branch above removes, so it must be visible in the
+        # baseline.
+        llm_ms = (time.perf_counter() - _llm_start) * 1000
 
         # A1: confidence follows EVIDENCE, not the model's (free-form) refusal
         # wording. When no known service was named AND no tool/telemetry data was
@@ -1396,41 +1686,16 @@ async def chat(
         # THE CONTRACT: ordered list of EVERY tool the agent ran this turn. Always
         # present (possibly empty) so the frontend timeline has a stable source.
         metadata["tool_calls"] = tool_calls_meta
+        # Phase 0 turn-level timing breakdown (additive; consumed by
+        # scripts/bench_mode.py to baseline Mode 1 vs later serving modes).
+        metadata["timings"] = {
+            "context_build_ms": round(context_build_ms, 2),
+            "tools_ms": round(tools_ms, 2),
+            "llm_ms": round(llm_ms, 2),
+            "total_ms": round((time.perf_counter() - turn_start) * 1000, 2),
+        }
         if selection_context:
             metadata["selection_applied"] = True
-
-        suggested_actions = _extract_actions(content)
-
-        # Remediation (Lane B): read the mode AFTER RCA/tool gathering so the
-        # decision is based on the evidence we actually collected. diagnose
-        # (default) returns None here -> no behavior change on the default path.
-        proposed_action: Optional[dict[str, Any]] = None
-        try:
-            remediation_settings = get_remediation_settings()
-            proposed_action = await _maybe_propose_remediation(
-                request,
-                mode=remediation_settings.get("mode", "diagnose"),
-                content=content,
-                suggested_actions=suggested_actions,
-                service=service,
-                confidence=confidence,
-                has_tool_data=has_tool_data,
-                remediation_settings=remediation_settings,
-                owner=user.username,
-                conversation_id=conversation_id,
-            )
-        except Exception as exc:  # noqa: BLE001 - remediation must never break chat
-            logger.warning("Remediation proposal step failed (ignored): %s", exc)
-            proposed_action = None
-
-        assistant_response = {
-            "content": content,
-            "confidence": confidence,
-            "suggested_actions": suggested_actions,
-            "metadata": metadata,
-            "tool_struct": tool_struct,
-            "proposed_action": proposed_action,
-        }
 
     except HTTPException:
         raise
@@ -1441,44 +1706,259 @@ async def chat(
             detail=f"Reasoning agent unavailable: {str(e)}",
         )
 
-    # C1: prefer the find_similar tool's incidents (so card + dropdown agree with the
-    # timeline that claims the find_similar tool); else fall back to _find_related_incidents.
-    related_incidents = _related_from_similar(assistant_response["tool_struct"])
-    if related_incidents is None:
-        related_incidents = await _find_related_incidents(request, chat_request.message)
-
-    # Create assistant message, persisting the per-turn metadata ON it so loading
-    # this conversation from history can replay the tool-call timeline + insight
-    # cards (otherwise reloaded chats show only the text). The shape mirrors the
-    # ChatResponse fields the frontend uses (enrichToolStepsWithResponse + insights).
-    assistant_message = ChatMessage(
-        role=ChatRole.ASSISTANT,
-        content=assistant_response["content"],
-        timestamp=datetime.utcnow(),
-        metadata={
-            "confidence": assistant_response.get("confidence"),
-            "suggested_actions": assistant_response.get("suggested_actions"),
-            "related_incidents": related_incidents,
-            "proposed_action": assistant_response.get("proposed_action"),
-            "metadata": assistant_response.get("metadata"),
-        },
-    )
-    conversation.messages.append(assistant_message)
-    conversation.updated_at = datetime.utcnow()
-    # Write-through the completed turn (incl. the assistant_message.metadata) so a
-    # reloaded conversation can replay its reasoning timeline + insight cards.
-    _persist_save_conversation(conversation)
-
-    # confidence is Optional: None for a genuine off-domain refusal (the UI then
-    # hides the confidence gauge), an evidence-based 0.5–0.9 otherwise.
-    return ChatResponse(
+    return await _finalize_chat_turn(
+        request,
+        user_message_text=chat_request.message,
+        conversation=conversation,
         conversation_id=conversation_id,
-        message=assistant_message,
-        confidence=assistant_response.get("confidence"),
-        suggested_actions=assistant_response.get("suggested_actions"),
-        related_incidents=related_incidents,
-        metadata=assistant_response.get("metadata"),
-        proposed_action=assistant_response.get("proposed_action"),
+        user=user,
+        service=service,
+        content=content,
+        confidence=confidence,
+        metadata=metadata,
+        tool_struct=tool_struct,
+        has_tool_data=has_tool_data,
+    )
+
+
+def _sse_event(event: str, data: Any) -> str:
+    """Render one Server-Sent Event frame (event name + JSON data line)."""
+    return f"event: {event}\ndata: {json.dumps(data, default=str)}\n\n"
+
+
+@router.post(
+    "/stream",
+    summary="Send Chat Message (SSE Streaming)",
+    description=(
+        "Streaming variant of POST /chat/ (Mode 2 plan, Phase 4). Emits "
+        "Server-Sent Events: `meta` (conversation id + whether token "
+        "streaming is active), one `tool_result` per executed tool, `delta` "
+        "token chunks, then `done` carrying the full ChatResponse JSON — the "
+        "same contract as the blocking endpoint, persisted identically. "
+        "`done.message.content` is ALWAYS authoritative (a residual refusal "
+        "is replaced by the deterministic synthesis there, since streamed "
+        "text cannot be un-said). On a Mode 1 backend the endpoint still "
+        "works: the answer arrives as a single `delta` after the blocking "
+        "completion. Mid-stream failures emit an `error` event."
+    ),
+)
+async def chat_stream(
+    request: Request,
+    chat_request: ChatRequest,
+    user: User = Depends(require_user),
+) -> StreamingResponse:
+    user = coerce_user(user)
+
+    reasoning_agent = getattr(request.app.state, "reasoning_agent", None)
+    if reasoning_agent is None:
+        logger.error("Reasoning agent not initialized - LLM server may be unavailable")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Reasoning agent not initialized. Check LLM server connection.",
+        )
+
+    # Conversation bookkeeping happens BEFORE streaming starts so ownership
+    # violations still surface as a proper 404 status (impossible mid-stream).
+    conversation, conversation_id = _open_conversation_turn(chat_request, user)
+    turn_start = time.perf_counter()
+
+    async def event_source():
+        try:
+            history = [
+                {"role": msg.role.value, "content": msg.content}
+                for msg in conversation.messages[-5:]
+            ]
+
+            serving_mode = _serving_mode(request)
+            model_router = getattr(request.app.state, "model_router", None)
+            stream_fn = getattr(model_router, "reasoning_completion_stream", None)
+            can_stream = serving_mode == 2 and callable(stream_fn)
+            yield _sse_event(
+                "meta",
+                {
+                    "conversation_id": conversation_id,
+                    "streaming": can_stream,
+                    "mode": serving_mode,
+                },
+            )
+
+            # ── Pre-LLM stages (same helpers as the blocking endpoint) ──────
+            _ctx_start = time.perf_counter()
+            runtime_context = await _cached_runtime_context(request)
+            selection_ctx = chat_request.context or conversation.context
+            selection_context = _render_selection_context(selection_ctx)
+            service = _extract_service_from_query(chat_request.message)
+            if service is None:
+                service = _selected_known_service(selection_ctx)
+            telemetry_context = ""
+            telemetry_struct: Optional[dict[str, Any]] = None
+            if service:
+                telemetry_context, telemetry_struct = await _build_telemetry_context(
+                    request, service
+                )
+            context_build_ms = (time.perf_counter() - _ctx_start) * 1000
+
+            _tools_start = time.perf_counter()
+            loop_result = await _execute_chat_tools(
+                request,
+                reasoning_agent,
+                message=chat_request.message,
+                conversation_history=history[:-1],
+                service=service,
+                runtime_context=runtime_context,
+                enable_thinking=chat_request.enable_thinking,
+            )
+            tools_ms = (time.perf_counter() - _tools_start) * 1000
+            tool_call_records = loop_result.tool_calls
+            tool_calls_meta = [rec.to_dict() for rec in tool_call_records]
+            for rec_dict in tool_calls_meta:
+                yield _sse_event("tool_result", rec_dict)
+
+            mcp_tool_context = _records_to_context_string(
+                tool_call_records, mode2=(serving_mode == 2)
+            )
+            tool_struct = _tool_records_to_back_compat(tool_call_records)
+
+            tools_meta: dict[str, Any] = {}
+            if telemetry_struct:
+                tools_meta["telemetry"] = telemetry_struct
+            for key in ("similar", "dependencies", "logs"):
+                if tool_struct.get(key):
+                    tools_meta[key] = tool_struct[key]
+            any_tool_ran = any(rec.status == "ok" for rec in tool_call_records)
+            has_tool_data = bool(tools_meta) or any_tool_ran
+            in_domain = service is not None or has_tool_data
+
+            # ── LLM stage ────────────────────────────────────────────────────
+            ttft_ms: Optional[float] = None
+            _llm_start = time.perf_counter()
+            if can_stream:
+                assembled = assemble_mode2_chat_prompt(
+                    base_system=reasoning_agent.get_system_prompt("chat"),
+                    message=chat_request.message,
+                    history=history[:-1],
+                    volatile_blocks=[
+                        selection_context,
+                        telemetry_context,
+                        mcp_tool_context,
+                        runtime_context,
+                    ],
+                    in_scope_directive=(
+                        build_in_scope_directive(service) if in_domain else ""
+                    ),
+                )
+                content = ""
+                usage: Optional[dict[str, Any]] = None
+                async for event in stream_fn(
+                    prompt=assembled.user_prompt,
+                    max_tokens=2048,
+                    temperature=0.5,
+                    enable_thinking=chat_request.enable_thinking,
+                    system_prompt=assembled.system_prompt,
+                ):
+                    if event.get("type") == "delta":
+                        yield _sse_event("delta", {"text": event.get("text", "")})
+                    elif event.get("type") == "done":
+                        content = event.get("content", "")
+                        ttft_ms = event.get("ttft_ms")
+                        usage = event.get("usage")
+                tokens_used = (
+                    usage.get("completion_tokens") if isinstance(usage, dict) else None
+                )
+                model_used: Optional[str] = None
+                try:
+                    name_fn = getattr(model_router, "_reasoning_model_name", None)
+                    model_used = name_fn() if callable(name_fn) else None
+                except Exception:  # noqa: BLE001
+                    model_used = None
+                metadata: dict[str, Any] = {
+                    "mode": "chat",
+                    "model_used": model_used,
+                    "tokens_used": tokens_used,
+                }
+            else:
+                # Mode 1 fallback: one blocking completion, same event contract
+                # (single big delta). Prompt assembly matches the blocking
+                # endpoint's Mode 1 path exactly.
+                full_context = runtime_context
+                if mcp_tool_context:
+                    full_context = mcp_tool_context + "\n\n" + full_context
+                if telemetry_context:
+                    full_context = telemetry_context + "\n\n" + full_context
+                if selection_context:
+                    full_context = selection_context + "\n\n" + full_context
+                agent_response = await reasoning_agent.chat(
+                    message=chat_request.message,
+                    conversation_history=history[:-1],
+                    runtime_context=full_context,
+                    enable_thinking=chat_request.enable_thinking,
+                )
+                content = agent_response.content
+                metadata = dict(agent_response.metadata or {})
+                metadata.setdefault("mode", "chat")
+                if content:
+                    yield _sse_event("delta", {"text": content})
+
+            if in_domain and _looks_like_refusal(content):
+                # Streamed text can't be un-said; done.message.content carries
+                # the synthesized answer and clients render it as final.
+                logger.info(
+                    "Streamed chat reply looked like a refusal for an in-domain "
+                    "query; done event carries the synthesized answer"
+                )
+                content = _synthesize_answer_from_data(
+                    service, telemetry_struct, tool_struct
+                )
+                yield _sse_event("notice", {"kind": "refusal_replaced"})
+            llm_ms = (time.perf_counter() - _llm_start) * 1000
+
+            confidence = (
+                _compute_chat_confidence(telemetry_struct, tool_struct)
+                if in_domain
+                else None
+            )
+            if tools_meta:
+                metadata["tools"] = tools_meta
+            metadata["tool_calls"] = tool_calls_meta
+            metadata["timings"] = {
+                "context_build_ms": round(context_build_ms, 2),
+                "tools_ms": round(tools_ms, 2),
+                "llm_ms": round(llm_ms, 2),
+                "total_ms": round((time.perf_counter() - turn_start) * 1000, 2),
+                # Streaming-only field (None on the fallback path).
+                "ttft_ms": round(ttft_ms, 2) if ttft_ms is not None else None,
+            }
+            if selection_context:
+                metadata["selection_applied"] = True
+
+            response = await _finalize_chat_turn(
+                request,
+                user_message_text=chat_request.message,
+                conversation=conversation,
+                conversation_id=conversation_id,
+                user=user,
+                service=service,
+                content=content,
+                confidence=confidence,
+                metadata=metadata,
+                tool_struct=tool_struct,
+                has_tool_data=has_tool_data,
+            )
+            yield _sse_event("done", response.model_dump(mode="json"))
+
+        except Exception as exc:  # noqa: BLE001 - stream already started: no HTTP status left
+            logger.error(f"Streaming chat failed: {exc}")
+            yield _sse_event("error", {"detail": str(exc)})
+
+    return StreamingResponse(
+        event_source(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            # Belt-and-braces for proxies that buffer by default (Caddy
+            # streams SSE natively; nginx-style buffering honors this hint).
+            "X-Accel-Buffering": "no",
+        },
     )
 
 

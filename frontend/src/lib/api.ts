@@ -605,6 +605,147 @@ async function request<T>(
   return response.json();
 }
 
+// ---------------------------------------------------------------------------
+// Chat streaming (Mode 2 plan, Phase 4): SSE over fetch — no new dependency.
+// ---------------------------------------------------------------------------
+
+/** `meta` event of POST /chat/stream. */
+export interface ChatStreamMeta {
+  conversation_id: string;
+  /** False on a Mode 1 backend: the answer then arrives as ONE delta. */
+  streaming: boolean;
+  mode: number;
+}
+
+/** One executed tool call, same shape as `metadata.tool_calls` entries. */
+export type ChatStreamToolResult = Record<string, unknown>;
+
+export interface ChatStreamCallbacks {
+  onMeta?: (meta: ChatStreamMeta) => void;
+  onToolResult?: (record: ChatStreamToolResult) => void;
+  onDelta?: (text: string) => void;
+  /** e.g. {kind: "refusal_replaced"} — done.message.content superseded the stream. */
+  onNotice?: (notice: { kind: string }) => void;
+  /**
+   * Fired last on success with the full ChatResponse — identical contract to
+   * api.chat.send. `done.message.content` is ALWAYS authoritative; replace
+   * any streamed text with it.
+   */
+  onDone: (response: ChatResponse) => void;
+  onError?: (detail: string) => void;
+}
+
+/**
+ * POST /chat/stream and dispatch its Server-Sent Events to typed callbacks.
+ *
+ * Works against BOTH modes (a Mode 1 backend emits meta -> tool_result* ->
+ * one delta -> done), so callers can probe /health/serving for
+ * features.streaming purely as a UX decision, not a correctness one.
+ * Resolves after `done`/`error`; rejects on transport/HTTP failures.
+ */
+async function streamChat(
+  req: ChatRequest,
+  callbacks: ChatStreamCallbacks,
+  timeoutMs: number = 300_000
+): Promise<void> {
+  const url = `${API_BASE_URL}/chat/stream`;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: 'POST',
+      credentials: 'same-origin',
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'text/event-stream',
+      },
+      body: JSON.stringify(req),
+    });
+  } catch (err) {
+    clearTimeout(timer);
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      throw new ApiError(
+        `Stream timed out after ${Math.round(timeoutMs / 1000)}s. The server may be busy or unreachable.`,
+        0
+      );
+    }
+    throw new ApiError(err instanceof Error ? err.message : 'Network request failed', 0);
+  }
+
+  try {
+    if (!response.ok) {
+      let errorMessage = `HTTP ${response.status}`;
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.detail || errorData.message || errorMessage;
+      } catch {
+        // Ignore JSON parse errors
+      }
+      if (response.status === 401) {
+        handleUnauthorized();
+      }
+      throw new ApiError(errorMessage, response.status);
+    }
+    if (!response.body) {
+      throw new ApiError('Streaming not supported by this browser/transport', 0);
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    const dispatch = (frame: string): void => {
+      let eventName = '';
+      let dataLine = '';
+      for (const line of frame.split(/\r?\n/)) {
+        if (line.startsWith('event:')) eventName = line.slice(6).trim();
+        else if (line.startsWith('data:')) dataLine += line.slice(5).trim();
+      }
+      if (!eventName || !dataLine) return;
+      switch (eventName) {
+        case 'meta':
+          callbacks.onMeta?.(JSON.parse(dataLine) as ChatStreamMeta);
+          break;
+        case 'tool_result':
+          callbacks.onToolResult?.(JSON.parse(dataLine) as ChatStreamToolResult);
+          break;
+        case 'delta':
+          callbacks.onDelta?.((JSON.parse(dataLine) as { text: string }).text);
+          break;
+        case 'notice':
+          callbacks.onNotice?.(JSON.parse(dataLine) as { kind: string });
+          break;
+        case 'done':
+          callbacks.onDone(JSON.parse(dataLine) as ChatResponse);
+          break;
+        case 'error':
+          callbacks.onError?.((JSON.parse(dataLine) as { detail: string }).detail);
+          break;
+        default:
+          break; // Forward-compatible: ignore unknown events.
+      }
+    };
+
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      let sep = buffer.indexOf('\n\n');
+      while (sep !== -1) {
+        dispatch(buffer.slice(0, sep));
+        buffer = buffer.slice(sep + 2);
+        sep = buffer.indexOf('\n\n');
+      }
+    }
+    if (buffer.trim()) dispatch(buffer);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 // API Client
 
 export const api = {
@@ -622,6 +763,14 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(req),
       }),
+
+    /**
+     * SSE streaming variant of send (Phase 4). UI adoption is deferred until
+     * the live SSE-through-Caddy pass; the contract is stable either way —
+     * onDone delivers the same ChatResponse send() returns.
+     */
+    stream: (req: ChatRequest, callbacks: ChatStreamCallbacks, timeoutMs?: number) =>
+      streamChat(req, callbacks, timeoutMs),
 
     getConversation: (id: string) =>
       request<ConversationHistory>(`/chat/conversations/${id}`),

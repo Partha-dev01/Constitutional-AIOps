@@ -24,6 +24,7 @@ from typing import Any, Optional
 
 from src.agents.base_agent import AgentResponse, AgentRole, BaseAgent
 from src.agents.model_router import ModelRouter
+from src.agents.schemas.annotation import ANNOTATION_JSON_SCHEMA
 
 logger = logging.getLogger(__name__)
 
@@ -272,6 +273,10 @@ class FastAnnotator(BaseAgent):
                 max_tokens=2048,  # No thinking overhead with instruct model
                 temperature=0.0,  # Deterministic classification (greedy decoding)
                 system_prompt=self.get_system_prompt(),  # Include system prompt for context
+                # Phase 5: schema-constrained decode. Router applies it ONLY
+                # when the serving profile supports guided JSON (Mode 2);
+                # Mode 1 requests are byte-identical to before.
+                guided_schema=ANNOTATION_JSON_SCHEMA,
             )
 
             # Parse response - ModelRouter already fixes thinking mode

@@ -29,6 +29,7 @@ from typing import Any, Optional
 
 from src.agents.base_agent import AgentResponse, AgentRole, BaseAgent
 from src.agents.model_router import ModelRouter
+from src.agents.schemas.rca import RCA_JSON_SCHEMA
 
 logger = logging.getLogger(__name__)
 
@@ -401,8 +402,16 @@ class ReasoningAgent(BaseAgent):
         runtime_context = input_data.get("runtime_context")
         enable_thinking = input_data.get("enable_thinking", False)
 
-        # Build prompt with runtime context (returns user_prompt, system_prompt)
-        user_prompt, system_prompt = self._build_prompt(mode, query, context, runtime_context)
+        # Mode 2 stable-prefix path (Phase 3): the chat route may supply the
+        # fully assembled (user_prompt, system_prompt) pair — see
+        # src/agents/prompt_layout.py. Absent (Mode 1 and every existing call
+        # site), prompt construction is byte-identical to before.
+        override = input_data.get("prompt_override")
+        if isinstance(override, (tuple, list)) and len(override) == 2:
+            user_prompt, system_prompt = str(override[0]), str(override[1])
+        else:
+            # Build prompt with runtime context (returns user_prompt, system_prompt)
+            user_prompt, system_prompt = self._build_prompt(mode, query, context, runtime_context)
 
         # Track timing for activity logging
         start_time = time.perf_counter()
@@ -417,6 +426,10 @@ class ReasoningAgent(BaseAgent):
                 temperature=temp,
                 enable_thinking=enable_thinking,
                 system_prompt=system_prompt,
+                # Phase 5: RCA answers are schema-constrained under Mode 2
+                # guided decoding (router gates on the serving profile; Mode 1
+                # requests unchanged). Chat/planning stay free-form.
+                guided_schema=RCA_JSON_SCHEMA if mode == "rca" else None,
             )
 
             content = response["choices"][0]["message"]["content"]
