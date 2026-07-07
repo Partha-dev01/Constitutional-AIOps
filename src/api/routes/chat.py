@@ -1572,6 +1572,11 @@ async def chat(
         # service was named, or a tool already returned data this turn.
         in_domain = service is not None or has_tool_data
 
+        # Ground the answer: once evidence exists for this turn, the model must
+        # answer from it — not narrate tool plans (see _ANSWER_DIRECTIVE).
+        if has_tool_data:
+            full_context = full_context + "\n\n" + _ANSWER_DIRECTIVE
+
         _llm_start = time.perf_counter()
         if serving_mode == 2:
             # Phase 3 (Mode 2): stable-prefix layout — static system prompt,
@@ -1606,10 +1611,12 @@ async def chat(
                 }
             )
             content = agent_response.content
-            if in_domain and _looks_like_refusal(content):
+            if in_domain and (
+                _looks_like_refusal(content) or _looks_like_nonanswer(content)
+            ):
                 logger.info(
-                    "Mode 2 chat reply looked like a refusal despite the "
-                    "pre-call directive; synthesizing from gathered data"
+                    "Mode 2 chat reply looked like a refusal/non-answer despite "
+                    "the pre-call directive; synthesizing from gathered data"
                 )
                 content = _synthesize_answer_from_data(
                     service, telemetry_struct, tool_struct
@@ -1626,16 +1633,24 @@ async def chat(
 
             content = agent_response.content
 
-            # D1(b): deterministic over-refusal guard. If the model produced a
-            # refusal-shaped reply for an in-domain query, re-issue ONCE with a
-            # forceful directive; if it STILL refuses, synthesize an answer
-            # from gathered data.
-            if in_domain and _looks_like_refusal(content):
-                logger.info("Chat reply looked like a refusal for an in-domain query; re-issuing")
+            # D1(b): deterministic over-refusal guard, extended (s29) to
+            # planning-speak NON-answers ("I will use the find_similar tool…").
+            # If the model produced a refusal- or non-answer-shaped reply for an
+            # in-domain query, re-issue ONCE with a forceful directive; if it
+            # STILL fails, synthesize an answer from gathered data.
+            if in_domain and (
+                _looks_like_refusal(content) or _looks_like_nonanswer(content)
+            ):
+                logger.info(
+                    "Chat reply looked like a refusal/non-answer for an "
+                    "in-domain query; re-issuing"
+                )
                 forced_context = full_context + (
                     "\n\n## IMPORTANT\n"
                     f"This request concerns the monitored service '{service or 'this system'}' "
-                    "and IS in scope. Answer it fully using the data above. Do NOT decline."
+                    "and IS in scope. Answer it fully using the data above. Do NOT decline. "
+                    "Every tool for this turn has ALREADY been executed — never reply "
+                    "that you WILL run, call, or use a tool; give the final answer now."
                 )
                 try:
                     retry_response = await reasoning_agent.chat(
@@ -1644,11 +1659,14 @@ async def chat(
                         runtime_context=forced_context,
                         enable_thinking=chat_request.enable_thinking,
                     )
-                    if not _looks_like_refusal(retry_response.content):
+                    if not (
+                        _looks_like_refusal(retry_response.content)
+                        or _looks_like_nonanswer(retry_response.content)
+                    ):
                         agent_response = retry_response
                         content = retry_response.content
                     else:
-                        # Still refusing: synthesize a concise answer from gathered data.
+                        # Still refusing / narrating: synthesize from gathered data.
                         content = _synthesize_answer_from_data(
                             service, telemetry_struct, tool_struct
                         )
@@ -1887,6 +1905,8 @@ async def chat_stream(
                     full_context = telemetry_context + "\n\n" + full_context
                 if selection_context:
                     full_context = selection_context + "\n\n" + full_context
+                if has_tool_data:
+                    full_context = full_context + "\n\n" + _ANSWER_DIRECTIVE
                 agent_response = await reasoning_agent.chat(
                     message=chat_request.message,
                     conversation_history=history[:-1],
@@ -1899,12 +1919,14 @@ async def chat_stream(
                 if content:
                     yield _sse_event("delta", {"text": content})
 
-            if in_domain and _looks_like_refusal(content):
+            if in_domain and (
+                _looks_like_refusal(content) or _looks_like_nonanswer(content)
+            ):
                 # Streamed text can't be un-said; done.message.content carries
                 # the synthesized answer and clients render it as final.
                 logger.info(
-                    "Streamed chat reply looked like a refusal for an in-domain "
-                    "query; done event carries the synthesized answer"
+                    "Streamed chat reply looked like a refusal/non-answer for an "
+                    "in-domain query; done event carries the synthesized answer"
                 )
                 content = _synthesize_answer_from_data(
                     service, telemetry_struct, tool_struct
@@ -2373,6 +2395,39 @@ def _looks_like_refusal(text: Optional[str]) -> bool:
     if len(lowered) > 400:
         return False
     return any(marker in lowered for marker in _REFUSAL_MARKERS)
+
+
+# Appended to the LLM context whenever tools/telemetry gathered real data this
+# turn: the model must ANSWER from that data, never narrate intentions. This is
+# the s29 chat-quality fix for replies like "I will use the find_similar tool
+# to look for similar past incidents." shipping as the final answer.
+_ANSWER_DIRECTIVE = (
+    "## Answer directive\n"
+    "Every tool for this turn has ALREADY been executed; the results are shown "
+    "above. Do NOT say you will run, call, or use a tool — that already "
+    "happened. Answer the user's request directly and completely from the data "
+    "above. For an incident investigation: state the most likely root cause "
+    "(or your best hypothesis plus what evidence is missing), cite the "
+    "specific log/telemetry/memory evidence, and recommend concrete "
+    "remediation steps."
+)
+
+
+def _looks_like_nonanswer(text: Optional[str]) -> bool:
+    """Heuristic: a short planning-speak reply that never actually answers.
+
+    Catches replies like "I will use the find_similar tool to look for similar
+    past incidents." — the model narrates an intention even though the tools
+    have already run by the time it speaks. Requires BOTH a short reply and a
+    narration opener so a long, data-rich answer that merely contains "I will"
+    mid-text is never misclassified. Empty content counts as a non-answer.
+    """
+    if not text or not text.strip():
+        return True
+    lowered = text.strip().lower()
+    if len(lowered) > 300:
+        return False
+    return any(lowered.startswith(prefix) for prefix in _NARRATION_PREFIXES)
 
 
 def _compute_chat_confidence(
