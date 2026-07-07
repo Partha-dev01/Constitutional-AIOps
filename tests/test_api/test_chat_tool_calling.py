@@ -156,6 +156,46 @@ def test_looks_like_nonanswer_accepts_substantive_answers() -> None:
     )
 
 
+def test_looks_like_nonanswer_flags_tool_parameter_deflection() -> None:
+    """The second live s29 specimen: the model answers ABOUT the tooling."""
+    assert chat_module._looks_like_nonanswer(
+        "I cannot complete the request as the find_similar tool requires a "
+        "parameter that was not provided. Please provide the necessary "
+        "parameter to proceed."
+    )
+    assert chat_module._looks_like_nonanswer(
+        "The analyze_logs tool requires a parameter. Please provide the service name."
+    )
+
+
+def test_looks_like_nonanswer_flags_terse_dead_ends() -> None:
+    """Accurate-but-useless one-liners must trigger the retry/synthesis path."""
+    assert chat_module._looks_like_nonanswer("No similar incidents found in memory.")
+    # A compact but complete sentence answer stays acceptable.
+    assert not chat_module._looks_like_nonanswer(
+        "nextcloud is healthy: no errors in the last 30 minutes of logs."
+    )
+
+
+def test_extract_actions_skips_third_person_suggests_prose() -> None:
+    """'…this suggests that…' is analysis, not a recommendation (s29 live)."""
+    prose = (
+        "The episode does not have any associated incidents or telemetry data "
+        "in the current system state. This suggests that while there are "
+        "warnings related to FlashInfer, there is no concrete evidence of impact."
+    )
+    assert chat_module._extract_actions(prose) is None
+    gerund = (
+        "No similar past incidents were found, suggesting this may be a "
+        "first-time occurrence or a unique failure scenario."
+    )
+    assert chat_module._extract_actions(gerund) is None
+    # Real recommendations still extract.
+    real = "I suggest restarting the nextcloud container to clear the fault."
+    actions = chat_module._extract_actions(real)
+    assert actions and "restarting the nextcloud container" in actions[0]
+
+
 # ---------------------------------------------------------------------------
 # Loop: deterministic routing + needs_param via the real loop function
 # ---------------------------------------------------------------------------
