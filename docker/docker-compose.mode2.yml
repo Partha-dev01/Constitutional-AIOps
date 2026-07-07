@@ -1,0 +1,173 @@
+# Constitutional AIOps - Mode 2 Overlay (Mode 2 plan, Phase 1: swap rails)
+#
+# Layers ON TOP of the frozen Mode 1 production stack; the Mode 1 files
+# (docker-compose.yml, docker/docker-compose.production.yml) are never edited.
+# Applying / omitting this overlay is the entire swap story:
+#
+# # Mode 1 (exactly as today — the frozen artifact)
+# docker compose -f docker-compose.yml -f docker/docker-compose.production.yml up -d
+# # Mode 2
+# docker compose -f docker-compose.yml -f docker/docker-compose.production.yml \
+#   -f docker/docker-compose.mode2.yml up -d
+#
+# (On the deployment host both commands additionally take
+#  `--env-file .env.production`; scripts/mode-swap.sh wraps them and also
+#  stops the other mode's engine containers so the GPU is freed first.)
+#
+# Phase 1 keeps llm-mode2 as a CLONE of the Mode 1 qwen3-14b service (same
+# image pin, same flags) so the swap/rollback rails can be verified with ZERO
+# engine-behavior change. Phase 2 upgrades the engine in THIS file only.
+#
+# Zero data loss by construction: this overlay adds no volumes and touches no
+# stateful service — Neo4j/SQLite/Loki/Prometheus/Tempo/Grafana keep their
+# /mnt/data bind mounts from the production file in both modes.
+
+services:
+  # ==========================================================================
+  # Mode 1 engines — excluded while this overlay is active
+  # ==========================================================================
+  # `profiles: ["mode1"]` is applied INSIDE this overlay only. Compose omits
+  # services whose profiles are not activated, so with the overlay in the file
+  # list (and no `--profile mode1`) qwen3-4b/qwen3-14b are not started; without
+  # the overlay the production file is unchanged and they run exactly as today.
+  qwen3-4b:
+    profiles: ["mode1"]
+  qwen3-14b:
+    profiles: ["mode1"]
+
+  # ==========================================================================
+  # Mode 2 LLM engine (single container serving both agent roles in Phase 1)
+  # ==========================================================================
+  llm-mode2:
+    # Phase 1: same image as Mode 1. Phase 2 pins vllm/vllm-openai:v0.24.0
+    # (exact pin, never `latest`) in this line only.
+    image: vllm/vllm-openai:v0.9.2
+    container_name: aiops-llm-mode2
+    runtime: nvidia
+    ipc: host  # required by vLLM for shared memory
+    ports:
+      - "127.0.0.1:8001:8001"  # internal only; backend reaches via service name
+    volumes:
+      - /mnt/models:/models
+      - /mnt/hf-cache:/root/.cache/huggingface
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=0
+      - VLLM_LOGGING_LEVEL=INFO
+      - HF_HOME=/root/.cache/huggingface
+      - VLLM_ENABLE_V1_MULTIPROCESSING=0
+    # Phase 1 command = clone of the Mode 1 qwen3-14b definition
+    # (docker/docker-compose.production.yml), so golden-set parity across the
+    # swap proves the rails without any serving change. Kept at the Mode 1
+    # 0.55 GPU split even though the 4B is not running (headroom is free —
+    # Phase 2 retunes it deliberately, with measurements).
+    #
+    # ── Phase 2 flip (do AFTER the Phase 1 swap gate passes live) ──────────
+    # 1. change the image pin above to:  vllm/vllm-openai:v0.24.0
+    # 2. swap the active `command:` below for this prepared block:
+    #
+    # command: >
+    #   --model Qwen/Qwen3-14B-AWQ
+    #   --port 8001
+    #   --host 0.0.0.0
+    #   --gpu-memory-utilization 0.85
+    #   --max-model-len 16384
+    #   --max-num-seqs 8
+    #   --quantization awq_marlin
+    #   --kv-cache-dtype fp8_e4m3
+    #   --enable-prefix-caching
+    #   --scheduling-policy priority
+    #   --seed 42
+    #   --reasoning-parser qwen3
+    #   --served-model-name qwen3-14b
+    #
+    #   (no --enforce-eager => CUDA graph capture ON; 0.85 util is the
+    #   single-engine retune — nothing else shares the L4 in Mode 2; FP8 KV
+    #   makes 16K ctx ≈ 1.3 GB. Golden v1+v2 must pass after the flip — the
+    #   v0.9.2→v0.24 jump crosses reasoning-parser/chat-template behavior
+    #   boundaries, so verify enable_thinking suppression still holds.)
+    # Phase 5 (structured decoding / native tool calls) additionally adds:
+    #   --enable-auto-tool-choice --tool-call-parser hermes
+    # Phase 6 (model swap, only if the mini-bench decision rules say so):
+    #   - repoint --model / --served-model-name (keep served names COLON-FREE:
+    #     ModelRouter's ":" heuristic gates enable_thinking suppression)
+    command: >
+      --model Qwen/Qwen3-14B-AWQ
+      --port 8001
+      --host 0.0.0.0
+      --gpu-memory-utilization 0.55
+      --max-model-len 8192
+      --quantization awq_marlin
+      --seed 42
+      --reasoning-parser qwen3
+      --served-model-name qwen3-14b
+      --enforce-eager
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    networks:
+      - aiops-network
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8001/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 180s  # 14B takes longer to warm up
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+
+  # ==========================================================================
+  # Backend — Mode 2 wiring (env additions + depends_on repoint)
+  # ==========================================================================
+  backend:
+    environment:
+      # AIOPS_MODE=2 flips the ServingProfile feature flags ON (streaming /
+      # native tools / guided JSON / priority). Phase 1 only *reports* them
+      # via GET /api/v1/health/serving; later phases gate real code paths on
+      # them. Unset (Mode 1) keeps every code path byte-identical — the same
+      # default-off convention as CHAT_AGENTIC_TOOL_LOOP below/above.
+      - AIOPS_MODE=2
+      # Phase 1 single-engine skeleton: both agent roles served by llm-mode2
+      # (fast_url == reasoning_url => ServingProfile.single_engine=true).
+      # Served name stays colon-free so ModelRouter keeps injecting
+      # chat_template_kwargs.enable_thinking=false (vLLM thinking suppression).
+      - FAST_AGENT_URL=http://llm-mode2:8001/v1
+      - REASONING_AGENT_URL=http://llm-mode2:8001/v1
+      - FAST_AGENT_MODEL=qwen3-14b
+      - REASONING_AGENT_MODEL=qwen3-14b
+      # Phase 5 (structured decoding / native tool calls) will additionally set:
+      #   - AIOPS_NATIVE_TOOL_CALLING=true
+      #   - CHAT_AGENTIC_TOOL_LOOP=true
+    # !override (same YAML merge tag the production file uses on `ports`)
+    # REPLACES the merged Mode 1 depends_on wholesale: the inherited entries
+    # reference qwen3-4b/qwen3-14b, which are profiled-out above and would
+    # otherwise fail `docker compose config` with "undefined service".
+    # loki/prometheus/neo4j conditions are restated from the base file.
+    depends_on: !override
+      llm-mode2:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+      loki:
+        condition: service_healthy
+      prometheus:
+        condition: service_healthy
+
+  # ==========================================================================
+  # Prometheus — Mode 2 config copy (adds the vllm-mode2 scrape job)
+  # ==========================================================================
+  # Compose merges volume entries by container target, so this replaces ONLY
+  # the /etc/prometheus/prometheus.yml mount; the /mnt/data/prometheus data
+  # mount from the production file is untouched (same TSDB in both modes).
+  # prometheus.mode2.yml = prometheus.yml + the llm-mode2 vllm:* scrape job
+  # (prefix-cache hit-rate is a Phase 2/3 verification-gate metric).
+  prometheus:
+    volumes:
+      - ./docker/configs/prometheus.mode2.yml:/etc/prometheus/prometheus.yml:ro

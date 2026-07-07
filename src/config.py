@@ -9,10 +9,13 @@ Architecture: Simultaneous Dual-Model (Qwen3-4B + Qwen3-14B on 24GB VRAM)
 
 import os
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from dotenv import load_dotenv
 load_dotenv()  # Load .env before any os.getenv() calls in dataclass defaults
+
+if TYPE_CHECKING:  # import for type hints only — see ServingConfig note below
+    from src.agents.serving_profile import ServingProfile
 
 
 def _require_password(env_var: str, dev_default: str) -> str:
@@ -207,6 +210,49 @@ class ConstitutionalConfig:
     max_concurrent_actions: int = 3
 
 
+def _parse_serving_mode() -> int:
+    """Parse ``AIOPS_MODE`` (Mode 2 plan, Phase 1).
+
+    Unset / empty / anything other than ``"2"`` resolves to Mode 1, so a bare
+    deploy is byte-identical to today. Kept in lockstep with the CANONICAL
+    resolver ``src.agents.serving_profile.resolve_serving_profile()`` — that
+    module is deliberately import-free of this one (no circular import), so
+    the two-line mode parse is mirrored here.
+    """
+    return 2 if (os.getenv("AIOPS_MODE") or "").strip() == "2" else 1
+
+
+@dataclass
+class ServingConfig:
+    """Serving-mode selection (Mode 2 plan, Phase 1) — purely ADDITIVE.
+
+    Mode 1 (``AIOPS_MODE`` unset/empty/``1``/unrecognized) is the frozen
+    dual-engine paper artifact; Mode 2 (``AIOPS_MODE=2``) is the modernized
+    stack applied via ``docker/docker-compose.mode2.yml``.
+
+    NOTE: like every other section, this is resolved once at import time.
+    Runtime consumers that must observe the *current* environment (the
+    ``ModelRouter`` constructor, ``GET /api/v1/health/serving``, tests) call
+    ``resolve_serving_profile()`` directly instead — see
+    :meth:`resolve_profile`.
+    """
+
+    # Resolved serving mode: 1 (default, frozen artifact) or 2.
+    mode: int = field(default_factory=_parse_serving_mode)
+
+    def resolve_profile(self) -> "ServingProfile":
+        """Return the fully-resolved :class:`ServingProfile` from current env.
+
+        Lazy import: ``src.agents.serving_profile`` is pure stdlib, but going
+        through ``src.agents`` at module-import time would pull the whole
+        agents package (which imports this module) — resolving lazily keeps
+        the import graph acyclic.
+        """
+        from src.agents.serving_profile import resolve_serving_profile
+
+        return resolve_serving_profile()
+
+
 @dataclass
 class AppConfig:
     """Application-wide configuration."""
@@ -242,6 +288,7 @@ class Config:
     constitutional: ConstitutionalConfig = field(default_factory=ConstitutionalConfig)
     memory: MemoryConfig = field(default_factory=MemoryConfig)
     performance: PerformanceConfig = field(default_factory=PerformanceConfig)
+    serving: ServingConfig = field(default_factory=ServingConfig)
     app: AppConfig = field(default_factory=AppConfig)
     
     @classmethod
@@ -263,6 +310,7 @@ __all__ = [
     "ConstitutionalConfig",
     "MemoryConfig",
     "PerformanceConfig",
+    "ServingConfig",
     "AppConfig",
     "config",
 ]

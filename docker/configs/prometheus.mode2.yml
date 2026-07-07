@@ -1,0 +1,64 @@
+# Constitutional AIOps - Prometheus Configuration (Mode 2 overlay copy)
+#
+# Identical to prometheus.yml (the Mode 1 config, which stays frozen) plus one
+# scrape job for the Mode 2 vLLM engine. docker-compose.mode2.yml mounts this
+# file over /etc/prometheus/prometheus.yml; without the overlay, Mode 1 keeps
+# using prometheus.yml untouched.
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Constitutional AIOps Backend
+  - job_name: 'aiops-backend'
+    static_configs:
+      - targets: ['backend:8000']
+    metrics_path: /metrics
+
+  # LLM Inference Servers
+  - job_name: 'llama-swap'
+    static_configs:
+      - targets: ['llama-swap:8080']
+    metrics_path: /metrics
+
+  # Mode 2 vLLM engine — exposes vllm:* series (prefix-cache hit/query
+  # counters, running/waiting queues, token throughput). The Phase 2/3
+  # verification gates read vllm:prefix_cache_hits vs _queries from here.
+  - job_name: 'vllm-mode2'
+    static_configs:
+      - targets: ['llm-mode2:8001']
+    metrics_path: /metrics
+
+  # Neo4j
+  - job_name: 'neo4j'
+    static_configs:
+      - targets: ['neo4j:2004']
+    metrics_path: /metrics
+
+  # OpenTelemetry Collector — internal self-telemetry (health counters)
+  - job_name: 'otel-collector'
+    static_configs:
+      - targets: ['otel-collector:8888']
+
+  # OpenTelemetry Collector — app/pipeline metrics exported via the
+  # Prometheus exporter (namespace "aiops", otel-collector.yaml:51-53).
+  # Port 8889 is the exporter address; 8888 is only the collector's own
+  # health telemetry.  Without this job aiops_* series are never ingested.
+  - job_name: 'otel-collector-app'
+    static_configs:
+      - targets: ['otel-collector:8889']
+
+  # Grafana
+  - job_name: 'grafana'
+    static_configs:
+      - targets: ['grafana:3000']
+
+# Alerting rules (to be expanded)
+rule_files:
+  # - /etc/prometheus/rules/*.yml

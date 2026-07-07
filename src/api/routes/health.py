@@ -262,6 +262,80 @@ async def agent_health(request: Request) -> dict[str, Any]:
     }
 
 
+@router.get(
+    "/health/serving",
+    summary="Serving Mode Health",
+    description=(
+        "Reports which serving mode is live (Mode 1 = frozen dual-engine "
+        "artifact, Mode 2 = modernized stack), the engine feature flags, and "
+        "the engine endpoints with best-effort live probes."
+    ),
+)
+async def serving_health(request: Request) -> dict[str, Any]:
+    """Serving-mode health check (Mode 2 plan, Phase 1).
+
+    This is the "which mode is live" endpoint the swap runbook checks after
+    every ``scripts/mode-swap.sh`` swap. The mode/features/engine block comes
+    from the resolved :class:`~src.agents.serving_profile.ServingProfile`;
+    the probe fields are best-effort (reusing the existing agent health-check
+    helpers) and degrade to ``null`` — this endpoint never returns a 500 just
+    because an engine is down.
+    """
+    from src.agents.serving_profile import ServingProfile, resolve_serving_profile
+
+    # Prefer the live router's profile (what the app is actually serving
+    # with, resolved once at startup); fall back to a fresh env resolution.
+    profile = None
+    model_router = getattr(request.app.state, "model_router", None)
+    if model_router is not None:
+        candidate = getattr(model_router, "profile", None)
+        if isinstance(candidate, ServingProfile):
+            profile = candidate
+    if profile is None:
+        profile = resolve_serving_profile()
+
+    engine: dict[str, Any] = {
+        "fast_url": profile.fast_url,
+        "reasoning_url": profile.reasoning_url,
+        "fast_model": profile.fast_model,
+        "reasoning_model": profile.reasoning_model,
+        # Best-effort probe results; null = could not probe (no router yet /
+        # probe raised), boolean = probe outcome.
+        "fast_agent_healthy": None,
+        "reasoning_agent_healthy": None,
+        "fast_agent_latency_ms": None,
+        "reasoning_agent_latency_ms": None,
+    }
+
+    if model_router is not None:
+        try:
+            fast = await _check_fast_agent(request)
+            if fast.error is None:
+                engine["fast_agent_healthy"] = fast.healthy
+                engine["fast_agent_latency_ms"] = fast.latency_ms
+        except Exception as e:  # noqa: BLE001 — probes must never 500 this route
+            logger.warning(f"Serving-health fast-agent probe failed: {e}")
+        try:
+            reasoning = await _check_reasoning_agent(request)
+            if reasoning.error is None:
+                engine["reasoning_agent_healthy"] = reasoning.healthy
+                engine["reasoning_agent_latency_ms"] = reasoning.latency_ms
+        except Exception as e:  # noqa: BLE001
+            logger.warning(f"Serving-health reasoning-agent probe failed: {e}")
+
+    return {
+        "mode": profile.mode,
+        "single_engine": profile.single_engine,
+        "features": {
+            "streaming": profile.supports_streaming,
+            "native_tools": profile.supports_native_tools,
+            "guided_json": profile.supports_guided_json,
+            "priority": profile.supports_priority,
+        },
+        "engine": engine,
+    }
+
+
 # Helper functions for health checks
 
 # Floor (ms) applied to a reachable agent's probe latency. A cached / very fast
