@@ -339,6 +339,33 @@ _KEYWORD_TOOL_HINTS: tuple[tuple[str, str], ...] = (
     ("container", "list_containers"),
 )
 
+# Investigation intent → force the full evidence bundle. The flagship incident
+# hand-off prompt ("Investigate INC-… Diagnose the root cause and recommend
+# remediation for <service>.", ActiveIncidentsPanel) matches NONE of the
+# single-tool hints above, so it previously reached the model with zero
+# gathered evidence and the reply degenerated into planning-speak.
+_INVESTIGATION_KEYWORDS: tuple[str, ...] = (
+    "investigate",
+    "diagnose",
+    "diagnosis",
+    "root cause",
+    "root-cause",
+    "remediat",  # remediate / remediation
+    "troubleshoot",
+    "what went wrong",
+    "what is wrong",
+    "what's wrong",
+)
+
+# Ordered: memory first (mirrors the hint order above), then live logs, then
+# blast radius. All three are READ tools; the service-requiring ones are
+# skipped when no service resolves (find_similar runs regardless).
+_INVESTIGATION_BUNDLE: tuple[str, ...] = (
+    "find_similar",
+    "analyze_logs",
+    "get_dependencies",
+)
+
 
 def detect_named_tools(message: str) -> list[str]:
     """Return tool names the user explicitly referenced by name, in order.
@@ -440,6 +467,17 @@ def plan_forced_tool_calls(
         if needs_service and not service:
             continue
         _add(name)
+
+    # 3. Investigation intent (the Incidents-page hand-off and free-form
+    #    "diagnose/root cause/remediation" asks): force the evidence bundle so
+    #    the model always has memory + logs + dependency data to reason from.
+    if any(kw in lowered for kw in _INVESTIGATION_KEYWORDS):
+        for name in _INVESTIGATION_BUNDLE:
+            spec = TOOL_SPECS_BY_NAME[name]
+            needs_service = "service" in spec.required or "service_name" in spec.required
+            if needs_service and not service:
+                continue
+            _add(name)
 
     return ordered
 

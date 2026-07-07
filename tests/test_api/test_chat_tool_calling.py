@@ -101,6 +101,61 @@ def test_action_tools_gated_by_env(monkeypatch) -> None:
     assert [s.name for s, _ in plan] == ["restart_service"]
 
 
+def test_investigation_intent_forces_evidence_bundle() -> None:
+    """The Incidents-page hand-off prompt must gather evidence (s29 fix).
+
+    "Investigate INC-… Diagnose the root cause and recommend remediation for
+    <service>." matches no single-tool keyword hint, so it previously planned
+    ZERO tools and the model answered from nothing.
+    """
+    plan = plan_forced_tool_calls(
+        "Investigate INC-2026-0001 ([DEMO] Database Down on nextcloud-db). "
+        "Diagnose the root cause and recommend remediation for nextcloud-db.",
+        "nextcloud",
+    )
+    names = [spec.name for spec, _ in plan]
+    assert names == ["find_similar", "analyze_logs", "get_dependencies"]
+
+
+def test_investigation_without_service_still_searches_memory() -> None:
+    plan = plan_forced_tool_calls("please diagnose the root cause of the outage", None)
+    # Service-requiring bundle tools are skipped; memory search still runs.
+    assert [s.name for s, _ in plan] == ["find_similar"]
+
+
+def test_investigation_bundle_does_not_duplicate_named_tools() -> None:
+    plan = plan_forced_tool_calls(
+        "Investigate the incident. Use the find_similar tool.", "nextcloud"
+    )
+    names = [spec.name for spec, _ in plan]
+    assert names.count("find_similar") == 1
+    assert names == ["find_similar", "analyze_logs", "get_dependencies"]
+
+
+def test_looks_like_nonanswer_flags_planning_speak() -> None:
+    """The s29 chat-quality bug: a planning one-liner must never ship as the answer."""
+    assert chat_module._looks_like_nonanswer(
+        "I will use the find_similar tool to look for similar past incidents."
+    )
+    assert chat_module._looks_like_nonanswer("Let me check the logs for nextcloud.")
+    assert chat_module._looks_like_nonanswer("")
+    assert chat_module._looks_like_nonanswer(None)
+
+
+def test_looks_like_nonanswer_accepts_substantive_answers() -> None:
+    substantive = (
+        "Root cause: the nextcloud-db container was OOM-killed. Evidence: 14 "
+        "error-level logs in the last 15 minutes show repeated 'Cannot allocate "
+        "memory' patterns, and the container restarted twice. Remediation: "
+        "increase the container memory limit and restart the service."
+    )
+    assert not chat_module._looks_like_nonanswer(substantive)
+    # A refusal is not planning-speak; the refusal guard owns that semantics.
+    assert not chat_module._looks_like_nonanswer(
+        "I can only help with infrastructure operations for this system."
+    )
+
+
 # ---------------------------------------------------------------------------
 # Loop: deterministic routing + needs_param via the real loop function
 # ---------------------------------------------------------------------------
