@@ -59,10 +59,10 @@ export function DetailDrawer({ target, inContext, onClose, onToggleAskAi, episod
 
   return (
     <div
-      className="schema-drawer absolute inset-y-0 right-0 z-30 flex w-72 flex-col overflow-hidden rounded-r-lg border-l border-slate-700/80 bg-slate-900/95 shadow-2xl backdrop-blur-md"
+      className="schema-drawer absolute inset-y-3 right-3 z-30 flex w-72 max-w-[calc(100%-1.5rem)] flex-col overflow-hidden rounded-xl border border-slate-600/50 bg-slate-900/70 shadow-2xl shadow-black/50 ring-1 ring-inset ring-white/10 backdrop-blur-xl"
       data-testid="schema-drawer"
     >
-      <div className="flex items-start justify-between gap-2 border-b border-slate-800 p-3">
+      <div className="flex items-start justify-between gap-2 border-b border-white/[0.06] bg-white/[0.03] p-3">
         <div className="min-w-0">
           <h4 className="truncate text-sm font-semibold text-slate-100">{title}</h4>
           <span
@@ -101,7 +101,7 @@ export function DetailDrawer({ target, inContext, onClose, onToggleAskAi, episod
       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
         {episodic ? (
           <>
-            <div className="space-y-1.5 rounded-lg border border-slate-800 bg-slate-950/40 p-2.5">
+            <div className="space-y-1.5 rounded-lg border border-slate-700/50 bg-slate-950/50 p-2.5">
               {episodic.rows.length > 0 ? (
                 episodic.rows.map((row) => (
                   <div key={row.label} className="flex items-start justify-between gap-3 text-xs">
@@ -124,7 +124,7 @@ export function DetailDrawer({ target, inContext, onClose, onToggleAskAi, episod
           </>
         ) : isNode ? (
           <>
-            <div className="space-y-1.5 rounded-lg border border-slate-800 bg-slate-950/40 p-2.5">
+            <div className="space-y-1.5 rounded-lg border border-slate-700/50 bg-slate-950/50 p-2.5">
               <div className="flex items-start justify-between gap-3 text-xs">
                 <span className="shrink-0 text-slate-500">Health</span>
                 <span className={`font-medium capitalize ${HEALTH_TEXT[target.node.health] ?? HEALTH_TEXT.unknown}`}>
@@ -181,7 +181,7 @@ export function DetailDrawer({ target, inContext, onClose, onToggleAskAi, episod
                           type="button"
                           onClick={() => onAskEpisode(askPrompt)}
                           data-testid="schema-ask-episode"
-                          className="group w-full rounded-lg border border-slate-800 bg-slate-950/40 p-2 text-left transition-colors hover:border-blue-500/50 hover:bg-blue-500/[0.06]"
+                          className="group w-full rounded-lg border border-slate-700/50 bg-slate-950/50 p-2 text-left transition-colors hover:border-blue-500/50 hover:bg-blue-500/[0.06]"
                         >
                           {body}
                         </button>
@@ -189,7 +189,7 @@ export function DetailDrawer({ target, inContext, onClose, onToggleAskAi, episod
                     ) : (
                       <li
                         key={ep.id}
-                        className="rounded-lg border border-slate-800 bg-slate-950/40 p-2"
+                        className="rounded-lg border border-slate-700/50 bg-slate-950/50 p-2"
                       >
                         {body}
                       </li>
@@ -202,7 +202,7 @@ export function DetailDrawer({ target, inContext, onClose, onToggleAskAi, episod
             </div>
           </>
         ) : (
-          <div className="space-y-1.5 rounded-lg border border-slate-800 bg-slate-950/40 p-2.5">
+          <div className="space-y-1.5 rounded-lg border border-slate-700/50 bg-slate-950/50 p-2.5">
             <Row label="Relationship" value={target.edge.relationship} />
             <Row label="Kind" value={target.edge.kind} />
             <Row label="Co-episodes (window)" value={target.edge.co_episode_count} />
@@ -215,7 +215,7 @@ export function DetailDrawer({ target, inContext, onClose, onToggleAskAi, episod
         )}
       </div>
 
-      <div className="border-t border-slate-800 p-3">
+      <div className="border-t border-white/[0.06] bg-white/[0.02] p-3">
         <button
           type="button"
           onClick={() => onToggleAskAi(target)}
