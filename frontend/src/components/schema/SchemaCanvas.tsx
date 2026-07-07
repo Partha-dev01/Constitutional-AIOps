@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Maximize2, Minus, Plus } from 'lucide-react'
 import { NODE_H, NODE_W, SchemaLayout } from './layout'
 import { SchemaEdge } from './SchemaEdge'
 import { SchemaNode } from './SchemaNode'
@@ -43,6 +44,13 @@ interface SchemaCanvasProps {
    * top-down episodic layout cascades cleanly. Pan/zoom are unaffected.
    */
   orientation?: 'lr' | 'td'
+  /**
+   * Show an on-canvas zoom-in / zoom-out / fit control cluster (bottom-left).
+   * Opt-in — default off, so existing consumers render byte-identically. The
+   * embedded cockpit turns it on to make the (otherwise wheel-only) zoom and a
+   * one-click "fit to pane" reset discoverable.
+   */
+  showControls?: boolean
 }
 
 /**
@@ -67,6 +75,7 @@ export function SchemaCanvas({
   edgeAccent,
   nodeSubLabel,
   orientation = 'lr',
+  showControls = false,
 }: SchemaCanvasProps) {
   const svgRef = useRef<SVGSVGElement>(null)
 
@@ -116,6 +125,29 @@ export function SchemaCanvas({
     svg.addEventListener('wheel', onWheel, { passive: false })
     return () => svg.removeEventListener('wheel', onWheel)
   }, [baseViewBox])
+
+  // Button-driven zoom about the viewport centre (mirrors the wheel clamp), and
+  // a one-click "fit" that snaps back to the whole-graph viewBox.
+  const zoomAtCentre = useCallback(
+    (factor: number) => {
+      const minW = baseViewBox.w / MAX_ZOOM
+      const maxW = baseViewBox.w / MIN_ZOOM
+      setViewBox((vb) => {
+        const newW = Math.min(maxW, Math.max(minW, vb.w * factor))
+        if (newW === vb.w) return vb
+        const k = newW / vb.w
+        const newH = vb.h * k
+        return {
+          x: vb.x + vb.w / 2 - newW / 2,
+          y: vb.y + vb.h / 2 - newH / 2,
+          w: newW,
+          h: newH,
+        }
+      })
+    },
+    [baseViewBox],
+  )
+  const fitView = useCallback(() => setViewBox(baseViewBox), [baseViewBox])
 
   // Background drag = pan; background click (no movement) = clear selection.
   const panRef = useRef<{
@@ -173,6 +205,7 @@ export function SchemaCanvas({
   )
 
   return (
+    <>
     <svg
       ref={svgRef}
       data-testid="schema-canvas"
@@ -313,5 +346,37 @@ export function SchemaCanvas({
         })}
       </g>
     </svg>
+      {showControls && (
+        <div className="absolute bottom-3 left-3 z-20 flex flex-col gap-1" data-testid="schema-zoom-controls">
+          <button
+            type="button"
+            aria-label="Zoom in"
+            title="Zoom in"
+            onClick={() => zoomAtCentre(0.8)}
+            className="rounded-md border border-slate-700 bg-slate-900/80 p-1.5 text-slate-300 backdrop-blur transition-colors hover:bg-slate-800 hover:text-white"
+          >
+            <Plus className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            aria-label="Zoom out"
+            title="Zoom out"
+            onClick={() => zoomAtCentre(1.25)}
+            className="rounded-md border border-slate-700 bg-slate-900/80 p-1.5 text-slate-300 backdrop-blur transition-colors hover:bg-slate-800 hover:text-white"
+          >
+            <Minus className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            aria-label="Fit graph to view"
+            title="Fit to view"
+            onClick={fitView}
+            className="rounded-md border border-slate-700 bg-slate-900/80 p-1.5 text-slate-300 backdrop-blur transition-colors hover:bg-slate-800 hover:text-white"
+          >
+            <Maximize2 className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+    </>
   )
 }

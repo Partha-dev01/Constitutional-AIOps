@@ -514,7 +514,7 @@ export function ChatPane({ variant = 'page', seedContext, injectedPrompt, classN
           )}
 
           {showSuggestions && (
-            <div className="flex flex-1 items-start justify-center px-2 pt-6 pb-4">
+            <div className="flex flex-1 items-center justify-center px-2 py-4">
               <SuggestedPrompts prompts={prompts} onPick={handlePickPrompt} dense={embedded} />
             </div>
           )}

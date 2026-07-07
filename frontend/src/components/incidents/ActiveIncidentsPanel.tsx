@@ -57,9 +57,14 @@ interface ActiveIncidentsPanelProps {
    * embedded chat instead of navigating to /chat?ask=. Default = navigate.
    */
   onOpenInChat?: (prompt: string) => void
+  /**
+   * Notified with the live incident count on every (re)load, so a host layout
+   * can collapse/expand the strip (the Console shrinks it when idle).
+   */
+  onCountChange?: (count: number) => void
 }
 
-export function ActiveIncidentsPanel({ className = '', onOpenInChat }: ActiveIncidentsPanelProps) {
+export function ActiveIncidentsPanel({ className = '', onOpenInChat, onCountChange }: ActiveIncidentsPanelProps) {
   const navigate = useNavigate()
   const [incidents, setIncidents] = useState<Incident[]>([])
   const [loading, setLoading] = useState(true)
@@ -70,13 +75,15 @@ export function ActiveIncidentsPanel({ className = '', onOpenInChat }: ActiveInc
       const res = await api.incidents.list({ page_size: 50 })
       // Filter to the active/actionable statuses on the client (the list API
       // status filter expects the narrower TS union).
-      setIncidents((res.items ?? []).filter((i) => ACTIVE_STATUSES.includes(i.status)))
+      const active = (res.items ?? []).filter((i) => ACTIVE_STATUSES.includes(i.status))
+      setIncidents(active)
+      onCountChange?.(active.length)
     } catch {
       // Transient fetch error — keep the current list rather than blanking it.
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [onCountChange])
 
   useEffect(() => {
     void load()
