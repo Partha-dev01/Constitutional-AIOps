@@ -1,7 +1,9 @@
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { AlertTriangle, Loader2, Sparkles, Waypoints, X } from 'lucide-react'
+import type { PointerEvent as ReactPointerEvent } from 'react'
+import { AlertTriangle, Columns, GripVertical, Loader2, MessageSquare, Sparkles, Waypoints, X } from 'lucide-react'
 import { ActiveIncidentsPanel } from '../components/incidents/ActiveIncidentsPanel'
 import { ChatPane } from '../components/chat/ChatPane'
+import { useMediaQuery } from '../hooks/useMediaQuery'
 import type { EpisodicLink, EpisodicNode } from '../components/EpisodicGraphExplorer'
 import { buildSchemaChatContext } from '../components/schema/types'
 import type { SelectedItem } from '../components/schema/types'
@@ -179,6 +181,15 @@ function transformEpisodes(data: EpisodesResponse): { nodes: EpisodicNode[]; lin
  * incident's "Open in Chat" prefills the same composer — so investigation
  * never leaves this screen.
  */
+// Divider drag bounds + persistence for the graph/right-column split (lg+).
+const GRAPH_PCT_KEY = 'aiops.console.graphPct'
+const GRAPH_PCT_MIN = 35
+const GRAPH_PCT_MAX = 72
+const GRAPH_PCT_DEFAULT = 58
+
+/** Which pane (if any) is maximised. 'none' = the balanced split view. */
+type FocusPane = 'none' | 'graph' | 'chat'
+
 export function Console() {
   const [selection, setSelection] = useState<SelectedItem[]>([])
   // Bumping the key re-prefills the chat composer even with identical text.
@@ -188,6 +199,58 @@ export function Console() {
   // 'episodic' is the memory graph rendered top-down via EpisodicSchemaGraph
   // (the same schema stage as the platform view).
   const [graphMode, setGraphMode] = useState<'platform' | 'episodic'>('platform')
+
+  // Pane focus: maximise the graph OR the incidents+chat column. Hidden panes
+  // stay MOUNTED (display:none) so the conversation and graph state survive
+  // toggling; 'none' restores the split.
+  const [focus, setFocus] = useState<FocusPane>('none')
+
+  // Split position (percent width of the graph pane at lg+), adjusted by
+  // dragging the divider and persisted so the preferred balance sticks.
+  const [graphPct, setGraphPct] = useState<number>(() => {
+    if (typeof window === 'undefined') return GRAPH_PCT_DEFAULT
+    const saved = Number(window.localStorage.getItem(GRAPH_PCT_KEY))
+    return Number.isFinite(saved) && saved >= GRAPH_PCT_MIN && saved <= GRAPH_PCT_MAX
+      ? saved
+      : GRAPH_PCT_DEFAULT
+  })
+  const isDesktop = useMediaQuery('(min-width: 1024px)')
+  const bodyRef = useRef<HTMLDivElement>(null)
+  const dragRef = useRef<{ pointerId: number } | null>(null)
+
+  const handleDividerDown = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
+    dragRef.current = { pointerId: e.pointerId }
+    e.currentTarget.setPointerCapture(e.pointerId)
+  }, [])
+
+  const handleDividerMove = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
+    if (!dragRef.current || dragRef.current.pointerId !== e.pointerId) return
+    const rect = bodyRef.current?.getBoundingClientRect()
+    if (!rect || rect.width === 0) return
+    const pct = ((e.clientX - rect.left) / rect.width) * 100
+    // Never let the graph grow so far that the right column drops below its
+    // usable minimum (~380px incl. the divider), whatever the window width.
+    const fitMax = ((rect.width - 380) / rect.width) * 100
+    const max = Math.min(GRAPH_PCT_MAX, Math.max(GRAPH_PCT_MIN, fitMax))
+    setGraphPct(Math.min(max, Math.max(GRAPH_PCT_MIN, Math.round(pct))))
+  }, [])
+
+  const handleDividerUp = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
+    if (!dragRef.current || dragRef.current.pointerId !== e.pointerId) return
+    dragRef.current = null
+    setGraphPct((pct) => {
+      try {
+        window.localStorage.setItem(GRAPH_PCT_KEY, String(pct))
+      } catch {
+        // Storage unavailable (private mode) — the in-session value still works.
+      }
+      return pct
+    })
+  }, [])
+
+  // Live incident count from the panel, so the incidents strip collapses to its
+  // compact "all clear" card when idle instead of reserving 38% of the column.
+  const [incidentCount, setIncidentCount] = useState(0)
 
   // Episodic graph data — fetched lazily the first time episodic mode is opened.
   const [episodic, setEpisodic] = useState<{ nodes: EpisodicNode[]; links: EpisodicLink[] }>({
@@ -277,16 +340,52 @@ export function Console() {
             Live topology, active incidents and the assistant — one operations view.
           </p>
         </div>
+        {/* Pane focus — maximise the graph, the chat column, or restore the split. */}
+        <div
+          className="ml-auto flex shrink-0 items-center rounded-md bg-muted p-0.5 text-xs"
+          role="group"
+          aria-label="Pane layout"
+          data-testid="console-focus-toggle"
+        >
+          {(
+            [
+              { id: 'graph', label: 'Graph', Icon: Waypoints, hint: 'Maximise the topology graph' },
+              { id: 'none', label: 'Split', Icon: Columns, hint: 'Balanced split view' },
+              { id: 'chat', label: 'Chat', Icon: MessageSquare, hint: 'Maximise incidents + assistant' },
+            ] as const
+          ).map(({ id, label, Icon, hint }) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setFocus(id)}
+              aria-pressed={focus === id}
+              title={hint}
+              className={`flex items-center gap-1 rounded px-2 py-0.5 font-medium transition-colors ${
+                focus === id
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Body: left pane (graph) + right column (incidents over chat). Stacks
           vertically and goes side-by-side at lg (1024) now that the UI is
           80%-scaled. The cockpit fills `<main>` and scrolls INTERNALLY rather
           than growing the page, so nothing is ever cut off. */}
-      <div className="flex min-h-0 flex-1 flex-col gap-3 lg:flex-row">
-        {/* LEFT PANE — topology graph (always shown) */}
+      <div ref={bodyRef} className="flex min-h-0 flex-1 flex-col gap-3 lg:flex-row">
+        {/* LEFT PANE — topology graph. Sized by the draggable divider (lg+),
+            maximised in graph focus, kept mounted-but-hidden in chat focus so
+            its data/zoom state survives. */}
         <section
-          className="relative flex h-[46vh] min-h-0 flex-col rounded-xl border border-border bg-card p-3 lg:h-auto lg:w-[58%] lg:min-w-[480px] lg:max-w-none"
+          className={`relative flex min-h-0 flex-col rounded-xl border border-border bg-card p-3 ${
+            focus === 'chat' ? 'hidden' : ''
+          } ${focus === 'graph' ? 'min-h-[60vh] flex-1 lg:min-h-0' : 'h-[46vh] lg:h-auto lg:min-w-0'}`}
+          style={isDesktop && focus === 'none' ? { flexBasis: `${graphPct}%` } : undefined}
           data-testid="console-graph-pane"
         >
           <div className="mb-2 flex shrink-0 items-center justify-between gap-2">
@@ -339,8 +438,12 @@ export function Console() {
                   />
                 </Suspense>
               </div>
-              <p className="mt-1.5 shrink-0 text-[11px] leading-snug text-muted-foreground/70">
-                Click a service to inspect · Ctrl-click to attach it to the chat as context.
+              <p className="mt-1.5 flex shrink-0 flex-wrap items-center gap-x-2 gap-y-1 text-[11px] leading-snug text-muted-foreground/80">
+                <span>Click a service to inspect</span>
+                <span className="inline-flex items-center gap-1 rounded-md border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-primary">
+                  <kbd className="rounded border border-primary/40 bg-background/60 px-1 font-sans text-[10px] font-semibold">Ctrl</kbd>
+                  <span>+ click a node → attach it to the chat as context</span>
+                </span>
               </p>
             </>
           ) : (
@@ -365,19 +468,50 @@ export function Console() {
                   />
                 </Suspense>
               </div>
-              <p className="mt-1.5 shrink-0 text-[11px] leading-snug text-muted-foreground/70">
-                Episodic memory — pick an incident to see its root cause and the services it touched · Ctrl-click a node to attach it to chat.
+              <p className="mt-1.5 flex shrink-0 flex-wrap items-center gap-x-2 gap-y-1 text-[11px] leading-snug text-muted-foreground/80">
+                <span>Episodic memory — pick an incident to see its root cause and the services it touched</span>
+                <span className="inline-flex items-center gap-1 rounded-md border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-primary">
+                  <kbd className="rounded border border-primary/40 bg-background/60 px-1 font-sans text-[10px] font-semibold">Ctrl</kbd>
+                  <span>+ click a node → attach to chat</span>
+                </span>
               </p>
             </>
           )}
         </section>
 
-        {/* RIGHT COLUMN — incidents (top) + chat (bottom) */}
-        <div className="flex min-h-0 min-w-[360px] flex-1 flex-col gap-3">
-          {/* TOP — active incidents. Capped to a fraction of the column so it
-              never starves the chat; scrolls internally when there are many. */}
-          <div className="max-h-[38%] shrink-0 overflow-y-auto" data-testid="console-incidents">
-            <ActiveIncidentsPanel onOpenInChat={handleOpenInChat} />
+        {/* DIVIDER — drag to rebalance the split (lg+, split view only). */}
+        {focus === 'none' && (
+          <div
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Drag to resize the graph and chat panes"
+            title="Drag to resize"
+            onPointerDown={handleDividerDown}
+            onPointerMove={handleDividerMove}
+            onPointerUp={handleDividerUp}
+            onPointerCancel={handleDividerUp}
+            data-testid="console-divider"
+            className="hidden shrink-0 cursor-col-resize touch-none items-center justify-center text-muted-foreground/40 transition-colors hover:text-primary lg:flex lg:w-3"
+          >
+            <GripVertical className="h-5 w-5" />
+          </div>
+        )}
+
+        {/* RIGHT COLUMN — incidents (top) + chat (bottom). Kept mounted-but-
+            hidden in graph focus so the conversation survives toggling. */}
+        <div
+          className={`flex min-h-0 min-w-[360px] flex-1 flex-col gap-3 ${
+            focus === 'graph' ? 'hidden' : ''
+          }`}
+        >
+          {/* TOP — active incidents. Collapses to the compact "all clear" card
+              when idle; capped to a fraction of the column (internal scroll)
+              when incidents are live so it never starves the chat. */}
+          <div
+            className={incidentCount > 0 ? 'max-h-[38%] shrink-0 overflow-y-auto' : 'shrink-0'}
+            data-testid="console-incidents"
+          >
+            <ActiveIncidentsPanel onOpenInChat={handleOpenInChat} onCountChange={setIncidentCount} />
           </div>
 
           {/* BOTTOM — assistant chat. flex-1 takes the remaining height; the

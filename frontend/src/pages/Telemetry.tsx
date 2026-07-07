@@ -27,6 +27,8 @@ export function Telemetry() {
   const [metrics, setMetrics] = useState<MetricPoint[]>([])
   const [telemetryLoading, setTelemetryLoading] = useState(false)
   const [logFilter, setLogFilter] = useState<string>('all')
+  // Free-text filter over message + service (the search box used to be dead).
+  const [textFilter, setTextFilter] = useState('')
 
   const fetchTelemetry = async () => {
     setTelemetryLoading(true)
@@ -108,6 +110,9 @@ export function Telemetry() {
             <input
               type="text"
               placeholder="Filter logs..."
+              value={textFilter}
+              onChange={(e) => setTextFilter(e.target.value)}
+              aria-label="Filter logs by text"
               className="w-full pl-9 pr-3 py-1.5 text-sm rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
@@ -120,6 +125,14 @@ export function Telemetry() {
           ) : logs.length > 0 ? (
             logs
               .filter((log) => logFilter === 'all' || log.level === logFilter)
+              .filter((log) => {
+                if (!textFilter.trim()) return true
+                const q = textFilter.toLowerCase()
+                return (
+                  log.message.toLowerCase().includes(q) ||
+                  log.service.toLowerCase().includes(q)
+                )
+              })
               .map((log, i) => (
                 <div key={i} className="p-3 hover:bg-muted/50 flex items-start gap-3">
                   <span className="text-xs text-muted-foreground whitespace-nowrap">

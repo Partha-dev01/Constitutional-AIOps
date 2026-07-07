@@ -361,6 +361,7 @@ export default function SchemaGraph({ height = 520, embedded = false, onSelectio
             onNodeHover={handleNodeHover}
             onEdgeHover={handleEdgeHover}
             onBackgroundClick={handleBackgroundClick}
+            showControls
           />
           {hover && !drawer && <HoverCard target={hover.target} x={hover.x} y={hover.y} />}
           {drawer && (
