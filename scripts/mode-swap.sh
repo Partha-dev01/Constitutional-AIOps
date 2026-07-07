@@ -53,13 +53,45 @@ serving_health() {
     fi
 }
 
+wait_engine_healthy() {
+    # $1 = container name, $2 = timeout seconds. A vLLM engine can take several
+    # minutes to load weights into VRAM — longer than compose is willing to wait
+    # on its depends_on healthcheck, which aborts the whole `up` with
+    # "dependency failed to start" while the engine is still mid-load.
+    _waited=0
+    while [ "$_waited" -lt "$2" ]; do
+        _st=$(docker inspect --format '{{.State.Health.Status}}' "$1" 2>/dev/null || echo missing)
+        if [ "$_st" = "healthy" ]; then
+            return 0
+        fi
+        # Container never got created (the failed `up` died earlier than the
+        # engine step) — nothing to wait on; let the retry `up` create it.
+        if [ "$_st" = "missing" ] && [ "$_waited" -ge 30 ]; then
+            echo "WARN: container $1 does not exist; skipping the health wait" >&2
+            return 1
+        fi
+        sleep 10
+        _waited=$((_waited + 10))
+    done
+    echo "WARN: $1 still not healthy after ${2}s (status: $_st)" >&2
+    return 1
+}
+
 case "${1:-}" in
     up-mode1)
         echo "==> Swapping to Mode 1 (frozen dual-engine artifact)"
         # Free the GPU first. llm-mode2 is not defined in the Mode 1 file
         # set, so --remove-orphans below also removes its container.
         docker stop aiops-llm-mode2 2>/dev/null || true
-        compose_mode1 up -d --remove-orphans
+        # First `up` can lose the race between the engines' multi-minute model
+        # load and compose's depends_on health wait; wait the engines healthy
+        # and retry once before declaring the swap failed.
+        if ! compose_mode1 up -d --remove-orphans; then
+            echo "WARN: up-mode1 attempt 1 failed (engine healthcheck race?); waiting for engines, then retrying once" >&2
+            wait_engine_healthy aiops-qwen3-4b 600 || true
+            wait_engine_healthy aiops-qwen3-14b 600 || true
+            compose_mode1 up -d --remove-orphans
+        fi
         serving_health
         ;;
     up-mode2)
@@ -67,7 +99,11 @@ case "${1:-}" in
         # Free the GPU first. qwen3-4b/qwen3-14b stay DEFINED under the
         # overlay (profiled-out, not orphans), so `up` would not stop them.
         docker stop aiops-qwen3-4b aiops-qwen3-14b 2>/dev/null || true
-        compose_mode2 up -d --remove-orphans
+        if ! compose_mode2 up -d --remove-orphans; then
+            echo "WARN: up-mode2 attempt 1 failed (engine healthcheck race?); waiting for the engine, then retrying once" >&2
+            wait_engine_healthy aiops-llm-mode2 600 || true
+            compose_mode2 up -d --remove-orphans
+        fi
         serving_health
         ;;
     status)

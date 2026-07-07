@@ -16,6 +16,7 @@ import {
   RotateCw,
   Wrench,
   Waypoints,
+  ArrowLeftRight,
 } from 'lucide-react'
 import api, {
   HealthResponse,
@@ -26,6 +27,7 @@ import api, {
   TelemetrySettings,
   RemediationSettings,
   RemediationMode,
+  ServingModeStatus,
 } from '../lib/api'
 import { TopologySchemaEditor } from '../components/TopologySchemaEditor'
 
@@ -876,6 +878,8 @@ export function Settings() {
 
         {/* ━━ Models ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
         {activeTab === 'models' && (
+          <div className="space-y-6">
+          <ServingModeCard />
           <div className="grid gap-6 lg:grid-cols-2">
             <div className="bg-card rounded-lg border border-border p-6">
               <div className="flex items-center justify-between mb-4">
@@ -963,6 +967,7 @@ export function Settings() {
                 </p>
               </div>
             </div>
+          </div>
           </div>
         )}
 
@@ -1128,6 +1133,208 @@ export function Settings() {
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
+
+const SERVING_MODE_INFO: Record<1 | 2, { title: string; description: string }> = {
+  1: {
+    title: 'Mode 1 — Dual engine',
+    description:
+      'Qwen3-4B (fast) + Qwen3-14B (reasoning) on dedicated engines. The frozen research-paper configuration.',
+  },
+  2: {
+    title: 'Mode 2 — Modernized stack',
+    description:
+      'Single engine serving both agent roles via the mode-2 overlay, with streaming / guided JSON / priority scheduling as those phases land.',
+  },
+}
+
+function ServingModeCard() {
+  const [status, setStatus] = useState<ServingModeStatus | null>(null)
+  const [confirmTarget, setConfirmTarget] = useState<1 | 2 | null>(null)
+  // Persists through the backend-restart window so fetch failures render as
+  // "swapping" instead of an error.
+  const [swapTarget, setSwapTarget] = useState<1 | 2 | null>(null)
+  const [unreachable, setUnreachable] = useState(false)
+  const [requestError, setRequestError] = useState<string | null>(null)
+  const [posting, setPosting] = useState(false)
+
+  const refresh = useCallback(async () => {
+    try {
+      const s = await api.settings.servingMode()
+      setStatus(s)
+      setUnreachable(false)
+      setSwapTarget((target) => {
+        if (s.swap_status === 'error') return null
+        if (target !== null && s.mode === target && s.swap_status === 'idle') return null
+        return target
+      })
+    } catch {
+      // Expected mid-swap: the backend container itself is being recreated.
+      setUnreachable(true)
+    }
+  }, [])
+
+  useEffect(() => {
+    refresh()
+  }, [refresh])
+
+  const swapActive =
+    swapTarget !== null ||
+    status?.swap_status === 'pending' ||
+    status?.swap_status === 'swapping'
+
+  useEffect(() => {
+    if (!swapActive) return
+    const timer = setInterval(refresh, 5000)
+    return () => clearInterval(timer)
+  }, [swapActive, refresh])
+
+  const requestSwap = async (mode: 1 | 2) => {
+    setPosting(true)
+    setRequestError(null)
+    try {
+      const s = await api.settings.requestServingMode(mode)
+      setStatus(s)
+      setSwapTarget(mode)
+    } catch (err) {
+      setRequestError(
+        err instanceof Error ? err.message : 'Failed to request the mode swap',
+      )
+    } finally {
+      setPosting(false)
+      setConfirmTarget(null)
+    }
+  }
+
+  const currentMode = status?.mode ?? null
+  const targetMode = swapTarget ?? status?.requested_mode ?? null
+
+  return (
+    <div className="bg-card rounded-lg border border-border p-6" data-testid="serving-mode-card">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
+        <h2 className="text-lg font-semibold flex items-center gap-2">
+          <ArrowLeftRight className="h-5 w-5 text-muted-foreground" />
+          Serving Mode
+        </h2>
+        {currentMode !== null && (
+          <span
+            data-testid="serving-mode-badge"
+            className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+              currentMode === 2
+                ? 'bg-purple-500/10 text-purple-500'
+                : 'bg-green-500/10 text-green-500'
+            }`}
+          >
+            Mode {currentMode} active
+          </span>
+        )}
+      </div>
+      <p className="text-sm text-muted-foreground mb-4">
+        Which LLM serving stack backs the agents. Swapping restarts the engines —
+        chat and analysis are unavailable for ~3–5 minutes while it runs.
+      </p>
+
+      <div
+        className="grid grid-cols-1 sm:grid-cols-2 gap-3"
+        role="radiogroup"
+        aria-label="Serving mode"
+      >
+        {([1, 2] as const).map((m) => {
+          const info = SERVING_MODE_INFO[m]
+          const isCurrent = currentMode === m
+          return (
+            <button
+              key={m}
+              type="button"
+              role="radio"
+              aria-checked={isCurrent}
+              data-testid={`serving-mode-${m}`}
+              disabled={swapActive || posting || isCurrent}
+              onClick={() => setConfirmTarget(m)}
+              className={`text-left p-4 rounded-lg border transition-colors ${
+                isCurrent
+                  ? 'border-primary bg-primary/5'
+                  : 'border-border bg-background hover:bg-muted disabled:opacity-50'
+              } ${swapActive || posting ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-medium text-sm">{info.title}</span>
+                {isCurrent && <CheckCircle className="h-4 w-4 text-primary shrink-0" />}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">{info.description}</p>
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Confirmation step — a swap takes the LLM stack down for minutes. */}
+      {confirmTarget !== null && !swapActive && (
+        <div className="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+          <p className="text-sm text-yellow-700 flex items-start gap-2">
+            <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+            Swap to Mode {confirmTarget}? The LLM engines restart and the assistant
+            is unavailable for roughly 3–5 minutes. Data (incidents, memory,
+            conversations) is untouched.
+          </p>
+          <div className="flex gap-2 mt-3">
+            <button
+              type="button"
+              data-testid="serving-mode-confirm"
+              disabled={posting}
+              onClick={() => requestSwap(confirmTarget)}
+              className="px-3 py-1.5 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
+            >
+              {posting ? 'Requesting…' : `Swap to Mode ${confirmTarget}`}
+            </button>
+            <button
+              type="button"
+              disabled={posting}
+              onClick={() => setConfirmTarget(null)}
+              className="px-3 py-1.5 bg-muted text-muted-foreground rounded-lg text-sm hover:bg-muted/80"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {swapActive && (
+        <div
+          className="mt-4 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg flex items-start gap-2 text-sm text-blue-600"
+          data-testid="serving-mode-swapping"
+        >
+          <Loader2 className="h-4 w-4 mt-0.5 animate-spin shrink-0" />
+          <span>
+            {unreachable
+              ? 'Swapping — the backend is restarting; reconnecting…'
+              : `Swap ${targetMode !== null ? `to Mode ${targetMode} ` : ''}in progress — engines are restarting (~3–5 min). This page keeps polling.`}
+          </span>
+        </div>
+      )}
+
+      {status?.swap_status === 'error' && !swapActive && (
+        <div className="mt-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg flex items-start gap-2 text-sm text-red-500">
+          <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+          <span>Last swap failed: {status.detail || 'see mode-swap/last-swap.log on the server'}.</span>
+        </div>
+      )}
+
+      {requestError && (
+        <p className="mt-3 text-sm text-red-500">{requestError}</p>
+      )}
+
+      <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg text-xs text-blue-600">
+        <p className="font-semibold mb-1">How it works</p>
+        <p>
+          The toggle writes a swap request that the host-side{' '}
+          <code>aiops-mode-swap</code> watcher executes via{' '}
+          <code>scripts/mode-swap.sh</code> (the backend itself has no Docker
+          access). Data stores are shared by both modes, so nothing is migrated
+          or lost.
+        </p>
+      </div>
+    </div>
+  )
+}
 
 function ToggleSetting({
   label,

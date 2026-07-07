@@ -1,0 +1,21 @@
+# Constitutional AIOps - systemd unit for the serving-mode swap watcher.
+# Executes in-app Mode 1 <-> Mode 2 toggle requests (see mode-swap-watcher.sh).
+#
+# Install (once, on the deployment host):
+#   sudo cp /mnt/aiops-repo/scripts/aiops-mode-swap.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now aiops-mode-swap
+
+[Unit]
+Description=Constitutional AIOps serving-mode swap watcher (Mode 1/2 toggle executor)
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+ExecStart=/bin/sh /mnt/aiops-repo/scripts/mode-swap-watcher.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
