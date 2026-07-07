@@ -5,7 +5,6 @@ Model Context Protocol server that provides tools for infrastructure management.
 All tools are validated through Constitutional AI before execution.
 """
 
-import asyncio
 import json
 import logging
 import os
@@ -647,35 +646,26 @@ class MCPActionServer:
         params: dict[str, Any],
         context: Optional[dict[str, Any]] = None,
     ) -> ToolResult:
-        """Restart a service (mock implementation)."""
-        service_name = params.get("service_name", "")
-        instance_id = params.get("instance_id")
-        graceful = params.get("graceful", True)
-        timeout = params.get("timeout_seconds", 60)
-        reason = params.get("reason", "No reason provided")
+        """Restart a whitelisted container via the shared real executor.
 
-        # Mock implementation - in production, this would call Kubernetes API
-        logger.info(f"MOCK: Restarting service {service_name} (instance: {instance_id}, graceful: {graceful})")
+        Delegates to the same executor as the REST path (container whitelist,
+        t3 remote routing, docker restart) so the MCP protocol path can no
+        longer fake success. The ``AIOPS_ENABLE_ACTION_TOOLS`` gate and the
+        constitutional validation already ran in ``execute_tool``.
+        """
+        import time
 
-        # Simulate restart time
-        await asyncio.sleep(0.5)
+        from src.api.routes.tools import _execute_restart_service
 
+        response = await _execute_restart_service(dict(params), time.time())
+        metadata = dict(response.metadata or {})
+        if response.error_code:
+            metadata["error_code"] = response.error_code
         return ToolResult(
-            success=True,
-            data={
-                "service": service_name,
-                "instance_id": instance_id or "all",
-                "action": "restart",
-                "graceful": graceful,
-                "status": "completed",
-                "message": f"Service {service_name} restart initiated",
-                "restart_time": datetime.utcnow().isoformat(),
-            },
-            metadata={
-                "reason": reason,
-                "timeout": timeout,
-                "mock": True,
-            },
+            success=response.success,
+            data=response.data,
+            error=response.error,
+            metadata=metadata,
         )
 
     async def _scale_service(
@@ -683,49 +673,25 @@ class MCPActionServer:
         params: dict[str, Any],
         context: Optional[dict[str, Any]] = None,
     ) -> ToolResult:
-        """Scale a service (mock implementation)."""
-        service_name = params.get("service_name", "")
-        target_replicas = params.get("target_replicas", 1)
-        current_replicas = params.get("current_replicas", 1)
-        reason = params.get("reason", "No reason provided")
+        """Scale a whitelisted compose service via the shared real executor.
 
-        # Validate scaling limits
-        if target_replicas > 50:
-            return ToolResult(
-                success=False,
-                data=None,
-                error="Cannot scale beyond 50 replicas without manual approval",
-            )
+        Delegates to the REST path's executor (whitelist + replica clamp 0-5 +
+        docker compose scale) instead of the old fake-success mock. Gating and
+        validation already ran in ``execute_tool``.
+        """
+        import time
 
-        if target_replicas == 0:
-            return ToolResult(
-                success=False,
-                data=None,
-                error="Cannot scale to 0 replicas - use service disable instead",
-            )
+        from src.api.routes.tools import _execute_scale_service
 
-        # Mock implementation
-        logger.info(f"MOCK: Scaling {service_name} from {current_replicas} to {target_replicas}")
-
-        await asyncio.sleep(0.3)
-
-        scale_direction = "up" if target_replicas > current_replicas else "down"
-
+        response = await _execute_scale_service(dict(params), time.time())
+        metadata = dict(response.metadata or {})
+        if response.error_code:
+            metadata["error_code"] = response.error_code
         return ToolResult(
-            success=True,
-            data={
-                "service": service_name,
-                "action": f"scale_{scale_direction}",
-                "previous_replicas": current_replicas,
-                "target_replicas": target_replicas,
-                "status": "completed",
-                "message": f"Service {service_name} scaled from {current_replicas} to {target_replicas}",
-                "scale_time": datetime.utcnow().isoformat(),
-            },
-            metadata={
-                "reason": reason,
-                "mock": True,
-            },
+            success=response.success,
+            data=response.data,
+            error=response.error,
+            metadata=metadata,
         )
 
     # ------------------------------------------------------------------ #
