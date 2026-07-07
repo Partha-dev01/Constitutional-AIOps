@@ -55,7 +55,10 @@ def build_in_scope_directive(service: Optional[str]) -> str:
     return (
         "## IMPORTANT\n"
         f"This request concerns the monitored service '{service or 'this system'}' "
-        "and IS in scope. Answer it fully using the data above. Do NOT decline."
+        "and IS in scope. Answer it fully using the data above. Do NOT decline. "
+        "Every tool for this turn has ALREADY been executed — the results are in "
+        "the data above. Never reply that you WILL run, call, or use a tool; "
+        "produce the final answer now."
     )
 
 
