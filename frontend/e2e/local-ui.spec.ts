@@ -123,6 +123,40 @@ const allSettings = {
   },
 }
 
+const latencyStats = {
+  count: 42, avg_ms: 850, min_ms: 120, max_ms: 4200, p50_ms: 700,
+  p95_ms: 2100, p99_ms: 3900, success_rate: 0.98, total_tokens: 51_000,
+}
+const metricsSnapshot = {
+  timestamp: '2026-07-07T09:00:00Z',
+  fast_agent: latencyStats,
+  reasoning_agent: { ...latencyStats, avg_ms: 13_300, p95_ms: 32_500 },
+  total_requests: 84,
+  success_rate: 0.98,
+  determinism_config: {
+    fast_agent_temperature: 0, reasoning_agent_temperature: 0,
+    chat_temperature: 0, seed_method: 'hash(prompt)',
+  },
+}
+const validationReport = {
+  generated_at: '2026-07-07T09:00:00Z',
+  system_configuration: {
+    fast_agent: { model: 'qwen3-4b', url: 'http://qwen3-4b:8000/v1', temperature: 0, purpose: 'Telemetry annotation' },
+    reasoning_agent: { model: 'qwen3-14b', url: 'http://qwen3-14b:8001/v1', temperature: 0, purpose: 'RCA and chat' },
+    chat_mode: { temperature: 0.3, purpose: 'Interactive chat' },
+  },
+  latency_metrics: {
+    fast_agent: latencyStats,
+    reasoning_agent: { ...latencyStats, avg_ms: 13_300, p95_ms: 32_500 },
+    disclaimer: 'Measured on the live deployment; resets on backend restart.',
+  },
+  accuracy_metrics: {
+    annotation_accuracy: { value: '82.6%', expected: '87-92%', disclaimer: 'From the 431-case benchmark.' },
+    rca_accuracy: { value: '82.0%', expected: '85-90%', disclaimer: 'From the 431-case benchmark.' },
+  },
+  validation_status: { latency: 'pass', determinism: 'pass', annotation_accuracy: 'partial', rca_accuracy: 'partial' },
+}
+
 async function mockApi(page: Page) {
   await page.route('**/api/v1/**', async (route) => {
     const url = route.request().url()
@@ -133,12 +167,23 @@ async function mockApi(page: Page) {
     if (url.includes('/auth/me')) return json({}, 401)
     if (url.includes('/health')) return json(health)
     if (url.includes('/graph/topology')) return json(topology)
+    if (url.includes('/graph/episodes'))
+      return json({
+        episodes: [], root_causes: [], actions: [], services: [], entities: [], links: [],
+        stats: {
+          total_episodes: 0, total_root_causes: 0, total_actions: 0, total_services: 0,
+          total_entities: 0, critical_episodes: 0, resolved_episodes: 0,
+        },
+      })
     if (url.includes('/incidents/stats')) return json(incidentStats)
     if (url.includes('/actions/stats')) return json(actionStats)
     // /actions/pending returns a {actions:[...]} shape, NOT {items:[]} — the
     // Incidents page reads actionData.actions and crashes on undefined.
     if (url.includes('/actions/pending')) return json({ actions: [], total: 0 })
     if (url.includes('/settings')) return json(allSettings)
+    if (url.includes('/metrics/validation/report')) return json(validationReport)
+    if (url.includes('/metrics/history')) return json({ records: [] })
+    if (url.includes('/metrics')) return json(metricsSnapshot)
     if (url.includes('/incidents')) return json(incidents)
     if (url.includes('/chat/conversations')) return json({ items: [], total: 0 })
     if (url.includes('/chat')) return json(chatResponse)
@@ -199,6 +244,10 @@ const ROUTES: Array<{ path: string; ready: (page: Page) => Promise<unknown> }> =
   { path: '/metrics', ready: (p) => expect(p.getByRole('heading', { name: /Metrics/, level: 1 })).toBeVisible() },
   { path: '/benchmark', ready: (p) => expect(p.getByRole('heading', { name: 'Benchmark', level: 1 })).toBeVisible() },
   { path: '/settings', ready: (p) => expect(p.getByRole('heading', { name: 'Settings', level: 1 })).toBeVisible() },
+  // Routes added in the session-21 nav restructure (extracted from Agent Hub).
+  { path: '/mcp', ready: (p) => expect(p.getByRole('heading', { name: 'MCP Tools', level: 1 })).toBeVisible() },
+  { path: '/telemetry', ready: (p) => expect(p.getByRole('heading', { name: 'Telemetry', level: 1 })).toBeVisible() },
+  { path: '/graph', ready: (p) => expect(p.getByRole('heading', { name: 'Episodic Knowledge Graph', level: 1 })).toBeVisible() },
 ]
 
 const VIEWPORTS = [
@@ -334,8 +383,8 @@ test.describe('Local UI QA — interactions', () => {
     await page.goto('/benchmark')
     await expect(page.getByRole('heading', { name: 'Benchmark', level: 1 })).toBeVisible()
 
-    // Switch to Run tab.
-    await page.getByRole('button', { name: 'Run', exact: true }).click()
+    // Switch to Run tab (tabs use role="tab" since the session-20 a11y batch).
+    await page.getByRole('tab', { name: 'Run', exact: true }).click()
     const select = page.locator('select').first()
     await expect(select).toBeVisible()
     const numberInput = page.locator('input[type="number"]').first()
@@ -350,7 +399,7 @@ test.describe('Local UI QA — interactions', () => {
     await shoot(page, 'interaction__benchmark__run.png')
 
     // Results tab loads without error.
-    await page.getByRole('button', { name: 'Results', exact: true }).click()
+    await page.getByRole('tab', { name: 'Results', exact: true }).click()
     await page.waitForTimeout(300)
     await shoot(page, 'interaction__benchmark__results.png')
 
