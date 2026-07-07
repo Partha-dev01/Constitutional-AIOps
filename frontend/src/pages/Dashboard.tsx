@@ -7,12 +7,29 @@ interface ServiceStatus {
   name: string
   status: 'healthy' | 'unhealthy' | 'unknown'
   monitored: boolean
-  uptimeHistory: ('up' | 'down' | 'unknown')[]
+}
+
+/** Slice of GET /api/v1/metrics we render — REAL measured latency/requests
+ *  (the model cards used to show hardcoded placeholder numbers). */
+interface AgentLatencyLite {
+  count: number
+  avg_ms: number
+  p95_ms: number
+}
+interface AgentMetricsLite {
+  fast_agent?: AgentLatencyLite
+  reasoning_agent?: AgentLatencyLite
+}
+
+/** Render a measured latency honestly at any magnitude (ms → s). */
+function formatLatency(ms: number): string {
+  return ms < 1000 ? `${ms.toFixed(0)}ms` : `${(ms / 1000).toFixed(1)}s`
 }
 
 export function Dashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [health, setHealth] = useState<HealthResponse | null>(null)
+  const [agentMetrics, setAgentMetrics] = useState<AgentMetricsLite | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date())
@@ -60,28 +77,26 @@ export function Dashboard() {
     setLoading(true)
     setError(null)
     try {
-      const [healthData, statsData, containersResponse] = await Promise.all([
+      const [healthData, statsData, containersResponse, metricsResponse] = await Promise.all([
         api.health.check(),
         api.dashboard.getStats(),
         fetch('/api/v1/infrastructure/containers').then(r => r.ok ? r.json() : { containers: [] }),
+        // Real measured LLM latency/request counts (same source as the Metrics page).
+        fetch('/api/v1/metrics').then(r => r.ok ? r.json() : null).catch(() => null),
       ])
       setHealth(healthData)
       setStats(statsData)
+      setAgentMetrics(metricsResponse)
       setLastRefresh(new Date())
 
-      // Update services with container data
+      // Update services with container data (current status only — no
+      // fabricated history; real uptime series lives in Grafana/Prometheus).
       const containerServices: ServiceStatus[] = (containersResponse.containers || [])
         .filter((c: { monitored?: boolean }) => c.monitored)
         .map((c: { name: string; health: string; monitored: boolean }) => ({
           name: c.name,
           status: (c.health === 'healthy' ? 'healthy' : c.health === 'unhealthy' ? 'unhealthy' : 'unknown') as ServiceStatus['status'],
           monitored: c.monitored,
-          // Generate fake uptime history for display (last 20 intervals)
-          uptimeHistory: Array.from({ length: 20 }, () =>
-            c.health === 'healthy' ? 'up' as const :
-            c.health === 'unhealthy' ? 'down' as const :
-            'unknown' as const
-          ),
         }))
       setServices(containerServices)
     } catch (err) {
@@ -169,10 +184,14 @@ export function Dashboard() {
           color="text-green-500"
         />
         <StatCard
-          title="Avg Response Time"
-          value={stats?.incidents.mttr_minutes != null ? `${stats.incidents.mttr_minutes}ms` : 'N/A'}
+          title="Avg LLM Latency"
+          value={
+            agentMetrics?.reasoning_agent && agentMetrics.reasoning_agent.count > 0
+              ? formatLatency(agentMetrics.reasoning_agent.avg_ms)
+              : 'No data'
+          }
           icon={Clock}
-          trend="LLM response latency"
+          trend="Reasoning agent, measured"
           color="text-blue-500"
         />
         <StatCard
@@ -207,23 +226,22 @@ export function Dashboard() {
         </div>
       )}
 
-      {/* Model Status */}
+      {/* Model Status — latency/requests are REAL measured values from
+          /api/v1/metrics (previously hardcoded placeholder numbers). */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <ModelCard
           name="Fast Agent"
           model="Qwen3-4B-AWQ"
           port={8000}
           status={isComponentHealthy(health, 'fast_agent') ? 'online' : 'offline'}
-          latency="<100ms P95"
-          requests={1247}
+          stats={agentMetrics?.fast_agent}
         />
         <ModelCard
           name="Reasoning Agent"
           model="Qwen3-14B-AWQ"
           port={8001}
           status={isComponentHealthy(health, 'reasoning_agent') ? 'online' : 'offline'}
-          latency="200-500ms P95"
-          requests={89}
+          stats={agentMetrics?.reasoning_agent}
         />
       </div>
 
@@ -259,7 +277,9 @@ export function Dashboard() {
                 ? `${stats.incidents.mttr_minutes}ms`
                 : 'N/A'}
             </p>
-            <p className="text-sm text-muted-foreground">Avg Response Time</p>
+            {/* This value is the backend→agent health-probe ping, not LLM
+                inference latency — label it honestly. */}
+            <p className="text-sm text-muted-foreground">API Health Probe</p>
           </div>
         </div>
       </div>
@@ -281,47 +301,30 @@ export function Dashboard() {
         <div className="space-y-3">
           {services.length > 0 ? (
             services.map((service) => (
-              <div key={service.name} className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${
-                      service.status === 'healthy' ? 'bg-green-500' :
-                      service.status === 'unhealthy' ? 'bg-red-500' :
-                      'bg-yellow-500'
-                    }`} />
-                    <span className="font-medium text-sm">{service.name}</span>
-                    {service.monitored && (
-                      <span className="px-1.5 py-0.5 bg-blue-500/10 text-blue-500 rounded text-xs">
-                        Monitoring
-                      </span>
-                    )}
-                  </div>
-                  <span className={`text-xs font-medium ${
-                    service.status === 'healthy' ? 'text-green-500' :
-                    service.status === 'unhealthy' ? 'text-red-500' :
-                    'text-yellow-500'
-                  }`}>
-                    {service.status === 'healthy' ? '100%' : service.status === 'unhealthy' ? '0%' : '--'}
-                  </span>
+              /* Current status only — the old 20-segment bar was fabricated
+                 (it just repeated the current status); real uptime history
+                 lives in Grafana/Prometheus. */
+              <div key={service.name} className="flex items-center justify-between rounded-lg border border-border/60 bg-muted/30 px-3 py-2">
+                <div className="flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${
+                    service.status === 'healthy' ? 'bg-green-500' :
+                    service.status === 'unhealthy' ? 'bg-red-500' :
+                    'bg-yellow-500'
+                  }`} />
+                  <span className="font-medium text-sm">{service.name}</span>
+                  {service.monitored && (
+                    <span className="px-1.5 py-0.5 bg-blue-500/10 text-blue-500 rounded text-xs">
+                      Monitoring
+                    </span>
+                  )}
                 </div>
-                {/* Uptime bar visualization */}
-                <div className="flex gap-[3px] items-center">
-                  {service.uptimeHistory.map((status, i) => (
-                    <div
-                      key={i}
-                      className={`h-2.5 flex-1 rounded-full transition-all duration-150 hover:h-3.5 ${
-                        status === 'up' ? 'bg-green-500/70 hover:bg-green-500' :
-                        status === 'down' ? 'bg-red-500/70 hover:bg-red-500' :
-                        'bg-muted hover:bg-muted-foreground/40'
-                      }`}
-                      title={`${status === 'up' ? 'Up' : status === 'down' ? 'Down' : 'Unknown'}`}
-                    />
-                  ))}
-                </div>
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>20 min ago</span>
-                  <span>Now</span>
-                </div>
+                <span className={`text-xs font-medium capitalize ${
+                  service.status === 'healthy' ? 'text-green-500' :
+                  service.status === 'unhealthy' ? 'text-red-500' :
+                  'text-yellow-500'
+                }`}>
+                  {service.status}
+                </span>
               </div>
             ))
           ) : (
@@ -371,16 +374,16 @@ function ModelCard({
   model,
   port,
   status,
-  latency,
-  requests,
+  stats,
 }: {
   name: string
   model: string
   port: number
   status: string
-  latency: string
-  requests: number
+  /** Real measured latency/requests from /api/v1/metrics; undefined = no data. */
+  stats?: AgentLatencyLite
 }) {
+  const hasData = stats != null && stats.count > 0
   return (
     <div className="bg-card rounded-lg border border-border p-4">
       <div className="flex items-center justify-between mb-3">
@@ -405,12 +408,14 @@ function ModelCard({
           <span>{port}</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-muted-foreground">Avg Latency</span>
-          <span>{latency}</span>
+          <span className="text-muted-foreground">Avg / P95 Latency</span>
+          <span>
+            {hasData ? `${formatLatency(stats.avg_ms)} / ${formatLatency(stats.p95_ms)}` : 'No data yet'}
+          </span>
         </div>
         <div className="flex justify-between">
-          <span className="text-muted-foreground">Requests (24h)</span>
-          <span>{requests.toLocaleString()}</span>
+          <span className="text-muted-foreground">Requests (measured)</span>
+          <span>{hasData ? stats.count.toLocaleString() : '0'}</span>
         </div>
       </div>
     </div>
