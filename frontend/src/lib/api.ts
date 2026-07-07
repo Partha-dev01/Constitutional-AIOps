@@ -211,6 +211,19 @@ export interface AllSettings {
   telemetry: TelemetrySettings;
   remediation: RemediationSettings;
 }
+
+export type ServingSwapStatus = 'idle' | 'pending' | 'swapping' | 'error';
+
+/** GET/POST /settings/serving-mode — Mode 1 ⇄ Mode 2 swap channel. */
+export interface ServingModeStatus {
+  mode: number;
+  single_engine: boolean;
+  requested_mode: number | null;
+  swap_status: ServingSwapStatus;
+  detail: string | null;
+  requested_at: string | null;
+  updated_at: string | null;
+}
 // ---- end Settings types ----
 
 // ---- Demo / Chaos types ----
@@ -1046,6 +1059,12 @@ export const api = {
       }),
     reset: () =>
       request<AllSettings>('/settings/reset', { method: 'POST' }),
+    servingMode: () => request<ServingModeStatus>('/settings/serving-mode'),
+    requestServingMode: (mode: 1 | 2) =>
+      request<ServingModeStatus>('/settings/serving-mode', {
+        method: 'POST',
+        body: JSON.stringify({ mode }),
+      }),
   },
 };
 
