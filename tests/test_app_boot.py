@@ -65,6 +65,12 @@ def test_app_has_expected_routers():
     from src.main import app
 
     registered_paths = {route.path for route in app.routes if hasattr(route, "path")}
+    # FastAPI >= 0.139 (starlette 1.x) no longer flattens include_router()
+    # targets into app.routes — each becomes an opaque _IncludedRouter entry
+    # with no .path. The OpenAPI schema is the version-stable public view of
+    # every registered HTTP route, so union it in (websocket routes are still
+    # covered by the app.routes pass above).
+    registered_paths |= set(app.openapi().get("paths", {}))
 
     # Build a set of route prefixes present in the registered paths
     expected_prefixes = [
