@@ -1650,7 +1650,10 @@ async def chat(
                     f"This request concerns the monitored service '{service or 'this system'}' "
                     "and IS in scope. Answer it fully using the data above. Do NOT decline. "
                     "Every tool for this turn has ALREADY been executed — never reply "
-                    "that you WILL run, call, or use a tool; give the final answer now."
+                    "that you WILL run, call, or use a tool, never ask for tool "
+                    "parameters, and never say the request is incomplete. If the "
+                    "gathered data is empty or clean, state what was checked and what "
+                    "it showed, then give your best assessment; give the final answer now."
                 )
                 try:
                     retry_response = await reasoning_agent.chat(
@@ -2405,29 +2408,82 @@ _ANSWER_DIRECTIVE = (
     "## Answer directive\n"
     "Every tool for this turn has ALREADY been executed; the results are shown "
     "above. Do NOT say you will run, call, or use a tool — that already "
-    "happened. Answer the user's request directly and completely from the data "
-    "above. For an incident investigation: state the most likely root cause "
-    "(or your best hypothesis plus what evidence is missing), cite the "
+    "happened. If the user's message asks you to use or call a tool, that call "
+    "has ALREADY been made and its output is above — never ask for tool "
+    "parameters and never say the request is incomplete. Answer the user's "
+    "request directly and completely from the data above. A one-line reply is "
+    "never enough. For an incident investigation: state the most likely root "
+    "cause (or your best hypothesis plus what evidence is missing), cite the "
     "specific log/telemetry/memory evidence, and recommend concrete "
-    "remediation steps."
+    "remediation steps. When the gathered data is empty or clean, say exactly "
+    "what was checked and what it showed (e.g. no similar incidents on "
+    "record, no recent log errors), summarize the relevant current system "
+    "state from the context above, then give your best assessment and "
+    "concrete next steps anyway. When the user asks about a specific error "
+    "or warning message, explain what that message means from your own "
+    "domain knowledge and relate it to the gathered data."
+)
+
+
+# Short replies that deflect ABOUT the tooling instead of answering. Live s29
+# specimen: "I cannot complete the request as the find_similar tool requires a
+# parameter that was not provided." — not a refusal, not narration, still a
+# non-answer.
+_TOOL_DEFLECTION_MARKERS = (
+    "cannot complete the request",
+    "can't complete the request",
+    "unable to complete the request",
+    "cannot proceed with the request",
+)
+
+# A single short sentence that ONLY restates an empty lookup ("No similar
+# incidents found in memory.", live s29): technically true, useless to an
+# operator. Anything that adds a second sentence of state/assessment after the
+# empty result deliberately does NOT match.
+_EMPTY_RESULT_ONLY_RE = re.compile(
+    r"^(?:no|zero)\b[^.!?\n]*"
+    r"\b(?:found|recorded|available|on record|in memory|detected)\b"
+    r"[^.!?\n]*[.!?]?\s*$"
 )
 
 
 def _looks_like_nonanswer(text: Optional[str]) -> bool:
-    """Heuristic: a short planning-speak reply that never actually answers.
+    """Heuristic: a short reply that never actually answers.
 
-    Catches replies like "I will use the find_similar tool to look for similar
-    past incidents." — the model narrates an intention even though the tools
-    have already run by the time it speaks. Requires BOTH a short reply and a
-    narration opener so a long, data-rich answer that merely contains "I will"
-    mid-text is never misclassified. Empty content counts as a non-answer.
+    Catches (a) planning-speak like "I will use the find_similar tool to look
+    for similar past incidents." — the model narrates an intention even though
+    the tools have already run by the time it speaks — and (b) tool-parameter
+    deflections like "I cannot complete the request as the find_similar tool
+    requires a parameter that was not provided." Requires a short reply plus a
+    narration opener / deflection marker so a long, data-rich answer that
+    merely contains "I will" mid-text is never misclassified. Empty content
+    counts as a non-answer.
     """
     if not text or not text.strip():
         return True
     lowered = text.strip().lower()
     if len(lowered) > 300:
         return False
-    return any(lowered.startswith(prefix) for prefix in _NARRATION_PREFIXES)
+    # Bare acknowledgements ("Done.", "OK, all good.") are never real answers.
+    if len(lowered) < 20:
+        return True
+    # Terse empty-result dead-ends; a compact-but-complete answer (e.g.
+    # "Nextcloud is healthy; no recent errors.") never matches the pattern.
+    if _EMPTY_RESULT_ONLY_RE.match(lowered):
+        return True
+    if any(lowered.startswith(prefix) for prefix in _NARRATION_PREFIXES):
+        return True
+    if any(marker in lowered for marker in _TOOL_DEFLECTION_MARKERS):
+        return True
+    # Tool-parameter deflection: a short reply about the tooling ("the
+    # find_similar tool requires a parameter…", "please provide the service
+    # name…") rather than about the incident. Needs the tooling co-mention so
+    # a legitimate short answer (e.g. asking for approval) never matches.
+    return "tool" in lowered and (
+        "parameter" in lowered
+        or "please provide" in lowered
+        or "provide the" in lowered
+    )
 
 
 def _compute_chat_confidence(
@@ -2567,6 +2623,22 @@ def _synthesize_answer_from_data(
             "- No telemetry or memory data is currently available for this service, "
             "but it is a monitored part of this system."
         )
+    else:
+        # Everything gathered came back clean/empty → close with an assessment
+        # instead of leaving bare zero-count bullets (the "meaningful output"
+        # requirement): say what that means and what to do next.
+        logs_clean = not logs or (
+            not logs.get("error_count") and not logs.get("warning_count")
+        )
+        if logs_clean and not (similar and similar.get("incidents")):
+            lines.append(
+                "Assessment: nothing currently points to an active fault — recent "
+                "logs show no errors and no similar incident is on record in "
+                "memory. If this incident is historical or already resolved, no "
+                "action is needed now. If the problem is ongoing, check the "
+                "container's status and restart count, widen the log search "
+                "window, and re-run the investigation."
+            )
 
     return "\n".join(lines)
 
@@ -2647,7 +2719,13 @@ def _extract_actions(content: str) -> list[str] | None:
             # A non-bullet line ends the section (new prose paragraph/heading).
             if in_actions_section:
                 in_actions_section = False
-            if not any(kw in low for kw in keywords):
+            # "…this suggests that…" / "…, suggesting this may be…" is
+            # analysis prose, not a recommendation — blank those forms before
+            # keyword matching so they can't ride in on the "suggest"
+            # substring (s29: whole diagnosis sentences showed up in the
+            # Suggested-actions card).
+            low_kw = re.sub(r"\bsuggest(?:s|ing)\b", "", low)
+            if not any(kw in low_kw for kw in keywords):
                 continue
         # Drop section headers masquerading as actions ("Recommendation:",
         # "Next Steps:", …) — they end with ':' or are just a label, not an

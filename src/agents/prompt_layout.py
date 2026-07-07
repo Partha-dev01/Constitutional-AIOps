@@ -57,8 +57,15 @@ def build_in_scope_directive(service: Optional[str]) -> str:
         f"This request concerns the monitored service '{service or 'this system'}' "
         "and IS in scope. Answer it fully using the data above. Do NOT decline. "
         "Every tool for this turn has ALREADY been executed — the results are in "
-        "the data above. Never reply that you WILL run, call, or use a tool; "
-        "produce the final answer now."
+        "the data above, even if the user's message asks you to use or call a "
+        "tool. Never reply that you WILL run, call, or use a tool, never ask for "
+        "tool parameters, and never say the request is incomplete. A one-line "
+        "reply is never enough: when the gathered data is empty or clean, state "
+        "what was checked and what it showed, summarize the relevant current "
+        "system state, and give your best assessment plus next steps. When the "
+        "user asks about a specific error or warning message, explain what that "
+        "message means from your own domain knowledge and relate it to the data. "
+        "Produce the final answer now."
     )
 
 
