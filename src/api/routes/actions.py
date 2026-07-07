@@ -751,33 +751,95 @@ async def _validate_action(
         )
 
 
+# Action types that map onto a real, whitelisted tool executor. Everything
+# else has NO executor wired and must fail honestly instead of pretending.
+_REAL_EXECUTOR_TOOLS: dict[ActionType, str] = {
+    ActionType.RESTART_SERVICE: "restart_service",
+    ActionType.SCALE_UP: "scale_service",
+    ActionType.SCALE_DOWN: "scale_service",
+}
+
+
 async def _execute_action(
     request: Request,
     action: Action,
 ) -> ActionExecutionResult:
-    """Execute the action (mock implementation)."""
-    import asyncio
-    import random
+    """Execute the action through the real gated tool pipeline.
+
+    Routes restart/scale actions through ``execute_tool_call`` so the
+    ``AIOPS_ENABLE_ACTION_TOOLS`` kill-switch, container whitelist and the
+    constitutional gate are all enforced — the same path chat and incident
+    remediation use. Action types with no real executor return an explicit
+    failure rather than a simulated success (this replaces the old
+    ``random() < 0.9`` mock).
+    """
+    from src.api.routes.tools import execute_tool_call
 
     start_time = datetime.utcnow()
+    params = action.parameters or {}
 
-    # Simulate execution time
-    await asyncio.sleep(random.uniform(0.5, 2.0))
+    tool_name = _REAL_EXECUTOR_TOOLS.get(action.action_type)
+    if tool_name is None:
+        end_time = datetime.utcnow()
+        return ActionExecutionResult(
+            success=False,
+            output=None,
+            error=(
+                f"No real executor is wired for action type "
+                f"'{action.action_type.value}'. Only restart_service / scale_up / "
+                f"scale_down execute (via the gated tool pipeline); refusing to "
+                f"simulate success."
+            ),
+            started_at=start_time,
+            completed_at=end_time,
+            duration_ms=round((end_time - start_time).total_seconds() * 1000, 2),
+            rollback_available=False,
+        )
+
+    parameters: dict[str, Any] = {
+        "service_name": action.target_service,
+        "reason": action.description or f"Action {action.id}",
+        "confidence": action.confidence,
+    }
+    if tool_name == "restart_service":
+        parameters["graceful"] = params.get("graceful", True)
+    else:
+        parameters["target_replicas"] = params.get(
+            "target_replicas", params.get("replicas")
+        )
+
+    result = await execute_tool_call(
+        request,
+        tool_name=tool_name,
+        parameters=parameters,
+        context={
+            # Honest signals only: APPROVED can be automatic, so assert a human
+            # only when one actually approved; incident linkage as recorded.
+            "human_approved": action.approved_by is not None,
+            "active_incident": bool(action.incident_id),
+            "telemetry_evidence": bool(action.validation),
+            "audit_enabled": _audit_enabled(),
+            "source": "actions_execute",
+            "action_id": action.id,
+        },
+    )
 
     end_time = datetime.utcnow()
-    duration = (end_time - start_time).total_seconds() * 1000
 
-    # Mock success (90% success rate)
-    success = random.random() < 0.9
-
+    success = bool(result.get("success"))
     if success:
-        output = f"Successfully executed {action.action_type.value} on {action.target_service}"
-        if action.target_instance:
-            output += f" (instance: {action.target_instance})"
+        data = result.get("data") or {}
+        output = (
+            f"Executed {tool_name} on {data.get('container', action.target_service)}"
+            f" (status: {data.get('status', 'completed')})"
+        )
         error = None
     else:
         output = None
-        error = f"Simulated failure for {action.action_type.value}"
+        error = result.get("error") or "Execution failed"
+        error_code = result.get("error_code")
+        if error_code:
+            error = f"[{error_code}] {error}"
 
     return ActionExecutionResult(
         success=success,
@@ -785,13 +847,8 @@ async def _execute_action(
         error=error,
         started_at=start_time,
         completed_at=end_time,
-        duration_ms=round(duration, 2),
-        rollback_available=action.action_type in [
-            ActionType.RESTART_SERVICE,
-            ActionType.SCALE_UP,
-            ActionType.SCALE_DOWN,
-            ActionType.MODIFY_CONFIG,
-        ],
+        duration_ms=round((end_time - start_time).total_seconds() * 1000, 2),
+        rollback_available=success,
     )
 
 

@@ -318,10 +318,13 @@ constitutional-aiops/
 ## 🔧 Technology Stack
 
 ### Models (architecture fixed; runtime now vLLM AWQ)
+Context column = deployed vLLM `--max-model-len` (docker-compose.production.yml).
+The Ollama-era design doc had 8K fast / 4K reasoning; production flips it so chat
+(reasoning agent) fits tool results in context.
 | Role | Model | Quantization | Port | Context |
 |------|-------|--------------|------|---------|
-| Fast Agent | Qwen3-4B | AWQ-marlin (vLLM) / Q4_K_M (Ollama local) | 8000 | 8K |
-| Reasoning Agent | Qwen3-14B | AWQ-marlin (vLLM) / Q4_K_M (Ollama local) | 8001 | 4K |
+| Fast Agent | Qwen3-4B | AWQ-marlin (vLLM) / Q4_K_M (Ollama local) | 8000 | 4K |
+| Reasoning Agent | Qwen3-14B | AWQ-marlin (vLLM) / Q4_K_M (Ollama local) | 8001 | 8K |
 
 ### Infrastructure
 | Component | Technology |
