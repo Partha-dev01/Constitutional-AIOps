@@ -16,17 +16,41 @@ Determinism:
 - Latency tracking for benchmarking
 """
 
+import json
 import logging
 import time
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any, AsyncIterator, Optional
 
 import httpx
 
 import src.config as _cfg_module
+from src.agents.serving_profile import ServingProfile, resolve_serving_profile
 
 logger = logging.getLogger(__name__)
+
+# vLLM V1 priority scheduling (Mode 2 plan, Phase 2): lower value = scheduled
+# first, so interactive chat preempts RCA, which preempts background
+# annotation. The field is injected ONLY when the resolved profile advertises
+# priority support (Mode 2) — Mode 1 request payloads stay byte-identical,
+# and the payload-equality tests in tests/test_serving_profile.py pin that.
+PRIORITY_CHAT = 0
+PRIORITY_RCA = 1
+PRIORITY_BACKGROUND = 2
+
+
+def _guided_json_response_format(schema: dict[str, Any]) -> dict[str, Any]:
+    """OpenAI-compatible structured-outputs body for vLLM (Phase 5).
+
+    vLLM's ``auto`` structured-outputs backend compiles this with xgrammar;
+    kept in one helper so the exact wire format has a single owner (it gets
+    validated live against v0.24 in the Phase 5 gate).
+    """
+    return {
+        "type": "json_schema",
+        "json_schema": {"name": "aiops_structured_output", "schema": schema},
+    }
 
 
 @dataclass
@@ -38,6 +62,9 @@ class LatencyRecord:
     prompt_hash: int
     tokens_generated: int = 0
     success: bool = True
+    # Time-to-first-token for streamed requests (Phase 4); None on the
+    # blocking paths, so existing records/exports are unchanged.
+    ttft_ms: Optional[float] = None
 
 
 @dataclass
@@ -65,6 +92,7 @@ class ModelRouter:
         self,
         fast_agent_url: Optional[str] = None,
         reasoning_agent_url: Optional[str] = None,
+        profile: Optional[ServingProfile] = None,
     ):
         """
         Initialize the model router.
@@ -72,9 +100,27 @@ class ModelRouter:
         Args:
             fast_agent_url: URL for fast agent (default from config)
             reasoning_agent_url: URL for reasoning agent (default from config)
+            profile: Optional pre-resolved ServingProfile (Mode 2 plan,
+                Phase 1). When None (the default) the profile is resolved
+                from the environment; in Mode 1 that resolution changes
+                NOTHING — URLs and model names keep coming from src.config
+                exactly as before (including late-bound model-name reads at
+                call time). An explicitly injected profile — or a resolved
+                Mode 2 — is authoritative for URLs and model names instead.
         """
-        self.fast_agent_url = fast_agent_url or _cfg_module.config.llm.fast_agent_url
-        self.reasoning_agent_url = reasoning_agent_url or _cfg_module.config.llm.reasoning_agent_url
+        # Serving profile (Mode 2 plan, Phase 1). `_profile_authoritative`
+        # gates every profile-driven branch so the default Mode 1 path stays
+        # byte-identical to the pre-Mode-2 router.
+        self.profile: ServingProfile = profile if profile is not None else resolve_serving_profile()
+        self._profile_authoritative: bool = profile is not None or self.profile.mode != 1
+
+        if self._profile_authoritative:
+            self.fast_agent_url = fast_agent_url or self.profile.fast_url
+            self.reasoning_agent_url = reasoning_agent_url or self.profile.reasoning_url
+        else:
+            # Mode 1 default: unchanged legacy behavior (config fallback).
+            self.fast_agent_url = fast_agent_url or _cfg_module.config.llm.fast_agent_url
+            self.reasoning_agent_url = reasoning_agent_url or _cfg_module.config.llm.reasoning_agent_url
 
         # Create separate HTTP clients for each endpoint
         self._fast_client = httpx.AsyncClient(
@@ -94,7 +140,34 @@ class ModelRouter:
         logger.info(f"  Fast Agent: {self.fast_agent_url}")
         logger.info(f"  Reasoning Agent: {self.reasoning_agent_url}")
         logger.info(f"  Determinism: temperature=0.0, seed=hash(prompt)")
-    
+        if self._profile_authoritative:
+            # Only logged off the legacy path so Mode 1 startup logs are unchanged.
+            logger.info(
+                "  Serving profile: mode=%d single_engine=%s fast_model=%s reasoning_model=%s",
+                self.profile.mode,
+                self.profile.single_engine,
+                self.profile.fast_model,
+                self.profile.reasoning_model,
+            )
+
+    def _fast_model_name(self) -> str:
+        """Served model name for fast-agent requests.
+
+        Mode 1 default keeps the legacy contract: read src.config at CALL time
+        (late binding — tests monkeypatch config.llm after construction).
+        Only an authoritative profile (explicitly injected, or resolved
+        Mode 2) supplies the name itself.
+        """
+        if self._profile_authoritative:
+            return self.profile.fast_model
+        return _cfg_module.config.llm.fast_agent_model
+
+    def _reasoning_model_name(self) -> str:
+        """Served model name for reasoning-agent requests (see _fast_model_name)."""
+        if self._profile_authoritative:
+            return self.profile.reasoning_model
+        return _cfg_module.config.llm.reasoning_agent_model
+
     @staticmethod
     def _fix_thinking_response(result: dict[str, Any]) -> dict[str, Any]:
         """
@@ -155,6 +228,7 @@ class ModelRouter:
         temperature: float = 0.0,  # Changed from 0.1 for determinism
         seed: Optional[int] = None,  # Fixed seed for reproducibility
         system_prompt: Optional[str] = None,  # System prompt for context
+        guided_schema: Optional[dict[str, Any]] = None,  # Phase 5: Mode 2 only
         **kwargs,
     ) -> dict[str, Any]:
         """
@@ -192,8 +266,9 @@ class ModelRouter:
             messages.append({"role": "system", "content": system_prompt})
         messages.append({"role": "user", "content": prompt})
 
+        model_name = self._fast_model_name()
         payload = {
-            "model": _cfg_module.config.llm.fast_agent_model,
+            "model": model_name,
             "messages": messages,
             "max_tokens": max_tokens,
             "temperature": temperature,
@@ -203,8 +278,17 @@ class ModelRouter:
         # vLLM + Qwen3 has thinking ON by default when --reasoning-parser qwen3 is set.
         # Annotation (4B) must NOT think — Ollama's qwen3:4b-instruct suppresses it via
         # instruct tuning; vLLM AWQ does not. Detect vLLM by model name (no colon).
-        if ":" not in _cfg_module.config.llm.fast_agent_model:
+        if ":" not in model_name:
             payload["chat_template_kwargs"] = {"enable_thinking": False}
+        # Fast-agent calls are background annotation by default; callers may
+        # pass priority=... in kwargs to override (setdefault respects it).
+        if self.profile.supports_priority:
+            payload.setdefault("priority", PRIORITY_BACKGROUND)
+        # Phase 5: schema-constrained decode. Explicit kwarg (never **kwargs)
+        # + profile gate => Mode 1 payloads stay byte-identical even when a
+        # caller always passes its schema.
+        if guided_schema is not None and self.profile.supports_guided_json:
+            payload["response_format"] = _guided_json_response_format(guided_schema)
 
         start_time = time.perf_counter()
         success = True
@@ -253,6 +337,7 @@ class ModelRouter:
         seed: Optional[int] = None,  # Fixed seed for reproducibility
         enable_thinking: bool = False,
         system_prompt: Optional[str] = None,  # System prompt for context
+        guided_schema: Optional[dict[str, Any]] = None,  # Phase 5: Mode 2 only
         **kwargs,
     ) -> dict[str, Any]:
         """
@@ -295,8 +380,9 @@ class ModelRouter:
             messages.append({"role": "system", "content": system_prompt})
         messages.append({"role": "user", "content": prompt})
 
+        model_name = self._reasoning_model_name()
         payload = {
-            "model": _cfg_module.config.llm.reasoning_agent_model,
+            "model": model_name,
             "messages": messages,
             "max_tokens": max_tokens,
             "temperature": temperature,
@@ -310,8 +396,15 @@ class ModelRouter:
         # model UNLESS this call explicitly asked for extended thinking. Ollama's
         # instruct tuning (colon in the model name) handles suppression itself, so
         # only the no-colon vLLM path needs the kwarg.
-        if not enable_thinking and ":" not in _cfg_module.config.llm.reasoning_agent_model:
+        if not enable_thinking and ":" not in model_name:
             payload["chat_template_kwargs"] = {"enable_thinking": False}
+        # Direct reasoning calls are RCA/planning work: above background
+        # annotation, below interactive chat. Caller kwargs win (setdefault).
+        if self.profile.supports_priority:
+            payload.setdefault("priority", PRIORITY_RCA)
+        # Phase 5: schema-constrained decode (see fast_completion).
+        if guided_schema is not None and self.profile.supports_guided_json:
+            payload["response_format"] = _guided_json_response_format(guided_schema)
 
         start_time = time.perf_counter()
         success = True
@@ -388,8 +481,9 @@ class ModelRouter:
         # NO seed for natural variation in chat
         prompt_hash = hash(prompt) % (2**32)
 
+        model_name = self._reasoning_model_name()
         payload = {
-            "model": _cfg_module.config.llm.reasoning_agent_model,
+            "model": model_name,
             "messages": [{"role": "user", "content": prompt}],
             "max_tokens": max_tokens,
             "temperature": temperature,
@@ -399,8 +493,11 @@ class ModelRouter:
         # Same vLLM thinking-suppression contract as reasoning_completion: the
         # colon-free production model leaks CoT unless we disable thinking, and
         # this method has no system prompt so a leak would be entirely raw CoT.
-        if not enable_thinking and ":" not in _cfg_module.config.llm.reasoning_agent_model:
+        if not enable_thinking and ":" not in model_name:
             payload["chat_template_kwargs"] = {"enable_thinking": False}
+        # Interactive chat gets the highest scheduling priority (lowest value).
+        if self.profile.supports_priority:
+            payload.setdefault("priority", PRIORITY_CHAT)
 
         start_time = time.perf_counter()
         success = True
@@ -441,6 +538,134 @@ class ModelRouter:
                 success=success,
             )
 
+    async def reasoning_completion_stream(
+        self,
+        prompt: str,
+        max_tokens: int = 2048,
+        temperature: float = 0.5,  # chat semantics: natural, non-deterministic
+        enable_thinking: bool = False,
+        system_prompt: Optional[str] = None,
+        **kwargs,
+    ) -> AsyncIterator[dict[str, Any]]:
+        """Stream a reasoning-agent completion token by token (Phase 4).
+
+        Async generator yielding event dicts:
+          {"type": "delta", "text": str}          — one per content token chunk
+          {"type": "done", "content": str,        — full assembled answer
+           "reasoning": str,                      — captured CoT (audit; "" when none)
+           "usage": dict | None,                  — from stream_options.include_usage
+           "ttft_ms": float | None,               — first-token latency
+           "latency_ms": float}                   — full-stream latency
+
+        Latency/token accounting lands in the same in-memory history the
+        blocking paths use (agent="reasoning"), with ``ttft_ms`` populated, so
+        GET /api/v1/metrics stays truthful for streamed traffic. Mirrors
+        chat_completion's semantics: no seed, thinking suppressed for the
+        colon-free vLLM served names unless explicitly enabled, and (Mode 2)
+        interactive-chat priority.
+        """
+        if enable_thinking:
+            prompt = f"/think\n{prompt}"
+
+        prompt_hash = hash(prompt) % (2**32)
+
+        messages: list[dict[str, str]] = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
+
+        model_name = self._reasoning_model_name()
+        payload: dict[str, Any] = {
+            "model": model_name,
+            "messages": messages,
+            "max_tokens": max_tokens,
+            "temperature": temperature,
+            "stream": True,
+            "stream_options": {"include_usage": True},
+            **kwargs,
+        }
+        if not enable_thinking and ":" not in model_name:
+            payload["chat_template_kwargs"] = {"enable_thinking": False}
+        if self.profile.supports_priority:
+            payload.setdefault("priority", PRIORITY_CHAT)
+
+        start_time = time.perf_counter()
+        success = True
+        tokens_generated = 0
+        ttft_ms: Optional[float] = None
+        content_parts: list[str] = []
+        reasoning_parts: list[str] = []
+        usage: Optional[dict[str, Any]] = None
+
+        try:
+            async with self._reasoning_client.stream(
+                "POST", "chat/completions", json=payload
+            ) as response:
+                response.raise_for_status()
+                async for line in response.aiter_lines():
+                    if not line.startswith("data:"):
+                        continue
+                    data = line[len("data:"):].strip()
+                    if not data or data == "[DONE]":
+                        continue
+                    try:
+                        chunk = json.loads(data)
+                    except json.JSONDecodeError:
+                        logger.debug("Skipping unparseable SSE chunk: %.120s", data)
+                        continue
+                    if isinstance(chunk.get("usage"), dict):
+                        usage = chunk["usage"]
+                    for choice in chunk.get("choices", []):
+                        delta = choice.get("delta") or {}
+                        text = delta.get("content") or ""
+                        reasoning = delta.get("reasoning_content") or delta.get("reasoning") or ""
+                        if reasoning:
+                            reasoning_parts.append(reasoning)
+                        if text:
+                            if ttft_ms is None:
+                                ttft_ms = (time.perf_counter() - start_time) * 1000
+                            content_parts.append(text)
+                            yield {"type": "delta", "text": text}
+
+            content = "".join(content_parts)
+            reasoning_text = "".join(reasoning_parts)
+            if not content and reasoning_text:
+                # Same promotion contract as _fix_thinking_response: a thinking
+                # leak with empty content becomes the visible answer.
+                content = reasoning_text
+                if ttft_ms is None:
+                    ttft_ms = (time.perf_counter() - start_time) * 1000
+                yield {"type": "delta", "text": content}
+
+            if isinstance(usage, dict):
+                tokens_generated = usage.get("completion_tokens", 0) or 0
+
+            latency_ms = (time.perf_counter() - start_time) * 1000
+            yield {
+                "type": "done",
+                "content": content,
+                "reasoning": reasoning_text,
+                "usage": usage,
+                "ttft_ms": round(ttft_ms, 2) if ttft_ms is not None else None,
+                "latency_ms": round(latency_ms, 2),
+            }
+
+        except httpx.HTTPError as e:
+            success = False
+            logger.error(f"Streaming reasoning request failed: {e}")
+            raise
+
+        finally:
+            latency_ms = (time.perf_counter() - start_time) * 1000
+            self._record_latency(
+                agent="reasoning",
+                latency_ms=latency_ms,
+                prompt_hash=prompt_hash,
+                tokens_generated=tokens_generated,
+                success=success,
+                ttft_ms=ttft_ms,
+            )
+
     async def health_check(self) -> dict[str, bool]:
         """
         Check health of both LLM endpoints.
@@ -479,6 +704,7 @@ class ModelRouter:
         prompt_hash: int,
         tokens_generated: int = 0,
         success: bool = True,
+        ttft_ms: Optional[float] = None,
     ) -> None:
         """Record a latency measurement."""
         record = LatencyRecord(
@@ -488,6 +714,7 @@ class ModelRouter:
             prompt_hash=prompt_hash,
             tokens_generated=tokens_generated,
             success=success,
+            ttft_ms=round(ttft_ms, 2) if ttft_ms is not None else None,
         )
         self._latency_history.append(record)
 
@@ -642,4 +869,12 @@ class ModelRouter:
 ModelManager = ModelRouter
 
 
-__all__ = ["ModelRouter", "ModelManager", "LatencyRecord", "MetricsSnapshot"]
+__all__ = [
+    "ModelRouter",
+    "ModelManager",
+    "LatencyRecord",
+    "MetricsSnapshot",
+    "PRIORITY_CHAT",
+    "PRIORITY_RCA",
+    "PRIORITY_BACKGROUND",
+]
