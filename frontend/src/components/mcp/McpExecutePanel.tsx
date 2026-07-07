@@ -101,17 +101,36 @@ export function McpExecutePanel({ tool }: McpExecutePanelProps) {
   const confirmParams = tool ? coerceForApi(values, tool.parameters) : {}
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-card rounded-lg border border-border">
-      <div className="shrink-0 p-4 border-b border-border">
-        <h3 className="font-semibold">
+    <div className="flex h-full min-h-0 flex-col rounded-xl border border-border bg-card">
+      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border p-3.5">
+        <h3 className="text-sm font-semibold">
           {tool ? `Execute: ${tool.name}` : 'Tool Execution'}
         </h3>
+        {tool && (
+          <span className="ml-auto flex shrink-0 items-center gap-1.5">
+            {tool.category && (
+              <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium capitalize text-muted-foreground">
+                {tool.category}
+              </span>
+            )}
+            {action && !disabled && (
+              <span className="rounded-full bg-orange-500/10 px-2 py-0.5 text-[10px] font-medium text-orange-500">
+                gated
+              </span>
+            )}
+          </span>
+        )}
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto p-4">
         {!tool ? (
-          <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-            <Wrench className="h-8 w-8 mb-2 opacity-50" />
-            <p className="text-sm">Select a tool to execute</p>
+          <div className="flex h-full min-h-[200px] flex-col items-center justify-center rounded-lg border border-dashed border-border/70 text-muted-foreground">
+            <span className="mb-2.5 flex h-10 w-10 items-center justify-center rounded-xl bg-muted/50">
+              <Wrench className="h-5 w-5 opacity-60" />
+            </span>
+            <p className="text-sm font-medium">Select a tool to execute</p>
+            <p className="mt-1 max-w-[240px] text-center text-xs">
+              Pick a tool from the list — its parameters and results appear here.
+            </p>
           </div>
         ) : (
           <div className="space-y-4">
