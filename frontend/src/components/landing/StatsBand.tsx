@@ -1,7 +1,3 @@
-import { useEffect, useState } from 'react'
-import { useReveal } from '../../hooks/useReveal'
-import { prefersReducedMotion } from '../../lib/utils'
-
 interface Stat {
   value: number
   decimals: number
@@ -52,63 +48,27 @@ const STATS: Stat[] = [
   },
 ]
 
-const COUNT_DURATION_MS = 1400
-
 /**
- * Full-width hairline stats band. Each figure counts up via rAF when the band
- * scrolls into view; under prefers-reduced-motion the final values render
- * immediately with no animation.
+ * Full-width hairline stats band. Renders the final figures directly — no
+ * animation.
  */
 export function StatsBand() {
-  const { ref, visible } = useReveal<HTMLDivElement>()
-
   return (
     <section className="border-b border-border bg-card/30">
-      <div
-        ref={ref}
-        className="mx-auto grid max-w-6xl grid-cols-2 gap-x-6 gap-y-10 px-6 py-14 sm:py-16 md:grid-cols-3 lg:grid-cols-5"
-      >
+      <div className="mx-auto grid max-w-6xl grid-cols-2 gap-x-6 gap-y-10 px-6 py-14 sm:py-16 md:grid-cols-3 lg:grid-cols-5">
         {STATS.map((stat) => (
-          <CountUpStat key={stat.label} stat={stat} start={visible} />
+          <StatItem key={stat.label} stat={stat} />
         ))}
       </div>
     </section>
   )
 }
 
-function CountUpStat({ stat, start }: { stat: Stat; start: boolean }) {
-  const [display, setDisplay] = useState(() =>
-    prefersReducedMotion() ? stat.value : 0,
-  )
-
-  useEffect(() => {
-    if (!start) return
-    if (prefersReducedMotion()) {
-      setDisplay(stat.value)
-      return
-    }
-
-    let frame = 0
-    const t0 = performance.now()
-
-    const tick = (now: number) => {
-      const progress = Math.min((now - t0) / COUNT_DURATION_MS, 1)
-      // Ease-out cubic so the count decelerates into its final value.
-      const eased = 1 - Math.pow(1 - progress, 3)
-      setDisplay(stat.value * eased)
-      if (progress < 1) {
-        frame = window.requestAnimationFrame(tick)
-      }
-    }
-
-    frame = window.requestAnimationFrame(tick)
-    return () => window.cancelAnimationFrame(frame)
-  }, [start, stat.value])
-
+function StatItem({ stat }: { stat: Stat }) {
   return (
     <div className="text-center">
       <div className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-        {display.toFixed(stat.decimals)}
+        {stat.value.toFixed(stat.decimals)}
         <span className="text-primary">{stat.suffix}</span>
       </div>
       <div className="mt-2 text-sm font-medium text-foreground">{stat.label}</div>

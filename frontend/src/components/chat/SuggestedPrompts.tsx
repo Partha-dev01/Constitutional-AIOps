@@ -1,5 +1,3 @@
-import { Sparkles } from 'lucide-react'
-
 interface SuggestedPromptsProps {
   prompts: string[]
   /** Fills the input with the chosen prompt — does NOT submit. */
@@ -25,7 +23,7 @@ export function SuggestedPrompts({ prompts, onPick, title, dense = false }: Sugg
   return (
     <div className={dense ? 'mx-auto w-full max-w-sm text-center' : 'mx-auto max-w-2xl text-center'}>
       <h2 className={dense ? 'text-base font-semibold' : 'text-lg font-semibold'}>
-        {title ?? 'Try asking about'}
+        {title ?? 'Common queries'}
       </h2>
       <p className="mt-1 text-sm text-muted-foreground">
         Pick a prompt to get started, or type your own question below.
@@ -38,9 +36,8 @@ export function SuggestedPrompts({ prompts, onPick, title, dense = false }: Sugg
             type="button"
             onClick={() => onPick(prompt)}
             style={{ animationDelay: `${i * 60}ms` }}
-            className="chip-in group flex items-center gap-2 rounded-xl border border-border/60 bg-card/70 p-3 text-left text-sm transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-[0_4px_20px_-4px_hsl(var(--primary)/0.3)]"
+            className="chip-in group flex items-center gap-2 rounded-xl border border-border/60 bg-card/70 p-3 text-left text-sm transition-colors hover:border-primary/50"
           >
-            <Sparkles className="h-4 w-4 shrink-0 text-primary/70 transition-colors group-hover:text-primary" />
             <span className="text-foreground">{prompt}</span>
           </button>
         ))}

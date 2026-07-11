@@ -9,8 +9,8 @@ import { useAuthStore } from '../lib/auth'
  * the auth store; on success it navigates to the ?next= target (default /).
  * Pre-flip (authRequired === false) or when already signed in it immediately
  * redirects to next, so the page never blocks anyone while enforcement is
- * off. Visuals follow the app brand (Shield + "Constitutional AIOps") with a
- * static gradient backdrop — no animation, so it is reduced-motion-safe.
+ * off. Visuals follow the app brand (Shield + "Constitutional AIOps") on a
+ * flat background — no decoration, so it is reduced-motion-safe.
  */
 
 /** Only allow same-app absolute paths as redirect targets (no `//host`). */
@@ -70,31 +70,10 @@ export function Login() {
 
   return (
     <div
-      className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 font-sans text-foreground"
+      className="flex min-h-screen items-center justify-center bg-background px-4 font-sans text-foreground"
       data-testid="login-page"
     >
-      {/* Static gradient wash + grid backdrop (no animation: reduced-motion-safe) */}
-      <div
-        className="pointer-events-none absolute inset-0 opacity-40"
-        style={{
-          background:
-            'radial-gradient(60% 50% at 50% 0%, hsl(var(--primary) / 0.25), transparent 70%), linear-gradient(120deg, hsl(var(--primary) / 0.10), transparent, hsl(var(--primary) / 0.10))',
-        }}
-        aria-hidden="true"
-      />
-      <div
-        className="pointer-events-none absolute inset-0 opacity-[0.12]"
-        style={{
-          backgroundImage:
-            'linear-gradient(hsl(var(--border)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--border)) 1px, transparent 1px)',
-          backgroundSize: '48px 48px',
-          maskImage: 'radial-gradient(70% 60% at 50% 30%, black, transparent 80%)',
-          WebkitMaskImage: 'radial-gradient(70% 60% at 50% 30%, black, transparent 80%)',
-        }}
-        aria-hidden="true"
-      />
-
-      <div className="relative w-full max-w-sm rounded-2xl border border-border bg-card p-8 shadow-2xl">
+      <div className="w-full max-w-sm rounded-lg border border-border bg-card p-8 shadow-sm">
         {/* Brand wordmark, matching components/Layout.tsx */}
         <div className="mb-6 flex items-center justify-center gap-2">
           <Shield className="h-8 w-8 text-primary" />

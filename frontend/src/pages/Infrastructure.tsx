@@ -488,11 +488,11 @@ export function Infrastructure() {
                         <div className="flex items-center gap-2">
                           <h4 className="font-semibold">{container.name}</h4>
                           {container.monitored && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-500/10 text-blue-500 rounded-full text-xs font-medium">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-primary/10 text-primary rounded-full text-xs font-medium">
                               Monitoring
                               <button
                                 onClick={(e) => stopMonitoring(container.name, e)}
-                                className="ml-1 p-0.5 hover:bg-blue-500/20 rounded"
+                                className="ml-1 p-0.5 hover:bg-primary/20 rounded"
                                 title="Stop monitoring"
                               >
                                 <X className="h-3 w-3" />
@@ -535,7 +535,7 @@ export function Infrastructure() {
                         <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                           Platform (this stack)
                         </span>
-                        <span className="ml-auto px-1.5 py-0.5 bg-purple-500/10 text-purple-500 rounded text-xs">
+                        <span className="ml-auto px-1.5 py-0.5 bg-primary/10 text-primary rounded text-xs">
                           {platformContainers.length}
                         </span>
                       </div>
@@ -553,7 +553,7 @@ export function Infrastructure() {
                         <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                           Other local containers
                         </span>
-                        <span className="ml-auto px-1.5 py-0.5 bg-blue-500/10 text-blue-500 rounded text-xs">
+                        <span className="ml-auto px-1.5 py-0.5 bg-primary/10 text-primary rounded text-xs">
                           {clientContainers.length}
                         </span>
                       </div>
@@ -603,7 +603,7 @@ export function Infrastructure() {
         <div className="bg-card rounded-lg border border-border">
           <div className="p-4 border-b border-border flex items-center justify-between">
             <h3 className="font-semibold flex items-center gap-2">
-              <Radio className="h-4 w-4 text-blue-500" />
+              <Radio className="h-4 w-4 text-primary" />
               Monitored remote hosts
               <span className="text-xs text-muted-foreground font-normal">(via Grafana Alloy edge agent)</span>
             </h3>
@@ -679,7 +679,7 @@ export function Infrastructure() {
       <div className="space-y-4">
         <div>
           <h2 className="text-lg font-semibold flex items-center gap-2">
-            <Radio className="h-5 w-5 text-blue-500" />
+            <Radio className="h-5 w-5 text-primary" />
             Monitor a Remote Host
           </h2>
           <p className="text-sm text-muted-foreground">
@@ -835,7 +835,7 @@ export function Infrastructure() {
                 href={grafanaUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-blue-500/10 text-blue-500 rounded-lg hover:bg-blue-500/20"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-primary/10 text-primary rounded-lg hover:bg-primary/20"
               >
                 <ExternalLink className="h-4 w-4" />
                 Open Grafana

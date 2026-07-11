@@ -241,11 +241,6 @@ export function SchemaCanvas({
           <stop offset="0%" stopColor="#2b3850" />
           <stop offset="100%" stopColor="#2b3850" />
         </linearGradient>
-        {/* Very subtle inner top highlight. */}
-        <linearGradient id="schemaNodeSheen" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.04" />
-          <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
-        </linearGradient>
         {/* Soft glow used by activity halos. */}
         <filter id="schemaGlow" x="-60%" y="-60%" width="220%" height="220%">
           <feGaussianBlur stdDeviation="9" />

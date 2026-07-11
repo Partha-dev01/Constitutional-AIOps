@@ -11,8 +11,8 @@ interface ShotFrameProps {
 
 /**
  * Glass "browser" frame shared by the hero showcase and the proof rows:
- * rounded glass panel, 3-dot window chrome, top sheen, drop glow (all in
- * .shot-frame / .shot-sheen, see styles/landing.css).
+ * rounded glass panel, 3-dot window chrome, top sheen, drop glow (see
+ * .shot-frame in styles/landing.css).
  *
  * Screenshots may not exist in every deployment; each <img> hides itself on
  * error so a missing PNG degrades to an empty chrome bar with no broken icon.
@@ -38,8 +38,6 @@ export function ShotFrame({ src, alt, eager = false, className }: ShotFrameProps
           (e.currentTarget as HTMLImageElement).style.display = 'none'
         }}
       />
-      {/* Animated glossy sweep (killed under reduced motion). */}
-      <div className="shot-sheen" aria-hidden="true" />
     </figure>
   )
 }
