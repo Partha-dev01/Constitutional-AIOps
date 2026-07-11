@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Maximize2, Minus, Plus } from 'lucide-react'
+import { Maximize2, Minimize2, Minus, Plus, Scan } from 'lucide-react'
 import { NODE_H, NODE_W, SchemaLayout } from './layout'
 import { SchemaEdge } from './SchemaEdge'
 import { SchemaNode } from './SchemaNode'
@@ -51,6 +51,14 @@ interface SchemaCanvasProps {
    * one-click "fit to pane" reset discoverable.
    */
   showControls?: boolean
+  /**
+   * Wire the ⤢ control to a host-owned expand action (the host fullscreens the
+   * stage container it owns — the canvas can't do that itself). Omitted → no
+   * expand button; "fit to view" keeps its own dedicated control either way.
+   */
+  onToggleExpand?: () => void
+  /** Host-tracked expand state: drives the expand button's icon + label. */
+  expanded?: boolean
 }
 
 /**
@@ -76,6 +84,8 @@ export function SchemaCanvas({
   nodeSubLabel,
   orientation = 'lr',
   showControls = false,
+  onToggleExpand,
+  expanded = false,
 }: SchemaCanvasProps) {
   const svgRef = useRef<SVGSVGElement>(null)
 
@@ -373,8 +383,20 @@ export function SchemaCanvas({
             onClick={fitView}
             className="rounded-md border border-slate-700 bg-slate-900/80 p-1.5 text-slate-300 backdrop-blur transition-colors hover:bg-slate-800 hover:text-white"
           >
-            <Maximize2 className="h-4 w-4" />
+            <Scan className="h-4 w-4" />
           </button>
+          {onToggleExpand && (
+            <button
+              type="button"
+              aria-label={expanded ? 'Exit expanded view' : 'Expand topology'}
+              title={expanded ? 'Exit expanded view' : 'Expand'}
+              onClick={onToggleExpand}
+              data-testid="schema-expand-toggle"
+              className="rounded-md border border-slate-700 bg-slate-900/80 p-1.5 text-slate-300 backdrop-blur transition-colors hover:bg-slate-800 hover:text-white"
+            >
+              {expanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+            </button>
+          )}
         </div>
       )}
     </>

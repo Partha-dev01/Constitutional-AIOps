@@ -65,6 +65,9 @@ export default function SchemaGraph({ height = 520, embedded = false, onSelectio
   const [hover, setHover] = useState<HoverState | null>(null)
   // Embedded mode: the canvas tracks its flex container's height live.
   const [measuredHeight, setMeasuredHeight] = useState(height)
+  // Embedded mode: the ⤢ control fullscreens the stage div (the cockpit pane
+  // is small — "expand" must genuinely expand, not just re-fit the viewBox).
+  const [stageExpanded, setStageExpanded] = useState(false)
 
   const hostRef = useRef<HTMLDivElement>(null)
 
@@ -102,6 +105,27 @@ export default function SchemaGraph({ height = 520, embedded = false, onSelectio
     ro.observe(el)
     return () => ro.disconnect()
   }, [embedded])
+
+  // Embedded mode: track fullscreen from the DOM (Escape also exits, so state
+  // must follow fullscreenchange rather than the button click).
+  useEffect(() => {
+    if (!embedded) return
+    const onFsChange = () => setStageExpanded(document.fullscreenElement === hostRef.current)
+    document.addEventListener('fullscreenchange', onFsChange)
+    return () => document.removeEventListener('fullscreenchange', onFsChange)
+  }, [embedded])
+
+  const toggleStageExpand = useCallback(() => {
+    const el = hostRef.current
+    if (!el) return
+    if (document.fullscreenElement) {
+      void document.exitFullscreen?.()
+    } else {
+      // Optional-chained: jsdom has no Fullscreen API; a browser rejection
+      // (e.g. no user gesture) is non-fatal — the button simply does nothing.
+      el.requestFullscreen?.()?.catch(() => undefined)
+    }
+  }, [])
 
   // Embedded mode: surface selection changes to the host (Console → chat ctx).
   useEffect(() => {
@@ -362,6 +386,8 @@ export default function SchemaGraph({ height = 520, embedded = false, onSelectio
             onEdgeHover={handleEdgeHover}
             onBackgroundClick={handleBackgroundClick}
             showControls
+            onToggleExpand={toggleStageExpand}
+            expanded={stageExpanded}
           />
           {hover && !drawer && <HoverCard target={hover.target} x={hover.x} y={hover.y} />}
           {drawer && (
