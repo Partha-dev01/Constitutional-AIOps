@@ -33,15 +33,17 @@ const TYPE_TIER: Record<EpisodicNode['type'], number> = {
   service: 3,
 }
 
-// Type accents (bare HSL triplets) — mirror EpisodicGraphExplorer.getNodeColor
-// and schema/types KIND_ACCENT so the browser reads with identical semantics.
+// Type accents (bare HSL triplets), desaturated from the original neon
+// EpisodicGraphExplorer.getNodeColor / schema/types KIND_ACCENT palette so the
+// canvas reads as muted category tags rather than a glowing rainbow spread.
+// Hues are preserved for identity; saturation/lightness are toned down.
 const TYPE_ACCENT: Record<string, string> = {
-  episode: '271 91% 65%', // purple  (#a855f7)
+  episode: '271 35% 58%', // muted purple
   incident: '0 84% 60%', // red       (#ef4444)
-  root_cause: '25 95% 53%', // orange (#f97316)
-  action: '189 94% 43%', // cyan      (#06b6d4)
-  service: '217 91% 60%', // blue     (#3b82f6)
-  entity: '330 81% 60%', // pink      (#ec4899)
+  root_cause: '25 45% 52%', // muted orange
+  action: '189 30% 45%', // muted cyan
+  service: '217 40% 58%', // muted blue
+  entity: '330 30% 58%', // muted pink
 }
 
 // Status accents override the type accent for the status-driven kinds (episode

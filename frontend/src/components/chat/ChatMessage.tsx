@@ -54,7 +54,7 @@ export function ChatMessage({ message, isTyping, displayedContent, insights, pro
         <div
           className={`rounded-2xl p-3 ${
             isUser
-              ? 'rounded-br-md bg-gradient-to-br from-primary to-primary/85 text-primary-foreground shadow-md'
+              ? 'rounded-br-md bg-primary text-primary-foreground shadow-sm'
               : 'rounded-tl-md border border-border/60 bg-card shadow-sm'
           }`}
         >

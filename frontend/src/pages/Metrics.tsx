@@ -353,7 +353,7 @@ export function Metrics() {
               title="Total Requests"
               value={metrics?.total_requests?.toString() || '0'}
               icon={Zap}
-              color="text-blue-500"
+              color="text-primary"
             />
             <MetricCard
               title="Success Rate"
@@ -371,13 +371,13 @@ export function Metrics() {
               title="Fast Agent Avg"
               value={`${metrics?.fast_agent?.avg_ms?.toFixed(0) || '0'}ms`}
               icon={Clock}
-              color="text-cyan-500"
+              color="text-primary"
             />
             <MetricCard
               title="Reasoning Agent Avg"
               value={`${metrics?.reasoning_agent?.avg_ms?.toFixed(0) || '0'}ms`}
               icon={Clock}
-              color="text-purple-500"
+              color="text-primary"
             />
           </div>
 
@@ -442,8 +442,8 @@ export function Metrics() {
                           <span className={cn(
                             'px-2 py-0.5 rounded text-xs',
                             record.agent === 'fast'
-                              ? 'bg-cyan-500/10 text-cyan-500'
-                              : 'bg-purple-500/10 text-purple-500'
+                              ? 'bg-primary/10 text-primary'
+                              : 'bg-primary/20 text-primary'
                           )}>
                             {record.agent}
                           </span>
@@ -786,7 +786,7 @@ export function Metrics() {
                 onClick={() => exportMetrics('json')}
                 className="flex items-center justify-center gap-3 p-6 rounded-lg border border-border hover:bg-muted/50 transition-colors"
               >
-                <FileJson className="h-8 w-8 text-blue-500" />
+                <FileJson className="h-8 w-8 text-primary" />
                 <div className="text-left">
                   <p className="font-medium">Export as JSON</p>
                   <p className="text-sm text-muted-foreground">
@@ -865,8 +865,8 @@ function AgentStatsCard({
   color: 'cyan' | 'purple'
 }) {
   const colorClasses = color === 'cyan'
-    ? 'border-cyan-500/20 bg-cyan-500/5'
-    : 'border-purple-500/20 bg-purple-500/5'
+    ? 'border-primary/20 bg-primary/5'
+    : 'border-primary/30 bg-primary/10'
 
   return (
     <div className={cn('rounded-lg border p-6', colorClasses)}>
@@ -926,9 +926,9 @@ function ConfigCard({
   color: 'cyan' | 'purple' | 'blue'
 }) {
   const colorClasses = {
-    cyan: 'border-cyan-500/20 bg-cyan-500/5',
-    purple: 'border-purple-500/20 bg-purple-500/5',
-    blue: 'border-blue-500/20 bg-blue-500/5',
+    cyan: 'border-primary/20 bg-primary/5',
+    purple: 'border-primary/30 bg-primary/10',
+    blue: 'border-primary/25 bg-primary/[0.07]',
   }
 
   return (

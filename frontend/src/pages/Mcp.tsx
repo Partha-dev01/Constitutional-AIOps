@@ -65,7 +65,7 @@ export function Mcp() {
           <Wrench className="h-5 w-5 text-primary" />
         </div>
         <div className="min-w-0">
-          <h1 className="text-xl font-bold leading-tight">MCP Tools</h1>
+          <h1 className="text-2xl font-bold">MCP Tools</h1>
           <p className="text-xs text-muted-foreground">
             The platform's tool surface — read-only queries run directly; action tools pass
             constitutional validation first.

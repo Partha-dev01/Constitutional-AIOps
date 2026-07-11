@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { ArrowUpRight, Loader2, Send, Sparkles, X } from 'lucide-react'
+import { ArrowUpRight, Loader2, Send, X } from 'lucide-react'
 import api from '../../lib/api'
 import { SelectedItem, buildSchemaChatContext } from './types'
 
@@ -97,10 +97,7 @@ export function AskAiPanel({ selection, onRemoveSelection, windowHours, maxHeigh
       data-testid="askai-panel"
     >
       <div className="flex items-center justify-between border-b border-slate-800 bg-gradient-to-r from-primary/10 to-transparent px-3 py-2.5">
-        <h4 className="flex items-center gap-1.5 text-sm font-semibold text-slate-200">
-          <Sparkles className="h-4 w-4 text-blue-400 drop-shadow-[0_0_6px_hsl(var(--primary)/0.7)]" />
-          Ask AI
-        </h4>
+        <h4 className="text-sm font-semibold text-slate-200">Ask AI</h4>
         {conversationId && (
           <button
             type="button"
@@ -152,9 +149,6 @@ export function AskAiPanel({ selection, onRemoveSelection, windowHours, maxHeigh
       <div ref={listRef} className="min-h-0 flex-1 space-y-2 overflow-y-auto px-3 py-2">
         {messages.length === 0 && !loading && (
           <div className="flex h-full flex-col items-center justify-center gap-2 px-4 text-center">
-            <div className="rounded-full border border-primary/20 bg-primary/10 p-2.5">
-              <Sparkles className="h-5 w-5 text-blue-400/80" />
-            </div>
             <p className="max-w-[200px] text-xs leading-relaxed text-slate-500">
               Ask about the architecture, health or recent episodes.
             </p>
@@ -165,7 +159,7 @@ export function AskAiPanel({ selection, onRemoveSelection, windowHours, maxHeigh
             key={m.id}
             className={`overflow-hidden rounded-2xl px-3 py-2 text-xs leading-relaxed [overflow-wrap:anywhere] ${
               m.role === 'user'
-                ? 'ml-6 rounded-br-md bg-gradient-to-br from-primary to-primary/85 text-primary-foreground shadow-sm'
+                ? 'ml-6 rounded-br-md bg-primary text-primary-foreground shadow-sm'
                 : m.isError
                   ? 'mr-2 rounded-tl-md border border-red-500/30 bg-red-500/10 text-red-300'
                   : 'mr-2 rounded-tl-md border border-slate-700/60 bg-slate-800/70 text-slate-300'
@@ -225,7 +219,7 @@ export function AskAiPanel({ selection, onRemoveSelection, windowHours, maxHeigh
           onClick={() => void send(input)}
           disabled={loading || !input.trim()}
           aria-label="Send to assistant"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-md transition-all hover:scale-105 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
         </button>

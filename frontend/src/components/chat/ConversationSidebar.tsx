@@ -57,7 +57,7 @@ export function ConversationSidebar({
         <button
           type="button"
           onClick={onNewConversation}
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-br from-primary to-primary/80 px-3 py-2 text-sm font-medium text-primary-foreground shadow-sm transition-all hover:shadow-[0_4px_16px_-4px_hsl(var(--primary)/0.5)]"
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
         >
           <MessageSquarePlus className="h-4 w-4" />
           New chat

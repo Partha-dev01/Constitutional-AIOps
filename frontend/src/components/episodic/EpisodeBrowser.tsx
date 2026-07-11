@@ -370,13 +370,14 @@ export function EpisodeBrowser({
       style={{ height }}
       data-testid="episode-browser"
     >
-      {/* KPI strip — one glance at the whole memory. */}
+      {/* KPI strip — one glance at the whole memory. Uniform muted chips; only
+          the critical count keeps its semantic red. */}
       <div className="flex shrink-0 flex-wrap items-center gap-1.5 text-[11px]">
-        <Kpi label="episodes" value={totals.episodes} accent="271 91% 65%" />
-        <Kpi label="critical" value={totals.critical} accent="0 84% 60%" />
-        <Kpi label="resolved" value={totals.resolved} accent="142 71% 45%" />
-        <Kpi label="root causes" value={totals.rootCauses} accent="25 95% 53%" />
-        <Kpi label="services" value={totals.services} accent="217 91% 60%" />
+        <Kpi label="episodes" value={totals.episodes} />
+        <Kpi label="critical" value={totals.critical} critical />
+        <Kpi label="resolved" value={totals.resolved} />
+        <Kpi label="root causes" value={totals.rootCauses} />
+        <Kpi label="services" value={totals.services} />
       </div>
 
       {/* Master/detail body. Stacks on very narrow panes; side-by-side otherwise. */}
@@ -558,10 +559,10 @@ export function EpisodeBrowser({
                 )}
                 {/* Tiny legend so the colour story reads without a manual. */}
                 <div className="pointer-events-none absolute bottom-2 left-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 rounded-md border border-slate-700/60 bg-slate-900/80 px-2 py-1 text-[10px] text-slate-400 backdrop-blur-sm">
-                  <LegendDot accent="271 91% 65%" label="Episode" />
-                  <LegendDot accent="25 95% 53%" label="Root cause" />
-                  <LegendDot accent="189 94% 43%" label="Action" />
-                  <LegendDot accent="217 91% 60%" label="Service" />
+                  <LegendDot accent="271 35% 58%" label="Episode" />
+                  <LegendDot accent="25 45% 52%" label="Root cause" />
+                  <LegendDot accent="189 30% 45%" label="Action" />
+                  <LegendDot accent="217 40% 58%" label="Service" />
                 </div>
               </>
             ) : (
@@ -585,15 +586,14 @@ export function EpisodeBrowser({
   )
 }
 
-function Kpi({ label, value, accent }: { label: string; value: number; accent: string }) {
+function Kpi({ label, value, critical }: { label: string; value: number; critical?: boolean }) {
   return (
     <span
-      className="flex items-center gap-1.5 rounded-md border border-slate-700/70 bg-slate-800/50 px-2 py-1"
+      className="flex items-center gap-1.5 rounded-md border border-border bg-muted/40 px-2 py-1 text-muted-foreground"
       data-testid={`episode-kpi-${label.replace(/\s+/g, '-')}`}
     >
-      <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: `hsl(${accent})` }} />
-      <span className="font-semibold text-slate-100">{value}</span>
-      <span className="text-slate-400">{label}</span>
+      <span className={`font-semibold ${critical ? 'text-red-400' : 'text-slate-100'}`}>{value}</span>
+      <span>{label}</span>
     </span>
   )
 }

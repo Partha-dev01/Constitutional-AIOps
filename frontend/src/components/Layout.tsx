@@ -30,18 +30,18 @@ interface LayoutProps {
 }
 
 const navigation = [
-  { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { name: 'Command Center', href: '/console', icon: LayoutPanelLeft },
-  { name: 'Agents', href: '/agents', icon: Cpu },
-  { name: 'MCP Tools', href: '/mcp', icon: Wrench },
-  { name: 'Telemetry', href: '/telemetry', icon: Network },
-  { name: 'Graph', href: '/graph', icon: GitBranch },
-  { name: 'Infrastructure', href: '/infrastructure', icon: Server },
-  { name: 'Incidents', href: '/incidents', icon: AlertTriangle },
-  { name: 'Chat', href: '/chat', icon: MessageSquare },
-  { name: 'Metrics', href: '/metrics', icon: BarChart3 },
-  { name: 'Benchmark', href: '/benchmark', icon: FlaskConical },
-  { name: 'Settings', href: '/settings', icon: Settings },
+  { name: 'Dashboard', href: '/', icon: LayoutDashboard, group: 'Overview' },
+  { name: 'Command Center', href: '/console', icon: LayoutPanelLeft, group: 'Operate' },
+  { name: 'Incidents', href: '/incidents', icon: AlertTriangle, group: 'Operate' },
+  { name: 'Chat', href: '/chat', icon: MessageSquare, group: 'Operate' },
+  { name: 'Telemetry', href: '/telemetry', icon: Network, group: 'Observe' },
+  { name: 'Metrics', href: '/metrics', icon: BarChart3, group: 'Observe' },
+  { name: 'Graph', href: '/graph', icon: GitBranch, group: 'Observe' },
+  { name: 'Infrastructure', href: '/infrastructure', icon: Server, group: 'Observe' },
+  { name: 'Agents', href: '/agents', icon: Cpu, group: 'AI' },
+  { name: 'MCP Tools', href: '/mcp', icon: Wrench, group: 'AI' },
+  { name: 'Benchmark', href: '/benchmark', icon: FlaskConical, group: 'AI' },
+  { name: 'Settings', href: '/settings', icon: Settings, group: 'Admin' },
 ]
 
 const SIDEBAR_COLLAPSED_KEY = 'aiops.sidebar.collapsed'
@@ -180,25 +180,37 @@ export function Layout({ children }: LayoutProps) {
 
       {/* Navigation */}
       <div className="flex-1 space-y-1 overflow-y-auto p-3">
-        {navigation.map((item) => {
+        {navigation.map((item, idx) => {
           const isActive = location.pathname === item.href
+          const showGroupLabel = !isRail && (idx === 0 || navigation[idx - 1].group !== item.group)
           return (
-            <Link
-              key={item.name}
-              to={item.href}
-              onClick={() => setMobileOpen(false)}
-              title={isRail ? item.name : undefined}
-              className={cn(
-                'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                isRail && 'justify-center',
-                isActive
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+            <div key={item.name}>
+              {showGroupLabel && (
+                <div
+                  className={cn(
+                    'px-3 pb-1 pt-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground',
+                    idx === 0 && 'pt-0'
+                  )}
+                >
+                  {item.group}
+                </div>
               )}
-            >
-              <item.icon className="h-5 w-5 shrink-0" aria-hidden="true" />
-              {!isRail && <span className="truncate">{item.name}</span>}
-            </Link>
+              <Link
+                to={item.href}
+                onClick={() => setMobileOpen(false)}
+                title={isRail ? item.name : undefined}
+                className={cn(
+                  'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                  isRail && 'justify-center',
+                  isActive
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                )}
+              >
+                <item.icon className="h-5 w-5 shrink-0" aria-hidden="true" />
+                {!isRail && <span className="truncate">{item.name}</span>}
+              </Link>
+            </div>
           )
         })}
       </div>

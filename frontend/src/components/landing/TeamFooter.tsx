@@ -10,17 +10,7 @@ const SECTION_LINKS = [
 
 export function TeamFooter() {
   return (
-    <footer id="about" className="relative pb-12 pt-20 sm:pt-24">
-      {/* Gradient hairline along the footer top */}
-      <div
-        className="absolute inset-x-0 top-0 h-px"
-        style={{
-          background:
-            'linear-gradient(90deg, transparent, hsl(var(--primary) / 0.6), hsl(262 83% 58% / 0.5), transparent)',
-        }}
-        aria-hidden="true"
-      />
-
+    <footer id="about" className="relative border-t border-border pb-12 pt-20 sm:pt-24">
       <div className="mx-auto max-w-6xl px-6">
         <div className="grid gap-12 md:grid-cols-3">
           {/* Brand */}
@@ -30,8 +20,8 @@ export function TeamFooter() {
               <span className="text-lg font-bold">Constitutional AIOps</span>
             </div>
             <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
-              Autonomous infrastructure operations with a constitution it
-              cannot break — dual LLM agents, graph memory, and graduated
+              Autonomous infrastructure operations gated by a constitutional
+              safety framework — dual LLM agents, graph memory, and graduated
               human trust.
             </p>
           </div>
