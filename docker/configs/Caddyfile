@@ -2,9 +2,11 @@
 #
 # One public host, path-routed, automatic Let's Encrypt TLS. Caddy is the only
 # service bound to 80/443; frontend / backend / grafana stay on the internal
-# aiops-network. A site-wide HTTP basic_auth gates the whole app (Grafana keeps
-# its own login on top). The /ingest/* path for the remote Alloy agent is added
-# in Gate 7 with a SEPARATE machine credential.
+# aiops-network. AUTH POSTURE (2026-07-11): the app's own session login
+# (AUTH_REQUIRED=true) is the gate for the SPA and /api — no basic_auth there,
+# so users land on the in-app login page. /grafana KEEPS the basic_auth wall
+# (defense in depth on top of Grafana's own login). The /ingest/* path for the
+# remote Alloy agent keeps its SEPARATE machine credential.
 #
 # Routes:
 #   /grafana, /grafana/*  -> grafana:3000  (serve_from_sub_path keeps the prefix)
@@ -132,11 +134,11 @@
 		reverse_proxy grafana:3000
 	}
 
-	# Backend REST API (human-auth gated).
+	# Backend REST API. No basic_auth: the app's own session auth is the gate
+	# (AUTH_REQUIRED=true — login throttle + HMAC session cookies in the backend).
 	@api path /api/*
 	handle @api {
 		import security_headers
-		import app_auth
 		reverse_proxy backend:8000
 	}
 
@@ -149,10 +151,10 @@
 		reverse_proxy backend:8000
 	}
 
-	# SPA — everything else.
+	# SPA — everything else. Public static assets; the app redirects to its own
+	# /login when /api/v1/auth/me returns 401 (AUTH_REQUIRED=true).
 	handle {
 		import security_headers
-		import app_auth
 		reverse_proxy frontend:3000
 	}
 }
