@@ -329,7 +329,9 @@ export function ChatPane({ variant = 'page', seedContext, injectedPrompt, classN
     void sendMessage(input)
   }
 
-  // Suggested-prompt chips FILL the input (never auto-submit), then focus it.
+  // Suggested-prompt chips AND per-answer suggested-action rows FILL the input
+  // (never auto-submit), then focus it — the user reviews/edits before sending,
+  // and actionable sends still go through the normal consent pipeline.
   const handlePickPrompt = useCallback((prompt: string) => {
     setInput(prompt)
     inputRef.current?.focus()
@@ -499,6 +501,7 @@ export function ChatPane({ variant = 'page', seedContext, injectedPrompt, classN
                 displayedContent={displayedContent}
                 insights={insightsById[message.id]}
                 proposedAction={proposedById[message.id]}
+                onUseAction={handlePickPrompt}
               />
             </div>
           ))}
