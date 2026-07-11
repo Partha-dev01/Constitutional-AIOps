@@ -16,7 +16,7 @@ from collections import deque
 from datetime import datetime, timedelta
 from typing import Any, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import StreamingResponse
 
 from src.auth.deps import User, coerce_user, require_user
@@ -2548,13 +2548,23 @@ async def delete_conversation(
     """
     user = coerce_user(user)
     conversation = _conversations.get(conversation_id)
-    if conversation is None or not _can_access(conversation, user):
+    if conversation is not None and _can_access(conversation, user):
+        del _conversations[conversation_id]
+        _persist_delete_conversation(conversation_id)
+        return
+
+    # ISS-106: the in-memory dict is capped/evicted (_MAX_CONVERSATIONS), so a
+    # conversation that only lives in SQLite must not 404 — fall back to the
+    # durable store before giving up. No dedicated get-by-id exists there, so
+    # load_all_conversations() is the read path (mirrors startup hydration).
+    persisted = persistence_store.load_all_conversations()
+    persisted_conv = persisted.get(conversation_id)
+    if persisted_conv is None or not _can_access(persisted_conv, user):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Conversation {conversation_id} not found",
         )
 
-    del _conversations[conversation_id]
     _persist_delete_conversation(conversation_id)
 
 
@@ -2564,8 +2574,8 @@ async def delete_conversation(
     description="List all active conversations",
 )
 async def list_conversations(
-    limit: int = 20,
-    offset: int = 0,
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
     user: User = Depends(require_user),
 ) -> dict[str, Any]:
     """

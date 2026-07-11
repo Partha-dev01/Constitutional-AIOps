@@ -815,7 +815,7 @@ async def get_episode(request: Request, episode_id: str) -> Episode:
         logger.error(f"Failed to get episode: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e),
+            detail="Internal error while building the graph response",
         )
 
 

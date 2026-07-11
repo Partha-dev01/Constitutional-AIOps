@@ -228,6 +228,9 @@ async def export_metrics(
             headers={"Content-Disposition": f"attachment; filename={filename}"},
         )
     except ValueError as e:
+        # Safe to surface: ModelRouter.export_metrics() only raises ValueError
+        # for an unsupported `format` value, echoing back the caller's own
+        # input (no internal state/stack info), so str(e) is not genericized.
         raise HTTPException(status_code=400, detail=str(e))
 
 

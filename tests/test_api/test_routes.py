@@ -139,6 +139,100 @@ class TestChatRoutes:
         assert exc_info.value.status_code == 404
 
 
+class TestListConversationsValidation:
+    """`limit`/`offset` on GET /conversations are bounded via fastapi.Query
+    (ge/le) — that enforcement only runs through real request validation, so
+    direct route-function calls (this file's usual pattern) can't exercise
+    it. A tiny app wrapping just the chat router is used instead of
+    importing src.main (langgraph is absent in CI)."""
+
+    @pytest.fixture
+    def client(self):
+        from fastapi import FastAPI
+        from fastapi.testclient import TestClient
+
+        from src.api.routes.chat import router as chat_router
+
+        app = FastAPI()
+        app.include_router(chat_router, prefix="/api/v1/chat")
+        return TestClient(app)
+
+    def test_limit_zero_rejected(self, client):
+        resp = client.get("/api/v1/chat/conversations", params={"limit": 0})
+        assert resp.status_code == 422
+
+    def test_limit_too_large_rejected(self, client):
+        resp = client.get("/api/v1/chat/conversations", params={"limit": 1000})
+        assert resp.status_code == 422
+
+    def test_offset_negative_rejected(self, client):
+        resp = client.get("/api/v1/chat/conversations", params={"offset": -1})
+        assert resp.status_code == 422
+
+    def test_defaults_accepted(self, client):
+        from src.api.routes.chat import _conversations
+
+        _conversations.clear()
+        resp = client.get("/api/v1/chat/conversations")
+        assert resp.status_code == 200
+
+
+class TestConversationDeleteFallback:
+    """ISS-106: DELETE /conversations/{id} must fall back to the SQLite
+    persistence store when the id is absent from the in-memory dict (e.g.
+    evicted from the capped hydration window), not 404 outright."""
+
+    @pytest.fixture
+    def persisted_store(self, tmp_path, monkeypatch):
+        """A freshly-reloaded persistence store bound to an isolated data dir,
+        wired into chat.py's module-level `persistence_store` reference
+        (mirrors test_topology_schema.py's store-reload convention)."""
+        import importlib
+
+        monkeypatch.setenv("AIOPS_DATA_DIR", str(tmp_path))
+        import src.persistence.store as store_mod
+
+        store_mod = importlib.reload(store_mod)
+        store_mod.init_db()
+
+        import src.api.routes.chat as chat_module
+
+        monkeypatch.setattr(chat_module, "persistence_store", store_mod)
+        monkeypatch.setattr(chat_module, "_conversations", {})
+        return store_mod
+
+    @pytest.mark.asyncio
+    async def test_delete_falls_back_to_persisted_store(self, persisted_store):
+        """A conversation that only exists in SQLite (never hydrated into
+        memory) is still deletable, and is actually removed from the store."""
+        from src.api.routes.chat import delete_conversation
+        from src.api.schemas.chat import ConversationHistory
+
+        conv_id = "persisted-only-conv"
+        conv = ConversationHistory(
+            conversation_id=conv_id,
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow(),
+            messages=[],
+        )
+        persisted_store.save_conversation(conv)
+
+        await delete_conversation(conv_id)  # must not raise
+
+        assert persisted_store.load_all_conversations().get(conv_id) is None
+
+    @pytest.mark.asyncio
+    async def test_delete_404_when_absent_from_both(self, persisted_store):
+        """Neither in-memory nor persisted -> still a clean 404."""
+        from fastapi import HTTPException
+
+        from src.api.routes.chat import delete_conversation
+
+        with pytest.raises(HTTPException) as exc_info:
+            await delete_conversation("does-not-exist-anywhere")
+        assert exc_info.value.status_code == 404
+
+
 # Test Incident Routes
 class TestIncidentRoutes:
     """Tests for incident management endpoints."""

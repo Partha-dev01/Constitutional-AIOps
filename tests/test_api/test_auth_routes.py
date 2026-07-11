@@ -413,14 +413,16 @@ class TestChatOwnershipScoping:
         )
 
         alice = User(id="u1", username="alice", role="user")
-        result = await chat_module.list_conversations(user=alice)
+        # Direct call: pass limit/offset explicitly (the route defaults are now
+        # fastapi Query markers, only resolved under real DI).
+        result = await chat_module.list_conversations(limit=20, offset=0, user=alice)
         ids = {item["conversation_id"] for item in result["items"]}
         assert ids == {"c-alice"}
         assert result["total"] == 1
 
         # Admins additionally see legacy owner-less conversations.
         admin = User(id="a1", username="root", role="admin")
-        result = await chat_module.list_conversations(user=admin)
+        result = await chat_module.list_conversations(limit=20, offset=0, user=admin)
         ids = {item["conversation_id"] for item in result["items"]}
         assert ids == {"c-legacy"}
 
