@@ -494,9 +494,12 @@ async def test_chat_action_tool_missing_reason_is_needs_param(monkeypatch) -> No
 
 
 @pytest.mark.asyncio
-async def test_chat_action_tool_runs_through_gate_via_model_loop(monkeypatch) -> None:
-    """With the agentic loop on, a MODEL-supplied action call hits the gated executor."""
+async def test_chat_action_tool_queues_consent_proposal_via_model_loop(monkeypatch) -> None:
+    """With the agentic loop on, a MODEL-supplied action call is QUEUED for human
+    approval (consent-before-execution) — never executed in-loop. The queued
+    intent becomes the turn's proposed_action card."""
     chat_module._conversations.clear()
+    chat_module._pending_actions.clear()
     monkeypatch.setenv("AIOPS_ENABLE_ACTION_TOOLS", "true")
     monkeypatch.setenv("CHAT_AGENTIC_TOOL_LOOP", "true")
 
@@ -514,7 +517,11 @@ async def test_chat_action_tool_runs_through_gate_via_model_loop(monkeypatch) ->
                 }
             ]
         },
-        {"choices": [{"message": {"content": '{"final_answer": "Restart requested."}'}}]},
+        {
+            "choices": [
+                {"message": {"content": '{"final_answer": "Restart queued for your approval."}'}}
+            ]
+        },
     ]
 
     model_router = MagicMock()
@@ -522,39 +529,45 @@ async def test_chat_action_tool_runs_through_gate_via_model_loop(monkeypatch) ->
 
     reasoning_agent = MagicMock()
     reasoning_agent.model_router = model_router
-    reasoning_agent.chat = AsyncMock(return_value=_agent_response("Restart requested."))
+    reasoning_agent.chat = AsyncMock(
+        return_value=_agent_response("Restart queued for your approval.")
+    )
     reasoning_agent.get_system_prompt = MagicMock(return_value="SYS {runtime_context}")
 
     request = _make_request(reasoning_agent=reasoning_agent)
     chat_request = ChatRequest(message="restart nextcloud, it is leaking memory")
 
-    captured = {}
+    executed: list[str] = []
 
     async def fake_exec(req, tool_name, parameters, context=None):
-        captured["tool_name"] = tool_name
-        captured["context"] = context
-        captured["parameters"] = parameters
-        return {
-            "success": False,
-            "data": None,
-            "error": "approval required",
-            "error_code": "approval_required",
-            "metadata": {"constitutional": {"requires_approval": True}},
-        }
+        executed.append(tool_name)
+        return {"success": True, "data": {"ok": True}}
+
+    approve_settings = {
+        "mode": "approve",
+        "autoConfidenceThreshold": 90,
+        "requireEvidenceForAuto": True,
+        "autoToolAllowlist": ["restart_service"],
+        "demoTargetUrl": "",
+    }
 
     with patch.object(chat_module, "_build_runtime_context", new=AsyncMock(return_value="ctx")), \
-         patch.object(chat_module, "execute_tool_call", new=fake_exec):
+         patch.object(chat_module, "execute_tool_call", new=fake_exec), \
+         patch.object(chat_module, "get_remediation_settings", return_value=approve_settings):
         response = await chat(request, chat_request)
 
-    # The model-chosen action reached the gated executor with action context.
-    assert captured["tool_name"] == "restart_service"
-    assert captured["parameters"]["reason"] == "memory leak"
-    assert captured["context"]["source"] == "chat_agent"
-    names = [tc["name"] for tc in response.metadata["tool_calls"]]
-    assert "restart_service" in names
+    # The action tool was never executed in-loop...
+    assert "restart_service" not in executed
+    # ...but its call is recorded as a successful queue in the timeline...
     rec = next(tc for tc in response.metadata["tool_calls"] if tc["name"] == "restart_service")
-    # Gate refused automatic execution -> recorded as error, never silently run.
-    assert rec["status"] == "error"
+    assert rec["status"] == "ok"
+    assert rec["result"]["data"]["status"] == "queued_for_approval"
+    # ...and surfaced as the turn's consent proposal, pending human approval.
+    assert response.proposed_action is not None
+    assert response.proposed_action["tool_name"] == "restart_service"
+    assert response.proposed_action["status"] == "proposed"
+    assert response.proposed_action["parameters"]["reason"] == "memory leak"
+    assert response.proposed_action["id"] in chat_module._pending_actions
 
 
 @pytest.mark.asyncio

@@ -445,23 +445,127 @@ async def _invoke_mcp_tools_for_query(
 _CHAT_MAX_TOOL_ITERATIONS = int(os.getenv("CHAT_MAX_TOOL_ITERATIONS") or "3")
 
 
-def _make_chat_executor(request: Request):
+def _queue_action_proposal(
+    tool_name: str,
+    arguments: dict[str, Any],
+    action_queue: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Convert an agent-initiated ACTION tool call into a pending consent
+    proposal instead of executing it in-loop (consent-before-execution).
+
+    Returns an execute_tool_call-shaped result dict so the model gets honest
+    feedback: queued-for-approval on success, or a refusal explaining why the
+    action cannot even be queued (diagnose mode, kill-switch off, target not
+    whitelisted, or one action already queued this turn). Execution — when the
+    human approves, or auto mode allows — always goes through the gated
+    execute_tool_call path later; nothing here mutates anything.
+    """
+    from src.api.routes.tools import (
+        _action_tools_enabled,
+        _allowed_action_containers,
+        _resolve_action_container,
+    )
+
+    def _refuse(error: str, error_code: str) -> dict[str, Any]:
+        return {
+            "success": False,
+            "data": None,
+            "error": error,
+            "error_code": error_code,
+            "execution_time_ms": 0.0,
+            "metadata": None,
+        }
+
+    if not _action_tools_enabled():
+        return _refuse(
+            f"'{tool_name}' is an action tool and is disabled on this deployment "
+            "(AIOPS_ENABLE_ACTION_TOOLS is off). Recommend the fix in your answer instead.",
+            "action_tools_disabled",
+        )
+
+    try:
+        remediation_settings = get_remediation_settings()
+    except Exception as exc:  # noqa: BLE001 - settings read must not break the loop
+        logger.warning("Could not read remediation settings for action queue: %s", exc)
+        remediation_settings = {}
+    mode = remediation_settings.get("mode", "diagnose")
+    if mode == "diagnose":
+        return _refuse(
+            "Remediation mode is 'diagnose' (analysis only): actions cannot run or be "
+            "queued. Recommend the fix in your answer; an operator can raise the mode "
+            "under Settings -> Remediation.",
+            "remediation_disabled",
+        )
+
+    service_name = arguments.get("service_name")
+    if _resolve_action_container(service_name) is None:
+        return _refuse(
+            f"Service '{service_name}' is not on the action-tool container whitelist "
+            f"({', '.join(sorted(_allowed_action_containers()))}).",
+            "container_not_whitelisted",
+        )
+
+    if action_queue:
+        return _refuse(
+            "An action is already queued for this turn — only one action proposal per "
+            "reply. Mention any further recommended actions in your answer text.",
+            "action_already_queued",
+        )
+
+    detected: dict[str, Any] = {
+        "service_name": str(service_name).strip(),
+        "reason": str(arguments.get("reason") or "AI-proposed remediation")[:200],
+    }
+    if tool_name == "scale_service":
+        detected["target_replicas"] = arguments.get("target_replicas")
+    proposed = _build_proposed_action(
+        detected, mode, status_value="proposed", tool_name=tool_name
+    )
+    action_queue.append(proposed)
+    return {
+        "success": True,
+        "data": {
+            "status": "queued_for_approval",
+            "action_id": proposed["id"],
+            "tool": tool_name,
+            "service": detected["service_name"],
+            "note": (
+                "Queued for human approval — NOT executed yet. Tell the user this "
+                "action awaits their Approve/Reject decision on the proposed-action "
+                "card shown with your reply."
+            ),
+        },
+        "error": None,
+        "error_code": None,
+        "execution_time_ms": 0.0,
+        "metadata": None,
+    }
+
+
+def _make_chat_executor(
+    request: Request,
+    action_queue: Optional[list[dict[str, Any]]] = None,
+):
     """Build the executor the tool loop calls: routes to the REAL tools.py.
 
     Wraps ``execute_tool_call`` so every tool the agent runs hits live
-    Neo4j/Loki/Prometheus/Docker via the same code path the MCP page uses
-    (action tools still flow through the constitutional gate inside it).
+    Neo4j/Loki/Prometheus/Docker via the same code path the MCP page uses.
+    Action tools are NOT executed in-loop: with an ``action_queue`` they are
+    queued as consent proposals (resolved per the remediation mode in
+    ``_finalize_chat_turn``); without one they keep the legacy direct gated
+    execution for programmatic callers.
     """
 
     from src.agents.tool_calling import TOOL_SPECS_BY_NAME
 
     async def _executor(tool_name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         spec = TOOL_SPECS_BY_NAME.get(tool_name)
-        # Action tools carry evidence/audit context so the constitutional gate
-        # can evaluate them (mirrors _maybe_propose_remediation); read tools take
-        # the legacy 3-arg signature so existing call sites/mocks stay valid.
-        # Never force past the gate — execute_tool_call owns that.
         if spec is not None and spec.is_action:
+            if action_queue is not None:
+                return _queue_action_proposal(tool_name, arguments, action_queue)
+            # Legacy path: evidence/audit context so the constitutional gate can
+            # evaluate (mirrors _finalize_proposal). Never force past the gate —
+            # execute_tool_call owns that.
             context = {
                 "source": "chat_agent",
                 "audit_enabled": _audit_enabled(),
@@ -705,6 +809,7 @@ async def _execute_chat_tools(
     service: Optional[str],
     runtime_context: str,
     enable_thinking: bool,
+    action_queue: Optional[list[dict[str, Any]]] = None,
 ) -> ToolLoopResult:
     """Run tool-calling for one chat turn and return the executed tool records.
 
@@ -719,7 +824,7 @@ async def _execute_chat_tools(
     guard); this function's ``final_answer`` is only populated in agentic mode
     and is treated as advisory.
     """
-    executor = _make_chat_executor(request)
+    executor = _make_chat_executor(request, action_queue)
     forced = plan_forced_tool_calls(message, service)
 
     if not _agentic_loop_enabled():
@@ -1090,19 +1195,35 @@ def _action_target(service_name: str) -> str:
 
 
 def _build_proposed_action(
-    detected: dict[str, str],
+    detected: dict[str, Any],
     mode: str,
     status_value: str,
+    tool_name: str = _REMEDIATION_TOOL_NAME,
 ) -> dict[str, Any]:
-    """Assemble the proposed_action payload (CONTRACT 3)."""
+    """Assemble the proposed_action payload (CONTRACT 3).
+
+    Supports both action tools: restart_service (default, the text-detection
+    path) and scale_service (agent-initiated calls; ``detected`` then carries
+    ``target_replicas``, clamped 0-5 here for display — tools.py re-clamps
+    authoritatively at execution).
+    """
     service_name = detected["service_name"]
     reason = detected.get("reason", "AI-proposed remediation")
+    parameters: dict[str, Any] = {"service_name": service_name, "reason": reason}
+    title = f"Restart {service_name}"
+    if tool_name == "scale_service":
+        try:
+            replicas = max(0, min(int(detected.get("target_replicas")), 5))
+        except (TypeError, ValueError):
+            replicas = 1
+        parameters["target_replicas"] = replicas
+        title = f"Scale {service_name} to {replicas} replica{'' if replicas == 1 else 's'}"
     return {
         "id": f"act-{uuid.uuid4().hex[:12]}",
-        "tool_name": _REMEDIATION_TOOL_NAME,
-        "parameters": {"service_name": service_name, "reason": reason},
+        "tool_name": tool_name,
+        "parameters": parameters,
         "target": _action_target(service_name),
-        "title": f"Restart {service_name}",
+        "title": title,
         "rationale": reason,
         "mode": mode,
         "status": status_value,
@@ -1162,7 +1283,7 @@ def _auto_exec_rate_ok() -> bool:
 
 
 def _record_auto_exec() -> None:
-    """Record an auto-exec attempt against the rate-limit window."""
+    """Record an executed auto-action against the rate-limit window."""
     _auto_exec_times.append(time.monotonic())
 
 
@@ -1201,14 +1322,8 @@ async def _maybe_propose_remediation(
 
     Returns the proposed_action dict to attach to the ChatResponse, or None in
     diagnose mode / when no concrete whitelisted restart action was detected.
-
-    approve: status "proposed", cached, NOT executed.
-    auto:    if confidence >= threshold AND (evidence not required OR present)
-             AND rate-limit OK -> execute via the gated execute_tool_call. The
-             gate may DEGRADE the outcome to "proposed" (approval_required /
-             validation_blocked) — we never force past the validator. Otherwise
-             "auto_executed" (+verdict+execution_result). Any failed interlock
-             degrades to "proposed" (cached for later approval).
+    The approve/auto resolution itself lives in ``_finalize_proposal`` (shared
+    with the agent-initiated action-call queue).
     """
     if mode == "diagnose":
         return None
@@ -1218,6 +1333,42 @@ async def _maybe_propose_remediation(
         return None
 
     proposed = _build_proposed_action(detected, mode, status_value="proposed")
+    return await _finalize_proposal(
+        request,
+        proposed,
+        mode=mode,
+        confidence=confidence,
+        has_tool_data=has_tool_data,
+        remediation_settings=remediation_settings,
+        owner=owner,
+        conversation_id=conversation_id,
+    )
+
+
+async def _finalize_proposal(
+    request: Request,
+    proposed: dict[str, Any],
+    *,
+    mode: str,
+    confidence: Optional[float],
+    has_tool_data: bool,
+    remediation_settings: dict[str, Any],
+    owner: str,
+    conversation_id: str,
+) -> dict[str, Any]:
+    """Resolve an assembled proposal per the remediation mode.
+
+    approve: status "proposed", cached, NOT executed.
+    auto:    if the tool is on the per-tool autoToolAllowlist AND confidence >=
+             threshold AND (evidence not required OR present) AND rate-limit OK
+             -> execute via the gated execute_tool_call. The gate may DEGRADE
+             the outcome to "proposed" (approval_required / validation_blocked)
+             — we never force past the validator. Otherwise "auto_executed"
+             (+verdict+execution_result). Any failed interlock degrades to
+             "proposed" (cached for later approval). A settings dict WITHOUT
+             the allowlist key (older persisted files, tests) keeps the legacy
+             all-tools-eligible behaviour; the merged defaults always carry one.
+    """
 
     def _cache(action: dict[str, Any]) -> None:
         entry = {
@@ -1244,22 +1395,28 @@ async def _maybe_propose_remediation(
     threshold = float(remediation_settings.get("autoConfidenceThreshold", 90)) / 100.0
     require_evidence = bool(remediation_settings.get("requireEvidenceForAuto", True))
 
+    # Per-tool autonomy: only allowlisted tools may auto-execute. A missing key
+    # (legacy persisted settings / explicit test dicts) means all are eligible.
+    allowlist = remediation_settings.get("autoToolAllowlist")
+    allowlisted = (proposed["tool_name"] in allowlist) if isinstance(allowlist, list) else True
+
     confidence_ok = confidence is not None and confidence >= threshold
     evidence_ok = (not require_evidence) or has_tool_data
     rate_ok = _auto_exec_rate_ok()
 
-    if not (confidence_ok and evidence_ok and rate_ok):
+    if not (allowlisted and confidence_ok and evidence_ok and rate_ok):
         logger.info(
-            "Auto-exec interlocks not met (confidence_ok=%s evidence_ok=%s rate_ok=%s); "
-            "degrading to proposed",
-            confidence_ok, evidence_ok, rate_ok,
+            "Auto-exec interlocks not met (allowlisted=%s confidence_ok=%s evidence_ok=%s "
+            "rate_ok=%s); degrading to proposed",
+            allowlisted, confidence_ok, evidence_ok, rate_ok,
         )
         _cache(proposed)
         return proposed
 
     # All interlocks held: attempt the gated execution. The constitutional gate
     # + AIOPS_ENABLE_ACTION_TOOLS kill-switch both live inside execute_tool_call.
-    _record_auto_exec()
+    # Budget is recorded only on actual execution below — a gate refusal that
+    # degrades to proposed/blocked must not consume the per-minute cap.
     try:
         # Forward the RCA confidence (already >= threshold) + telemetry evidence
         # to the constitutional gate so it can authorize; without these the gate
@@ -1280,6 +1437,7 @@ async def _maybe_propose_remediation(
     error_code = result.get("error_code")
 
     if result.get("success"):
+        _record_auto_exec()
         proposed["status"] = "auto_executed"
         proposed["verdict"] = verdict
         proposed["execution_result"] = result.get("data")
@@ -1361,6 +1519,7 @@ async def _finalize_chat_turn(
     metadata: dict[str, Any],
     tool_struct: dict[str, Any],
     has_tool_data: bool,
+    queued_actions: Optional[list[dict[str, Any]]] = None,
 ) -> ChatResponse:
     """Shared post-LLM tail for POST /chat/ and POST /chat/stream: action
     extraction, remediation proposal, related incidents, assistant-message
@@ -1371,21 +1530,38 @@ async def _finalize_chat_turn(
     # Remediation (Lane B): read the mode AFTER RCA/tool gathering so the
     # decision is based on the evidence we actually collected. diagnose
     # (default) returns None here -> no behavior change on the default path.
+    # An action the agent explicitly queued this turn (via an action tool call)
+    # IS the proposal — it takes precedence over text detection so a turn never
+    # grows two cards; both routes resolve through the same _finalize_proposal.
     proposed_action: Optional[dict[str, Any]] = None
     try:
         remediation_settings = get_remediation_settings()
-        proposed_action = await _maybe_propose_remediation(
-            request,
-            mode=remediation_settings.get("mode", "diagnose"),
-            content=content,
-            suggested_actions=suggested_actions,
-            service=service,
-            confidence=confidence,
-            has_tool_data=has_tool_data,
-            remediation_settings=remediation_settings,
-            owner=user.username,
-            conversation_id=conversation_id,
-        )
+        mode = remediation_settings.get("mode", "diagnose")
+        queued = [q for q in (queued_actions or []) if isinstance(q, dict)]
+        if queued and mode != "diagnose":
+            proposed_action = await _finalize_proposal(
+                request,
+                queued[0],
+                mode=mode,
+                confidence=confidence,
+                has_tool_data=has_tool_data,
+                remediation_settings=remediation_settings,
+                owner=user.username,
+                conversation_id=conversation_id,
+            )
+        else:
+            proposed_action = await _maybe_propose_remediation(
+                request,
+                mode=mode,
+                content=content,
+                suggested_actions=suggested_actions,
+                service=service,
+                confidence=confidence,
+                has_tool_data=has_tool_data,
+                remediation_settings=remediation_settings,
+                owner=user.username,
+                conversation_id=conversation_id,
+            )
     except Exception as exc:  # noqa: BLE001 - remediation must never break chat
         logger.warning("Remediation proposal step failed (ignored): %s", exc)
         proposed_action = None
@@ -1520,6 +1696,10 @@ async def chat(
         # tools when CHAT_AGENTIC_TOOL_LOOP is enabled). This replaces the old
         # keyword-only _invoke_mcp_tools_for_query so a named tool ALWAYS runs.
         _tools_start = time.perf_counter()
+        # Agent-initiated ACTION tool calls land here as consent proposals
+        # (never executed in-loop); _finalize_chat_turn resolves them per the
+        # remediation mode.
+        queued_actions: list[dict[str, Any]] = []
         loop_result = await _execute_chat_tools(
             request,
             reasoning_agent,
@@ -1528,6 +1708,7 @@ async def chat(
             service=service,
             runtime_context=runtime_context,
             enable_thinking=chat_request.enable_thinking,
+            action_queue=queued_actions,
         )
         tools_ms = (time.perf_counter() - _tools_start) * 1000
         tool_call_records = loop_result.tool_calls
@@ -1739,6 +1920,7 @@ async def chat(
         metadata=metadata,
         tool_struct=tool_struct,
         has_tool_data=has_tool_data,
+        queued_actions=queued_actions,
     )
 
 
@@ -1820,6 +2002,8 @@ async def chat_stream(
             context_build_ms = (time.perf_counter() - _ctx_start) * 1000
 
             _tools_start = time.perf_counter()
+            # Same consent-queue contract as the blocking endpoint.
+            queued_actions: list[dict[str, Any]] = []
             loop_result = await _execute_chat_tools(
                 request,
                 reasoning_agent,
@@ -1828,6 +2012,7 @@ async def chat_stream(
                 service=service,
                 runtime_context=runtime_context,
                 enable_thinking=chat_request.enable_thinking,
+                action_queue=queued_actions,
             )
             tools_ms = (time.perf_counter() - _tools_start) * 1000
             tool_call_records = loop_result.tool_calls
@@ -1968,6 +2153,7 @@ async def chat_stream(
                 metadata=metadata,
                 tool_struct=tool_struct,
                 has_tool_data=has_tool_data,
+                queued_actions=queued_actions,
             )
             yield _sse_event("done", response.model_dump(mode="json"))
 
@@ -1985,6 +2171,44 @@ async def chat_stream(
             "X-Accel-Buffering": "no",
         },
     )
+
+
+def _record_decision_on_conversation(
+    entry: dict[str, Any],
+    action_id: str,
+    *,
+    status_value: str,
+    verdict: Optional[dict[str, Any]] = None,
+    execution_result: Any = None,
+) -> None:
+    """Best-effort write-back of a decision outcome onto the conversation.
+
+    The proposing turn persisted the proposed_action (status "proposed") in the
+    assistant message metadata; without this, a reloaded conversation re-renders
+    an interactive Approve/Reject card whose single-use pending entry is already
+    consumed (deciding it would 404). Updates the in-memory conversation and
+    persists; silently skips when the conversation is gone (evicted/deleted) —
+    the decision itself already succeeded.
+    """
+    try:
+        conversation_id = entry.get("conversation_id")
+        conversation = _conversations.get(conversation_id) if conversation_id else None
+        if conversation is None:
+            return
+        for message in reversed(conversation.messages):
+            meta = getattr(message, "metadata", None)
+            action = meta.get("proposed_action") if isinstance(meta, dict) else None
+            if isinstance(action, dict) and action.get("id") == action_id:
+                action["status"] = status_value
+                if verdict is not None:
+                    action["verdict"] = verdict
+                if execution_result is not None:
+                    action["execution_result"] = execution_result
+                conversation.updated_at = datetime.utcnow()
+                _persist_save_conversation(conversation)
+                return
+    except Exception as exc:  # noqa: BLE001 - write-back must never fail a decision
+        logger.warning("Could not record decision on conversation: %s", exc)
 
 
 @router.post(
@@ -2032,6 +2256,7 @@ async def decide_action(
         _pending_actions.pop(action_id, None)
         _persist_delete_pending_action(action_id)
         logger.info("Proposed action %s rejected by %s", action_id, user.username)
+        _record_decision_on_conversation(entry, action_id, status_value="rejected")
         return DecisionResponse(
             action_id=action_id,
             status="rejected",
@@ -2078,6 +2303,7 @@ async def decide_action(
         )
     except Exception as exc:  # noqa: BLE001
         logger.error("Approved action %s execution raised: %s", action_id, exc)
+        _record_decision_on_conversation(entry, action_id, status_value="refused")
         return DecisionResponse(
             action_id=action_id,
             status="refused",
@@ -2092,6 +2318,10 @@ async def decide_action(
 
     if result.get("success"):
         logger.info("Proposed action %s executed by %s", action_id, user.username)
+        _record_decision_on_conversation(
+            entry, action_id,
+            status_value="executed", verdict=verdict, execution_result=result.get("data"),
+        )
         return DecisionResponse(
             action_id=action_id,
             status="executed",
@@ -2104,6 +2334,9 @@ async def decide_action(
     # The gate (or executor) declined / failed.
     logger.info(
         "Proposed action %s refused/failed (error_code=%s)", action_id, error_code
+    )
+    _record_decision_on_conversation(
+        entry, action_id, status_value="refused", verdict=verdict,
     )
     return DecisionResponse(
         action_id=action_id,
