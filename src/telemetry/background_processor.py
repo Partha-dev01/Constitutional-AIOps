@@ -28,6 +28,7 @@ from typing import Any
 from uuid import uuid4
 
 from src.memory.episode_store import Episode
+from src.telemetry.chat_activity import chat_turn_active, wait_for_chat_idle
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +36,13 @@ logger = logging.getLogger(__name__)
 PROCESSING_INTERVAL_SECONDS = 30  # How often to process telemetry
 TELEMETRY_WINDOW_MINUTES = 5  # How far back to look for telemetry
 REASONING_INTERVAL_CYCLES = 10  # Run reasoning every N fast cycles (10 * 30s = 5 min)
+
+# Chat-priority interlock: routine reasoning shares the 14B engine with
+# interactive chat. A sweep is skipped while a turn is in flight or within this
+# grace of the last one (user mid-conversation); escalations instead WAIT
+# bounded by the second constant, since skipping one would lose its RCA.
+CHAT_PRIORITY_GRACE_SECONDS = 20.0
+ESCALATION_CHAT_WAIT_SECONDS = 60.0
 
 # Services kept when an analysis names NO service explicitly: linking every
 # service that merely emitted a log line in the window is what produced the
@@ -376,8 +384,13 @@ class BackgroundTelemetryProcessor:
 
         # Phase 5: Periodic routine reasoning (every REASONING_INTERVAL_CYCLES)
         if self._fast_cycle_count >= REASONING_INTERVAL_CYCLES:
-            self._fast_cycle_count = 0
-            await self._routine_reasoning_analysis()
+            if chat_turn_active(grace_seconds=CHAT_PRIORITY_GRACE_SECONDS):
+                # Counter stays >= threshold, so the sweep retries next cycle
+                # (30s) instead of contending with the interactive turn.
+                logger.info("Chat turn active - deferring routine reasoning to next cycle")
+            else:
+                self._fast_cycle_count = 0
+                await self._routine_reasoning_analysis()
 
     async def _routine_reasoning_analysis(self) -> None:
         """
@@ -763,6 +776,13 @@ Provide a brief summary of system health and any concerning patterns."""
     async def _escalate_to_reasoning(self, annotation: Any, window: Any) -> None:
         """Escalate to Reasoning Agent for deep analysis."""
         logger.info("Escalating to Reasoning Agent for RCA")
+
+        # Chat-priority interlock: escalations are event-driven (skipping loses
+        # the RCA), so wait for the interactive turn instead — bounded, so a
+        # busy chat can only delay an escalation, never starve it.
+        waited = await wait_for_chat_idle(ESCALATION_CHAT_WAIT_SECONDS)
+        if waited:
+            logger.info(f"RCA escalation deferred {waited:.0f}s for an active chat turn")
 
         # Extract actual services for context
         affected_services = self._extract_services_from_window(window)

@@ -590,3 +590,84 @@ async def test_chat_action_tool_not_exposed_when_disabled(monkeypatch) -> None:
     # Action tool disabled -> not routed, executor never called for it.
     assert response.metadata["tool_calls"] == []
     exec_mock.assert_not_awaited()
+
+
+# ---------------------------------------------------------------------------
+# Loop-completion token cap + chat-priority interlock (latency fixes)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_loop_completion_max_tokens_is_capped() -> None:
+    """The agentic-LOOP completion must stay tightly capped.
+
+    The loop only ever consumes tool-call JSON; any prose it generates is
+    discarded (the answer phase regenerates in both serving modes), so an
+    uncapped loop call is pure wasted 14B decode the user sits through.
+    Pins the cap value: raising it is a conscious latency decision.
+    """
+    assert chat_module._LOOP_COMPLETION_MAX_TOKENS == 160
+
+    captured: dict = {}
+
+    class _Router:
+        async def reasoning_completion(self, **kwargs):
+            captured.update(kwargs)
+            return {"choices": [{"message": {"content": "done"}}]}
+
+    reasoning_agent = SimpleNamespace(
+        model_router=_Router(),
+        get_system_prompt=lambda kind: "SYS",
+    )
+    completion = chat_module._make_chat_completion(reasoning_agent, enable_thinking=False)
+    await completion("SYS", [{"role": "user", "content": "hi"}], None)
+
+    assert captured["max_tokens"] == chat_module._LOOP_COMPLETION_MAX_TOKENS
+
+
+@pytest.mark.asyncio
+async def test_chat_endpoint_marks_turn_activity() -> None:
+    """Both marker calls fire around a turn so background reasoning defers."""
+    chat_module._conversations.clear()
+
+    reasoning_agent = MagicMock()
+    reasoning_agent.chat = AsyncMock(return_value=_agent_response("Hello."))
+    reasoning_agent.get_system_prompt = MagicMock(return_value="SYS {runtime_context}")
+
+    request = _make_request(reasoning_agent=reasoning_agent)
+    chat_request = ChatRequest(message="hello there")
+
+    started = MagicMock()
+    finished = MagicMock()
+    with patch.object(chat_module, "_build_runtime_context", new=AsyncMock(return_value="ctx")), \
+         patch.object(chat_module, "chat_turn_started", new=started), \
+         patch.object(chat_module, "chat_turn_finished", new=finished):
+        await chat(request, chat_request)
+
+    started.assert_called_once()
+    finished.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_chat_endpoint_releases_turn_marker_on_failure() -> None:
+    """A failing turn must still release the marker (finally), or background
+    reasoning would be starved forever by one crashed request."""
+    chat_module._conversations.clear()
+
+    reasoning_agent = MagicMock()
+    reasoning_agent.chat = AsyncMock(side_effect=RuntimeError("engine down"))
+    reasoning_agent.get_system_prompt = MagicMock(return_value="SYS {runtime_context}")
+
+    request = _make_request(reasoning_agent=reasoning_agent)
+    chat_request = ChatRequest(message="hello there")
+
+    started = MagicMock()
+    finished = MagicMock()
+    with patch.object(chat_module, "_build_runtime_context", new=AsyncMock(return_value="ctx")), \
+         patch.object(chat_module, "chat_turn_started", new=started), \
+         patch.object(chat_module, "chat_turn_finished", new=finished):
+        with pytest.raises(Exception):
+            await chat(request, chat_request)
+
+    started.assert_called_once()
+    finished.assert_called_once()
