@@ -88,12 +88,14 @@ export function edgeDetail(link: EpisodicLink): EpisodicDetail {
  * focused episode (used by the "Ask AI about this episode" button).
  */
 export function buildEpisodePrompt(node: EpisodicNode, services: string[], rootCause?: string): string {
-  const when = node.timestamp ? ` from ${new Date(node.timestamp).toLocaleString()}` : ''
-  const sev = node.severity ? ` (severity: ${node.severity})` : ''
-  const touched = services.length > 0 ? ` It touched: ${services.join(', ')}.` : ''
-  const rc = rootCause ? ` The recorded root cause was "${rootCause}".` : ''
-  return (
-    `Investigate this past incident${when}${sev}: "${node.label}".${rc}${touched} ` +
-    `Summarise what happened, confirm the likely root cause, and recommend remediation if it recurs.`
-  )
+  // Slim on purpose: this lands verbatim as the user's chat bubble. MUST keep
+  // an investigation keyword (investigate / root cause / remediat…) plus a
+  // service name so the backend forces the evidence bundle and resolves the
+  // service; the date is dropped (it's already visible on the episode card).
+  const sev = node.severity ? `${node.severity} ` : ''
+  const on = services.length > 0 ? ` on ${services.join(', ')}` : ''
+  const rc = rootCause
+    ? ` (recorded root cause: "${rootCause.length > 90 ? `${rootCause.slice(0, 90)}…` : rootCause}")`
+    : ''
+  return `Investigate the ${sev}incident "${node.label}"${on}${rc}. What are the root cause and remediation?`
 }
