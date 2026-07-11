@@ -277,6 +277,7 @@ export function Graph() {
           links={graphData.links}
           loading={isLoading}
           onRefresh={handleRefresh}
+          fillParent
         />
       </div>
     </div>
