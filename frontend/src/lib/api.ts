@@ -132,12 +132,17 @@ export interface ChatResponseMetadata {
 export interface ProposedAction {
   id: string;
   tool_name: string;
-  parameters: { service_name: string; reason: string };
+  parameters: { service_name: string; reason: string; target_replicas?: number };
   target: 't3' | 'local';
   title: string;
   rationale: string;
   mode: 'approve' | 'auto';
-  status: 'proposed' | 'auto_executed' | 'blocked';
+  /**
+   * proposed/auto_executed/blocked are set when the turn is created;
+   * executed/rejected/refused are written back onto the persisted conversation
+   * after a human decision, so reloaded chats render the outcome read-only.
+   */
+  status: 'proposed' | 'auto_executed' | 'blocked' | 'executed' | 'rejected' | 'refused';
   verdict: Record<string, unknown> | null;
   execution_result: Record<string, unknown> | null;
 }
@@ -201,9 +206,14 @@ export interface RemediationSettings {
   autoConfidenceThreshold: number;
   /** Require telemetry evidence before auto-executing. Default true. */
   requireEvidenceForAuto: boolean;
+  /** Action tools allowed to auto-execute in auto mode; others always need consent. */
+  autoToolAllowlist: ActionToolName[];
   /** Base URL of the t3 demo agent. */
   demoTargetUrl: string;
 }
+
+/** The mutating MCP action tools (everything else is read-only). */
+export type ActionToolName = 'restart_service' | 'scale_service';
 
 export interface AllSettings {
   constitutional: ConstitutionalSettings;
