@@ -23,6 +23,8 @@ interface ChatMessageProps {
   insights?: MessageInsights
   /** Optional AI-proposed remediation rendered as a card beneath the bubble. */
   proposedAction?: ProposedAction
+  /** Fill-the-composer handler for suggested-action rows (never auto-sends). */
+  onUseAction?: (text: string) => void
 }
 
 /**
@@ -34,7 +36,7 @@ interface ChatMessageProps {
  * The `prose` wrapper here is the ONLY element carrying `prose` for assistant
  * bodies — the live e2e test reads `.prose`.last().innerText().
  */
-export function ChatMessage({ message, isTyping, displayedContent, insights, proposedAction }: ChatMessageProps) {
+export function ChatMessage({ message, isTyping, displayedContent, insights, proposedAction, onUseAction }: ChatMessageProps) {
   const isUser = message.role === 'user'
 
   return (
@@ -82,7 +84,7 @@ export function ChatMessage({ message, isTyping, displayedContent, insights, pro
         </p>
 
         {message.role === 'assistant' && !isTyping && insights && (
-          <InsightCards insights={insights} />
+          <InsightCards insights={insights} onUseAction={onUseAction} />
         )}
 
         {/* Proposed-action card: a SIBLING of the bubble, OUTSIDE the `.prose`

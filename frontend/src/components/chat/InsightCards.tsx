@@ -1,4 +1,4 @@
-import { Lightbulb, History, Gauge } from 'lucide-react'
+import { Lightbulb, History, Gauge, CornerDownLeft } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { useReveal } from '../../hooks/useReveal'
@@ -31,6 +31,22 @@ export interface MessageInsights {
 
 interface InsightCardsProps {
   insights: MessageInsights
+  /**
+   * When provided, suggested-action rows become clickable and hand their text
+   * (markdown markers stripped) to the host. The contract mirrors the prompt
+   * chips: FILL the composer, never auto-send — the user reviews/edits first,
+   * and an actionable send then flows through the normal consent pipeline.
+   */
+  onUseAction?: (action: string) => void
+}
+
+/**
+ * Strip the inline markdown markers (`**bold**`, `` `code` ``) the model puts
+ * in suggested actions, so the prefilled composer carries clean plain text.
+ * Single `*`/`_` are left alone — they appear in identifiers like service_name.
+ */
+function actionPlainText(action: string): string {
+  return action.replace(/\*\*|`/g, '').trim()
 }
 
 /** Confidence-band color: >=0.90 green, 0.70-0.90 yellow, <0.70 red. */
@@ -65,12 +81,14 @@ function confidenceTone(confidence: number): {
 }
 
 /**
- * Display-only insight cards rendered beneath an assistant message. Each card
- * renders only when its data is present, so off-domain / empty responses
- * produce no output at all. Deliberately does NOT use the `prose` class (that
- * is reserved for assistant message bodies, per the e2e contract).
+ * Insight cards rendered beneath an assistant message. Each card renders only
+ * when its data is present, so off-domain / empty responses produce no output
+ * at all. Suggested-action rows are interactive when the host passes
+ * `onUseAction` (fill-the-composer; see the prop doc). Deliberately does NOT
+ * use the `prose` class (that is reserved for assistant message bodies, per
+ * the e2e contract).
  */
-export function InsightCards({ insights }: InsightCardsProps) {
+export function InsightCards({ insights, onUseAction }: InsightCardsProps) {
   const { ref, visible } = useReveal<HTMLDivElement>()
   const { confidence, suggestedActions, relatedIncidents } = insights
 
@@ -116,11 +134,32 @@ export function InsightCards({ insights }: InsightCardsProps) {
           </div>
           <ul className="space-y-1">
             {(suggestedActions as string[]).map((action, i) => (
-              <li key={i} className="flex gap-2 text-sm text-foreground">
-                <span className="text-primary">•</span>
-                <span className="[&_strong]:font-semibold [&_code]:rounded [&_code]:bg-muted [&_code]:px-1">
-                  <InlineMarkdown>{action}</InlineMarkdown>
-                </span>
+              <li key={i}>
+                {onUseAction ? (
+                  <button
+                    type="button"
+                    data-testid="suggested-action-use"
+                    onClick={() => onUseAction(actionPlainText(action))}
+                    aria-label={`Use suggested action: ${actionPlainText(action)}`}
+                    className="group/action -mx-1.5 flex w-[calc(100%+0.75rem)] items-start gap-2 rounded-md px-1.5 py-1 text-left text-sm text-foreground transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+                  >
+                    <span className="text-primary">•</span>
+                    <span className="min-w-0 flex-1 [&_strong]:font-semibold [&_code]:rounded [&_code]:bg-muted [&_code]:px-1">
+                      <InlineMarkdown>{action}</InlineMarkdown>
+                    </span>
+                    <span className="flex shrink-0 items-center gap-1 self-center text-[11px] font-medium text-muted-foreground transition-colors group-hover/action:text-primary">
+                      <CornerDownLeft className="h-3 w-3" />
+                      Use
+                    </span>
+                  </button>
+                ) : (
+                  <div className="flex gap-2 text-sm text-foreground">
+                    <span className="text-primary">•</span>
+                    <span className="[&_strong]:font-semibold [&_code]:rounded [&_code]:bg-muted [&_code]:px-1">
+                      <InlineMarkdown>{action}</InlineMarkdown>
+                    </span>
+                  </div>
+                )}
               </li>
             ))}
           </ul>

@@ -404,7 +404,7 @@ export function EpisodeBrowser({
                   aria-pressed={severity === f.key}
                   className={`rounded-full border px-2 py-0.5 text-[11px] font-medium transition-colors ${
                     severity === f.key
-                      ? 'border-primary/50 bg-primary/15 text-primary'
+                      ? 'border-primary bg-primary text-primary-foreground'
                       : 'border-slate-700 bg-slate-800/60 text-slate-400 hover:bg-slate-700/60'
                   }`}
                 >
