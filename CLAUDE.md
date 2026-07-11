@@ -1,9 +1,9 @@
 # CLAUDE.md - Constitutional AIOps Development Instructions
 
-> **Version**: 4.0
-> **Last Updated**: 2026-05-30
-> **Architecture**: Simultaneous Dual-Model (24GB VRAM)
-> **Status**: Core complete; Thread B (AWS deploy + remote-monitoring + test gate) in progress
+> **Version**: 5.0
+> **Last Updated**: 2026-07-08
+> **Architecture**: Simultaneous Dual-Model (24GB VRAM) — Mode 1 default; single-engine Mode 2 overlay available
+> **Status**: PRODUCTION deployed (AWS, gated, TLS); chat-driven consent-gated remediation live; Mode 2 phases 0-1 validated
 
 ---
 
@@ -36,18 +36,20 @@ cat docs/KEY_METRICS.md | head -100
 **If Claude Code context is compacted, this file contains ALL essential information to resume work:**
 
 ### System Status
-- **Implementation**: core complete; Thread B deploy-modernization in progress
-- **Production runtime**: AWS g6.xlarge L4 24GB with **vLLM AWQ-marlin** (Stack B), behind a Caddy/Let's-Encrypt domain
-- **Local dev**: Jarvis Labs / Ollama (OpenAI-compatible) — local defaults unchanged
-- **Research Paper**: `docs/research/# IMP Current Research Documentation/Research_V7.tex`
+- **Implementation**: core complete + production-hardened; chat-driven consent-gated remediation SHIPPED (2026-07)
+- **Production runtime**: AWS g6.xlarge L4 24GB with **vLLM AWQ-marlin** dual engines (Mode 1), behind a Caddy/Let's-Encrypt domain with site-wide basic-auth; VM frozen/thawed on demand for cost
+- **Serving Mode 2** (opt-in overlay): single-engine profile via `AIOPS_MODE=2` + `docker/docker-compose.mode2.yml`; swappable from Settings (host-side watcher); Mode 1 stays byte-identical when off
+- **Remediation model**: action tools NEVER execute inside the model loop — proposals queue for an Approve/Reject card in chat; Settings→Remediation picks diagnose/approve/auto (+ per-tool autonomy allowlist); everything passes the constitutional gate + audit log
+- **Local dev**: Ollama / mock endpoints (OpenAI-compatible) — local defaults unchanged
+- **Current state snapshot**: `docs/SESSION_STATE.md` · consolidated history: `docs/CHANGELOG.md` (0.12.0)
 
 ### Key Files Inventory
 | Category | Count | Location |
 |----------|-------|----------|
-| Backend Python | 43 files | `src/` |
-| Frontend React | 23 files | `frontend/src/` |
-| API Endpoints | 50+ | FastAPI routes |
-| Documentation | 15+ files | `docs/` |
+| Backend Python | ~83 files | `src/` |
+| Frontend TS/TSX | ~83 files | `frontend/src/` |
+| API routers | 17 registered | FastAPI routes (`src/main.py`) |
+| Documentation | 20 files | `docs/` |
 
 ### Observability Stack
 | Component | Version | Retention |
@@ -91,7 +93,7 @@ Production runtime is vLLM AWQ-marlin (served-model-name in parens); local dev m
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                 │
 │  ┌───────────────────────────────────────────────────────────┐  │
-│  │  FAST AGENT (Port 8081)                                   │  │
+│  │  FAST AGENT (Port 8000)                                   │  │
 │  │  ─────────────────────────────────────────────────────    │  │
 │  │  Model: Qwen3-4B Q4_K_M (~2.5GB + 1GB KV = ~4GB)         │  │
 │  │  Purpose: Telemetry annotation, classification            │  │
@@ -99,7 +101,7 @@ Production runtime is vLLM AWQ-marlin (served-model-name in parens); local dev m
 │  └───────────────────────────────────────────────────────────┘  │
 │                                                                 │
 │  ┌───────────────────────────────────────────────────────────┐  │
-│  │  REASONING AGENT (Port 8082)                              │  │
+│  │  REASONING AGENT (Port 8001)                              │  │
 │  │  ─────────────────────────────────────────────────────    │  │
 │  │  Model: Qwen3-14B Q4_K_M (~9GB + 1.5GB KV = ~11GB)       │  │
 │  │  Purpose: RCA, remediation planning, human chat           │  │
@@ -248,11 +250,12 @@ Where:
 
 | Deployment | Hardware | Cost | Use Case |
 |------------|----------|------|----------|
-| **Primary (Current)** | Jarvis Labs A5000 24GB | $0.49/hr (~$36/month) | Development |
-| Alternative | AWS g6.xlarge L4 24GB Spot | $0.35/hr (~$252/month continuous) | Production |
+| **Primary (Current)** | AWS g6.xlarge L4 24GB On-Demand | ~$0.80/hr while running (VM frozen when idle; EBS-only cost stopped) | Production |
+| Historical | Jarvis Labs A5000 24GB | $0.49/hr | Development (decommissioned 2026-05) |
 | Local Dev | No GPU (mock LLM) | Free | Testing |
 
-**Note**: Currently using **Jarvis Labs** for development with Ollama endpoints.
+**Note**: Production runs on **AWS** with vLLM; the VM is stopped between sessions (an idle-stop
+alarm guards against unattended burn) and all state persists on EBS across freeze/thaw.
 
 ---
 
@@ -355,6 +358,15 @@ NEO4J_PASSWORD=<required-in-production>
 # Constitutional AI Thresholds
 CONFIDENCE_THRESHOLD_AUTO=0.90
 CONFIDENCE_THRESHOLD_APPROVAL=0.70
+
+# Action tools (fail-closed; both default OFF/empty)
+AIOPS_ENABLE_ACTION_TOOLS=false          # master kill-switch for restart/scale
+AIOPS_ACTION_CONTAINER_WHITELIST=        # comma-extra containers beyond the default whitelist
+DEMO_REMOTE_CONTAINERS=nextcloud-db      # containers remediated via the remote demo agent
+
+# Serving mode (Mode 1 default; Mode 2 needs the compose overlay too)
+AIOPS_MODE=1
+CHAT_AGENTIC_TOOL_LOOP=false             # opt-in agentic tool loop in chat
 ```
 
 ### Key Commands
@@ -440,4 +452,4 @@ reasoning_response = await router.reasoning_completion(prompt)
 
 ---
 
-**End of CLAUDE.md** | Version 4.0 | 2026-05-30
+**End of CLAUDE.md** | Version 5.0 | 2026-07-08

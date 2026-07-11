@@ -2,6 +2,78 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.12.0] - 2026-07-08
+
+### Production web-app modernization (June–July 2026, consolidated) + chat-driven remediation
+
+This entry consolidates the post-paper "Thread B" modernization: the app moved from a
+Jarvis-Labs/Ollama dev setup to a hardened production deployment on an AWS L4 GPU VM
+with dual vLLM engines, and chat gained gated, human-consented remediation execution.
+
+#### Production deployment & infrastructure
+- Dual **vLLM AWQ-marlin** engines (Qwen3-4B fast @ :8000, Qwen3-14B reasoning @ :8001) behind a
+  **Caddy + Let's Encrypt** domain; path-routed `/`, `/api`, `/grafana`, `/ingest`; site-wide basic-auth.
+- **Remote-host monitoring**: single Grafana Alloy edge agent ships logs/metrics/traces from any
+  Docker host into the central LGTM stack via the authenticated `/ingest/*` gateway.
+- All stateful stores (Neo4j, Loki/Tempo/Prometheus/Grafana, SQLite, Caddy certs) bind-mounted to a
+  persistent data volume; systemd units for one-shot VM bring-up; production compose overlay with
+  loopback-only store ports (Caddy is the sole public listener).
+- **Durable app persistence**: stdlib SQLite (WAL) write-through store for conversations, incidents,
+  pending actions and counters, hydrated at startup — chat/incident state survives restarts.
+
+#### Security & robustness
+- Security headers (HSTS, CSP, X-Frame-Options, nosniff), trusted-proxy client-IP parsing (fixes
+  lockout spoofing), prod CORS guard, `/docs`/`/redoc` disabled in prod, request body caps.
+- Action tools are **fail-closed**: kill-switch env (`AIOPS_ENABLE_ACTION_TOOLS`), container
+  whitelist (`AIOPS_ACTION_CONTAINER_WHITELIST`), constitutional validation with tiered
+  authorization, and an audit log line for every attempt.
+- App-level ErrorBoundary, accessible Tabs/Modal/toast primitives, `prefers-reduced-motion`,
+  lazy-loaded routes with manual chunking (≈864 KB single bundle → ≈190 KB max chunk).
+
+#### Chat: real tool-calling, answer quality, and consent-gated actions
+- Chat executes the MCP tools for real (find_similar, get_dependencies, analyze_logs, telemetry,
+  metrics, containers, anomaly) with an ordered `tool_calls` metadata contract rendered as a
+  reasoning timeline; optional agentic tool loop (`CHAT_AGENTIC_TOOL_LOOP`).
+- Investigation prompts force a query bundle (find_similar → analyze_logs → get_dependencies);
+  non-answer guards catch narration, tool-parameter deflection and terse dead-ends; evidence-based
+  confidence (`0.4·LLM + 0.35·history + 0.25·similarity`) replaces synthetic values.
+- **NEW — chat-driven remediation with human consent**: agent-initiated action-tool calls are never
+  executed in-loop; they queue as **proposed actions** rendered as an Approve/Reject card in chat.
+  Approval executes through the constitutional gate (human approval satisfies Tier-1 authorization);
+  decisions are written back onto conversation history (reloaded chats show executed/rejected/refused).
+- **Per-tool autonomy allowlist** in Settings (auto mode executes only allowlisted tools, and only
+  when confidence ≥ threshold, evidence present, and rate limit unspent). `scale_service` proposals
+  supported with replica clamping. The auto-exec rate budget counts only real executions — a
+  constitutional-gate refusal that degrades to a proposal no longer consumes the per-minute cap.
+- **Local restarts use the Docker SDK** over the mounted socket (the production backend image has no
+  docker CLI binary; the old subprocess path could never work there).
+
+#### Incidents & demo
+- Fake remediation executor replaced with the real gated tool executor; paced chaos demo runs real
+  break/heal cycles against a remote demo host with verified recovery (no false resolves).
+
+#### Episodic memory & UI
+- Episode Browser (master/detail with focused causal subgraph), causal-tree episodic layout in the
+  Command Center, full-screen `/graph` page with type filters/search/similar-links toggle,
+  glassmorphic inspector drawer, MCP Tools page overhaul, honest Dashboard metrics (real latency
+  and request counts), draggable Command Center divider + focus modes.
+- LLM-editable platform topology schema (generate → preview → apply → reset) with strict validation
+  so a bad generation can never break the live view.
+- `/graph` layout fixes: canvas fills its card (`fillParent`), camera re-fits on canvas-box changes,
+  detail drawer no longer overlaps the stats chip, long root-cause text renders stacked.
+
+#### Mode 2 serving scaffolding (opt-in, Mode 1 remains byte-identical default)
+- `ServingProfile` resolver + `AIOPS_MODE` env + single-engine compose overlay; `/health/serving`;
+  host-side mode-swap watcher with an admin Settings toggle (Mode 1 ⇄ Mode 2 from the UI).
+- Bench harness (`scripts/bench_mode.py`), golden eval set v2 (34 checks, passing live on both
+  modes with zero data loss across swaps), stable-prefix prompt layout, runtime-context TTL cache,
+  parallel read-tool execution, SSE `POST /chat/stream` endpoint + typed client, guided-JSON
+  scaffolding, per-role request priority.
+
+#### Tests
+- Backend suite **704 passed / 25 skipped**; golden v2 34/34 live on both serving modes; live
+  Playwright post-deploy gate and route-mocked local UI tour; CI (backend, frontend, golden-smoke) green.
+
 ## [0.11.2] - 2026-05-15
 
 ### Session 5 — DeepSeek SOTA, Paper v2 Draft, Ablation Launched
