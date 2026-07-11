@@ -106,6 +106,7 @@ DEFAULT_SETTINGS: dict[str, Any] = {
         "mode": "diagnose",
         "autoConfidenceThreshold": 90,
         "requireEvidenceForAuto": True,
+        "autoToolAllowlist": ["restart_service"],
         "demoTargetUrl": "",
     },
 }
@@ -189,11 +190,17 @@ class RemediationSettingsModel(BaseModel):
       * ``diagnose`` (default) — never attach/execute anything; pure analysis.
       * ``approve``  — attach a proposed action; execute only on user approval.
       * ``auto``     — attempt gated execution when the interlocks all pass.
+    ``autoToolAllowlist`` scopes auto mode per tool: only listed action tools may
+    auto-execute; anything else degrades to an approve-style consent card. The
+    default preserves the pre-allowlist behaviour (restarts eligible, scaling not).
     ``demoTargetUrl`` is shared with Lane A (chaos demo target endpoint).
     """
     mode: Literal["diagnose", "approve", "auto"] = "diagnose"
     autoConfidenceThreshold: int = Field(90, ge=70, le=99)
     requireEvidenceForAuto: bool = True
+    autoToolAllowlist: list[Literal["restart_service", "scale_service"]] = Field(
+        default_factory=lambda: ["restart_service"]
+    )
     demoTargetUrl: str = ""
 
 
