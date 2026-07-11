@@ -211,7 +211,9 @@ _TOOL_SPECS: tuple[ToolSpec, ...] = (
         name="restart_service",
         description=(
             "Restart a whitelisted Docker container. ACTION tool — gated by "
-            "AIOPS_ENABLE_ACTION_TOOLS and the constitutional validator."
+            "AIOPS_ENABLE_ACTION_TOOLS and the constitutional validator. Calling "
+            "it QUEUES the restart for human approval (it does not run "
+            "immediately); tell the user to approve or reject the proposed action."
         ),
         parameters={
             "type": "object",
@@ -228,7 +230,9 @@ _TOOL_SPECS: tuple[ToolSpec, ...] = (
         name="scale_service",
         description=(
             "Scale a whitelisted Docker Compose service (replicas clamped 0-5). "
-            "ACTION tool — gated by AIOPS_ENABLE_ACTION_TOOLS and the validator."
+            "ACTION tool — gated by AIOPS_ENABLE_ACTION_TOOLS and the validator. "
+            "Calling it QUEUES the scaling for human approval (it does not run "
+            "immediately); tell the user to approve or reject the proposed action."
         ),
         parameters={
             "type": "object",

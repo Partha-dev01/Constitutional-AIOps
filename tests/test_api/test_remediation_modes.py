@@ -302,6 +302,7 @@ class TestMaybeProposeRemediation:
                 conversation_id="conv-1",
             )
         assert out["status"] == "auto_executed"
+        assert len(chat_module._auto_exec_times) == 1  # execution consumed budget
 
     @pytest.mark.asyncio
     async def test_auto_degrades_when_gate_requires_approval(self):
@@ -330,6 +331,34 @@ class TestMaybeProposeRemediation:
         assert out["status"] == "proposed"             # degraded, not executed
         assert out["verdict"] == {"requires_approval": True}
         assert out["id"] in chat_module._pending_actions
+
+    @pytest.mark.asyncio
+    async def test_gate_refusal_does_not_consume_rate_budget(self):
+        """Only real executions count against the per-minute cap — a gate
+        refusal that degrades to proposed must leave the budget untouched."""
+        async def fake_exec(request, tool_name, parameters, context=None):
+            return {
+                "success": False,
+                "error_code": "approval_required",
+                "error": "needs a human",
+            }
+
+        with patch.object(chat_module, "execute_tool_call", new=fake_exec):
+            out = await _maybe_propose_remediation(
+                _make_request(),
+                mode="auto",
+                content=_RCA_RESTART_DB,
+                suggested_actions=["Restart the nextcloud-db container"],
+                service="nextcloud",
+                confidence=0.99,
+                has_tool_data=True,
+                remediation_settings=_remediation("auto"),
+                owner="admin",
+                conversation_id="conv-1",
+            )
+        assert out["status"] == "proposed"
+        assert len(chat_module._auto_exec_times) == 0
+        assert _auto_exec_rate_ok() is True
 
     @pytest.mark.asyncio
     async def test_auto_blocked_when_kill_switch_disabled(self):
@@ -603,3 +632,397 @@ class TestDecisionEndpoint:
         assert resp.status == "refused"
         assert resp.success is False
         assert resp.error_code == "execution_failed"
+
+
+# ---------------------------------------------------------------------------
+# Agent-initiated action queue (consent-before-execution)
+# ---------------------------------------------------------------------------
+
+class TestQueueActionProposal:
+    """_queue_action_proposal: an agent action-tool call queues a consent
+    proposal instead of executing — or refuses with an honest error_code."""
+
+    def test_kill_switch_off_refuses(self, monkeypatch):
+        monkeypatch.delenv("AIOPS_ENABLE_ACTION_TOOLS", raising=False)
+        queue: list = []
+        out = chat_module._queue_action_proposal(
+            "restart_service", {"service_name": "nextcloud", "reason": "r"}, queue
+        )
+        assert out["success"] is False
+        assert out["error_code"] == "action_tools_disabled"
+        assert queue == []
+
+    def test_diagnose_mode_refuses(self, monkeypatch):
+        monkeypatch.setenv("AIOPS_ENABLE_ACTION_TOOLS", "true")
+        queue: list = []
+        with patch.object(
+            chat_module, "get_remediation_settings", return_value=_remediation("diagnose")
+        ):
+            out = chat_module._queue_action_proposal(
+                "restart_service", {"service_name": "nextcloud", "reason": "r"}, queue
+            )
+        assert out["success"] is False
+        assert out["error_code"] == "remediation_disabled"
+        assert queue == []
+
+    def test_approve_mode_queues_without_executing(self, monkeypatch):
+        monkeypatch.setenv("AIOPS_ENABLE_ACTION_TOOLS", "true")
+        queue: list = []
+        with patch.object(
+            chat_module, "get_remediation_settings", return_value=_remediation("approve")
+        ):
+            out = chat_module._queue_action_proposal(
+                "restart_service",
+                {"service_name": "nextcloud", "reason": "stuck workers"},
+                queue,
+            )
+        assert out["success"] is True
+        assert out["data"]["status"] == "queued_for_approval"
+        assert len(queue) == 1
+        proposed = queue[0]
+        assert proposed["status"] == "proposed"
+        assert proposed["mode"] == "approve"
+        assert proposed["tool_name"] == "restart_service"
+        assert proposed["parameters"]["service_name"] == "nextcloud"
+        assert out["data"]["action_id"] == proposed["id"]
+        # Queueing must not touch the pending cache — _finalize_proposal owns that.
+        assert chat_module._pending_actions == {}
+
+    def test_non_whitelisted_target_refused(self, monkeypatch):
+        monkeypatch.setenv("AIOPS_ENABLE_ACTION_TOOLS", "true")
+        monkeypatch.delenv("AIOPS_ACTION_CONTAINER_WHITELIST", raising=False)
+        queue: list = []
+        with patch.object(
+            chat_module, "get_remediation_settings", return_value=_remediation("approve")
+        ):
+            out = chat_module._queue_action_proposal(
+                "restart_service", {"service_name": "neo4j", "reason": "r"}, queue
+            )
+        assert out["success"] is False
+        assert out["error_code"] == "container_not_whitelisted"
+        assert queue == []
+
+    def test_env_whitelist_extension_allows_target(self, monkeypatch):
+        monkeypatch.setenv("AIOPS_ENABLE_ACTION_TOOLS", "true")
+        monkeypatch.setenv("AIOPS_ACTION_CONTAINER_WHITELIST", "nextcloud-db")
+        queue: list = []
+        with patch.object(
+            chat_module, "get_remediation_settings", return_value=_remediation("approve")
+        ):
+            out = chat_module._queue_action_proposal(
+                "restart_service", {"service_name": "nextcloud-db", "reason": "r"}, queue
+            )
+        assert out["success"] is True
+        assert queue[0]["target"] == "t3"
+
+    def test_second_action_same_turn_refused(self, monkeypatch):
+        monkeypatch.setenv("AIOPS_ENABLE_ACTION_TOOLS", "true")
+        queue: list = []
+        with patch.object(
+            chat_module, "get_remediation_settings", return_value=_remediation("approve")
+        ):
+            first = chat_module._queue_action_proposal(
+                "restart_service", {"service_name": "nextcloud", "reason": "r"}, queue
+            )
+            second = chat_module._queue_action_proposal(
+                "scale_service",
+                {"service_name": "nextcloud", "target_replicas": 2, "reason": "r"},
+                queue,
+            )
+        assert first["success"] is True
+        assert second["success"] is False
+        assert second["error_code"] == "action_already_queued"
+        assert len(queue) == 1
+
+    def test_scale_service_proposal_shape(self, monkeypatch):
+        monkeypatch.setenv("AIOPS_ENABLE_ACTION_TOOLS", "true")
+        queue: list = []
+        with patch.object(
+            chat_module, "get_remediation_settings", return_value=_remediation("auto")
+        ):
+            out = chat_module._queue_action_proposal(
+                "scale_service",
+                {"service_name": "nextcloud", "target_replicas": 9, "reason": "load"},
+                queue,
+            )
+        assert out["success"] is True
+        proposed = queue[0]
+        assert proposed["tool_name"] == "scale_service"
+        assert proposed["mode"] == "auto"
+        # Display clamp mirrors tools.py's authoritative 0-5 clamp.
+        assert proposed["parameters"]["target_replicas"] == 5
+        assert "Scale nextcloud to 5 replicas" == proposed["title"]
+
+
+class TestFinalizeProposalAllowlist:
+    """auto mode is scoped per tool by remediation.autoToolAllowlist."""
+
+    @pytest.mark.asyncio
+    async def test_auto_not_allowlisted_degrades_to_proposed(self):
+        async def fake_exec(*a, **k):
+            raise AssertionError("non-allowlisted tool must not auto-execute")
+
+        with patch.object(chat_module, "execute_tool_call", new=fake_exec):
+            out = await _maybe_propose_remediation(
+                _make_request(),
+                mode="auto",
+                content=_RCA_RESTART_DB,
+                suggested_actions=["Restart the nextcloud-db container"],
+                service="nextcloud",
+                confidence=0.99,
+                has_tool_data=True,
+                remediation_settings=_remediation("auto", autoToolAllowlist=[]),
+                owner="admin",
+                conversation_id="conv-1",
+            )
+        assert out["status"] == "proposed"
+        assert out["id"] in chat_module._pending_actions
+
+    @pytest.mark.asyncio
+    async def test_auto_allowlisted_executes(self):
+        async def fake_exec(request, tool_name, parameters, context=None):
+            return {"success": True, "data": {"status": "completed"}}
+
+        with patch.object(chat_module, "execute_tool_call", new=fake_exec):
+            out = await _maybe_propose_remediation(
+                _make_request(),
+                mode="auto",
+                content=_RCA_RESTART_DB,
+                suggested_actions=["Restart the nextcloud-db container"],
+                service="nextcloud",
+                confidence=0.99,
+                has_tool_data=True,
+                remediation_settings=_remediation(
+                    "auto", autoToolAllowlist=["restart_service"]
+                ),
+                owner="admin",
+                conversation_id="conv-1",
+            )
+        assert out["status"] == "auto_executed"
+
+    @pytest.mark.asyncio
+    async def test_missing_allowlist_key_keeps_legacy_behaviour(self):
+        """Settings dicts without the key (legacy persisted files) stay permissive."""
+        async def fake_exec(request, tool_name, parameters, context=None):
+            return {"success": True, "data": {"status": "completed"}}
+
+        settings = _remediation("auto")
+        assert "autoToolAllowlist" not in settings
+        with patch.object(chat_module, "execute_tool_call", new=fake_exec):
+            out = await _maybe_propose_remediation(
+                _make_request(),
+                mode="auto",
+                content=_RCA_RESTART_DB,
+                suggested_actions=["Restart the nextcloud-db container"],
+                service="nextcloud",
+                confidence=0.99,
+                has_tool_data=True,
+                remediation_settings=settings,
+                owner="admin",
+                conversation_id="conv-1",
+            )
+        assert out["status"] == "auto_executed"
+
+
+class TestQueuedActionInFinalize:
+    """_finalize_chat_turn: a queued agent action IS the turn's proposal."""
+
+    def _make_conversation(self):
+        from src.api.schemas.chat import ConversationHistory
+
+        conv = ConversationHistory(
+            conversation_id="conv-1",
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow(),
+            messages=[],
+            context=None,
+            owner="admin",
+        )
+        chat_module._conversations["conv-1"] = conv
+        return conv
+
+    @pytest.mark.asyncio
+    async def test_queued_action_wins_over_text_detection(self):
+        from src.auth.deps import User
+
+        conv = self._make_conversation()
+        queued = [
+            _build_proposed_action(
+                {"service_name": "nextcloud", "reason": "agent-initiated restart"},
+                mode="approve",
+                status_value="proposed",
+            )
+        ]
+        with patch.object(
+            chat_module, "get_remediation_settings",
+            return_value=_remediation("approve"),
+        ), patch.object(
+            chat_module, "_find_related_incidents", new=AsyncMock(return_value=[])
+        ):
+            resp = await chat_module._finalize_chat_turn(
+                _make_request(),
+                user_message_text="restart nextcloud",
+                conversation=conv,
+                conversation_id="conv-1",
+                user=User(id="u1", username="admin", role="admin"),
+                service="nextcloud",
+                # This content would text-detect a nextcloud-db restart if the
+                # queued proposal did not take precedence.
+                content=_RCA_RESTART_DB,
+                confidence=0.9,
+                metadata={},
+                tool_struct={},
+                has_tool_data=True,
+                queued_actions=queued,
+            )
+        assert resp.proposed_action is not None
+        assert resp.proposed_action["id"] == queued[0]["id"]
+        assert resp.proposed_action["parameters"]["service_name"] == "nextcloud"
+        assert resp.proposed_action["id"] in chat_module._pending_actions
+        # Persisted on the assistant turn for reload replay.
+        assert conv.messages[-1].metadata["proposed_action"]["id"] == queued[0]["id"]
+
+    @pytest.mark.asyncio
+    async def test_no_queue_falls_back_to_text_detection(self):
+        from src.auth.deps import User
+
+        conv = self._make_conversation()
+        with patch.object(
+            chat_module, "get_remediation_settings",
+            return_value=_remediation("approve"),
+        ), patch.object(
+            chat_module, "_find_related_incidents", new=AsyncMock(return_value=[])
+        ):
+            resp = await chat_module._finalize_chat_turn(
+                _make_request(),
+                user_message_text="what is wrong with nextcloud?",
+                conversation=conv,
+                conversation_id="conv-1",
+                user=User(id="u1", username="admin", role="admin"),
+                service="nextcloud",
+                content=_RCA_RESTART_DB,
+                confidence=0.9,
+                metadata={},
+                tool_struct={},
+                has_tool_data=True,
+                queued_actions=[],
+            )
+        assert resp.proposed_action is not None
+        assert resp.proposed_action["parameters"]["service_name"] == "nextcloud-db"
+
+
+class TestDecisionWriteBack:
+    """decide_action writes the outcome back onto the persisted conversation."""
+
+    def _seed(self, *, status_ok=True):
+        from src.api.schemas.chat import ChatMessage, ChatRole, ConversationHistory
+
+        action = _build_proposed_action(
+            {"service_name": "nextcloud-db", "reason": "restart it"},
+            mode="approve",
+            status_value="proposed",
+        )
+        conv = ConversationHistory(
+            conversation_id="conv-1",
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow(),
+            messages=[
+                ChatMessage(
+                    role=ChatRole.ASSISTANT,
+                    content="I found the fault; approve the restart below.",
+                    timestamp=datetime.utcnow(),
+                    metadata={"confidence": 0.82, "proposed_action": action},
+                )
+            ],
+            context=None,
+            owner="admin",
+        )
+        chat_module._conversations["conv-1"] = conv
+        chat_module._pending_actions[action["id"]] = {
+            "tool_name": action["tool_name"],
+            "parameters": action["parameters"],
+            "owner": "admin",
+            "conversation_id": "conv-1",
+            "created_at": __import__("time").time(),
+            "proposed_action": action,
+            "confidence": 0.82,
+        }
+        return action["id"], conv
+
+    @pytest.mark.asyncio
+    async def test_reject_marks_conversation_rejected(self):
+        aid, conv = self._seed()
+        await decide_action(_make_request(), aid, DecisionRequest(approved=False))
+        assert conv.messages[0].metadata["proposed_action"]["status"] == "rejected"
+
+    @pytest.mark.asyncio
+    async def test_approve_success_marks_conversation_executed(self):
+        aid, conv = self._seed()
+
+        async def fake_exec(request, tool_name, parameters, context=None):
+            return {
+                "success": True,
+                "data": {"status": "completed"},
+                "metadata": {"constitutional": {"can_proceed": True}},
+            }
+
+        with patch.object(chat_module, "execute_tool_call", new=fake_exec):
+            await decide_action(_make_request(), aid, DecisionRequest(approved=True))
+        stored = conv.messages[0].metadata["proposed_action"]
+        assert stored["status"] == "executed"
+        assert stored["execution_result"] == {"status": "completed"}
+        assert stored["verdict"] == {"can_proceed": True}
+
+    @pytest.mark.asyncio
+    async def test_gate_refusal_marks_conversation_refused(self):
+        aid, conv = self._seed()
+
+        async def fake_exec(request, tool_name, parameters, context=None):
+            return {
+                "success": False,
+                "error_code": "validation_blocked",
+                "error": "tier-1",
+                "metadata": {"constitutional": {"can_proceed": False}},
+            }
+
+        with patch.object(chat_module, "execute_tool_call", new=fake_exec):
+            await decide_action(_make_request(), aid, DecisionRequest(approved=True))
+        assert conv.messages[0].metadata["proposed_action"]["status"] == "refused"
+
+    @pytest.mark.asyncio
+    async def test_missing_conversation_is_harmless(self):
+        """Decision still succeeds when the conversation was evicted/deleted."""
+        aid, _ = self._seed()
+        chat_module._conversations.clear()
+        resp = await decide_action(_make_request(), aid, DecisionRequest(approved=False))
+        assert resp.status == "rejected"
+
+
+class TestScaleProposalBuilder:
+    def test_scale_shape_title_and_clamp(self):
+        action = _build_proposed_action(
+            {"service_name": "nextcloud", "reason": "load spike", "target_replicas": 3},
+            mode="approve",
+            status_value="proposed",
+            tool_name="scale_service",
+        )
+        assert action["tool_name"] == "scale_service"
+        assert action["parameters"]["target_replicas"] == 3
+        assert action["title"] == "Scale nextcloud to 3 replicas"
+
+        one = _build_proposed_action(
+            {"service_name": "nextcloud", "reason": "r", "target_replicas": 1},
+            mode="approve",
+            status_value="proposed",
+            tool_name="scale_service",
+        )
+        assert one["title"] == "Scale nextcloud to 1 replica"
+
+        # Garbage replica counts fall back to a safe display default.
+        bad = _build_proposed_action(
+            {"service_name": "nextcloud", "reason": "r", "target_replicas": "lots"},
+            mode="approve",
+            status_value="proposed",
+            tool_name="scale_service",
+        )
+        assert bad["parameters"]["target_replicas"] == 1
