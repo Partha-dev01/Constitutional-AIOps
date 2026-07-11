@@ -540,7 +540,7 @@ export function Settings() {
               </div>
 
               {/* Persistence note */}
-              <div className="mt-6 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg text-xs text-blue-600">
+              <div className="mt-6 p-3 bg-primary/10 border border-primary/20 rounded-lg text-xs text-primary">
                 <p className="font-semibold mb-1">Persistence</p>
                 <p>
                   Constitutional thresholds are saved to the backend (
@@ -701,7 +701,7 @@ export function Settings() {
                 </div>
               </div>
 
-              <div className="mt-6 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg text-xs text-blue-600">
+              <div className="mt-6 p-3 bg-primary/10 border border-primary/20 rounded-lg text-xs text-primary">
                 <p className="font-semibold mb-1">Persistence</p>
                 <p>
                   Remediation settings are saved to the backend (
@@ -919,7 +919,7 @@ export function Settings() {
                   </p>
                 </div>
 
-                <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg text-xs text-blue-600">
+                <div className="p-3 bg-primary/10 border border-primary/20 rounded-lg text-xs text-primary">
                   <p className="font-semibold mb-1">Persistence</p>
                   <p>
                     Telemetry settings are persisted via <code>/api/v1/settings/</code>. Changes to
@@ -1087,7 +1087,7 @@ export function Settings() {
                               className={`px-2 py-0.5 rounded text-xs ${
                                 prompt.agent === 'fast'
                                   ? 'bg-yellow-500/10 text-yellow-500'
-                                  : 'bg-purple-500/10 text-purple-500'
+                                  : 'bg-primary/10 text-primary'
                               }`}
                             >
                               {prompt.agent === 'fast' ? 'Fast Agent' : 'Reasoning Agent'}
@@ -1159,17 +1159,17 @@ export function Settings() {
               )}
             </div>
 
-            <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+            <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
               <div className="flex items-start gap-3">
-                <Info className="h-5 w-5 text-blue-500 mt-0.5" />
+                <Info className="h-5 w-5 text-primary mt-0.5" />
                 <div>
-                  <h3 className="font-semibold text-blue-600">About System Prompts</h3>
-                  <p className="text-sm text-blue-600/80 mt-1">
+                  <h3 className="font-semibold text-primary">About System Prompts</h3>
+                  <p className="text-sm text-primary/80 mt-1">
                     System prompts define how each agent behaves. The Fast Agent handles quick
                     classification tasks, while the Reasoning Agent performs deep analysis and
                     planning. Changes take effect immediately for new requests.
                   </p>
-                  <p className="text-xs text-blue-600/60 mt-2">
+                  <p className="text-xs text-primary/60 mt-2">
                     Saved via <code>/api/v1/prompts/</code>: a save succeeds only when the edit is
                     applied to the live agent and persisted; failures surface as an error banner
                     above. Use Save Settings above for Constitutional / Notification / Telemetry
@@ -1275,7 +1275,7 @@ function ServingModeCard() {
             data-testid="serving-mode-badge"
             className={`px-2 py-0.5 rounded-full text-xs font-medium ${
               currentMode === 2
-                ? 'bg-purple-500/10 text-purple-500'
+                ? 'bg-primary/10 text-primary'
                 : 'bg-green-500/10 text-green-500'
             }`}
           >
@@ -1354,7 +1354,7 @@ function ServingModeCard() {
 
       {swapActive && (
         <div
-          className="mt-4 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg flex items-start gap-2 text-sm text-blue-600"
+          className="mt-4 p-3 bg-primary/10 border border-primary/30 rounded-lg flex items-start gap-2 text-sm text-primary"
           data-testid="serving-mode-swapping"
         >
           <Loader2 className="h-4 w-4 mt-0.5 animate-spin shrink-0" />
@@ -1377,7 +1377,7 @@ function ServingModeCard() {
         <p className="mt-3 text-sm text-red-500">{requestError}</p>
       )}
 
-      <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg text-xs text-blue-600">
+      <div className="mt-4 p-3 bg-primary/10 border border-primary/20 rounded-lg text-xs text-primary">
         <p className="font-semibold mb-1">How it works</p>
         <p>
           The toggle writes a swap request that the host-side{' '}

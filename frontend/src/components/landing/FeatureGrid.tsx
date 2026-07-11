@@ -49,7 +49,7 @@ export function FeatureGrid() {
       <div className="mx-auto max-w-6xl px-6">
         <div className="mx-auto mb-14 max-w-2xl text-center">
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-            Six pillars, one autonomous operator
+            Core subsystems
           </h2>
           <p className="mt-4 text-muted-foreground">
             Each subsystem is designed to be inspectable, safe, and grounded in
@@ -67,8 +67,8 @@ export function FeatureGrid() {
                 style={{ animationDelay: `${i * 90}ms` }}
               >
                 {/* Reveal lives on the wrapper: reveal-up's fill-forwards
-                    transform would otherwise override the hover lift. */}
-                <div className="glass-card group h-full p-6">
+                    transform would otherwise override child transitions. */}
+                <div className="group h-full rounded-lg border border-border bg-card p-6">
                   <div className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary/20">
                     <Icon className="h-6 w-6" aria-hidden="true" />
                   </div>

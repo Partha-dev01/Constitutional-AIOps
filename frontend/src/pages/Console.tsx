@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
-import { AlertTriangle, Columns, GripVertical, Loader2, MessageSquare, Sparkles, Waypoints, X } from 'lucide-react'
+import { AlertTriangle, Columns, GripVertical, Loader2, MessageSquare, Waypoints, X } from 'lucide-react'
 import { ActiveIncidentsPanel } from '../components/incidents/ActiveIncidentsPanel'
 import { ChatPane } from '../components/chat/ChatPane'
 import { useMediaQuery } from '../hooks/useMediaQuery'
@@ -335,9 +335,9 @@ export function Console() {
       <div className="flex shrink-0 flex-wrap items-center gap-2.5">
         <Waypoints className="h-6 w-6 shrink-0 text-primary" />
         <div>
-          <h1 className="text-xl font-bold leading-tight">Command Center</h1>
+          <h1 className="text-2xl font-bold">Command Center</h1>
           <p className="text-xs text-muted-foreground">
-            Live topology, active incidents and the assistant — one operations view.
+            Topology, incidents, and the assistant.
           </p>
         </div>
         {/* Pane focus — maximise the graph, the chat column, or restore the split. */}
@@ -390,7 +390,7 @@ export function Console() {
         >
           <div className="mb-2 flex shrink-0 items-center justify-between gap-2">
             <h2 className="flex items-center gap-2 text-sm font-semibold">
-              <Waypoints className="h-4 w-4 text-cyan-400" />
+              <Waypoints className="h-4 w-4 text-muted-foreground" />
               {graphMode === 'platform' ? 'Platform Topology' : 'Episodic Topology'}
             </h2>
             {/* Segmented control — switch the pane between the two topologies. */}
@@ -522,7 +522,6 @@ export function Console() {
           >
             {selection.length > 0 && (
               <div className="mb-2 flex shrink-0 flex-wrap items-center gap-1.5 rounded-lg border border-blue-500/30 bg-blue-500/10 px-2.5 py-1.5 text-xs text-blue-200">
-                <Sparkles className="h-3.5 w-3.5 shrink-0" />
                 <span className="font-medium">
                   {selection.length} attached as context
                 </span>

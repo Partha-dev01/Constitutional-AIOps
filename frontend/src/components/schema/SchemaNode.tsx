@@ -49,7 +49,7 @@ export interface SchemaNodeProps {
   y: number
   /** Scrub-derived cumulative episode count (badge). */
   displayCount: number
-  /** Scrub-derived current-bucket activity (glow intensity). */
+  /** Scrub-derived current-bucket activity (drives the border brightness). */
   activity: number
   selected: boolean
   onClick: (node: TopologyNode, event: React.MouseEvent) => void
@@ -83,7 +83,8 @@ function SchemaNodeInner({
   const Icon = KIND_ICON[node.kind] ?? Box
   const healthColor = HEALTH_COLOR[node.health] ?? HEALTH_COLOR.unknown
   const accent = accentOverride ?? kindAccent(node.kind)
-  const glow = Math.min(0.16, activity * 0.09)
+  // Activity reads as a slightly brighter flat border, not a blurred halo.
+  const active = activity > 0
   const subLabel =
     subLabelOverride ?? (node.meta.port ? `${node.kind} · :${node.meta.port}` : node.kind)
 
@@ -117,22 +118,6 @@ function SchemaNodeInner({
       onPointerMove={(e) => onHover(node, e)}
       onPointerLeave={() => onHover(null)}
     >
-      {/* Activity glow: brightness driven by the scrubbed current bucket,
-          tinted with this service's category accent. */}
-      {glow > 0 && (
-        <rect
-          x={-6}
-          y={-6}
-          width={NODE_W + 12}
-          height={NODE_H + 12}
-          rx={14}
-          fill={`hsl(${accent})`}
-          opacity={glow}
-          filter="url(#schemaGlow)"
-          pointerEvents="none"
-        />
-      )}
-
       {/* Selected ring. */}
       {selected && (
         <rect
@@ -149,49 +134,40 @@ function SchemaNodeInner({
         />
       )}
 
-      {/* Glass body: gradient fill + gradient hairline stroke (.glass-card). */}
+      {/* Flat card body: solid fill, 1px hairline stroke. Activity brightens
+          the border slightly instead of casting a blurred halo. */}
       <rect
         className="schema-node-body"
         width={NODE_W}
         height={NODE_H}
         rx={10}
         fill="url(#schemaNodeFill)"
-        stroke="url(#schemaNodeStroke)"
-        strokeWidth={1.25}
-      />
-      {/* Inner top highlight, mimicking .glass-card::before. */}
-      <rect
-        x={1}
-        y={1}
-        width={NODE_W - 2}
-        height={26}
-        rx={9}
-        fill="url(#schemaNodeSheen)"
-        pointerEvents="none"
+        stroke={active ? 'hsl(217 30% 46%)' : 'url(#schemaNodeStroke)'}
+        strokeWidth={active ? 1.5 : 1.25}
       />
 
-      {/* Thin category accent stripe down the left edge — a clean status bar
-          instead of a glowing gradient border. */}
+      {/* Thin category accent stripe down the left edge — a muted 2px bar,
+          not a glowing gradient border. */}
       <rect
         x={2}
         y={9}
-        width={3}
+        width={2}
         height={NODE_H - 18}
-        rx={1.5}
+        rx={1}
         fill={`hsl(${accent})`}
-        opacity={0.85}
+        opacity={0.6}
         pointerEvents="none"
       />
 
-      {/* Kind glyph in a category-tinted chip. */}
+      {/* Kind glyph in a muted category-tinted chip. */}
       <rect
         x={9}
         y={17}
         width={22}
         height={22}
         rx={6}
-        fill={`hsl(${accent} / 0.16)`}
-        stroke={`hsl(${accent} / 0.45)`}
+        fill={`hsl(${accent} / 0.12)`}
+        stroke={`hsl(${accent} / 0.32)`}
         strokeWidth={1}
         pointerEvents="none"
       />

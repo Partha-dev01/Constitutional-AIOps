@@ -38,7 +38,7 @@ const ROWS: ProofRow[] = [
   {
     shot: 'metrics',
     alt: 'Metrics view with agent latency and system performance panels',
-    title: 'Watch the system think',
+    title: 'Monitor agent performance',
     blurb:
       'Latency, throughput, and resource panels expose exactly what both agents are doing. Nothing is a black box — every inference is measured.',
     bullets: [

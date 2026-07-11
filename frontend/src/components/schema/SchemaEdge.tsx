@@ -29,9 +29,9 @@ export interface SchemaEdgeProps {
 }
 
 /**
- * Cubic-bezier connector with arrowhead, animated dash flow and an invisible
- * 10px hit stroke for hover/click. Dynamic SHIPS_TELEMETRY edges render
- * dashed; width/opacity respond to the scrubbed co-episode activity.
+ * Cubic-bezier connector with arrowhead and an invisible 10px hit stroke for
+ * hover/click. Dynamic SHIPS_TELEMETRY edges render as a static dashed line;
+ * width/opacity respond to the scrubbed co-episode activity.
  */
 function SchemaEdgeInner({
   edge,
@@ -68,7 +68,6 @@ function SchemaEdgeInner({
   // Episodic relationship edges are kept deliberately faint so a dense memory
   // graph reads as a soft web rather than an opaque hairball (selection pops).
   const effectiveOpacity = accent && !selected ? baseOpacity * 0.55 : baseOpacity
-  const dashDur = activity > 0 ? Math.max(0.7, 2.4 - activity * 0.6) : dynamic ? 2.8 : 2.4
 
   // Episodic accent (when supplied) colours the unselected connector by
   // relationship; selection still wins so the primary-blue selected state reads
@@ -84,33 +83,18 @@ function SchemaEdgeInner({
 
   return (
     <g data-testid={`schema-edge-${edge.id}`}>
-      {/* Visible stroke. Dynamic edges are dashed and march on their own. */}
+      {/* Visible stroke. Dynamic (telemetry) edges render as a static dashed
+          line — no marching-ants animation. */}
       <path
         d={d}
         fill="none"
         stroke={stroke}
         strokeWidth={width}
+        strokeDasharray={dynamic ? '5 6' : undefined}
         opacity={effectiveOpacity}
         markerEnd={marker}
-        className={dynamic ? 'schema-edge-dynamic' : undefined}
-        style={dynamic ? ({ '--schema-dash-dur': `${dashDur}s` } as React.CSSProperties) : undefined}
         pointerEvents="none"
       />
-      {/* Animated flow overlay on static edges (primary-tinted dashes). Skipped
-          for accent-coloured episodic edges (unless selected) so the
-          relationship colour reads cleanly instead of a blue wash. */}
-      {!dynamic && (!accent || selected) && (
-        <path
-          d={d}
-          fill="none"
-          stroke={selected ? 'hsl(var(--primary))' : 'hsl(var(--primary) / 0.7)'}
-          strokeWidth={Math.max(1, width - 0.5)}
-          opacity={Math.min(0.9, 0.3 + activity * 0.25 + (selected ? 0.3 : 0))}
-          className="schema-edge-flow"
-          style={{ '--schema-dash-dur': `${dashDur}s` } as React.CSSProperties}
-          pointerEvents="none"
-        />
-      )}
       {/* Invisible wide hit stroke for hover/click. */}
       <path
         d={d}
