@@ -55,6 +55,10 @@ from src.agents.prompt_layout import (
 )
 from src.agents.serving_profile import resolve_serving_profile
 
+# Chat-priority interlock: both chat endpoints mark their turn in flight so the
+# background processor defers its own reasoning-engine sweeps while a user waits.
+from src.telemetry.chat_activity import chat_turn_finished, chat_turn_started
+
 # Durable persistence (write-through): the in-memory dicts below stay the read
 # fast-path; these helpers mirror each mutation into SQLite so conversations and
 # pending actions survive a backend restart/redeploy.
@@ -581,6 +585,14 @@ def _make_chat_executor(
     return _executor
 
 
+# Token cap for agentic-LOOP completions only. The loop consumes tool-call JSON
+# (small); any prose answer it produces is discarded — the answer phase always
+# regenerates from the reasoning agent in both serving modes. Without a tight
+# cap a chatty loop turn can burn tens of seconds of 14B decode that no one
+# ever sees (2048 tokens ≈ 70s worst case at ~28 tok/s).
+_LOOP_COMPLETION_MAX_TOKENS = 160
+
+
 def _make_chat_completion(reasoning_agent: Any, *, enable_thinking: bool):
     """Build the model-completion callable for the tool loop.
 
@@ -619,7 +631,7 @@ def _make_chat_completion(reasoning_agent: Any, *, enable_thinking: bool):
         if callable(completion_fn):
             kwargs: dict[str, Any] = {
                 "prompt": prompt,
-                "max_tokens": 2048,
+                "max_tokens": _LOOP_COMPLETION_MAX_TOKENS,
                 "temperature": 0.3,
                 "enable_thinking": enable_thinking,
                 "system_prompt": system_prompt,
@@ -1656,6 +1668,9 @@ async def chat(
             detail="Reasoning agent not initialized. Check LLM server connection.",
         )
 
+    # Chat-priority interlock: the user is now waiting on the reasoning engine —
+    # background reasoning sweeps defer until this turn releases it.
+    chat_turn_started()
     try:
         # Build conversation history for context
         history = [
@@ -1907,6 +1922,9 @@ async def chat(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=f"Reasoning agent unavailable: {str(e)}",
         )
+    finally:
+        # Release before finalize: persistence below doesn't hold the engine.
+        chat_turn_finished()
 
     return await _finalize_chat_turn(
         request,
@@ -1966,6 +1984,9 @@ async def chat_stream(
     turn_start = time.perf_counter()
 
     async def event_source():
+        # Chat-priority interlock (same as the blocking endpoint); the finally
+        # also covers client-disconnect GeneratorExit mid-stream.
+        chat_turn_started()
         try:
             history = [
                 {"role": msg.role.value, "content": msg.content}
@@ -2160,6 +2181,8 @@ async def chat_stream(
         except Exception as exc:  # noqa: BLE001 - stream already started: no HTTP status left
             logger.error(f"Streaming chat failed: {exc}")
             yield _sse_event("error", {"detail": str(exc)})
+        finally:
+            chat_turn_finished()
 
     return StreamingResponse(
         event_source(),
