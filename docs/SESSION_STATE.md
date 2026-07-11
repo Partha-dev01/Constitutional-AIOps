@@ -1,6 +1,6 @@
 # Session State - Production Snapshot
 
-> **Last Updated**: 2026-07-08
+> **Last Updated**: 2026-07-11
 > **Purpose**: Current-state snapshot for context recovery. Historical session-by-session
 > detail lives in `docs/CHANGELOG.md`.
 
@@ -9,7 +9,9 @@
 ## Current Status: PRODUCTION (AWS), Mode 1 serving
 
 The app runs as a gated production deployment on a single AWS L4 GPU VM (frozen/thawed
-on demand for cost control), fronted by Caddy with TLS + basic-auth on a dedicated domain.
+on demand for cost control), fronted by Caddy with TLS on a dedicated domain. The app's
+own **session login is the production gate** (`AUTH_REQUIRED=true`; 401s without a session);
+Caddy basic-auth remains only on `/grafana`, and `/ingest/*` keeps its machine credential.
 
 | Layer | Reality |
 |-------|---------|
@@ -22,10 +24,15 @@ on demand for cost control), fronted by Caddy with TLS + basic-auth on a dedicat
 
 ---
 
-## Feature state (2026-07-08)
+## Feature state (2026-07-11)
 
 - **Chat tool-calling**: real MCP tool execution with ordered `tool_calls` metadata and a
   reasoning-timeline UI; investigation keyword bundle; non-answer guards; evidence-based confidence.
+  The agentic tool loop is enabled in production by operator choice; its in-loop completion is
+  decode-capped (160 tokens) and a chat-priority interlock defers background RCA while a user turn
+  is in flight — typical turns run ~10–17s.
+- **Interactive suggested actions**: rows beneath an answer are clickable (`↵ Use`) and prefill the
+  composer (editable, never auto-sent); actionable sends go through the normal consent pipeline.
 - **Chat-driven remediation (consent model)**: action tools (`restart_service`, `scale_service`)
   never execute inside the model loop — they queue as proposed actions with an Approve/Reject card.
   Approval executes through the constitutional gate; decisions persist onto conversation history.
@@ -45,11 +52,11 @@ on demand for cost control), fronted by Caddy with TLS + basic-auth on a dedicat
 
 ---
 
-## Gates (last verified 2026-07-08)
+## Gates (last verified 2026-07-11)
 
 | Gate | Result |
 |------|--------|
-| Backend pytest | 704 passed / 25 skipped / 0 failed |
+| Backend pytest | 722 passed / 25 skipped / 0 failed |
 | Frontend tsc / eslint / build | clean / 0 errors / ✓ |
 | Golden v2 (live) | 34/34 on Mode 1 and Mode 2 |
 | Live Playwright post-deploy | green (see `frontend/playwright.config.live.ts`) |

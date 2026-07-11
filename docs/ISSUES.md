@@ -1,8 +1,8 @@
 # Constitutional AIOps - Issue Tracker
 
-> **Version**: 0.12.0
+> **Version**: 0.13.0
 > **Last Updated**: 2026-07-11
-> **Open Issues**: 8 (all low/medium/info, none blocking)
+> **Open Issues**: 10 (all low/medium/info, none blocking)
 > **Blockers**: 0
 
 ---
@@ -31,6 +31,8 @@ None currently.
 | ISS-107 | Local `vitest` broken on Windows dev machines (env issue) | Low | CI-frontend on Linux is the source of truth; do not block on local vitest. |
 | ISS-108 | Agent-initiated action proposals are latent in production Mode 1 (agentic tool loop off by default; the live consent path is fallback detection) | Info | The agentic tool loop is deliberately enabled in the production environment by operator choice (2026-07-11), trading some added per-turn latency for native tool-calling ahead of Mode 2 phase 5; the fallback-detection consent path remains the safety net when the loop is off. |
 | ISS-109 | Infra fingerprint in the public tree: cloud instance ID appears in terraform/aws docs and an old CHANGELOG entry; static IP + domain in the DNS setup doc | Low | Not exploitable without cloud credentials (auth + SGs are the boundary), but scrub to placeholders in a dedicated pass; git history would still hold old values. |
+| ISS-110 | Chat timestamps render UTC as local time: backend sends naive-UTC ISO strings (no `Z`/offset), so `new Date()` in the frontend parses them as local — fresh conversations show "5h ago" (for IST) and message times are offset | Low | Found 2026-07-11. Fix: suffix `Z` (or use timezone-aware UTC) on API timestamps, or parse-as-UTC in the frontend date helpers. |
+| ISS-111 | Conversation titles/previews echo the ASSISTANT's answer text instead of the user's first message, making the sidebar hard to scan | Low | Derive the title from the first user message (clamped) at conversation creation. |
 
 ### Optional Enhancements (Not Blocking)
 
@@ -450,4 +452,4 @@ When adding new issues, use this format:
 ---
 
 **Last Updated**: 2026-07-11
-**Version**: 0.12.0
+**Version**: 0.13.0

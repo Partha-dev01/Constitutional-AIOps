@@ -1,7 +1,7 @@
 # CLAUDE.md - Constitutional AIOps Development Instructions
 
-> **Version**: 5.0
-> **Last Updated**: 2026-07-08
+> **Version**: 5.1
+> **Last Updated**: 2026-07-11
 > **Architecture**: Simultaneous Dual-Model (24GB VRAM) — Mode 1 default; single-engine Mode 2 overlay available
 > **Status**: PRODUCTION deployed (AWS, gated, TLS); chat-driven consent-gated remediation live; Mode 2 phases 0-1 validated
 
@@ -37,11 +37,11 @@ cat docs/KEY_METRICS.md | head -100
 
 ### System Status
 - **Implementation**: core complete + production-hardened; chat-driven consent-gated remediation SHIPPED (2026-07)
-- **Production runtime**: AWS g6.xlarge L4 24GB with **vLLM AWQ-marlin** dual engines (Mode 1), behind a Caddy/Let's-Encrypt domain with site-wide basic-auth; VM frozen/thawed on demand for cost
+- **Production runtime**: AWS g6.xlarge L4 24GB with **vLLM AWQ-marlin** dual engines (Mode 1), behind a Caddy/Let's-Encrypt domain; the app's own session login is the gate (`AUTH_REQUIRED=true`; Caddy basic-auth only on `/grafana`); VM frozen/thawed on demand for cost
 - **Serving Mode 2** (opt-in overlay): single-engine profile via `AIOPS_MODE=2` + `docker/docker-compose.mode2.yml`; swappable from Settings (host-side watcher); Mode 1 stays byte-identical when off
 - **Remediation model**: action tools NEVER execute inside the model loop — proposals queue for an Approve/Reject card in chat; Settings→Remediation picks diagnose/approve/auto (+ per-tool autonomy allowlist); everything passes the constitutional gate + audit log
 - **Local dev**: Ollama / mock endpoints (OpenAI-compatible) — local defaults unchanged
-- **Current state snapshot**: `docs/SESSION_STATE.md` · consolidated history: `docs/CHANGELOG.md` (0.12.0)
+- **Current state snapshot**: `docs/SESSION_STATE.md` · consolidated history: `docs/CHANGELOG.md` (0.13.0)
 
 ### Key Files Inventory
 | Category | Count | Location |
@@ -452,4 +452,4 @@ reasoning_response = await router.reasoning_completion(prompt)
 
 ---
 
-**End of CLAUDE.md** | Version 5.0 | 2026-07-08
+**End of CLAUDE.md** | Version 5.1 | 2026-07-11

@@ -185,16 +185,24 @@ List all conversations.
 **Query Parameters**
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| limit | int | 20 | Max results |
-| offset | int | 0 | Pagination offset |
+| limit | int | 20 | Max results (validated: 1–100) |
+| offset | int | 0 | Pagination offset (validated: ≥ 0) |
 
 **Response** `200 OK`
 ```json
 {
-  "conversations": [
-    {"id": "conv-123", "created_at": "...", "message_count": 5}
+  "items": [
+    {
+      "conversation_id": "conv-123",
+      "created_at": "...",
+      "updated_at": "...",
+      "message_count": 5,
+      "preview": "First ~100 chars of the latest assistant reply"
+    }
   ],
-  "total": 15
+  "total": 15,
+  "limit": 20,
+  "offset": 0
 }
 ```
 
