@@ -27,6 +27,7 @@ import api, {
   TelemetrySettings,
   RemediationSettings,
   RemediationMode,
+  ActionToolName,
   ServingModeStatus,
 } from '../lib/api'
 import { TopologySchemaEditor } from '../components/TopologySchemaEditor'
@@ -77,6 +78,7 @@ const DEFAULT_REMEDIATION: RemediationSettings = {
   mode: 'diagnose',
   autoConfidenceThreshold: 90,
   requireEvidenceForAuto: true,
+  autoToolAllowlist: ['restart_service'],
   demoTargetUrl: '',
 }
 
@@ -87,8 +89,22 @@ const REMEDIATION_MODE_HELP: Record<RemediationMode, string> = {
   approve:
     'Approve to run — the AI proposes a fix in chat; nothing executes until you click Approve.',
   auto:
-    'Auto-remediate — high-confidence fixes execute automatically once they pass the constitution.',
+    'Auto-remediate — allowlisted, high-confidence fixes execute automatically once they pass the constitution; everything else still asks for approval.',
 }
+
+// The mutating action tools an operator can allow to run autonomously.
+const ACTION_TOOL_OPTIONS: { name: ActionToolName; label: string; description: string }[] = [
+  {
+    name: 'restart_service',
+    label: 'restart_service',
+    description: 'Restart a whitelisted container',
+  },
+  {
+    name: 'scale_service',
+    label: 'scale_service',
+    description: 'Scale a whitelisted service (0–5 replicas)',
+  },
+]
 
 // ── main component ────────────────────────────────────────────────────────────
 export function Settings() {
@@ -621,6 +637,45 @@ export function Settings() {
                     setRemediation({ ...remediation, requireEvidenceForAuto: checked })
                   }
                 />
+
+                {/* Per-tool autonomy allowlist (only meaningful for auto) */}
+                <div className={remediation.mode === 'auto' ? '' : 'opacity-50'}>
+                  <p className="text-sm font-medium">Autonomous action tools</p>
+                  <p className="text-xs text-muted-foreground mt-0.5 mb-2">
+                    Only checked tools may execute without approval in Auto mode; unchecked
+                    tools always show an Approve/Reject card in chat.
+                  </p>
+                  <div className="space-y-2" role="group" aria-label="Autonomous action tools">
+                    {ACTION_TOOL_OPTIONS.map((tool) => {
+                      const allowlist = remediation.autoToolAllowlist ?? []
+                      const checked = allowlist.includes(tool.name)
+                      return (
+                        <label
+                          key={tool.name}
+                          className="flex items-center gap-3 rounded-lg border border-border/60 bg-background/50 px-3 py-2 cursor-pointer has-[:disabled]:cursor-not-allowed"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            disabled={remediation.mode !== 'auto'}
+                            data-testid={`remediation-auto-tool-${tool.name}`}
+                            onChange={(e) =>
+                              setRemediation({
+                                ...remediation,
+                                autoToolAllowlist: e.target.checked
+                                  ? [...allowlist, tool.name]
+                                  : allowlist.filter((name) => name !== tool.name),
+                              })
+                            }
+                            className="h-4 w-4 accent-primary"
+                          />
+                          <span className="font-mono text-sm">{tool.label}</span>
+                          <span className="text-xs text-muted-foreground">{tool.description}</span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                </div>
               </div>
             </div>
 

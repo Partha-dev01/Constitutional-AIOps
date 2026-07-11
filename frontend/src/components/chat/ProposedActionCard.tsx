@@ -124,6 +124,60 @@ export function ProposedActionCard({ action }: ProposedActionCardProps) {
     )
   }
 
+  // ── Persisted decision outcomes (reloaded conversations, read-only) ───────
+  // The backend writes the human decision back onto the stored turn so a
+  // reloaded chat shows what happened instead of a stale interactive card.
+  if (action.status === 'executed') {
+    const summary = resultSummary(action.execution_result) ?? verdictReason(action.verdict)
+    return (
+      <div
+        data-testid="proposed-action-card"
+        data-status="executed"
+        className="mt-2 rounded-xl border border-green-500/30 bg-green-500/10 p-3 text-sm"
+      >
+        <div className="flex items-center gap-2 font-medium text-green-600">
+          <CheckCircle2 className="h-4 w-4 shrink-0" />
+          Executed
+        </div>
+        <p className="mt-1 font-medium">{action.title}</p>
+        {summary && <p className="mt-1 text-xs text-muted-foreground">{summary}</p>}
+      </div>
+    )
+  }
+  if (action.status === 'rejected') {
+    return (
+      <div
+        data-testid="proposed-action-card"
+        data-status="dismissed"
+        className="mt-2 rounded-xl border border-border/60 bg-muted/40 p-3 text-sm text-muted-foreground"
+      >
+        <div className="flex items-center gap-2 font-medium">
+          <XCircle className="h-4 w-4 shrink-0" />
+          Dismissed
+        </div>
+        <p className="mt-1">{action.title}</p>
+      </div>
+    )
+  }
+  if (action.status === 'refused') {
+    return (
+      <div
+        data-testid="proposed-action-card"
+        data-status="error"
+        className="mt-2 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm"
+      >
+        <div className="flex items-center gap-2 font-medium text-red-600">
+          <XCircle className="h-4 w-4 shrink-0" />
+          Refused
+        </div>
+        <p className="mt-1 font-medium">{action.title}</p>
+        <p className="mt-1 text-xs text-red-600/90">
+          {verdictText ?? 'The constitutional gate declined this action when it was approved.'}
+        </p>
+      </div>
+    )
+  }
+
   // ── Proposed (interactive) ────────────────────────────────────────────────
   // Decided outcome takes over the card once a decision returns.
   if (phase === 'done' && decision) {
@@ -211,6 +265,8 @@ export function ProposedActionCard({ action }: ProposedActionCardProps) {
         <span className="font-medium text-foreground">{action.tool_name}</span>
         {' · '}
         {action.parameters.service_name}
+        {action.parameters.target_replicas !== undefined &&
+          ` · ${action.parameters.target_replicas} replica${action.parameters.target_replicas === 1 ? '' : 's'}`}
       </div>
 
       {verdictText && (
