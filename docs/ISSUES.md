@@ -1,8 +1,8 @@
 # Constitutional AIOps - Issue Tracker
 
 > **Version**: 0.12.0
-> **Last Updated**: 2026-07-08
-> **Open Issues**: 9 (all low/medium, none blocking)
+> **Last Updated**: 2026-07-11
+> **Open Issues**: 8 (all low/medium/info, none blocking)
 > **Blockers**: 0
 
 ---
@@ -23,14 +23,13 @@ None currently.
 
 | ID | Issue | Priority | Notes |
 |----|-------|----------|-------|
-| ISS-101 | Mode 1 chat turns feel slow on long answers (30-60s for ~700+ generated tokens; no streaming) | Medium | Engine decode is at baseline (~26 tok/s on L4); the felt latency is architectural. Cure = Mode 2 phases: SSE UI wiring (endpoint exists), engine pin upgrade, prefix caching. |
+| ISS-101 | Mode 1 chat turns feel slow on long answers (30-60s for ~700+ generated tokens; no streaming) | Medium | 2026-07-11: agentic-loop token cap + chat-priority background-RCA deferral shipped, cutting typical turns from ~31-38s to ~10-17s. Engine decode itself is still at baseline (~26 tok/s on L4); full cure remains Mode 2 streaming (SSE UI wiring, engine pin upgrade, prefix caching). |
 | ISS-102 | Local `scale_service` shells out to `docker compose` — unavailable inside the prod backend container | Low | Restart path fixed via Docker SDK (0.12.0); compose-based scaling needs the compose project context, so local scaling stays a dev-only path. Remote demo host unaffected. |
 | ISS-103 | `Metrics.tsx` dereferences `validation_report.system_configuration.*` behind a truthiness check only — a partial 200 would crash the route to the ErrorBoundary | Medium-Low | Live-safe today (backend always sends the full shape). Guard pending. |
 | ISS-104 | `Incidents.tsx` unguarded `Math.round(confidence*100)` renders "NaN%" if a confidence field is ever absent | Medium-Low | Live-safe today (`RCAResult.confidence` is required). Guard pending. |
 | ISS-105 | Mobile/tablet polish batch (Console stacked-canvas fit, clipped panels, icon orphans, incidents search collapse, /graph legend overlap on small widths) | Low | Desktop/laptop production-clean; list from the 2026-07 QA tour. |
-| ISS-106 | Conversation delete can 404/no-op for rows outside the in-memory hydration window | Low | SQLite remains authoritative; sidebar delete may need a persistent-store fallback. |
 | ISS-107 | Local `vitest` broken on Windows dev machines (env issue) | Low | CI-frontend on Linux is the source of truth; do not block on local vitest. |
-| ISS-108 | Agent-initiated action proposals are latent in production Mode 1 (agentic tool loop off by default; the live consent path is fallback detection) | Info | By design for now; native tool-calling arrives with Mode 2 phase 5. |
+| ISS-108 | Agent-initiated action proposals are latent in production Mode 1 (agentic tool loop off by default; the live consent path is fallback detection) | Info | The agentic tool loop is deliberately enabled in the production environment by operator choice (2026-07-11), trading some added per-turn latency for native tool-calling ahead of Mode 2 phase 5; the fallback-detection consent path remains the safety net when the loop is off. |
 | ISS-109 | Infra fingerprint in the public tree: cloud instance ID appears in terraform/aws docs and an old CHANGELOG entry; static IP + domain in the DNS setup doc | Low | Not exploitable without cloud credentials (auth + SGs are the boundary), but scrub to placeholders in a dedicated pass; git history would still hold old values. |
 
 ### Optional Enhancements (Not Blocking)
@@ -44,6 +43,12 @@ None currently.
 ---
 
 ## ✅ Resolved Issues
+
+### 2026-07-11 (v0.12.0 - Conversation delete SQLite fallback)
+
+| ID | Issue | Resolution |
+|----|-------|------------|
+| ISS-106 | Conversation delete only checked the in-memory `_conversations` dict and 404'd for rows that exist only in SQLite (evicted from the capped in-memory hydration window) | `DELETE /api/v1/chat/conversations/{id}` now falls back to `persistence_store.load_all_conversations()` when the id is absent (or inaccessible) in memory, deleting from the durable store when found there; 404 only when neither has it |
 
 ### 2026-03-01 (v0.10.1 - Dashboard Integration & Telemetry Fixes)
 
@@ -444,5 +449,5 @@ When adding new issues, use this format:
 
 ---
 
-**Last Updated**: 2026-02-06
-**Version**: 0.8.0
+**Last Updated**: 2026-07-11
+**Version**: 0.12.0

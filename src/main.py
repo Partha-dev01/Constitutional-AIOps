@@ -7,6 +7,7 @@ Constitutional AIOps system.
 Architecture: Simultaneous Dual-Model (Qwen3-4B + Qwen3-14B on 24GB VRAM)
 """
 
+import hmac
 import logging
 import os
 from contextlib import asynccontextmanager
@@ -530,7 +531,8 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str = None, token:
     session_cookie = websocket.cookies.get(SESSION_COOKIE_NAME)
     session_ok = bool(session_cookie) and verify_session(session_cookie) is not None
     expected = os.getenv("WS_TOKEN", "")
-    if not session_ok and expected and token != expected:
+    token_ok = token is not None and hmac.compare_digest(token, expected)
+    if not session_ok and expected and not token_ok:
         await websocket.close(code=1008)
         return
 

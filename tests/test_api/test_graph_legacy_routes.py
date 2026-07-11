@@ -84,6 +84,30 @@ class TestGetEpisodeById:
             await get_episode(req, "nope")
         assert ei.value.status_code == 404
 
+    @pytest.mark.asyncio
+    async def test_internal_error_returns_generic_detail(self, monkeypatch):
+        """A 500 from get_episode must never leak str(exception) to the
+        client — only a generic message (the real error still goes to the
+        server log via logger.error)."""
+        from fastapi import HTTPException
+
+        from src.api.routes.graph import get_episode
+
+        store = EpisodeStore(neo4j_client=None)
+        marker = "SECRET_INTERNAL_DETAIL_qwe789"
+
+        async def _boom(episode_id: str):
+            raise RuntimeError(marker)
+
+        monkeypatch.setattr(store, "get_episode", _boom)
+        req = _make_request(episode_store=store)
+
+        with pytest.raises(HTTPException) as ei:
+            await get_episode(req, "ep-1")
+        assert ei.value.status_code == 500
+        assert marker not in str(ei.value.detail)
+        assert ei.value.detail == "Internal error while building the graph response"
+
 
 class TestFindSimilarEpisodes:
     @pytest.mark.asyncio

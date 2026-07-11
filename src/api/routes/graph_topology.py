@@ -743,7 +743,7 @@ async def seed_topology(request: Request) -> SeedTopologyResponse:
         logger.error(f"Manual topology seed failed: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Topology seed failed: {e}",
+            detail="Internal error while building the graph response",
         )
     return SeedTopologyResponse(
         success=True,
