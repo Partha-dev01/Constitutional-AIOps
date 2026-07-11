@@ -154,7 +154,11 @@ export function DetailDrawer({ target, inContext, onClose, onToggleAskAi, episod
               {target.node.recent_episodes.length > 0 ? (
                 <ul className="space-y-1.5">
                   {target.node.recent_episodes.map((ep) => {
-                    const askPrompt = `Investigate this ${target.node.label} episode from ${new Date(ep.at).toLocaleString()} (severity: ${ep.severity}): "${ep.title}". What is the likely root cause and the recommended remediation?`
+                    // Slim on purpose: this lands verbatim as the user's chat
+                    // bubble. MUST keep an investigation keyword (investigate /
+                    // root cause / remediat…) so the backend forces the evidence
+                    // bundle, and the service label so the service resolves.
+                    const askPrompt = `Investigate the ${ep.severity} episode "${ep.title}" on ${target.node.label}. What are the root cause and remediation?`
                     const body = (
                       <>
                         <div className="flex items-center gap-1.5">
