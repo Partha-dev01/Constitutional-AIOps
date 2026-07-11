@@ -404,8 +404,10 @@ class TestToolsRemoteRestartDispatch:
 
         monkeypatch.setenv("DEMO_REMOTE_CONTAINERS", "nextcloud-db")
         # Local docker must never be touched on the remote path.
-        fake_run = MagicMock(side_effect=AssertionError("local docker called"))
-        monkeypatch.setattr("subprocess.run", fake_run)
+        monkeypatch.setattr(
+            "src.api.routes.tools._docker_restart_container",
+            MagicMock(side_effect=AssertionError("local docker called")),
+        )
         monkeypatch.setattr(
             "src.remediation.t3_client.restart_remote",
             AsyncMock(return_value={"success": True, "container": "nextcloud-db"}),
@@ -440,14 +442,10 @@ class TestToolsRemoteRestartDispatch:
 
         monkeypatch.setenv("DEMO_REMOTE_CONTAINERS", "nextcloud-db")
         calls = []
-        def _run(cmd, **kwargs):
-            calls.append(cmd)
-            result = MagicMock()
-            result.returncode = 0
-            result.stdout = ""
-            result.stderr = ""
-            return result
-        monkeypatch.setattr("subprocess.run", _run)
+        monkeypatch.setattr(
+            "src.api.routes.tools._docker_restart_container",
+            lambda container_name: calls.append(container_name),
+        )
         # restart_remote must NOT be called for a local container.
         monkeypatch.setattr(
             "src.remediation.t3_client.restart_remote",
@@ -458,5 +456,5 @@ class TestToolsRemoteRestartDispatch:
             {"service_name": "nextcloud", "reason": "t"}, 0.0,
         )
         assert resp.success is True
-        assert calls == [["docker", "restart", "nextcloud"]]
+        assert calls == ["nextcloud"]
         assert resp.metadata["source"] == "docker"

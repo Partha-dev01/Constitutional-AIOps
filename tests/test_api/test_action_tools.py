@@ -2,9 +2,10 @@
 
 Covers the full REST contract for action-class tools:
   - gate OFF (default)  → structured refusal (error_code="action_tools_disabled"),
-    zero behavior beyond the refusal; subprocess never reached
-  - gate ON + validator pass → docker execution (mocked) with the
-    constitutional verdict attached to the response metadata
+    zero behavior beyond the refusal; no docker SDK call, no subprocess
+  - gate ON + validator pass → docker execution (mocked: restart via the
+    docker-SDK helper, scale via subprocess) with the constitutional verdict
+    attached to the response metadata
   - gate ON + requires_approval → NO execution; verdict payload returned with
     error_code="approval_required"
   - container whitelist enforcement (default nextcloud +
@@ -90,6 +91,26 @@ def fake_run(monkeypatch):
     return fake
 
 
+class _FakeDockerRestart:
+    """Records _docker_restart_container invocations; optionally raises."""
+
+    def __init__(self, exc=None):
+        self.calls = []
+        self.exc = exc
+
+    def __call__(self, container_name):
+        self.calls.append(container_name)
+        if self.exc is not None:
+            raise self.exc
+
+
+@pytest.fixture()
+def fake_docker_restart(monkeypatch):
+    fake = _FakeDockerRestart()
+    monkeypatch.setattr("src.api.routes.tools._docker_restart_container", fake)
+    return fake
+
+
 @pytest.fixture(autouse=True)
 def _mock_audit(monkeypatch):
     """Keep unit tests from writing real audit files; capture the calls."""
@@ -104,7 +125,7 @@ def _mock_audit(monkeypatch):
 
 class TestGateOffRefusal:
     @pytest.mark.asyncio
-    async def test_structured_refusal_shape(self, monkeypatch, fake_run):
+    async def test_structured_refusal_shape(self, monkeypatch, fake_run, fake_docker_restart):
         from src.api.routes.tools import call_tool
 
         monkeypatch.delenv("AIOPS_ENABLE_ACTION_TOOLS", raising=False)
@@ -120,6 +141,7 @@ class TestGateOffRefusal:
         # No validation ran, so no verdict — and absolutely no docker call.
         assert "constitutional" not in response.metadata
         assert fake_run.calls == []
+        assert fake_docker_restart.calls == []
 
     @pytest.mark.asyncio
     async def test_falsy_env_values_stay_disabled(self, monkeypatch, fake_run):
@@ -158,7 +180,9 @@ class TestGateOffRefusal:
 
 class TestValidatedExecution:
     @pytest.mark.asyncio
-    async def test_restart_executes_with_verdict_attached(self, monkeypatch, fake_run, _mock_audit):
+    async def test_restart_executes_with_verdict_attached(
+        self, monkeypatch, fake_run, fake_docker_restart, _mock_audit,
+    ):
         from src.api.routes.tools import call_tool
 
         monkeypatch.setenv("AIOPS_ENABLE_ACTION_TOOLS", "true")
@@ -168,7 +192,9 @@ class TestValidatedExecution:
         response = await call_tool(request, _tool_call("restart_service"))
         assert response.success is True
         assert response.error_code is None
-        assert fake_run.calls == [["docker", "restart", "nextcloud"]]
+        # Local restarts go through the docker SDK (no CLI in the prod image).
+        assert fake_docker_restart.calls == ["nextcloud"]
+        assert fake_run.calls == []
         assert response.data["container"] == "nextcloud"
         assert response.data["status"] == "completed"
         # Verdict is part of the payload on success too.
@@ -190,8 +216,8 @@ class TestValidatedExecution:
         from src.api.routes.tools import call_tool
 
         monkeypatch.setenv("AIOPS_ENABLE_ACTION_TOOLS", "true")
-        fake = _FakeRun(returncode=1, stderr="No such container")
-        monkeypatch.setattr("subprocess.run", fake)
+        fake = _FakeDockerRestart(exc=RuntimeError("404 Client Error: No such container: nextcloud"))
+        monkeypatch.setattr("src.api.routes.tools._docker_restart_container", fake)
         request = _request_with_validator(_report())
 
         response = await call_tool(request, _tool_call("restart_service"))
@@ -201,6 +227,21 @@ class TestValidatedExecution:
         # Verdict still attached on execution failure.
         assert response.metadata["constitutional"]["can_proceed"] is True
 
+    @pytest.mark.asyncio
+    async def test_missing_docker_sdk_is_structured(self, monkeypatch):
+        """CI installs no docker package — the ImportError must stay structured."""
+        from src.api.routes.tools import call_tool
+
+        monkeypatch.setenv("AIOPS_ENABLE_ACTION_TOOLS", "true")
+        fake = _FakeDockerRestart(exc=ImportError("No module named 'docker'"))
+        monkeypatch.setattr("src.api.routes.tools._docker_restart_container", fake)
+        request = _request_with_validator(_report())
+
+        response = await call_tool(request, _tool_call("restart_service"))
+        assert response.success is False
+        assert response.error_code == "execution_failed"
+        assert "Docker SDK not available" in (response.error or "")
+
 
 # ---------------------------------------------------------------------------
 # Gate ON + requires_approval — verdict surfaced, NOTHING executed
@@ -208,7 +249,9 @@ class TestValidatedExecution:
 
 class TestApprovalRequired:
     @pytest.mark.asyncio
-    async def test_no_execution_and_verdict_payload(self, monkeypatch, fake_run, _mock_audit):
+    async def test_no_execution_and_verdict_payload(
+        self, monkeypatch, fake_run, fake_docker_restart, _mock_audit,
+    ):
         from src.api.routes.tools import call_tool
 
         monkeypatch.setenv("AIOPS_ENABLE_ACTION_TOOLS", "true")
@@ -229,6 +272,7 @@ class TestApprovalRequired:
         assert response.success is False
         assert response.error_code == "approval_required"
         assert fake_run.calls == []  # never executed
+        assert fake_docker_restart.calls == []
         verdict = response.metadata["constitutional"]
         assert verdict["requires_approval"] is True
         assert verdict["principles"]["tier2_operational_passed"] is False
@@ -244,7 +288,9 @@ class TestApprovalRequired:
         assert kwargs["context"]["error_code"] == "approval_required"
 
     @pytest.mark.asyncio
-    async def test_blocked_verdict_is_validation_blocked(self, monkeypatch, fake_run):
+    async def test_blocked_verdict_is_validation_blocked(
+        self, monkeypatch, fake_run, fake_docker_restart,
+    ):
         from src.api.routes.tools import call_tool
 
         monkeypatch.setenv("AIOPS_ENABLE_ACTION_TOOLS", "true")
@@ -259,6 +305,7 @@ class TestApprovalRequired:
         assert response.error_code == "validation_blocked"
         assert response.metadata["constitutional"]["can_proceed"] is False
         assert fake_run.calls == []
+        assert fake_docker_restart.calls == []
 
 
 # ---------------------------------------------------------------------------
@@ -267,7 +314,9 @@ class TestApprovalRequired:
 
 class TestContainerWhitelist:
     @pytest.mark.asyncio
-    async def test_non_whitelisted_container_refused_before_validation(self, monkeypatch, fake_run):
+    async def test_non_whitelisted_container_refused_before_validation(
+        self, monkeypatch, fake_run, fake_docker_restart,
+    ):
         from src.api.routes.tools import call_tool
 
         monkeypatch.setenv("AIOPS_ENABLE_ACTION_TOOLS", "true")
@@ -280,11 +329,14 @@ class TestContainerWhitelist:
         assert response.success is False
         assert response.error_code == "container_not_whitelisted"
         assert fake_run.calls == []
+        assert fake_docker_restart.calls == []
         # Whitelist is checked before the validator even runs.
         request.app.state.validator.validate.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_env_whitelist_extension_allows_container(self, monkeypatch, fake_run):
+    async def test_env_whitelist_extension_allows_container(
+        self, monkeypatch, fake_run, fake_docker_restart,
+    ):
         from src.api.routes.tools import call_tool
 
         monkeypatch.setenv("AIOPS_ENABLE_ACTION_TOOLS", "true")
@@ -295,7 +347,8 @@ class TestContainerWhitelist:
             "restart_service", {"service_name": "alpha", "reason": "test"},
         ))
         assert response.success is True
-        assert fake_run.calls == [["docker", "restart", "alpha"]]
+        assert fake_docker_restart.calls == ["alpha"]
+        assert fake_run.calls == []
 
     def test_resolver_rejects_flag_like_and_empty_names(self, monkeypatch):
         from src.api.routes.tools import _resolve_action_container
@@ -526,7 +579,7 @@ class TestGateContextPopulation:
 
 class TestOtherDispatchPaths:
     @pytest.mark.asyncio
-    async def test_execute_tool_call_is_gated(self, monkeypatch, fake_run):
+    async def test_execute_tool_call_is_gated(self, monkeypatch, fake_run, fake_docker_restart):
         """The programmatic path (chat.py) must not bypass the gate."""
         from src.api.routes.tools import execute_tool_call
 
@@ -540,6 +593,7 @@ class TestOtherDispatchPaths:
         assert result["success"] is False
         assert result["error_code"] == "action_tools_disabled"
         assert fake_run.calls == []
+        assert fake_docker_restart.calls == []
 
     @pytest.mark.asyncio
     async def test_mcp_server_execute_tool_is_gated(self, monkeypatch):

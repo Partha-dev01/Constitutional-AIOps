@@ -11,6 +11,7 @@ Research Paper (Section 4.5) defines 5 MCP tools:
 5. analyze_time_series_anomaly - Statistical analysis (Z-score)
 """
 
+import asyncio
 import logging
 import os
 import re
@@ -1186,6 +1187,23 @@ async def _run_action_tool(
     return response
 
 
+def _docker_restart_container(container_name: str) -> None:
+    """Restart a local container via the docker SDK over the mounted socket.
+
+    The production backend image mounts /var/run/docker.sock but ships NO
+    docker CLI binary, so shelling out to ``docker restart`` fails there with
+    FileNotFoundError; the SDK talks to the socket directly. timeout=10 keeps
+    the CLI's default stop-grace semantics.
+    """
+    import docker  # type: ignore[import]
+
+    client = docker.from_env()
+    try:
+        client.containers.get(container_name).restart(timeout=10)
+    finally:
+        client.close()
+
+
 async def _execute_restart_service(
     params: dict,
     start_time: float,
@@ -1195,8 +1213,6 @@ async def _execute_restart_service(
     Defense in depth: re-checks the container whitelist itself (the gate also
     checks it) so no dispatch path can restart an arbitrary container.
     """
-    import subprocess
-
     service_name = params.get("service_name")
     if not service_name:
         return ToolCallResponse(
@@ -1256,34 +1272,28 @@ async def _execute_restart_service(
     graceful = params.get("graceful", True)
 
     try:
-        cmd = ["docker", "restart", container_name]
-
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
-
-        if result.returncode == 0:
-            return ToolCallResponse(
-                success=True,
-                data={
-                    "service": service_name,
-                    "container": container_name,
-                    "action": "restart",
-                    "status": "completed",
-                    "graceful": graceful,
-                    "reason": reason,
-                },
-                execution_time_ms=(time.time() - start_time) * 1000,
-                metadata={"source": "docker"},
-            )
-        else:
-            return ToolCallResponse(
-                success=False,
-                data=None,
-                error=f"Docker restart failed: {result.stderr}",
-                error_code="execution_failed",
-                execution_time_ms=(time.time() - start_time) * 1000,
-            )
-
-    except subprocess.TimeoutExpired:
+        # to_thread workers are not cancellable: on the 60s cap we report
+        # execution_timeout but the SDK restart may still complete in the
+        # background. The SDK's own stop-grace (timeout=10) is the real bound;
+        # this outer cap only protects the event loop from a hung socket.
+        await asyncio.wait_for(
+            asyncio.to_thread(_docker_restart_container, container_name),
+            timeout=60,
+        )
+        return ToolCallResponse(
+            success=True,
+            data={
+                "service": service_name,
+                "container": container_name,
+                "action": "restart",
+                "status": "completed",
+                "graceful": graceful,
+                "reason": reason,
+            },
+            execution_time_ms=(time.time() - start_time) * 1000,
+            metadata={"source": "docker"},
+        )
+    except TimeoutError:
         return ToolCallResponse(
             success=False,
             data=None,
@@ -1291,12 +1301,20 @@ async def _execute_restart_service(
             error_code="execution_timeout",
             execution_time_ms=(time.time() - start_time) * 1000,
         )
+    except ImportError:
+        return ToolCallResponse(
+            success=False,
+            data=None,
+            error="Docker SDK not available",
+            error_code="execution_failed",
+            execution_time_ms=(time.time() - start_time) * 1000,
+        )
     except Exception as e:
         logger.error(f"Service restart failed: {e}")
         return ToolCallResponse(
             success=False,
             data=None,
-            error=f"Service restart failed: {str(e)}",
+            error=f"Docker restart failed: {str(e)}",
             error_code="execution_failed",
             execution_time_ms=(time.time() - start_time) * 1000,
         )
