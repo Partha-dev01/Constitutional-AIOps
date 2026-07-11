@@ -2,6 +2,53 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.13.0] - 2026-07-11
+
+### Production auth gate, chat latency, interactive suggested actions, production look
+
+#### Authentication: the app's own login is now the production gate
+- Caddy's site-wide basic-auth was removed from the SPA and `/api` — the app's **session login**
+  (HMAC cookies, login throttling, constant-time verification, fail-closed startup) is the single
+  production gate (`AUTH_REQUIRED=true`). Unauthenticated API calls return 401; the login page is a
+  plain centered card. Basic-auth remains ONLY on `/grafana` (defense-in-depth) and `/ingest/*`
+  keeps its dedicated machine credential.
+
+#### Chat latency (typical turns ~31–38s → ~10–17s)
+- **Agentic-loop decode cap**: the in-loop completion only ever needs tool-call JSON (its final
+  answer is always discarded), so its `max_tokens` dropped 2048 → 160 (pin-tested).
+- **Chat-priority interlock** (`src/telemetry/chat_activity.py`): the background processor skips
+  routine RCA sweeps while a chat turn is in flight (20s grace; the cycle counter stays armed so
+  the sweep runs next cycle), and event-driven escalations wait bounded (≤60s) instead of
+  contending with the user's turn on the shared GPU.
+
+#### Chat: interactive suggested actions
+- Suggested-action rows beneath an assistant answer are now buttons with a `↵ Use` affordance:
+  clicking one prefills the composer with the action text (inline markdown stripped), focused and
+  editable — never auto-sent. Actionable sends flow through the existing consent pipeline
+  (proposed-action card → Approve → constitutionally gated execution). One implementation serves
+  both the /chat page and the Command Center Assistant.
+
+#### Production look ("de-AI" pass) and navigation
+- Landing page stripped of aurora gradients, glass cards, glow CTAs, count-up animations and
+  SaaS-style copy; login is a flat card; Console/schema theming flattened (no radial stage glows,
+  node halos, marching-dash edges or gradient chat bubbles; activity reads as border brightness).
+- Sidebar navigation grouped: Overview / Operate / Observe / AI / Admin (labels suppressed in the
+  collapsed rail); ~20 hardcoded blue/purple color sites tokenized to the theme palette.
+- Episodic severity-filter chips: active chip is solid primary with contrast-safe foreground.
+- Topology canvas: the expand button is a real fullscreen toggle (Esc exits); fit-to-view kept as
+  its own control; episode "Ask AI" canned prompts slimmed to one sentence (investigation keyword
+  triggers preserved).
+
+#### API/backend hardening
+- Graph-route 500s return a generic detail (real error only in server logs); WebSocket token check
+  uses `hmac.compare_digest`; `GET /chat/conversations` pagination is bounds-validated
+  (`limit` 1–100, `offset` ≥ 0); conversation delete falls back to the durable SQLite store for
+  conversations not in the in-memory cache (ISS-106).
+
+#### Gates
+- Backend pytest **722 passed / 25 skipped / 0 failed**; frontend tsc/eslint/build clean; changes
+  live-verified post-deploy (auth posture 8/8 checks, Playwright UI proofs).
+
 ## [0.12.0] - 2026-07-08
 
 ### Production web-app modernization (June–July 2026, consolidated) + chat-driven remediation
