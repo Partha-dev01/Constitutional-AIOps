@@ -95,6 +95,26 @@ Detailed agent configuration and status.
 }
 ```
 
+#### GET /health/serving
+Serving-mode introspection (Mode 1 dual-engine vs Mode 2 single-engine). Never 500s.
+
+**Response** `200 OK`
+```json
+{
+  "mode": 1,
+  "single_engine": false,
+  "features": {"streaming": false, "native_tools": false, "guided_json": false, "priority": false},
+  "engine": {
+    "fast_url": "http://qwen3-4b:8000/v1",
+    "reasoning_url": "http://qwen3-14b:8001/v1",
+    "fast_model": "qwen3-4b",
+    "reasoning_model": "qwen3-14b",
+    "fast_agent_healthy": true,
+    "reasoning_agent_healthy": true
+  }
+}
+```
+
 ---
 
 ### Chat (`/chat`)
@@ -183,6 +203,92 @@ Get full conversation history.
 
 #### DELETE /chat/conversations/{id}
 Delete conversation.
+
+#### POST /chat/stream
+SSE variant of `POST /chat` (same request body). Emits `meta` → `tool_result`* → `delta`* →
+optional `notice` → `done` events; the `done` payload is the full `ChatResponse`. On Mode 1
+(no engine streaming) the answer arrives as a single `delta`, so the endpoint works on both modes.
+
+#### Proposed actions (consent model)
+When remediation is enabled (Settings → Remediation, mode `approve` or `auto`), a chat response
+may carry `proposed_action` — an action the agent wants to run but has NOT executed:
+
+```json
+{
+  "proposed_action": {
+    "id": "act-1a2b3c4d5e6f",
+    "tool_name": "restart_service",
+    "title": "Restart nextcloud-db",
+    "status": "proposed",
+    "parameters": {"service_name": "nextcloud-db", "reason": "..."}
+  }
+}
+```
+
+`status` values: `proposed` (awaiting decision), `auto_executed` (auto mode, allowlisted +
+interlocks passed), `blocked`, and — after a decision — `executed`, `rejected`, or `refused`
+(constitutional gate declined at approval time). Decisions are persisted onto the conversation,
+so reloaded chats render the outcome read-only.
+
+#### POST /chat/actions/{action_id}/decision
+Approve or reject a proposed action. Approval executes it through the constitutional gate with
+`human_approved=true` (satisfies Tier-1 authorization; Tier-1 safety principles still apply).
+
+**Request**
+```json
+{"approved": true}
+```
+
+**Response** `200 OK`
+```json
+{
+  "action_id": "act-1a2b3c4d5e6f",
+  "status": "executed",
+  "success": true,
+  "error_code": null,
+  "verdict": {"can_proceed": true, "authorization_level": "automatic", "explanation": "..."},
+  "result": {"service": "nextcloud-db", "action": "restart", "status": "completed"}
+}
+```
+
+---
+
+### Settings (`/settings`)
+
+Admin-gated persisted settings (survive restarts via the SQLite store).
+
+#### GET /settings
+Full settings document (constitutional thresholds, remediation, notifications, models, ...).
+
+#### PUT /settings
+Replace settings (validated; unknown remediation tools are rejected).
+
+**Remediation section**
+```json
+{
+  "remediation": {
+    "mode": "approve",
+    "autoConfidenceThreshold": 90,
+    "requireEvidenceForAuto": true,
+    "autoToolAllowlist": ["restart_service"]
+  }
+}
+```
+- `mode`: `diagnose` (never propose) / `approve` (propose, human decides) / `auto`
+  (execute autonomously when ALL interlocks pass: tool allowlisted AND confidence ≥ threshold
+  AND evidence present AND rate limit unspent).
+- `autoToolAllowlist`: which action tools `auto` may execute (`restart_service`, `scale_service`).
+
+#### GET /settings/serving-mode
+Current serving mode + swap status (`idle` / `pending` / `swapping` / `error`).
+
+#### POST /settings/serving-mode
+Request a Mode 1 ⇄ Mode 2 swap (admin; 202; executed by a host-side watcher, takes minutes).
+
+**Request**
+```json
+{"mode": 2}
+```
 
 ---
 
@@ -474,6 +580,15 @@ Execute tool.
 }
 ```
 
+**Action-tool gating** — `restart_service` / `scale_service` are fail-closed. Each call passes,
+in order: the `AIOPS_ENABLE_ACTION_TOOLS` kill-switch, the container whitelist
+(`nextcloud` + `AIOPS_ACTION_CONTAINER_WHITELIST`), and constitutional validation. Refusals are
+structured (`success=false` with `error_code` ∈ `action_tools_disabled` /
+`container_not_whitelisted` / `approval_required` / `validation_blocked`) and every attempt —
+executed or refused — writes an audit line. On execution, the constitutional verdict is attached
+under `metadata.constitutional`. Local restarts use the Docker SDK over the mounted socket;
+containers hosted on the remote demo host are dispatched to its control agent over HTTP.
+
 ---
 
 ### Telemetry (`/telemetry`)
@@ -712,6 +827,26 @@ Graph database statistics.
   "episode_count": 45
 }
 ```
+
+---
+
+### Topology (`/topology`)
+
+LLM-editable platform topology schema (admin). A bad generation can never break the live view —
+the auto-discovered topology is always restorable.
+
+#### GET /topology
+Current schema + mode (`discovered` or `custom`).
+
+#### PUT /topology
+Apply a custom schema (strictly validated; invalid shapes → `422`).
+
+#### POST /topology/generate
+Ask the reasoning model to draft a candidate schema from a prompt (returns a preview; nothing is
+applied until `PUT`).
+
+#### POST /topology/reset
+Drop the custom schema and return to auto-discovery.
 
 ---
 

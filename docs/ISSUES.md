@@ -1,8 +1,8 @@
 # Constitutional AIOps - Issue Tracker
 
-> **Version**: 0.10.1
-> **Last Updated**: 2026-03-01
-> **Open Issues**: 0
+> **Version**: 0.12.0
+> **Last Updated**: 2026-07-08
+> **Open Issues**: 9 (all low/medium, none blocking)
 > **Blockers**: 0
 
 ---
@@ -21,16 +21,25 @@ None currently.
 
 ## 📝 Open Issues
 
-None - All core functionality implemented and tested.
+| ID | Issue | Priority | Notes |
+|----|-------|----------|-------|
+| ISS-101 | Mode 1 chat turns feel slow on long answers (30-60s for ~700+ generated tokens; no streaming) | Medium | Engine decode is at baseline (~26 tok/s on L4); the felt latency is architectural. Cure = Mode 2 phases: SSE UI wiring (endpoint exists), engine pin upgrade, prefix caching. |
+| ISS-102 | Local `scale_service` shells out to `docker compose` — unavailable inside the prod backend container | Low | Restart path fixed via Docker SDK (0.12.0); compose-based scaling needs the compose project context, so local scaling stays a dev-only path. Remote demo host unaffected. |
+| ISS-103 | `Metrics.tsx` dereferences `validation_report.system_configuration.*` behind a truthiness check only — a partial 200 would crash the route to the ErrorBoundary | Medium-Low | Live-safe today (backend always sends the full shape). Guard pending. |
+| ISS-104 | `Incidents.tsx` unguarded `Math.round(confidence*100)` renders "NaN%" if a confidence field is ever absent | Medium-Low | Live-safe today (`RCAResult.confidence` is required). Guard pending. |
+| ISS-105 | Mobile/tablet polish batch (Console stacked-canvas fit, clipped panels, icon orphans, incidents search collapse, /graph legend overlap on small widths) | Low | Desktop/laptop production-clean; list from the 2026-07 QA tour. |
+| ISS-106 | Conversation delete can 404/no-op for rows outside the in-memory hydration window | Low | SQLite remains authoritative; sidebar delete may need a persistent-store fallback. |
+| ISS-107 | Local `vitest` broken on Windows dev machines (env issue) | Low | CI-frontend on Linux is the source of truth; do not block on local vitest. |
+| ISS-108 | Agent-initiated action proposals are latent in production Mode 1 (agentic tool loop off by default; the live consent path is fallback detection) | Info | By design for now; native tool-calling arrives with Mode 2 phase 5. |
+| ISS-109 | Infra fingerprint in the public tree: cloud instance ID appears in terraform/aws docs and an old CHANGELOG entry; static IP + domain in the DNS setup doc | Low | Not exploitable without cloud credentials (auth + SGs are the boundary), but scrub to placeholders in a dedicated pass; git history would still hold old values. |
 
 ### Optional Enhancements (Not Blocking)
 
 | ID | Enhancement | Priority | Status |
 |----|-------------|----------|--------|
-| ENH-001 | User Authentication | Low | Not Started |
-| ENH-002 | Production SSL Setup | Low | Not Started |
-| ENH-003 | Performance Benchmarking | Medium | Pending |
-| ENH-004 | CI/CD Pipeline | Low | Not Started |
+| ENH-003 | Performance Benchmarking (Mode 2 bench harness exists — `scripts/bench_mode.py`) | Medium | Partial |
+| ENH-005 | `/ingest/*` rate-limiting (needs custom Caddy build; 10MB body cap is the interim guard) | Low | Documented in Caddyfile |
+| ENH-006 | Chat streaming UI (wire `api.chat.stream()` into ChatPane behind the serving-features probe) | Medium | Backend + client ready |
 
 ---
 
