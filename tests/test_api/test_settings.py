@@ -77,6 +77,7 @@ class TestRemediationSettings:
             "mode": "diagnose",
             "autoConfidenceThreshold": 90,
             "requireEvidenceForAuto": True,
+            "autoToolAllowlist": ["restart_service"],
             "demoTargetUrl": "",
         }
 
@@ -86,6 +87,7 @@ class TestRemediationSettings:
         assert rem["mode"] == "diagnose"
         assert rem["autoConfidenceThreshold"] == 90
         assert rem["requireEvidenceForAuto"] is True
+        assert rem["autoToolAllowlist"] == ["restart_service"]
         assert rem["demoTargetUrl"] == ""
 
     def test_get_remediation_settings_overlays_persisted(self, tmp_settings_dir):
@@ -116,15 +118,20 @@ class TestRemediationSettings:
         assert default.mode == "diagnose"
         assert default.autoConfidenceThreshold == 90
         assert default.requireEvidenceForAuto is True
+        assert default.autoToolAllowlist == ["restart_service"]
         assert default.demoTargetUrl == ""
 
         # Valid custom values.
         ok = RemediationSettingsModel(
             mode="auto", autoConfidenceThreshold=70, requireEvidenceForAuto=False,
+            autoToolAllowlist=["restart_service", "scale_service"],
             demoTargetUrl="http://x",
         )
         assert ok.mode == "auto"
         assert ok.autoConfidenceThreshold == 70
+        assert ok.autoToolAllowlist == ["restart_service", "scale_service"]
+        # Empty allowlist = auto mode never executes anything on its own.
+        assert RemediationSettingsModel(autoToolAllowlist=[]).autoToolAllowlist == []
 
         # mode must be one of the three literals.
         with _pytest.raises(ValidationError):
@@ -134,6 +141,9 @@ class TestRemediationSettings:
             RemediationSettingsModel(autoConfidenceThreshold=69)
         with _pytest.raises(ValidationError):
             RemediationSettingsModel(autoConfidenceThreshold=100)
+        # Allowlist entries are restricted to the known action tools.
+        with _pytest.raises(ValidationError):
+            RemediationSettingsModel(autoToolAllowlist=["rm_rf_slash"])
 
 
 # ---------------------------------------------------------------------------
