@@ -438,6 +438,27 @@ class TestSeedTopology:
         assert "S.TIER" in all_cypher
 
     @pytest.mark.asyncio
+    async def test_seed_endpoint_500_returns_generic_detail(self, monkeypatch):
+        """A seed failure must never leak str(exception) to the client — only
+        a generic message (the real error still goes to logger.error)."""
+        from fastapi import HTTPException
+
+        marker = "SECRET_INTERNAL_DETAIL_abc123"
+
+        async def _boom(client):
+            raise RuntimeError(marker)
+
+        monkeypatch.setattr(topo_module, "seed_service_topology", _boom)
+        client = _FakeNeo4jClient([[], []])
+        req = _make_request(neo4j_client=client)
+
+        with pytest.raises(HTTPException) as ei:
+            await seed_topology(req)
+        assert ei.value.status_code == 500
+        assert marker not in str(ei.value.detail)
+        assert ei.value.detail == "Internal error while building the graph response"
+
+    @pytest.mark.asyncio
     async def test_seed_endpoint_reports_counts(self):
         client = _FakeNeo4jClient([[], []])
         req = _make_request(neo4j_client=client)
