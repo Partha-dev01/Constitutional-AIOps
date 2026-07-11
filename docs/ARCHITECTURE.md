@@ -11,7 +11,7 @@
 
 1. [System Overview](#1-system-overview)
 2. [Component Architecture](#2-component-architecture)
-3. [LLM Architecture](#3-llm-architecture)
+3. [LLM Architecture](#3-llm-architecture) — incl. 3.5 Orchestration, 3.6 Serving Modes, 3.7 Chat-Driven Remediation
 4. [Data Flow](#4-data-flow)
 5. [Memory Architecture](#5-memory-architecture)
 6. [Graph Schema Optimization](#6-graph-schema-optimization) (v0.6.0)
@@ -269,6 +269,51 @@ The orchestrator is **mandatory** — the system will not start without it.
 | `src/orchestration/graph.py` | ~480 | LangGraph pipeline definition |
 | `src/orchestration/state_machine.py` | ~100 | Incident lifecycle enforcement |
 | `src/orchestration/__init__.py` | ~18 | Package exports |
+
+---
+
+## 3.6 Serving Modes (Mode 1 / Mode 2)
+
+Mode 1 (the paper architecture, default) runs **both** vLLM engines simultaneously.
+Mode 2 is an additive, opt-in single-engine profile for serving modernization work —
+Mode 1 must remain byte-identical whenever Mode 2 is off.
+
+| | Mode 1 (default) | Mode 2 (overlay) |
+|---|---|---|
+| Engines | Qwen3-4B (:8000) + Qwen3-14B (:8001) | one engine serves both roles |
+| Enable | nothing (bare compose) | `AIOPS_MODE=2` + `docker/docker-compose.mode2.yml` |
+| Resolver | `src/agents/serving_profile.py` (fail-safe: unknown → Mode 1) | same |
+| Introspection | `GET /api/v1/health/serving` | same (reports `single_engine`, feature flags) |
+| Swap | `scripts/mode-swap.sh up-mode1\|up-mode2` on the host | same |
+| UI swap | Settings → Models card → host-side `aiops-mode-swap` watcher (file-based request/status channel under `AIOPS_DATA_DIR/mode-swap/`) | same |
+
+Data stores (Neo4j / SQLite / LGTM) are mode-agnostic; swap gates verified live with
+zero data loss (golden v2 passing on both modes).
+
+## 3.7 Chat-Driven Remediation (consent queue)
+
+Action tools are **never executed inside the model loop**. The flow:
+
+```
+Chat turn
+  ├─ model (or fallback detection) wants restart_service / scale_service
+  ├─ proposal QUEUED (honest refusals: tools disabled / diagnose mode /
+  │                    not whitelisted / one action already queued this turn)
+  ├─ Settings→Remediation mode decides:
+  │    diagnose → never proposed
+  │    approve  → ChatResponse.proposed_action → Approve/Reject card in chat
+  │    auto     → executes ONLY IF tool ∈ autoToolAllowlist AND confidence ≥ threshold
+  │               AND evidence present AND rate limit unspent (else falls back to a card)
+  ├─ POST /chat/actions/{id}/decision (approve) → constitutional gate with
+  │    human_approved=true (Tier-1 authorization; Tier-1 SAFETY principles still apply)
+  │    → kill-switch → container whitelist → execute → audit line
+  └─ decision written back onto the persisted conversation
+       (reloaded chats render executed / rejected / refused read-only)
+```
+
+Execution routing (`src/remediation/executor.py`): containers in `DEMO_REMOTE_CONTAINERS`
+dispatch to the remote demo host's control agent over HTTP; everything else restarts locally
+via the **Docker SDK** over the mounted socket (the backend image ships no docker CLI).
 
 ---
 

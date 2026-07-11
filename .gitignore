@@ -110,11 +110,16 @@ benchmark/datasets/raw/
 # Playwright test artifacts
 frontend/playwright-report/
 frontend/playwright-report-live/
+frontend/playwright-report-local/
 frontend/playwright-report-graph/
 frontend/playwright-report-schema/
 frontend/test-results/
 frontend/e2e/__screenshots__/
+frontend/e2e/__console__/
 .playwright-mcp/
+
+# Session scratch scripts (must never reach the frozen benchmark artifact)
+benchmark/final/audit/**/_tmp_*.py
 
 # Nested project copy (tarball extraction artifact)
 constitutional-aiops/
