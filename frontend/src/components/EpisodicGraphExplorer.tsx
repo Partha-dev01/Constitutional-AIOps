@@ -59,6 +59,10 @@ interface EpisodicGraphExplorerProps {
   defaultLayoutMode?: 'force' | 'dag'
   // DAG flow direction when in 'dag' layout. Defaults to 'lr' (left-to-right).
   dagDirection?: 'td' | 'lr'
+  // Fill the parent's height instead of the fixed `height` prop. Safe to feed the
+  // observed height back to ForceGraph here because the host's CSS height (100%)
+  // is pinned by the parent box, not by the canvas content — no resize loop.
+  fillParent?: boolean
 }
 
 // Node color mapping by type and status
@@ -133,6 +137,7 @@ export function EpisodicGraphExplorer({
   width = 800,
   defaultLayoutMode = 'force',
   dagDirection,
+  fillParent = false,
 }: EpisodicGraphExplorerProps) {
   const graphRef = useRef<ForceGraphMethods>(null)
 
@@ -145,9 +150,10 @@ export function EpisodicGraphExplorer({
     height: height,
   })
   // Resolved width: use measured width once ResizeObserver fires (> 0), else fallback.
-  // Height is always the fixed `height` prop.
+  // Height is the fixed `height` prop, unless fillParent pins the host to the parent
+  // box (100%) — then the observed height is authoritative (no feed-back loop).
   const graphWidth = measuredSize.width > 0 ? measuredSize.width : width
-  const graphHeight = height
+  const graphHeight = fillParent && measuredSize.height > 0 ? measuredSize.height : height
 
   // Guards onEngineStop so zoomToFit runs once per topology, not on every micro-stop.
   const hasFitRef = useRef(false)
@@ -157,6 +163,26 @@ export function EpisodicGraphExplorer({
   // True while a programmatic zoom/fit is in flight — lets us skip marking
   // onZoom as a user interaction when the fit was triggered by code, not the user.
   const isProgrammaticZoomRef = useRef(false)
+  // Timestamp of the last canvas-box change. Force-graph adjusts its camera on
+  // resize and fires onZoom for it — without this, that internal event would be
+  // mistaken for a user pan/zoom and permanently disable every auto-fit.
+  const lastBoxChangeRef = useRef(0)
+  // Re-fit when the canvas box changes materially — in fillParent mode the measured
+  // height arrives AFTER first paint (520px fallback → full card), and a fit done
+  // against the old box leaves the content framed wrong. Debounced; also re-arms
+  // the one-shot engine-stop fit so whichever runs last frames the settled layout.
+  useEffect(() => {
+    lastBoxChangeRef.current = Date.now()
+    if (hasInteractedRef.current) return
+    hasFitRef.current = false
+    const t = setTimeout(() => {
+      if (hasInteractedRef.current || !graphRef.current) return
+      isProgrammaticZoomRef.current = true
+      graphRef.current.zoomToFit(400, 60)
+      setTimeout(() => { isProgrammaticZoomRef.current = false }, 600)
+    }, 300)
+    return () => clearTimeout(t)
+  }, [graphWidth, graphHeight])
 
   const [hoveredNode, setHoveredNode] = useState<EpisodicNode | null>(null)
   const [selectedNode, setSelectedNode] = useState<EpisodicNode | null>(null)
@@ -561,21 +587,25 @@ export function EpisodicGraphExplorer({
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center bg-gradient-to-br from-slate-900/50 to-slate-800/50 rounded-lg" style={{ height }}>
+      <div
+        className="flex items-center justify-center bg-gradient-to-br from-slate-900/50 to-slate-800/50 rounded-lg"
+        style={{ height: fillParent ? '100%' : height }}
+      >
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     )
   }
 
   return (
-    <div className="relative">
-      {/* Graph Container — this div is measured by ResizeObserver for width only.
-          Height is pinned by the `height` prop via inline style. The `w-full` class
-          lets it fill its parent's flex/grid cell; overflow-hidden clips the canvas. */}
+    <div className={fillParent ? 'relative h-full' : 'relative'}>
+      {/* Graph Container — this div is measured by ResizeObserver. Height is pinned
+          by the `height` prop via inline style (or by the parent box in fillParent
+          mode). The `w-full` class lets it fill its parent's flex/grid cell;
+          overflow-hidden clips the canvas. */}
       <div
         ref={canvasHostRef}
         className="w-full bg-gradient-to-br from-slate-900/80 to-slate-800/80 rounded-lg overflow-hidden"
-        style={{ height: graphHeight }}
+        style={{ height: fillParent ? '100%' : graphHeight }}
       >
         <ForceGraph2D
           ref={graphRef}
@@ -591,8 +621,13 @@ export function EpisodicGraphExplorer({
           onNodeDragEnd={(node) => handleNodeDragEnd(node as EpisodicNode)}
           // FIX: Only mark user-initiated pan/zoom as an interaction. Programmatic
           // zoom (zoomToFit, centerAt) fires onZoom too — suppress those via the ref.
+          // Camera adjustments the library makes right after a canvas resize also
+          // fire onZoom — ignore anything within 800ms of a box change.
           onZoom={() => {
-            if (!isProgrammaticZoomRef.current) {
+            if (
+              !isProgrammaticZoomRef.current &&
+              Date.now() - lastBoxChangeRef.current > 800
+            ) {
               hasInteractedRef.current = true
             }
           }}
@@ -764,8 +799,11 @@ export function EpisodicGraphExplorer({
         </div>
       </div>
 
-      {/* Stats Overlay */}
-      <div className="absolute bottom-3 right-3 text-xs text-slate-400 bg-slate-900/80 px-3 py-1.5 rounded-md border border-slate-700">
+      {/* Stats Overlay — shifts left of the details drawer (right-14 + w-72) when a
+          node is selected so the drawer never covers it. */}
+      <div
+        className={`absolute bottom-3 ${selectedNode ? 'right-[22.5rem]' : 'right-3'} text-xs text-slate-400 bg-slate-900/80 px-3 py-1.5 rounded-md border border-slate-700`}
+      >
         {displayNodes.length} nodes shown · {filteredLinks.length} edges
         {filterType !== 'all' && ` (filtered: ${filterType})`}
       </div>
@@ -859,9 +897,12 @@ export function EpisodicGraphExplorer({
                   </div>
                 )}
                 {selectedNode.rootCause && (
-                  <div className="flex justify-between">
+                  // Paragraph-length value — stacked, not a justify-between row
+                  // (side-by-side squeezes the label into a wrap and the value
+                  // starts flush against it with no gap).
+                  <div>
                     <span className="text-slate-500">Root Cause:</span>
-                    <span className="text-orange-400">{selectedNode.rootCause.replace(/_/g, ' ')}</span>
+                    <p className="mt-0.5 text-orange-400">{selectedNode.rootCause.replace(/_/g, ' ')}</p>
                   </div>
                 )}
                 {selectedNode.confidence !== undefined && (
