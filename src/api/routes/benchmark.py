@@ -27,16 +27,12 @@ def _repo_root() -> Path:
 def _data_root() -> Path:
     """Base path for benchmark datasets + results.
 
-    Prefers the app-facing, container-shipped mirror at ``data/benchmark``
-    (seeded via ``scripts/seed_benchmark_data.py``). Falls back to the
-    read-only research corpus at ``benchmark`` when the mirror is absent, so
-    nothing breaks for the paper/corpus tooling.
+    The app-facing benchmark data lives at ``data/benchmark`` -- committed to
+    the repo and shipped in the container. Populate/refresh the synthetic
+    sample datasets with ``scripts/seed_benchmark_data.py``; bring your own
+    dataset by replacing the files there.
     """
-    root = _repo_root()
-    seeded = root / "data" / "benchmark"
-    if seeded.exists():
-        return seeded
-    return root / "benchmark"
+    return _repo_root() / "data" / "benchmark"
 
 
 # Global benchmark runner instance

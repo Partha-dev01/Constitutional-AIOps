@@ -234,18 +234,17 @@ Constitutional AIOps includes a comprehensive benchmarking system for evaluating
 
 ### Quick Benchmark Commands
 
+The app ships a small **synthetic sample** dataset so the Benchmark page works
+out of the box. Regenerate it (or use it as a template for your own data) with:
+
 ```bash
-# Download and prepare datasets
-python benchmark/scripts/download_datasets.py
-python benchmark/scripts/prepare_datasets.py
-
-# Run benchmarks (requires Ollama server)
-python benchmark/scripts/run_benchmark.py
-
-# Evaluate and export results
-python benchmark/scripts/evaluate_results.py
-python benchmark/scripts/export_metrics.py --format latex
+# (Re)seed the synthetic sample datasets under data/benchmark/
+python scripts/seed_benchmark_data.py
 ```
+
+**Bring your own dataset:** replace the JSON files under
+`data/benchmark/intermediate/datasets/` with your own cases in the same shape,
+then start a run from the Benchmark page (requires a configured LLM endpoint).
 
 ### Evaluation Metrics
 
@@ -253,8 +252,6 @@ python benchmark/scripts/export_metrics.py --format latex
 - **RCA Accuracy**: Partial match + BERTScore F1
 - **BERTScore**: Semantic similarity using DeBERTa-XLarge-MNLI
 - **Latency**: P50, P95, P99 with network compensation
-
-See [docs/BENCHMARK.md](docs/BENCHMARK.md) for detailed benchmark documentation.
 
 ## Research Gaps Addressed
 
@@ -333,7 +330,6 @@ CONFIDENCE_THRESHOLD_APPROVAL=0.70
 - **[CLAUDE.md](CLAUDE.md)**: Instructions for AI assistants (read first on every session)
 - **[docs/INDEX.md](docs/INDEX.md)**: Master documentation index (100+ files)
 - **[docs/KEY_METRICS.md](docs/KEY_METRICS.md)**: Performance metrics reference
-- **[docs/BENCHMARK.md](docs/BENCHMARK.md)**: Benchmarking system documentation
 - **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**: System architecture
 - **[docs/BACKEND.md](docs/BACKEND.md)**: Python backend (45+ files)
 - **[docs/API.md](docs/API.md)**: REST API reference (55+ endpoints)
