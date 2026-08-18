@@ -26,18 +26,14 @@ logger = logging.getLogger(__name__)
 def _data_root() -> Path:
     """Base path for benchmark datasets + results.
 
-    Prefers the app-facing, container-shipped mirror at ``data/benchmark``
-    (seeded via ``scripts/seed_benchmark_data.py``). Falls back to the
-    read-only research corpus at ``benchmark`` when the mirror is absent, so
-    nothing breaks for the paper/corpus tooling.
+    The app-facing benchmark data lives at ``data/benchmark`` -- committed to
+    the repo and shipped in the container. Populate/refresh the synthetic
+    sample datasets with ``scripts/seed_benchmark_data.py``; bring your own
+    dataset by replacing the files there.
 
     This file is ``src/benchmark/runner.py`` -> repo root is two levels up.
     """
-    repo_root = Path(__file__).resolve().parents[2]
-    seeded = repo_root / "data" / "benchmark"
-    if seeded.exists():
-        return seeded
-    return repo_root / "benchmark"
+    return Path(__file__).resolve().parents[2] / "data" / "benchmark"
 
 
 import httpx
@@ -331,7 +327,7 @@ class BenchmarkRunner:
         return self._network_rtt_ms
 
     def load_dataset(self, dataset_type: str) -> list[dict]:
-        """Load test dataset from benchmark/intermediate/datasets/.
+        """Load test dataset from data/benchmark/intermediate/datasets/.
 
         Args:
             dataset_type: "annotation", "rca", "benchmark_150", or a filename

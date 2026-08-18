@@ -1,0 +1,64 @@
+{
+  "version": "synthetic-1",
+  "created": "2026-01-01T00:00:00Z",
+  "source": "Synthetic sample (bring your own dataset)",
+  "description": "SYNTHETIC SAMPLE -- invented data, not real telemetry. Replace with your own dataset.",
+  "total_cases": 3,
+  "distribution": {
+    "anomaly": 2,
+    "normal": 1
+  },
+  "test_cases": [
+    {
+      "id": "ANN_SAMPLE_001",
+      "source": "synthetic_sample",
+      "input": {
+        "telemetry_type": "log",
+        "content": "2026-01-01 00:00:01 ERROR web-frontend: connection to payments-api timed out after 30000ms",
+        "context": "Synthetic sample log from an example web service"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "critical",
+        "category": "error",
+        "classification": "alert"
+      },
+      "ground_truth_label": "alert",
+      "alert_category": "APPSEV"
+    },
+    {
+      "id": "ANN_SAMPLE_002",
+      "source": "synthetic_sample",
+      "input": {
+        "telemetry_type": "log",
+        "content": "2026-01-01 00:05:12 WARN example-db: disk usage on /var/lib/data reached 87% capacity",
+        "context": "Synthetic sample log from an example database node"
+      },
+      "expected": {
+        "anomaly_detected": true,
+        "severity": "warning",
+        "category": "resource",
+        "classification": "warn"
+      },
+      "ground_truth_label": "warn",
+      "alert_category": "RESOURCE"
+    },
+    {
+      "id": "ANN_SAMPLE_003",
+      "source": "synthetic_sample",
+      "input": {
+        "telemetry_type": "log",
+        "content": "2026-01-01 00:07:44 INFO health-checker: liveness probe for orders-service returned 200 OK",
+        "context": "Synthetic sample log from an example health check"
+      },
+      "expected": {
+        "anomaly_detected": false,
+        "severity": "info",
+        "category": "normal",
+        "classification": "normal"
+      },
+      "ground_truth_label": "normal",
+      "alert_category": "NORMAL"
+    }
+  ]
+}

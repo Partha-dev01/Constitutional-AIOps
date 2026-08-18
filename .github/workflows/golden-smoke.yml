@@ -9,15 +9,12 @@ name: golden-smoke
 # triggered here — they require GPU access and live model endpoints.
 # Run those manually against the AWS VM with:
 #     GOLDEN_SMOKE_LIVE=1 pytest tests/test_golden_regression.py -v
-#
-# Reference: misty-knitting-pine.md Phase 1.4.
 
 on:
   pull_request:
     paths:
       - 'src/agents/**'
       - 'src/benchmark/**'
-      - 'benchmark/**'
       - 'tests/golden/**'
       - 'tests/test_golden_regression.py'
       - 'requirements.txt'
@@ -27,7 +24,6 @@ on:
     paths:
       - 'src/agents/**'
       - 'src/benchmark/**'
-      - 'benchmark/**'
       - 'tests/golden/**'
       - 'tests/test_golden_regression.py'
 
@@ -51,11 +47,3 @@ jobs:
 
       - name: Run golden schema tests
         run: pytest tests/test_golden_regression.py -v -x
-
-      - name: Verify benchmark manifest (if present)
-        run: |
-          if [ -f benchmark/data/manifest.json ]; then
-            python scripts/verify_manifest.py
-          else
-            echo "No manifest.json present yet; skipping verify."
-          fi

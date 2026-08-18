@@ -1,0 +1,95 @@
+{
+  "version": "synthetic-1",
+  "created": "2026-01-01T00:00:00Z",
+  "source": "Synthetic sample (bring your own dataset)",
+  "description": "SYNTHETIC SAMPLE -- invented data, not real telemetry. Replace with your own dataset.",
+  "total_cases": 3,
+  "distribution": {
+    "application": 2,
+    "infrastructure": 1
+  },
+  "categories": {
+    "application": 2,
+    "infrastructure": 1
+  },
+  "test_cases": [
+    {
+      "id": "RCA_SAMPLE_001",
+      "source": "synthetic_sample",
+      "incident": {
+        "title": "Checkout latency spike on the example storefront",
+        "severity": "high",
+        "fault_type": "latency_degradation",
+        "logs": [
+          "web-frontend: p99 checkout latency 8200ms (baseline 240ms)",
+          "payments-api: connection pool exhausted, 0 idle connections",
+          "payments-api: rejected 143 requests with pool timeout"
+        ],
+        "metrics": {
+          "p99_latency_ms": 8200,
+          "pool_wait_ms": 7600
+        },
+        "system_id": "example_storefront"
+      },
+      "expected_root_cause": "payments_api_connection_pool_exhaustion",
+      "expected_category": "application",
+      "acceptable_answers": [
+        "connection pool exhaustion",
+        "payments-api connection pool exhausted",
+        "pool_exhaustion"
+      ]
+    },
+    {
+      "id": "RCA_SAMPLE_002",
+      "source": "synthetic_sample",
+      "incident": {
+        "title": "Cache tier unavailable for the example catalog service",
+        "severity": "critical",
+        "fault_type": "service_unavailable",
+        "logs": [
+          "catalog-service: redis GET failed: connection refused",
+          "example-cache: OOM, evicting keys under maxmemory policy",
+          "example-cache: process restarted by supervisor"
+        ],
+        "metrics": {
+          "cache_memory_pct": 100,
+          "evicted_keys": 51230
+        },
+        "system_id": "example_cache"
+      },
+      "expected_root_cause": "cache_out_of_memory_restart",
+      "expected_category": "infrastructure",
+      "acceptable_answers": [
+        "cache out of memory",
+        "redis oom",
+        "memory eviction"
+      ]
+    },
+    {
+      "id": "RCA_SAMPLE_003",
+      "source": "synthetic_sample",
+      "incident": {
+        "title": "Elevated 5xx rate on the example API gateway",
+        "severity": "high",
+        "fault_type": "error_rate_increase",
+        "logs": [
+          "api-gateway: 5xx rate 18% (baseline 0.2%)",
+          "auth-service: NullPointerException after deploy v2.3.1",
+          "deploy-bot: rolled out auth-service v2.3.1 3 minutes before spike"
+        ],
+        "metrics": {
+          "error_rate_pct": 18.0,
+          "minutes_since_deploy": 3
+        },
+        "system_id": "example_gateway"
+      },
+      "expected_root_cause": "auth_service_bad_deploy_regression",
+      "expected_category": "application",
+      "acceptable_answers": [
+        "bad deploy",
+        "auth-service deploy regression",
+        "regression from v2.3.1"
+      ]
+    }
+  ]
+}

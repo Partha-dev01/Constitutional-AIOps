@@ -248,15 +248,13 @@
 
 ---
 
-### Benchmark Scripts (benchmark/) - NEW v0.7.0
+### Benchmark
 
-| File | Purpose |
-|------|---------|
-| [benchmark/scripts/prep/download_datasets.py](../benchmark/scripts/prep/download_datasets.py) | Download OpsEval + Loghub datasets |
-| [benchmark/scripts/prep/prepare_datasets.py](../benchmark/scripts/prep/prepare_datasets.py) | Convert to standardized JSON format |
-| [benchmark/scripts/run/run_benchmark.py](../benchmark/scripts/run/run_benchmark.py) | Execute benchmarks with latency compensation |
-| [benchmark/scripts/eval/evaluate_results.py](../benchmark/scripts/eval/evaluate_results.py) | Calculate BERTScore + accuracy metrics |
-| [benchmark/scripts/eval/export_metrics.py](../benchmark/scripts/eval/export_metrics.py) | Export results (JSON, CSV, LaTeX) |
+The benchmark engine lives at [src/benchmark/](../src/benchmark/) (runner +
+evaluator) and is surfaced through the Benchmark page and the `/benchmark` API.
+The app ships a small synthetic sample dataset under `data/benchmark/`; seed or
+refresh it with [scripts/seed_benchmark_data.py](../scripts/seed_benchmark_data.py).
+The paper's research corpus is maintained privately, outside this repository.
 
 ### Scripts - 7 Files
 
