@@ -49,6 +49,9 @@ quickstart/secrets.local.ps1
 .classpath
 .settings/
 
+# Claude Code local settings (personal/local — never committed)
+.claude/settings.local.json
+
 # OS
 .DS_Store
 Thumbs.db
