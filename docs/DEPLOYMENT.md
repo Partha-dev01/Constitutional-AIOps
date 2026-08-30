@@ -107,6 +107,12 @@ FAST_AGENT_URL=https://[your-instance].notebooks.jarvislabs.net/v1
 REASONING_AGENT_URL=https://[your-instance].notebooks.jarvislabs.net/v1
 FAST_AGENT_MODEL=qwen3:4b
 REASONING_AGENT_MODEL=qwen3:14b
+# Optional: bearer token for a secured bring-your-own endpoint. Leave unset for
+# an unauthenticated local endpoint (behaviour unchanged). A single LLM_API_KEY
+# covers both agents; FAST_AGENT_API_KEY / REASONING_AGENT_API_KEY override it
+# per agent. A minimal one-endpoint self-host can point both *_URL/*_MODEL at the
+# same value and set one LLM_API_KEY.
+# LLM_API_KEY=sk-...
 ```
 
 ### 3.4 Start Services
@@ -225,6 +231,9 @@ docker compose up -d
 | `REASONING_AGENT_URL` | `http://localhost:8082/v1` | Reasoning agent endpoint |
 | `FAST_AGENT_MODEL` | `qwen3:4b` | Fast agent model name |
 | `REASONING_AGENT_MODEL` | `qwen3:14b` | Reasoning agent model |
+| `LLM_API_KEY` | _(unset)_ | Shared bearer token for a secured BYO endpoint; applies to both agents. Empty = no `Authorization` header sent |
+| `FAST_AGENT_API_KEY` | _(falls back to `LLM_API_KEY`)_ | Per-agent bearer token override for the fast endpoint |
+| `REASONING_AGENT_API_KEY` | _(falls back to `LLM_API_KEY`)_ | Per-agent bearer token override for the reasoning endpoint |
 | `NEO4J_URI` | `bolt://localhost:7687` | Neo4j connection URI |
 | `NEO4J_PASSWORD` | `constitutional_aiops_2025` | Neo4j password |
 | `LOKI_URL` | `http://localhost:3100` | Loki log endpoint |

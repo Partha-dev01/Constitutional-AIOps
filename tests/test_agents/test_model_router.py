@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from src.agents.model_router import ModelRouter
+from src.config import LLMConfig
 
 
 def _mock_response() -> MagicMock:
@@ -160,3 +161,72 @@ class TestModelRouter:
 
                 assert "fast_agent" in health
                 assert "reasoning_agent" in health
+
+
+class TestModelRouterBYOAuth:
+    """BYO-endpoint bearer auth (5c WS1). Empty key => no header (unchanged)."""
+
+    def test_auth_headers_empty_key_yields_no_header(self):
+        assert ModelRouter._auth_headers("") == {}
+        assert ModelRouter._auth_headers("   ") == {}
+        assert ModelRouter._auth_headers(None) == {}
+
+    def test_auth_headers_with_key_yields_bearer(self):
+        assert ModelRouter._auth_headers("sk-abc") == {"Authorization": "Bearer sk-abc"}
+
+    def test_no_api_key_sends_no_authorization_header(self, monkeypatch):
+        """Default (empty) keys => neither client carries an Authorization header,
+        so an unauthenticated local endpoint is byte-identical to before."""
+        import src.config as _cfg_module
+
+        monkeypatch.setattr(_cfg_module.config.llm, "fast_agent_api_key", "")
+        monkeypatch.setattr(_cfg_module.config.llm, "reasoning_agent_api_key", "")
+        router = ModelRouter(
+            fast_agent_url="http://test:8000/v1",
+            reasoning_agent_url="http://test:8001/v1",
+        )
+        assert "authorization" not in router._fast_client.headers
+        assert "authorization" not in router._reasoning_client.headers
+
+    def test_api_key_sets_per_client_bearer_header(self, monkeypatch):
+        """A configured key becomes an Authorization: Bearer default header on the
+        matching client (applied to every request that client makes)."""
+        import src.config as _cfg_module
+
+        monkeypatch.setattr(_cfg_module.config.llm, "fast_agent_api_key", "fast-secret")
+        monkeypatch.setattr(
+            _cfg_module.config.llm, "reasoning_agent_api_key", "reason-secret"
+        )
+        router = ModelRouter(
+            fast_agent_url="http://test:8000/v1",
+            reasoning_agent_url="http://test:8001/v1",
+        )
+        assert router._fast_client.headers["authorization"] == "Bearer fast-secret"
+        assert router._reasoning_client.headers["authorization"] == "Bearer reason-secret"
+
+
+class TestLLMConfigApiKeyResolution:
+    """FAST_/REASONING_AGENT_API_KEY with a shared LLM_API_KEY fallback (5c WS1)."""
+
+    def test_absent_env_means_empty(self, monkeypatch):
+        for var in ("FAST_AGENT_API_KEY", "REASONING_AGENT_API_KEY", "LLM_API_KEY"):
+            monkeypatch.delenv(var, raising=False)
+        llm = LLMConfig()
+        assert llm.fast_agent_api_key == ""
+        assert llm.reasoning_agent_api_key == ""
+
+    def test_shared_llm_api_key_covers_both_agents(self, monkeypatch):
+        monkeypatch.delenv("FAST_AGENT_API_KEY", raising=False)
+        monkeypatch.delenv("REASONING_AGENT_API_KEY", raising=False)
+        monkeypatch.setenv("LLM_API_KEY", "shared-secret")
+        llm = LLMConfig()
+        assert llm.fast_agent_api_key == "shared-secret"
+        assert llm.reasoning_agent_api_key == "shared-secret"
+
+    def test_per_agent_key_overrides_shared(self, monkeypatch):
+        monkeypatch.setenv("LLM_API_KEY", "shared")
+        monkeypatch.setenv("FAST_AGENT_API_KEY", "fast-only")
+        monkeypatch.delenv("REASONING_AGENT_API_KEY", raising=False)
+        llm = LLMConfig()
+        assert llm.fast_agent_api_key == "fast-only"
+        assert llm.reasoning_agent_api_key == "shared"

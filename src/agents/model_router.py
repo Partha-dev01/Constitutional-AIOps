@@ -122,14 +122,22 @@ class ModelRouter:
             self.fast_agent_url = fast_agent_url or _cfg_module.config.llm.fast_agent_url
             self.reasoning_agent_url = reasoning_agent_url or _cfg_module.config.llm.reasoning_agent_url
 
-        # Create separate HTTP clients for each endpoint
+        # Create separate HTTP clients for each endpoint. When a BYO endpoint
+        # requires auth, FAST_AGENT_API_KEY / REASONING_AGENT_API_KEY (or a shared
+        # LLM_API_KEY) become an "Authorization: Bearer <key>" default header on
+        # that client, applied to every request (chat/completions, models list,
+        # streaming). An empty key sends no header, so an unauthenticated local
+        # endpoint behaves exactly as before. Keys come from config (not the
+        # serving profile) — consistent with the timeouts read just below.
         self._fast_client = httpx.AsyncClient(
             base_url=self.fast_agent_url,
             timeout=_cfg_module.config.llm.fast_agent_timeout,
+            headers=self._auth_headers(_cfg_module.config.llm.fast_agent_api_key),
         )
         self._reasoning_client = httpx.AsyncClient(
             base_url=self.reasoning_agent_url,
             timeout=_cfg_module.config.llm.reasoning_agent_timeout,
+            headers=self._auth_headers(_cfg_module.config.llm.reasoning_agent_api_key),
         )
 
         # Latency tracking for benchmarking
@@ -149,6 +157,12 @@ class ModelRouter:
                 self.profile.fast_model,
                 self.profile.reasoning_model,
             )
+
+    @staticmethod
+    def _auth_headers(api_key: str) -> dict[str, str]:
+        """Bearer-auth header for a secured BYO endpoint (empty key -> no header)."""
+        key = (api_key or "").strip()
+        return {"Authorization": f"Bearer {key}"} if key else {}
 
     def _fast_model_name(self) -> str:
         """Served model name for fast-agent requests.
