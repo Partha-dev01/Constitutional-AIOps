@@ -55,6 +55,17 @@ if who 2>/dev/null | grep -q .; then
     exit 0
 fi
 
+# --- Guard 1b: also protect NON-PTY ssh sessions (`ssh host <cmd>` maintenance
+# runs), which never appear in who/utmp. Any established inbound connection on
+# :22 (server-side source port 22) keeps the box alive (fail-open). Discovered
+# live: without this, a maintenance ssh-command session gets the box stopped
+# out from under it the moment the idle timer fires.
+if command -v ss >/dev/null 2>&1 && \
+   ss -tnH state established '( sport = :22 )' 2>/dev/null | grep -q .; then
+    log "SKIP: active SSH connection on :22 — not stopping (fail-open)"
+    exit 0
+fi
+
 # --- Guard 2: Caddy must be present to measure external liveness. If docker or
 # the edge container is missing we CANNOT tell whether the box is idle -> never
 # stop (fail-open). This is the exact inversion of the old unknown->stop bug.

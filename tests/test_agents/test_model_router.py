@@ -162,6 +162,41 @@ class TestModelRouter:
                 assert "fast_agent" in health
                 assert "reasoning_agent" in health
 
+    @pytest.mark.asyncio
+    async def test_health_check_falls_back_to_chat_completions(self):
+        """When /models is unavailable (e.g. Bedrock 404s on it), health falls
+        back to a minimal chat/completions probe (5c BYO robustness)."""
+        router = ModelRouter(
+            fast_agent_url="http://test:8000/v1",
+            reasoning_agent_url="http://test:8001/v1",
+        )
+        with patch.object(router._fast_client, "get", new_callable=AsyncMock) as gf, \
+             patch.object(router._reasoning_client, "get", new_callable=AsyncMock) as gr, \
+             patch.object(router._fast_client, "post", new_callable=AsyncMock) as pf, \
+             patch.object(router._reasoning_client, "post", new_callable=AsyncMock) as pr:
+            gf.return_value.status_code = 404
+            gr.return_value.status_code = 404
+            pf.return_value.status_code = 200
+            pr.return_value.status_code = 200
+            health = await router.health_check()
+            assert health["fast_agent"] is True
+            assert health["reasoning_agent"] is True
+
+    def test_ensure_trailing_slash(self):
+        assert ModelRouter._ensure_trailing_slash("http://h/openai/v1") == "http://h/openai/v1/"
+        assert ModelRouter._ensure_trailing_slash("http://h/openai/v1/") == "http://h/openai/v1/"
+
+    def test_client_base_url_is_slash_terminated(self):
+        """The HTTP client base_url is normalized even when the configured URL
+        omits the trailing slash; the raw configured value is left untouched."""
+        router = ModelRouter(
+            fast_agent_url="http://test:8000/v1",
+            reasoning_agent_url="http://test:8001/v1",
+        )
+        assert str(router._fast_client.base_url).endswith("/")
+        assert str(router._reasoning_client.base_url).endswith("/")
+        assert router.fast_agent_url == "http://test:8000/v1"
+
 
 class TestModelRouterBYOAuth:
     """BYO-endpoint bearer auth (5c WS1). Empty key => no header (unchanged)."""

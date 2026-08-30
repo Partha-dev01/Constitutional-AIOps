@@ -103,6 +103,9 @@ Update `docker-compose.yml` or create `.env`:
 
 ```bash
 # .env file
+# The *_URL points at the OpenAI-compatible base (…/v1). A trailing slash is
+# optional — it is normalized internally either way. Works with vLLM, Ollama,
+# and hosted OpenAI-compatible endpoints such as AWS Bedrock's /openai/v1.
 FAST_AGENT_URL=https://[your-instance].notebooks.jarvislabs.net/v1
 REASONING_AGENT_URL=https://[your-instance].notebooks.jarvislabs.net/v1
 FAST_AGENT_MODEL=qwen3:4b

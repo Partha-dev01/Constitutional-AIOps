@@ -26,14 +26,22 @@
 # The full/GPU stack (Neo4j + LGTM + local vLLM) lives in docker-compose.yml +
 # docker/docker-compose.{gpu,production}.yml — spin it up on demand, not here.
 #
-# NOTE: memory limits below are CONSERVATIVE PLACEHOLDERS. The real instance
-# sizing comes from the Chunk-B on-VM steady-state RSS measurement (WS3 gate).
+# MEMORY LIMITS: sized from an on-VM steady-state measurement (aws/measure-lite-rss.sh,
+# s78 2026-08-30): peak total RSS ~0.74 GiB under a live chat (backend ~700 MiB,
+# frontend ~13 MiB, caddy ~48 MiB). With OS + docker daemon (~0.4 GiB) plus headroom,
+# a 2 GiB instance (t3/t4g.small) is sufficient — the t3.medium (4 GiB) is oversized.
 
 services:
   backend:
     build:
       context: ..                       # repo root (this file is in docker/)
       dockerfile: docker/Dockerfile.backend
+      args:
+        # CPU-only torch: this box has no GPU (LLM is a remote Bedrock/BYO
+        # endpoint), so pull the ~200MB CPU wheel instead of the multi-GB CUDA
+        # build + nvidia-cu* stack. Keeps the image ~1.3GB (fits the 20GB lite
+        # disk) with zero functional loss — embeddings/BERTScore run on CPU.
+        - TORCH_INDEX_URL=https://download.pytorch.org/whl/cpu
     container_name: aiops-backend
     ports:
       - "${BACKEND_PORT:-8000}:8000"
@@ -81,7 +89,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1536M               # PLACEHOLDER — measure on-VM (Chunk B)
+          memory: 1024M               # measured backend RSS ~700 MiB (s78) + ~45% headroom
           cpus: '2'
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
