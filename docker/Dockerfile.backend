@@ -12,6 +12,16 @@ RUN apt-get update && apt-get install -y \
 
 # Install Python dependencies
 COPY requirements.txt .
+# Optional CPU-only torch for GPU-less deploys (the lite/self-host tier). When
+# TORCH_INDEX_URL is set (docker-compose.lite.yml passes the PyTorch CPU wheel
+# index), torch installs from it FIRST, so the requirements.txt `torch` pin is
+# already satisfied and pip does NOT pull the multi-GB CUDA build + nvidia-cu*
+# stack. sentence-transformers / bert-score then run on CPU torch (all-MiniLM
+# works fine on CPU). Empty default = unchanged full/GPU build (CUDA torch).
+ARG TORCH_INDEX_URL=""
+RUN if [ -n "$TORCH_INDEX_URL" ]; then \
+        pip install --no-cache-dir torch --index-url "$TORCH_INDEX_URL"; \
+    fi
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code

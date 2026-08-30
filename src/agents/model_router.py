@@ -129,13 +129,17 @@ class ModelRouter:
         # streaming). An empty key sends no header, so an unauthenticated local
         # endpoint behaves exactly as before. Keys come from config (not the
         # serving profile) — consistent with the timeouts read just below.
+        # base_url is normalized to a trailing slash (see _ensure_trailing_slash)
+        # so httpx joins the relative "chat/completions" / "models" paths without
+        # dropping a URL segment. self.fast_agent_url stays the raw configured
+        # value (introspection / logging); only the HTTP client base is normalized.
         self._fast_client = httpx.AsyncClient(
-            base_url=self.fast_agent_url,
+            base_url=self._ensure_trailing_slash(self.fast_agent_url),
             timeout=_cfg_module.config.llm.fast_agent_timeout,
             headers=self._auth_headers(_cfg_module.config.llm.fast_agent_api_key),
         )
         self._reasoning_client = httpx.AsyncClient(
-            base_url=self.reasoning_agent_url,
+            base_url=self._ensure_trailing_slash(self.reasoning_agent_url),
             timeout=_cfg_module.config.llm.reasoning_agent_timeout,
             headers=self._auth_headers(_cfg_module.config.llm.reasoning_agent_api_key),
         )
@@ -163,6 +167,19 @@ class ModelRouter:
         """Bearer-auth header for a secured BYO endpoint (empty key -> no header)."""
         key = (api_key or "").strip()
         return {"Authorization": f"Bearer {key}"} if key else {}
+
+    @staticmethod
+    def _ensure_trailing_slash(url: str) -> str:
+        """Normalize a BYO base URL to end in '/'.
+
+        httpx joins a relative request path ("chat/completions", "models")
+        against base_url with RFC-3986 semantics: WITHOUT a trailing slash the
+        last path segment is replaced, so "https://h/openai/v1" + "chat/completions"
+        resolves to "https://h/openai/chat/completions" and the "/v1" is silently
+        dropped. Self-hosters routinely omit the slash, so normalize here instead
+        of making a working endpoint depend on that detail.
+        """
+        return url if url.endswith("/") else url + "/"
 
     def _fast_model_name(self) -> str:
         """Served model name for fast-agent requests.
@@ -687,25 +704,45 @@ class ModelRouter:
         Returns:
             Dictionary with health status for each agent
         """
-        health = {"fast_agent": False, "reasoning_agent": False}
+        return {
+            "fast_agent": await self._probe_agent(
+                self._fast_client, self._fast_model_name()
+            ),
+            "reasoning_agent": await self._probe_agent(
+                self._reasoning_client, self._reasoning_model_name()
+            ),
+        }
 
-        # base_url ends in /v1/, and httpx appends relative paths, so the
-        # relative "models" resolves to {base}/v1/models — the OpenAI-style model
-        # list that BOTH vLLM and Ollama return 200 for when ready. (The old
-        # "../" root probe only worked for Ollama; vLLM returns 404 at "/".)
+    async def _probe_agent(self, client: httpx.AsyncClient, model_name: str) -> bool:
+        """Liveness probe for one OpenAI-compatible endpoint.
+
+        Tries the cheap "models" list first: vLLM and Ollama return 200 for
+        {base}models when ready, at zero token cost. BYO endpoints that only
+        implement chat/completions (e.g. AWS Bedrock's OpenAI-compat surface,
+        which 404s on /models) fall back to a minimal max_tokens=1 completion —
+        the one operation every OpenAI-compatible server must support. Healthy
+        iff one of the two returns HTTP 200.
+        """
         try:
-            response = await self._fast_client.get("models")
-            health["fast_agent"] = response.status_code == 200
+            response = await client.get("models")
+            if response.status_code == 200:
+                return True
         except httpx.HTTPError:
             pass
 
         try:
-            response = await self._reasoning_client.get("models")
-            health["reasoning_agent"] = response.status_code == 200
+            response = await client.post(
+                "chat/completions",
+                json={
+                    "model": model_name,
+                    "messages": [{"role": "user", "content": "ping"}],
+                    "max_tokens": 1,
+                    "temperature": 0.0,
+                },
+            )
+            return response.status_code == 200
         except httpx.HTTPError:
-            pass
-
-        return health
+            return False
 
     # =========================================================================
     # Metrics and Latency Tracking
