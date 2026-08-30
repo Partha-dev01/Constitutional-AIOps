@@ -1,0 +1,63 @@
+# Constitutional AIOps — LITE edge Caddyfile (5c WS3).
+#
+# Trimmed edge for the lite profile: backend + frontend only. NO /grafana route
+# and NO /ingest telemetry routes, because Grafana and the LGTM stores are not
+# part of lite. One public host, path-routed, automatic Let's Encrypt TLS.
+#
+# The access-log-to-stdout block is what aws/idle-check.sh greps ("handled
+# request") to measure external liveness for sleep-when-idle — keep it.
+#
+# Env (from .env via docker-compose): APP_DOMAIN, ACME_EMAIL.
+
+{
+	email {$ACME_EMAIL}
+	# Single-Caddy topology: no CDN/LB in front, so no inbound peer is a trusted
+	# proxy — Caddy treats the connecting client as the real client (mirrors the
+	# full Caddyfile's XFF hardening).
+	servers {
+		trusted_proxies static private_ranges
+		client_ip_headers X-Forwarded-For
+	}
+}
+
+(security_headers) {
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Frame-Options "DENY"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' ws: wss:; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'"
+		-Server
+	}
+}
+
+{$APP_DOMAIN} {
+	encode zstd gzip
+
+	# Access log to stdout — aws/idle-check.sh reads this to detect external
+	# traffic (sleep-when-idle). Do NOT remove.
+	log {
+		output stdout
+		format console
+	}
+
+	# Backend REST API. The app's own session auth is the gate (AUTH_REQUIRED).
+	@api path /api/*
+	handle @api {
+		import security_headers
+		reverse_proxy backend:8000
+	}
+
+	# WebSocket stream (app-layer WS_TOKEN / session-cookie guarded in the backend).
+	@ws path /ws
+	handle @ws {
+		import security_headers
+		reverse_proxy backend:8000
+	}
+
+	# SPA — everything else.
+	handle {
+		import security_headers
+		reverse_proxy frontend:3000
+	}
+}

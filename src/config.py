@@ -105,6 +105,18 @@ class LLMConfig:
         default_factory=lambda: float(os.getenv("REASONING_AGENT_TIMEOUT", "180"))
     )
 
+    # Optional bearer token for a secured bring-your-own endpoint. Empty (the
+    # default) => no Authorization header is sent, so an unauthenticated local
+    # endpoint (Ollama / mock / on-VM vLLM) is byte-identical to before. A single
+    # LLM_API_KEY covers both agents for a minimal one-endpoint self-host; a
+    # per-agent FAST_AGENT_API_KEY / REASONING_AGENT_API_KEY overrides it.
+    fast_agent_api_key: str = field(
+        default_factory=lambda: os.getenv("FAST_AGENT_API_KEY") or os.getenv("LLM_API_KEY") or ""
+    )
+    reasoning_agent_api_key: str = field(
+        default_factory=lambda: os.getenv("REASONING_AGENT_API_KEY") or os.getenv("LLM_API_KEY") or ""
+    )
+
 
 @dataclass
 class Neo4jConfig:

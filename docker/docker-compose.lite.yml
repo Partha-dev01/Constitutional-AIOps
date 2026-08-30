@@ -1,0 +1,162 @@
+# Constitutional AIOps — LITE self-host profile (5c WS3).
+#
+# The minimal, low-cost deployment: backend + frontend + (optional) Caddy edge.
+# NO GPU, NO bundled models (bring your own LLM endpoint), NO Neo4j, NO LGTM.
+# The app degrades gracefully without Neo4j/observability — src/main.py falls
+# back to an in-memory episode store and the Graph/Metrics pages show fallback
+# data — so this is a genuine one-command self-host, not a crippled build.
+#
+# SELF-CONTAINED — use it ALONE, not layered on docker-compose.yml:
+#
+#   Localhost (no TLS, ports published):
+#     docker compose -f docker/docker-compose.lite.yml up -d
+#       -> frontend http://localhost:3000 , backend http://localhost:8000
+#
+#   Public edge (Caddy + Let's Encrypt TLS on a domain) — our AWS lite tier:
+#     docker compose -f docker/docker-compose.lite.yml --profile edge up -d
+#       -> needs APP_DOMAIN + ACME_EMAIL; frontend/backend stay internal, only
+#          Caddy binds 80/443. Its access log feeds aws/idle-check.sh.
+#
+# Bring your own LLM endpoint (.env, OpenAI-compatible). Both agents MAY point at
+# the SAME URL + model for a single-endpoint setup:
+#   FAST_AGENT_URL, REASONING_AGENT_URL
+#   FAST_AGENT_MODEL, REASONING_AGENT_MODEL
+#   LLM_API_KEY                 (secured endpoint; optional, empty = no auth header)
+#
+# The full/GPU stack (Neo4j + LGTM + local vLLM) lives in docker-compose.yml +
+# docker/docker-compose.{gpu,production}.yml — spin it up on demand, not here.
+#
+# NOTE: memory limits below are CONSERVATIVE PLACEHOLDERS. The real instance
+# sizing comes from the Chunk-B on-VM steady-state RSS measurement (WS3 gate).
+
+services:
+  backend:
+    build:
+      context: ..                       # repo root (this file is in docker/)
+      dockerfile: docker/Dockerfile.backend
+    container_name: aiops-backend
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    environment:
+      # --- Bring-your-own LLM endpoint (OpenAI-compatible) ---
+      - FAST_AGENT_URL=${FAST_AGENT_URL}
+      - REASONING_AGENT_URL=${REASONING_AGENT_URL}
+      - FAST_AGENT_MODEL=${FAST_AGENT_MODEL}
+      - REASONING_AGENT_MODEL=${REASONING_AGENT_MODEL}
+      # Bearer token for a secured endpoint (empty = no Authorization header).
+      # LLM_API_KEY covers both agents; *_AGENT_API_KEY override per agent.
+      - LLM_API_KEY=${LLM_API_KEY:-}
+      - FAST_AGENT_API_KEY=${FAST_AGENT_API_KEY:-}
+      - REASONING_AGENT_API_KEY=${REASONING_AGENT_API_KEY:-}
+      # --- Neo4j/LGTM are NOT deployed in lite ---
+      # NEO4J_URI is left at its localhost default (no server -> the app's
+      # graceful in-memory fallback). NEO4J_PASSWORD is a dummy only so the
+      # production secret-guard (_require_password) does not refuse to boot.
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD:-lite-unused}
+      # --- App ---
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+      - DEBUG=false
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - API_WORKERS=${API_WORKERS:-2}
+      - AIOPS_DATA_DIR=/app/data/state
+      # CORS: the origin the browser loads the SPA from. Localhost profile is
+      # cross-origin (SPA :3000 -> API :8000) so it must be listed; the edge
+      # profile is same-origin under APP_DOMAIN.
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000}
+      # In-app auth (OFF by default; set AUTH_REQUIRED=true + admin creds to gate).
+      - AUTH_REQUIRED=${AUTH_REQUIRED:-false}
+      - AUTH_ADMIN_USER=${AUTH_ADMIN_USER:-}
+      - AUTH_ADMIN_PASSWORD=${AUTH_ADMIN_PASSWORD:-}
+      - AUTH_SECRET_KEY=${AUTH_SECRET_KEY:-}
+      # /ws guard token — REQUIRED when ENVIRONMENT=production (see main.py).
+      - WS_TOKEN=${WS_TOKEN:-}
+    volumes:
+      - aiops-lite-state:/app/data/state
+      # Action-tool remediation (container restart/scale) is OFF in lite. To
+      # enable it, uncomment the docker socket mount and set AIOPS_ENABLE_ACTION_TOOLS=true:
+      # - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - aiops-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1536M               # PLACEHOLDER — measure on-VM (Chunk B)
+          cpus: '2'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.frontend
+      args:
+        # Localhost default: SPA calls the backend cross-origin at :8000. For the
+        # edge profile set PUBLIC_API_URL=/api/v1 so the bundle is same-origin.
+        - VITE_API_URL=${PUBLIC_API_URL:-http://localhost:8000/api/v1}
+    container_name: aiops-frontend
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - aiops-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.5'
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "3"
+
+  # Optional public edge (TLS + domain). Enable with `--profile edge`. Uses the
+  # trimmed docker/configs/Caddyfile.lite (no Grafana / no /ingest). Its stdout
+  # access log is the liveness signal for aws/idle-check.sh (sleep-when-idle).
+  caddy:
+    image: caddy:2.8-alpine
+    container_name: aiops-caddy
+    profiles: ["edge"]
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - APP_DOMAIN=${APP_DOMAIN}
+      - ACME_EMAIL=${ACME_EMAIL:-admin@example.com}
+    volumes:
+      - ./configs/Caddyfile.lite:/etc/caddy/Caddyfile:ro
+      - aiops-lite-caddy-data:/data          # Let's Encrypt certs persist
+      - aiops-lite-caddy-config:/config
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - aiops-network
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "3"
+
+networks:
+  aiops-network:
+    driver: bridge
+
+volumes:
+  aiops-lite-state:
+  aiops-lite-caddy-data:
+  aiops-lite-caddy-config:
