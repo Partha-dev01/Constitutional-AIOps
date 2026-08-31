@@ -27,6 +27,18 @@ function welcomeMessage(): ChatMessageData {
   return { id: 'welcome', role: 'assistant', content: WELCOME, timestamp: new Date() }
 }
 
+/**
+ * Parse an API timestamp as UTC. The backend emits naive-UTC ISO strings with
+ * no `Z`/offset (ISS-110), which `new Date()` would read as local time; append
+ * `Z` when the string carries no timezone marker. Absent value falls back to now.
+ */
+function toDate(ts?: string | number | null): Date {
+  if (ts == null) return new Date()
+  if (typeof ts === 'number') return new Date(ts)
+  const hasTz = /[zZ]$|[+-]\d{2}:?\d{2}$/.test(ts)
+  return new Date(hasTz ? ts : `${ts}Z`)
+}
+
 export interface ChatPaneProps {
   /**
    * `page` (default) renders the full /chat experience — heading, conversation
@@ -263,7 +275,7 @@ export function ChatPane({ variant = 'page', seedContext, injectedPrompt, classN
           id: messageId,
           role: 'assistant',
           content: response.message.content,
-          timestamp: new Date(response.message.timestamp || Date.now()),
+          timestamp: toDate(response.message.timestamp),
         }
 
         setInsightsById((prev) => ({
@@ -363,7 +375,7 @@ export function ChatPane({ variant = 'page', seedContext, injectedPrompt, classN
           id: `${id}-${i}`,
           role: m.role as 'user' | 'assistant',
           content: m.content,
-          timestamp: m.timestamp ? new Date(m.timestamp) : new Date(),
+          timestamp: toDate(m.timestamp),
         }))
 
         // Replay each assistant turn's reasoning section. The step list is
