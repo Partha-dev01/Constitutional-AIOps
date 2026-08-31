@@ -501,11 +501,23 @@ export interface AuthUser {
 
 export interface AuthConfigResponse {
   auth_required: boolean;
+  /** Public self-service signup available (hosted demo only). */
+  signup_enabled: boolean;
+  /** '' when disabled, else 'turnstile' | 'hcaptcha'. */
+  captcha_provider: string;
+  /** Public captcha site key for the widget ('' when no provider). */
+  captcha_site_key: string;
 }
 
 export interface LoginResponse {
   user: AuthUser;
   expires_at: string;
+}
+
+export interface SignupResponse {
+  user: AuthUser;
+  expires_at: string;
+  email_verification: string;
 }
 
 export interface LogoutResponse {
@@ -1038,6 +1050,17 @@ export const api = {
       request<LoginResponse>('/auth/login', {
         method: 'POST',
         body: JSON.stringify({ username, password }),
+      }),
+
+    signup: (payload: {
+      username: string
+      email: string
+      password: string
+      captcha_token?: string
+    }) =>
+      request<SignupResponse>('/auth/signup', {
+        method: 'POST',
+        body: JSON.stringify(payload),
       }),
 
     logout: (everywhere = false) =>

@@ -6,6 +6,7 @@ import { RequireAuth } from './components/RequireAuth'
 import { ErrorBoundary } from './components/ErrorBoundary'
 // First-paint-critical pages — kept eager
 import { Login } from './pages/Login'
+import { Signup } from './pages/Signup'
 import { Dashboard } from './pages/Dashboard'
 import { useAuthStore } from './lib/auth'
 
@@ -82,6 +83,8 @@ function App() {
       <Routes>
         {/* Public login page rendered OUTSIDE the sidebar Layout */}
         <Route path="/login" element={<Login />} />
+        {/* Public self-service signup (hosted demo; redirects away when disabled) */}
+        <Route path="/signup" element={<Signup />} />
         {/* Legacy path: redirect to the root (which sends logged-out users to login) */}
         <Route path="/welcome" element={<Navigate to="/" replace />} />
         {/* Public root: Landing (logged out, enforcement on) or Dashboard */}

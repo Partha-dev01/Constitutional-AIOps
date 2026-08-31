@@ -123,4 +123,55 @@ def verify_session(token: str) -> Optional[dict[str, Any]]:
     return claims
 
 
-__all__ = ["COOKIE_NAME", "SESSION_TTL_SECONDS", "sign_session", "verify_session"]
+def sign_value(payload: dict[str, Any], ttl_seconds: int) -> str:
+    """Sign an arbitrary short-lived payload with the same secret as sessions.
+
+    Used for out-of-band links (e.g. email verification). The caller's dict is
+    copied and stamped with an ``exp`` claim; read_value enforces it.
+    """
+    claims = dict(payload)
+    claims["exp"] = int(time.time()) + int(ttl_seconds)
+    encoded = _b64url_encode(
+        json.dumps(claims, separators=(",", ":"), sort_keys=True).encode("utf-8")
+    )
+    signature = hmac.new(_get_secret(), encoded.encode("ascii"), hashlib.sha256).digest()
+    return f"{encoded}.{_b64url_encode(signature)}"
+
+
+def read_value(token: str) -> Optional[dict[str, Any]]:
+    """Verify a sign_value() token; return its claims or None (never raises)."""
+    if not isinstance(token, str) or not token:
+        return None
+    parts = token.split(".")
+    if len(parts) != 2:
+        return None
+    payload_b64, signature_b64 = parts
+    try:
+        provided_sig = _b64url_decode(signature_b64)
+    except (ValueError, TypeError):
+        return None
+    expected_sig = hmac.new(
+        _get_secret(), payload_b64.encode("ascii", errors="replace"), hashlib.sha256
+    ).digest()
+    if not hmac.compare_digest(expected_sig, provided_sig):
+        return None
+    try:
+        claims = json.loads(_b64url_decode(payload_b64))
+    except (ValueError, TypeError):
+        return None
+    if not isinstance(claims, dict):
+        return None
+    exp = claims.get("exp")
+    if not isinstance(exp, (int, float)) or exp < time.time():
+        return None
+    return claims
+
+
+__all__ = [
+    "COOKIE_NAME",
+    "SESSION_TTL_SECONDS",
+    "read_value",
+    "sign_session",
+    "sign_value",
+    "verify_session",
+]

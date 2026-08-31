@@ -4,6 +4,25 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Public self-service signup for the hosted demo (front-door redesign R3)
+- New `POST /api/v1/auth/signup` creates a `role=user` account and logs the visitor
+  straight in (same httpOnly session cookie as login). It is **off by default**
+  (`AIOPS_ENABLE_PUBLIC_SIGNUP`, unset ⇒ 404) so a self-host stays admin-managed; the
+  hosted demo turns it on. Reuses the existing scrypt hashing + password policy.
+- Abuse controls: a per-IP signup rate limit (5/hour), optional captcha (Cloudflare
+  Turnstile or hCaptcha, server-side siteverify — fails closed if a provider is set
+  without a secret), and optional email verification. Verification emails go out over
+  SMTP (works with the Amazon SES SMTP endpoint; stdlib `smtplib`, no new dependency);
+  with no SMTP configured the link is logged and the account still works.
+- The `users` table gains `email` + `email_verified` columns via an idempotent
+  `ALTER TABLE` migration; `email_verified` is a soft flag flipped by opening the signed,
+  expiring verification link (`GET /api/v1/auth/verify`), so it never depends on the demo
+  box being awake when the user clicks later.
+- `GET /api/v1/auth/config` now also returns `signup_enabled` + the public captcha
+  provider/site-key. Frontend: a `/signup` page with an optional captcha widget, a
+  "Create an account" link on the login page (only when enabled), and matching auth-store
+  wiring. Covered by `tests/test_auth/test_signup.py`.
+
 ### Serverless marketing + bot-filtered wake (front-door redesign R2)
 - The front door no longer wakes the demo box on every hit. The existing CloudFront distribution
   now has a **path split**: a private S3 origin (the built `marketing/` site, served via an
