@@ -9,3 +9,13 @@
  * path useful only for local preview.
  */
 export const APP_URL: string = import.meta.env.VITE_APP_URL ?? '/login?next=/'
+
+/**
+ * Where "See how it works" sends visitors: the always-on, no-login demo that
+ * runs the real app UI from bundled fixture data (no box wake, $0). Hosted
+ * statically under /demo/ on this same site. The explicit index.html avoids
+ * needing a CloudFront directory-index rewrite (private S3 + OAC does not
+ * resolve `/demo/` to `/demo/index.html`); the demo build uses HashRouter so
+ * every in-app route lives in the URL fragment. Overridable via VITE_DEMO_URL.
+ */
+export const DEMO_URL: string = import.meta.env.VITE_DEMO_URL ?? '/demo/index.html'

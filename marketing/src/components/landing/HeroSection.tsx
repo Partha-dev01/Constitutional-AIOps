@@ -1,7 +1,7 @@
 import { Shield, ArrowRight } from 'lucide-react'
 import { useReveal } from '../../hooks/useReveal'
 import { ShotFrame } from './ShotFrame'
-import { APP_URL } from '../../config'
+import { APP_URL, DEMO_URL } from '../../config'
 
 /**
  * Landing hero. Pure static — no network calls. The masked grid is
@@ -72,7 +72,7 @@ export function HeroSection() {
             />
           </a>
           <a
-            href="#architecture"
+            href={DEMO_URL}
             className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-6 py-3 text-sm font-semibold text-foreground transition-colors hover:border-primary/50 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             See how it works

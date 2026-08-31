@@ -5,6 +5,7 @@
  */
 
 import { useEffect, useRef, useState, useCallback } from 'react'
+import { DEMO_MODE } from './demo/flag'
 
 // WebSocket event types (must match backend EventType enum)
 export enum EventType {
@@ -151,6 +152,15 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
 
   // Connect to WebSocket
   const connect = useCallback(async () => {
+    // Demo build: there is no backend socket. Report a healthy "Live"
+    // connection and emit nothing (pages render from the fixture fetches).
+    if (DEMO_MODE) {
+      setConnectionState('connected')
+      reconnectAttemptsRef.current = 0
+      onConnect?.()
+      return
+    }
+
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       console.log('WebSocket already connected')
       return
