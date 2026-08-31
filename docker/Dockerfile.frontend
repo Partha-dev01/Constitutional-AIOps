@@ -15,6 +15,12 @@ RUN npm install
 # Copy source code
 COPY frontend/ ./
 
+# Landing-link target for the top-left brand. Empty (the self-host default)
+# leaves the brand linking to the app home; our hosted build passes the
+# marketing site URL. Prefixed VITE_ so Vite exposes it to the bundle.
+ARG VITE_LANDING_URL=""
+ENV VITE_LANDING_URL=$VITE_LANDING_URL
+
 # Build application
 RUN npm run build
 

@@ -125,6 +125,9 @@ services:
         # Localhost default: SPA calls the backend cross-origin at :8000. For the
         # edge profile set PUBLIC_API_URL=/api/v1 so the bundle is same-origin.
         - VITE_API_URL=${PUBLIC_API_URL:-http://localhost:8000/api/v1}
+        # Top-left brand link. Empty = self-host (links to app home); our hosted
+        # build sets PUBLIC_LANDING_URL to the marketing site.
+        - VITE_LANDING_URL=${PUBLIC_LANDING_URL:-}
     container_name: aiops-frontend
     ports:
       - "${FRONTEND_PORT:-3000}:3000"

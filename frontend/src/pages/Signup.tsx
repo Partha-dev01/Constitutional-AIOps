@@ -1,6 +1,6 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { Loader2, Shield, UserPlus } from 'lucide-react'
+import { Loader2, UserPlus } from 'lucide-react'
 import { ApiError } from '../lib/api'
 import { useAuthStore } from '../lib/auth'
 import { CaptchaWidget } from '../components/CaptchaWidget'
@@ -90,7 +90,7 @@ export function Signup() {
     >
       <div className="w-full max-w-sm rounded-lg border border-border bg-card p-8 shadow-sm">
         <div className="mb-6 flex items-center justify-center gap-2">
-          <Shield className="h-8 w-8 text-primary" />
+          <img src="/logo-mark.png" alt="" aria-hidden="true" className="h-10 w-10 rounded-lg" />
           <div>
             <p className="text-lg font-bold leading-tight">Constitutional</p>
             <p className="text-xs text-muted-foreground">AIOps</p>

@@ -524,6 +524,18 @@ export interface LogoutResponse {
   ok: boolean;
   everywhere: boolean;
 }
+
+/** One row of the admin user list (GET /auth/users). */
+export interface AdminUserListItem {
+  username: string;
+  role: string;
+  created_at?: string;
+}
+
+export interface AdminUserList {
+  items: AdminUserListItem[];
+  total: number;
+}
 // ---- end Auth types ----
 
 /**
@@ -1067,6 +1079,35 @@ export const api = {
       request<LogoutResponse>('/auth/logout', {
         method: 'POST',
         body: JSON.stringify({ everywhere }),
+      }),
+
+    /** Self-service: change the signed-in user's own password. */
+    changePassword: (currentPassword: string, newPassword: string) =>
+      request<{ ok: boolean }>('/auth/password', {
+        method: 'POST',
+        body: JSON.stringify({
+          current_password: currentPassword,
+          new_password: newPassword,
+        }),
+      }),
+  },
+
+  // Admin-only user management (require_admin on the backend).
+  admin: {
+    listUsers: () => request<AdminUserList>('/auth/users'),
+    createUser: (payload: { username: string; password: string; role: 'user' | 'admin' }) =>
+      request<AuthUser>('/auth/users', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
+    deleteUser: (username: string) =>
+      request<void>(`/auth/users/${encodeURIComponent(username)}`, {
+        method: 'DELETE',
+      }),
+    setPassword: (username: string, password: string) =>
+      request<{ ok: boolean }>(`/auth/users/${encodeURIComponent(username)}/password`, {
+        method: 'POST',
+        body: JSON.stringify({ password }),
       }),
   },
 
