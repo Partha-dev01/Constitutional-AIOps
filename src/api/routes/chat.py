@@ -2605,7 +2605,7 @@ async def list_conversations(
                 "created_at": c.created_at,
                 "updated_at": c.updated_at,
                 "message_count": len(c.messages),
-                "preview": c.messages[-1].content[:100] if c.messages else None,
+                "preview": _conversation_preview(c),
             }
             for c in paginated
         ],
@@ -2616,6 +2616,21 @@ async def list_conversations(
 
 
 # Helper functions
+
+def _conversation_preview(conv: Any) -> str | None:
+    """Sidebar title/preview text for a conversation: the user's FIRST message
+    (clamped), not the assistant's latest answer (ISS-111). Falls back to the
+    first message of any role, then None for an empty conversation."""
+    first_user = next(
+        (m for m in conv.messages if getattr(m, "role", None) == ChatRole.USER),
+        None,
+    )
+    source = first_user or (conv.messages[0] if conv.messages else None)
+    if source is None:
+        return None
+    text = (source.content or "").strip()
+    return text[:100] if text else None
+
 
 # Phrases that signal the model declined / refused the request. Kept lowercase.
 _REFUSAL_MARKERS = (
