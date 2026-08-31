@@ -670,7 +670,12 @@ export function Metrics() {
 
       <TabPanel id="validation" activeTab={activeTab} className="pt-6">
         <div className="space-y-6">
-          {validationReport ? (
+          {/* Guard on the nested shape, not just a truthy object: a partial 200
+              would otherwise crash the route to the ErrorBoundary (ISS-103). */}
+          {validationReport?.system_configuration &&
+          validationReport.accuracy_metrics &&
+          validationReport.latency_metrics &&
+          validationReport.validation_status ? (
             <>
               {/* System Configuration */}
               <div className="bg-card rounded-lg border border-border p-6">

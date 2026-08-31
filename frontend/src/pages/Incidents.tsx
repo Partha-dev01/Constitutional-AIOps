@@ -6,6 +6,10 @@ import { ActiveIncidentsPanel } from '../components/incidents/ActiveIncidentsPan
 import { Modal } from '../components/ui/Modal'
 import { useToast } from '../components/ui/toast'
 
+/** Confidence (0-1) as a percent, guarding absent/NaN so the UI never shows "NaN%" (ISS-104). */
+const confPct = (c?: number | null): string =>
+  c == null || Number.isNaN(c) ? 'n/a' : `${Math.round(c * 100)}%`
+
 export function Incidents() {
   const { showToast } = useToast()
   const [incidents, setIncidents] = useState<Incident[]>([])
@@ -153,7 +157,7 @@ export function Incidents() {
                 <div>
                   <p className="text-sm font-medium">{action.description}</p>
                   <p className="text-xs text-muted-foreground">
-                    {action.target_service} • Confidence: {Math.round(action.confidence * 100)}%
+                    {action.target_service} • Confidence: {confPct(action.confidence)}
                   </p>
                 </div>
                 <div className="flex gap-2">
@@ -376,7 +380,7 @@ function IncidentCard({
           <p className="text-sm font-medium">Root Cause Analysis</p>
           <p className="text-sm text-muted-foreground mt-1">{incident.rca.root_cause}</p>
           <p className="text-xs text-muted-foreground mt-1">
-            Confidence: {Math.round(incident.rca.confidence * 100)}%
+            Confidence: {confPct(incident.rca.confidence)}
           </p>
         </div>
       )}
@@ -448,7 +452,7 @@ function IncidentDetailContent({ incident }: { incident: Incident }) {
           <h4 className="font-semibold mb-2">Root Cause Analysis</h4>
           <p className="text-sm">{incident.rca.root_cause}</p>
           <p className="text-xs text-muted-foreground mt-2">
-            Confidence: {Math.round(incident.rca.confidence * 100)}%
+            Confidence: {confPct(incident.rca.confidence)}
           </p>
           {(incident.rca.causal_chain?.length ?? 0) > 0 && (
             <div className="mt-3">
@@ -514,7 +518,7 @@ function ApprovalContent({
           </div>
           <div>
             <span className="text-muted-foreground">Confidence:</span>{' '}
-            {Math.round(action.confidence * 100)}%
+            {confPct(action.confidence)}
           </div>
           <div>
             <span className="text-muted-foreground">Risk:</span>{' '}

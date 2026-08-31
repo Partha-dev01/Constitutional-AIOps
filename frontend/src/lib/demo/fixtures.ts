@@ -46,18 +46,143 @@ const HEALTH = {
   ],
 }
 
-/** GET /metrics — real measured LLM latency/request counts (Dashboard + Metrics). */
-const AGENT_METRICS = {
-  fast_agent: { count: 1284, avg_ms: 74, p95_ms: 121 },
-  reasoning_agent: { count: 342, avg_ms: 830, p95_ms: 1920 },
+// Full per-agent latency stats. The Dashboard reads count/avg_ms/p95_ms; the
+// Metrics page reads the rest (min/max/p50/p99/success_rate/total_tokens).
+const LAT_FAST = {
+  count: 1284, avg_ms: 74, min_ms: 41, max_ms: 210,
+  p50_ms: 70, p95_ms: 121, p99_ms: 180, success_rate: 99.6, total_tokens: 164_352,
+}
+const LAT_REASONING = {
+  count: 342, avg_ms: 830, min_ms: 420, max_ms: 2450,
+  p50_ms: 760, p95_ms: 1920, p99_ms: 2280, success_rate: 98.2, total_tokens: 421_000,
 }
 
+const DETERMINISM_CONFIG = {
+  fast_agent_temperature: 0.0,
+  reasoning_agent_temperature: 0.0,
+  chat_temperature: 0.5,
+  seed_method: 'hash(prompt) % 2^32',
+}
+
+/** GET /metrics — a full MetricsSnapshot (Dashboard cards + Metrics overview). */
+const AGENT_METRICS = {
+  timestamp: new Date().toISOString(),
+  fast_agent: LAT_FAST,
+  reasoning_agent: LAT_REASONING,
+  total_requests: 1626,
+  success_rate: 99.1,
+  determinism_config: DETERMINISM_CONFIG,
+}
+
+// GET /metrics/history — `records` feeds the Metrics "Recent Requests" table;
+// `history` is kept for any averaged-series consumer.
 const METRICS_HISTORY = {
   history: Array.from({ length: 24 }, (_, i) => ({
     at: iso((23 - i) * 30),
     fast_avg_ms: 60 + Math.round(30 * Math.abs(Math.sin(i / 3))),
     reasoning_avg_ms: 700 + Math.round(500 * Math.abs(Math.sin(i / 4))),
   })),
+  records: Array.from({ length: 24 }, (_, i) => {
+    const fast = i % 3 !== 0
+    return {
+      agent: fast ? 'fast' : 'reasoning',
+      latency_ms: fast
+        ? 60 + Math.round(60 * Math.abs(Math.sin(i / 2)))
+        : 700 + Math.round(600 * Math.abs(Math.sin(i / 3))),
+      timestamp: iso(i * 7),
+      tokens_generated: fast ? 96 + (i % 5) * 24 : 640 + (i % 4) * 160,
+      success: i !== 5,
+    }
+  }),
+}
+
+// GET /metrics/validation/report — the Metrics "Validation" tab.
+const VALIDATION_REPORT = {
+  generated_at: iso(3),
+  system_configuration: {
+    fast_agent: {
+      model: 'Qwen3-4B-AWQ',
+      url: 'http://localhost:8000/v1',
+      temperature: 0.0,
+      purpose: 'Telemetry annotation + severity classification',
+    },
+    reasoning_agent: {
+      model: 'Qwen3-14B-AWQ',
+      url: 'http://localhost:8001/v1',
+      temperature: 0.0,
+      purpose: 'Root-cause analysis + remediation planning',
+    },
+    chat_mode: { temperature: 0.5, purpose: 'Operator chat + explanations' },
+  },
+  latency_metrics: {
+    fast_agent: LAT_FAST,
+    reasoning_agent: LAT_REASONING,
+    disclaimer:
+      'End-to-end latency measured at the backend (includes queueing + network). Single-node demo figures, not a controlled benchmark.',
+  },
+  accuracy_metrics: {
+    annotation_accuracy: {
+      value: 'Not run',
+      expected: '87-92%',
+      disclaimer: 'Not evaluated in this snapshot. Run the Benchmark page against a labelled corpus.',
+    },
+    rca_accuracy: {
+      value: 'Not run',
+      expected: '85-90%',
+      disclaimer: 'Not evaluated in this snapshot. See the Benchmark page for scored RCA cases.',
+    },
+  },
+  validation_status: {
+    latency: 'Measured',
+    determinism: 'Configured (temp=0)',
+    annotation_accuracy: 'Pending',
+    rca_accuracy: 'Pending',
+  },
+}
+
+// POST /metrics/validate/determinism — the Metrics determinism panel.
+const DETERMINISM_RESULT = {
+  determinism_score: 100,
+  deterministic_prompts: 5,
+  total_prompts: 5,
+  iterations_per_prompt: 5,
+  configuration: { temperature: 0.0, seed_method: 'hash(prompt) % 2^32' },
+  results: [
+    { prompt: 'Classify: disk usage on /var/lib/docker at 93%', iterations: 5, unique_outputs: 1, unique_seeds: 1, is_deterministic: true, sample_output: 'severity=warning, component=disk' },
+    { prompt: 'Classify: php-fpm worker killed by OOM', iterations: 5, unique_outputs: 1, unique_seeds: 1, is_deterministic: true, sample_output: 'severity=critical, component=runtime' },
+    { prompt: 'Classify: connection refused to nextcloud-db', iterations: 5, unique_outputs: 1, unique_seeds: 1, is_deterministic: true, sample_output: 'severity=critical, component=database' },
+    { prompt: 'Classify: reasoning queue depth 18', iterations: 5, unique_outputs: 1, unique_seeds: 1, is_deterministic: true, sample_output: 'severity=warning, component=backend' },
+    { prompt: 'Classify: GET /api/v1/incidents 200 8ms', iterations: 5, unique_outputs: 1, unique_seeds: 1, is_deterministic: true, sample_output: 'severity=info, component=api' },
+  ],
+  passed: true,
+  timestamp: iso(1),
+}
+
+/** POST /metrics/benchmark — a single-agent micro-benchmark result. */
+function metricsBenchmark(bodyText?: string) {
+  let agent = 'fast'
+  let iterations = 10
+  if (bodyText) {
+    try {
+      const b = JSON.parse(bodyText) as { agent?: string; iterations?: number }
+      if (b.agent) agent = b.agent
+      if (b.iterations) iterations = b.iterations
+    } catch {
+      // keep defaults
+    }
+  }
+  const lat = agent === 'reasoning' ? LAT_REASONING : LAT_FAST
+  return {
+    status: 'completed',
+    agent,
+    iterations,
+    successes: iterations,
+    total_time_ms: lat.avg_ms * iterations,
+    latency: lat,
+    success_rate: 100,
+    errors: [] as string[],
+    timestamp: iso(0),
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -423,19 +548,46 @@ const REMOTE_HOSTS = {
 // Agent activity
 // ---------------------------------------------------------------------------
 
+// Each activity matches the page's AgentActivity shape: input/output are
+// strings (output is JSON so the row's expand view + summary render), plus
+// model and a 'success'|'error' status.
 const FAST_ACTIVITY = {
   activities: [
-    { id: 'fa-1', timestamp: iso(2), type: 'annotation', summary: 'Annotated 34 log lines for nextcloud-host', tokens: 512, latency_ms: 68 },
-    { id: 'fa-2', timestamp: iso(5), type: 'classification', summary: 'Classified severity: critical (DB refused)', tokens: 128, latency_ms: 71 },
-    { id: 'fa-3', timestamp: iso(9), type: 'annotation', summary: 'Annotated Prometheus disk-usage series', tokens: 256, latency_ms: 80 },
+    {
+      id: 'fa-1', timestamp: iso(2), type: 'annotation', model: 'qwen3-4b', latency_ms: 68, status: 'success',
+      input: 'Annotate 34 log lines from nextcloud-host around the OOM event',
+      output: JSON.stringify({ summary: 'Annotated 34 log lines for nextcloud-host', severity: 'critical', component: 'runtime', tags: ['oom', 'edge'] }),
+    },
+    {
+      id: 'fa-2', timestamp: iso(5), type: 'classification', model: 'qwen3-4b', latency_ms: 71, status: 'success',
+      input: 'Classify: nextcloud-db connection refused (ECONNREFUSED)',
+      output: JSON.stringify({ summary: 'Classified severity: critical (DB refused)', severity: 'critical', component: 'database' }),
+    },
+    {
+      id: 'fa-3', timestamp: iso(9), type: 'annotation', model: 'qwen3-4b', latency_ms: 80, status: 'success',
+      input: 'Annotate Prometheus disk-usage series for /var/lib/docker',
+      output: JSON.stringify({ summary: 'Annotated disk-usage series; threshold crossed at 92%', severity: 'warning', component: 'disk' }),
+    },
   ],
 }
 
 const REASONING_ACTIVITY = {
   activities: [
-    { id: 'ra-1', timestamp: iso(4), type: 'rca', summary: 'Root-cause analysis for inc-2043 (confidence 0.91)', tokens: 2048, latency_ms: 910 },
-    { id: 'ra-2', timestamp: iso(7), type: 'remediation', summary: 'Drafted 3-step remediation plan, queued for approval', tokens: 1536, latency_ms: 840 },
-    { id: 'ra-3', timestamp: iso(38), type: 'chat', summary: 'Answered operator question about the backlog', tokens: 720, latency_ms: 760 },
+    {
+      id: 'ra-1', timestamp: iso(4), type: 'rca', model: 'qwen3-14b', latency_ms: 910, status: 'success',
+      input: 'Perform root-cause analysis for inc-2043 (Nextcloud DB connection refused)',
+      output: JSON.stringify({ summary: 'Root-cause analysis for inc-2043 (confidence 0.91)', root_cause: 'Disk pressure -> php-fpm OOM -> dropped DB connection', confidence: 0.91 }),
+    },
+    {
+      id: 'ra-2', timestamp: iso(7), type: 'planning', model: 'qwen3-14b', latency_ms: 840, status: 'success',
+      input: 'Draft a remediation plan for inc-2043',
+      output: JSON.stringify({ summary: 'Drafted 3-step remediation plan, queued for approval', steps: 3, requires_approval: true }),
+    },
+    {
+      id: 'ra-3', timestamp: iso(38), type: 'chat', model: 'qwen3-14b', latency_ms: 760, status: 'success',
+      input: 'Operator asked about the current backlog',
+      output: JSON.stringify({ summary: 'Answered operator question about the backlog', related_incidents: ['inc-2043', 'inc-2039'] }),
+    },
   ],
 }
 
@@ -536,47 +688,233 @@ const EPISODES_GRAPH = {
 
 const CHAT_CONVERSATIONS = { items: [], total: 0, limit: 20, offset: 0 }
 
-const CHAT_ANSWER =
-  'This is a read-only demo, so I answer from a fixed incident snapshot. The active critical incident is ' +
-  '**inc-2043** — Nextcloud database connection refused on `nextcloud-host`. Root cause (confidence 0.91): disk ' +
-  'pressure on `/var/lib/docker` triggered php-fpm OOM kills, which dropped the database connection and surfaced ' +
-  'as 5xx from the backend. A 3-step remediation plan is queued for your approval on the Incidents page.'
+interface ChatToolCall {
+  id: string
+  name: string
+  arguments: Record<string, unknown>
+  status: string
+  duration_ms: number
+  result: Record<string, unknown>
+}
 
-function chatResponse(conversationId: string) {
+interface ChatAnswer {
+  text: string
+  confidence: number
+  tokens_used: number
+  suggested_actions: string[]
+  related_incidents: string[]
+  tool_calls: ChatToolCall[]
+}
+
+const TOOL_TELEMETRY: ChatToolCall = {
+  id: 't1', name: 'query_telemetry', arguments: { service: 'nextcloud-host' }, status: 'ok', duration_ms: 60,
+  result: { service: 'nextcloud-host', log_count: 214, error_count: 12 },
+}
+const TOOL_SIMILAR: ChatToolCall = {
+  id: 't2', name: 'find_similar_incidents', arguments: { query: 'db connection refused' }, status: 'ok', duration_ms: 40,
+  result: { count: 2, incidents: [{ id: 'inc-1007', summary: 'Prior DB outage', score: 0.88 }] },
+}
+const TOOL_DEPS: ChatToolCall = {
+  id: 't3', name: 'get_dependencies', arguments: { service: 'backend' }, status: 'ok', duration_ms: 35,
+  result: { upstream: ['nextcloud-host', 'neo4j'], downstream: ['frontend'] },
+}
+
+/**
+ * The demo answers from a fixed incident snapshot, but chooses its reply from
+ * the question so the chat feels live. Keyword-routed, most specific first;
+ * deterministic (no randomness) so the streamed deltas match the authoritative
+ * `done` frame exactly.
+ */
+function answerFor(message: string): ChatAnswer {
+  const q = message.trim().toLowerCase()
+  const has = (...k: string[]): boolean => k.some((w) => q.includes(w))
+
+  if (has('root cause', 'rca', 'why', 'cause')) {
+    return {
+      text:
+        'Root cause of **inc-2043** (confidence 0.91): disk pressure on `/var/lib/docker` on `nextcloud-host` crossed 92%, ' +
+        "which OOM-killed the php-fpm workers. That dropped Nextcloud's database connection pool, and the backend API then " +
+        'returned 5xx upstream. Loki shows the OOM kill about 40s before the first DB-refused log, and the Prometheus ' +
+        'disk-usage series crosses the threshold in the same window. The pattern matches 2 prior incidents on this host.',
+      confidence: 0.91, tokens_used: 812,
+      suggested_actions: ['View the full RCA for inc-2043', 'Open the causal chain in the Graph'],
+      related_incidents: ['inc-2043', 'inc-1007'],
+      tool_calls: [TOOL_TELEMETRY, TOOL_SIMILAR],
+    }
+  }
+  if (has('remediat', 'fix', 'resolve', 'mitigat', 'how do i', 'what should')) {
+    return {
+      text:
+        'The queued 3-step remediation plan for **inc-2043** is:\n\n' +
+        '1. Prune dangling Docker images/volumes on `nextcloud-host` (`docker system prune -af --volumes`) — medium risk, needs approval.\n' +
+        '2. Restart `php-fpm` and the `nextcloud-db` container — medium risk, needs approval.\n' +
+        '3. Verify `/chat` and `/incidents` return 200 through Caddy — low risk, automatic.\n\n' +
+        'Steps 1 and 2 sit above the 0.90 auto-execution band, so they wait for your approval on the Incidents page.',
+      confidence: 0.86, tokens_used: 690,
+      suggested_actions: ['Approve the restart of nextcloud-db', 'Open the remediation plan for inc-2043'],
+      related_incidents: ['inc-2043'],
+      tool_calls: [TOOL_TELEMETRY],
+    }
+  }
+  if (has('similar', 'past', 'before', 'memory', 'graph', 'episod', 'history')) {
+    return {
+      text:
+        'The episodic memory has 2 close matches to the active incident. `inc-1007` (score 0.88) was a prior DB outage on ' +
+        'the same edge host, resolved by a `restart_service` in about 5 min. `inc-2039` (Neo4j pool exhaustion) is linked ' +
+        'SIMILAR_TO because both trace back to saturation. The Graph page shows the full causal chain: episode -> root ' +
+        'cause -> resolving action.',
+      confidence: 0.84, tokens_used: 604,
+      suggested_actions: ['Open the Graph explorer', 'Compare with inc-1007'],
+      related_incidents: ['inc-2043', 'inc-2039', 'inc-1007'],
+      tool_calls: [TOOL_SIMILAR],
+    }
+  }
+  if (has('latency', 'agent', 'model', 'fast', 'reasoning', 'slow', 'performance', 'p95')) {
+    return {
+      text:
+        'Both agents are online. The **fast agent** (Qwen3-4B) is averaging 74ms (p95 121ms) across 1,284 requests — it ' +
+        'handles annotation and severity classification. The **reasoning agent** (Qwen3-14B) is averaging 830ms (p95 ' +
+        '1,920ms) across 342 requests — it owns RCA, remediation planning, and this chat. The Metrics page has the full ' +
+        'latency breakdown.',
+      confidence: 0.88, tokens_used: 520,
+      suggested_actions: ['Open the Metrics page', 'Run a latency benchmark'],
+      related_incidents: ['inc-2036'],
+      tool_calls: [],
+    }
+  }
+  if (has('benchmark', 'accuracy', 'eval', 'score')) {
+    return {
+      text:
+        'On the demo corpus (168 scored cases) Constitutional AIOps reaches 84.2% annotation accuracy and 82.4% RCA ' +
+        'accuracy (BERT-F1 0.861) — about +10.8pp RCA over the Llama-3.3-70B baseline and +15.1pp over DeepSeek-V3.2, at a ' +
+        'fraction of the latency. Full per-model numbers and JSON/CSV/LaTeX export live on the Benchmark page.',
+      confidence: 0.9, tokens_used: 560,
+      suggested_actions: ['Open the Benchmark page', 'Compare models'],
+      related_incidents: [],
+      tool_calls: [],
+    }
+  }
+  if (has('constitution', 'approval', 'approve', 'gate', 'safe', 'autonom', 'risk', 'principle')) {
+    return {
+      text:
+        'Every proposed action passes a 3-tier constitutional gate before it can run. Confidence above 0.90 auto-executes ' +
+        '(audit only); 0.70-0.90 needs human approval; below 0.70 is alert-only. Tier-1 safety principles (no unconfirmed ' +
+        'data deletion, keep at least 2 healthy replicas, reversible within 60s) can never be violated. That is why the two ' +
+        'open restart/scale actions are waiting on your approval rather than firing on their own.',
+      confidence: 0.92, tokens_used: 640,
+      suggested_actions: ['Review pending approvals', 'Open Settings -> Remediation'],
+      related_incidents: ['inc-2043', 'inc-2039'],
+      tool_calls: [TOOL_DEPS],
+    }
+  }
+  if (q === 'hi' || q === 'hello' || has('hello', 'hey', 'help', 'what can you', 'who are you')) {
+    return {
+      text:
+        'Hi — this is the Constitutional AIOps operator chat, running in a read-only demo. I can walk you through the active ' +
+        'incidents, explain a root cause, show the queued remediation plan, or point you at the Graph, Metrics, and ' +
+        'Benchmark pages. Right now 1 critical incident is open (**inc-2043**). What would you like to look at?',
+      confidence: 0.9, tokens_used: 300,
+      suggested_actions: ['Summarize the current incidents', 'What is the root cause of inc-2043?'],
+      related_incidents: ['inc-2043'],
+      tool_calls: [],
+    }
+  }
+  // Default: incident overview, and echo the question so it reads as a real reply.
+  const echo = message.trim() ? `You asked: "${message.trim()}". ` : ''
+  return {
+    text:
+      echo +
+      'From the current snapshot there are 4 active incidents, 1 of them critical: **inc-2043** — Nextcloud database ' +
+      'connection refused on `nextcloud-host`, root-caused (0.91) to disk pressure -> php-fpm OOM -> dropped DB connection. ' +
+      'A 3-step remediation plan is queued for approval and 2 actions are waiting on the constitutional gate. Ask me about ' +
+      'the root cause, the fix, similar past incidents, the agents, or the benchmark.',
+    confidence: 0.87, tokens_used: 480,
+    suggested_actions: ['What is the root cause of inc-2043?', 'How do I fix it?'],
+    related_incidents: ['inc-2043', 'inc-2039'],
+    tool_calls: [TOOL_TELEMETRY, TOOL_SIMILAR],
+  }
+}
+
+function chatResponse(conversationId: string, message = '') {
+  const a = answerFor(message)
   return {
     conversation_id: conversationId || 'demo-conv-1',
-    message: { role: 'assistant', content: CHAT_ANSWER, timestamp: new Date().toISOString() },
-    confidence: 0.9,
-    suggested_actions: ['Approve the restart of nextcloud-db', 'View the full RCA for inc-2043'],
-    related_incidents: ['inc-2043', 'inc-2039'],
+    message: { role: 'assistant', content: a.text, timestamp: new Date().toISOString() },
+    confidence: a.confidence,
+    suggested_actions: a.suggested_actions,
+    related_incidents: a.related_incidents,
     metadata: {
       mode: 'demo',
       model_used: 'qwen3-14b (fixture)',
-      tokens_used: 742,
-      tool_calls: [
-        { id: 't1', name: 'query_telemetry', arguments: { service: 'nextcloud-host' }, status: 'ok', duration_ms: 60,
-          result: { service: 'nextcloud-host', log_count: 214, error_count: 12 } },
-        { id: 't2', name: 'find_similar_incidents', arguments: { query: 'db connection refused' }, status: 'ok', duration_ms: 40,
-          result: { count: 2, incidents: [{ id: 'inc-1007', summary: 'Prior DB outage', score: 0.88 }] } },
-      ],
+      tokens_used: a.tokens_used,
+      tool_calls: a.tool_calls,
     },
     proposed_action: null,
   }
 }
 
-/** Break the canned answer into word-chunks so the stream animates like the real thing. */
-function chatSseFrames(conversationId: string): Array<{ event: string; data: unknown }> {
+/** Break the chosen answer into word-chunks so the stream animates like the real thing. */
+function chatSseFrames(conversationId: string, message = ''): Array<{ event: string; data: unknown }> {
   const cid = conversationId || 'demo-conv-1'
+  const a = answerFor(message)
   const frames: Array<{ event: string; data: unknown }> = [
     { event: 'meta', data: { conversation_id: cid, streaming: true, mode: 2 } },
-    { event: 'tool_result', data: { name: 'query_telemetry', service: 'nextcloud-host', error_count: 12 } },
   ]
-  const words = CHAT_ANSWER.split(' ')
+  if (a.tool_calls.length > 0) {
+    const t = a.tool_calls[0]
+    frames.push({ event: 'tool_result', data: { name: t.name, ...t.result } })
+  }
+  const words = a.text.split(' ')
   for (let i = 0; i < words.length; i += 4) {
     frames.push({ event: 'delta', data: { text: words.slice(i, i + 4).join(' ') + ' ' } })
   }
-  frames.push({ event: 'done', data: chatResponse(cid) })
+  frames.push({ event: 'done', data: chatResponse(cid, message) })
   return frames
+}
+
+// ---------------------------------------------------------------------------
+// Benchmark page (datasets / models / results / compare)
+// ---------------------------------------------------------------------------
+
+const BENCH_DATASETS = [
+  {
+    name: 'annotation',
+    file: 'annotation_demo.jsonl',
+    total_cases: 120,
+    source: 'synthetic (logs / metrics / traces)',
+    description: 'Labelled telemetry lines scored for annotation accuracy: severity, component, and category tags.',
+    distribution: { logs: 70, metrics: 32, traces: 18 },
+  },
+  {
+    name: 'rca',
+    file: 'rca_demo.jsonl',
+    total_cases: 48,
+    source: 'synthetic incident bundles',
+    description: 'Incidents with a known root cause for end-to-end RCA scoring against the reasoning agent.',
+    categories: { availability: 16, saturation: 12, latency: 11, errors: 9 },
+  },
+]
+
+const BENCH_MODELS = {
+  constitutional_aiops: { description: 'Constitutional AIOps (Qwen3-4B + 14B dual)', type: 'dual-agent', vram_gb: 24 },
+  qwen3_14b_base: { description: 'Qwen3-14B (base, single agent)', type: 'single', vram_gb: 15 },
+  llama3_3_70b: { description: 'Llama-3.3-70B (baseline)', type: 'baseline', vram_gb: 40 },
+  deepseek_v3_2: { description: 'DeepSeek-V3.2 (baseline)', type: 'baseline', vram_gb: 48 },
+}
+
+const BENCH_RESULTS = [
+  { model_name: 'constitutional_aiops', annotation_accuracy: 84.2, rca_accuracy: 82.4, bert_f1: 0.861, avg_latency_ms: 118, p95_latency_ms: 210, total_tests: 168, passed_tests: 141, status: 'completed' },
+  { model_name: 'qwen3_14b_base', annotation_accuracy: 78.5, rca_accuracy: 71.6, bert_f1: 0.802, avg_latency_ms: 96, p95_latency_ms: 180, total_tests: 168, passed_tests: 129, status: 'completed' },
+  { model_name: 'llama3_3_70b', annotation_accuracy: 80.1, rca_accuracy: 71.6, bert_f1: 0.821, avg_latency_ms: 540, p95_latency_ms: 980, total_tests: 168, passed_tests: 131, status: 'completed' },
+  { model_name: 'deepseek_v3_2', annotation_accuracy: 79.2, rca_accuracy: 67.3, bert_f1: 0.808, avg_latency_ms: 610, p95_latency_ms: 1120, total_tests: 168, passed_tests: 127, status: 'completed' },
+]
+
+/** A small LaTeX table so the Benchmark "Export -> LaTeX" download has content. */
+function benchLatex(): string {
+  const rows = BENCH_RESULTS.map(
+    (r) => `${r.model_name} & ${r.annotation_accuracy} & ${r.rca_accuracy} & ${r.bert_f1} & ${r.avg_latency_ms} \\\\`,
+  ).join('\n')
+  return `\\begin{tabular}{lrrrr}\nModel & Ann. Acc & RCA Acc & BERT F1 & Latency (ms) \\\\\n\\hline\n${rows}\n\\end{tabular}`
 }
 
 // ---------------------------------------------------------------------------
@@ -591,6 +929,17 @@ function bodyConversationId(bodyText?: string): string {
   try {
     const parsed = JSON.parse(bodyText) as { conversation_id?: string }
     return parsed.conversation_id ?? ''
+  } catch {
+    return ''
+  }
+}
+
+/** user message out of a JSON chat request body, if present. */
+function bodyMessage(bodyText?: string): string {
+  if (!bodyText) return ''
+  try {
+    const parsed = JSON.parse(bodyText) as { message?: string }
+    return parsed.message ?? ''
   } catch {
     return ''
   }
@@ -619,7 +968,11 @@ export function matchRoute(method: string, route: string, bodyText?: string): De
   // Metrics (Dashboard model cards + Metrics page)
   if (route === '/metrics' || route === '/metrics/') return ok(AGENT_METRICS)
   if (route === '/metrics/history') return ok(METRICS_HISTORY)
-  if (route.startsWith('/metrics/')) return ok({}) // validation/report, benchmark, etc.
+  if (route === '/metrics/validation/report') return ok(VALIDATION_REPORT)
+  if (route === '/metrics/benchmark') return ok(metricsBenchmark(bodyText))
+  if (route === '/metrics/validate/determinism') return ok(DETERMINISM_RESULT)
+  if (route === '/metrics/export') return ok(AGENT_METRICS)
+  if (route.startsWith('/metrics/')) return ok({}) // clear, misc
 
   // Incidents
   if (route === '/incidents/stats') return ok(INCIDENT_STATS)
@@ -692,8 +1045,8 @@ export function matchRoute(method: string, route: string, bodyText?: string): De
   if (route === '/telemetry/metrics') return ok(TELEMETRY_METRICS)
 
   // Chat
-  if (route === '/chat/stream') return { status: 200, sse: chatSseFrames(bodyConversationId(bodyText)) }
-  if (route === '/chat/' || route === '/chat') return ok(chatResponse(bodyConversationId(bodyText)))
+  if (route === '/chat/stream') return { status: 200, sse: chatSseFrames(bodyConversationId(bodyText), bodyMessage(bodyText)) }
+  if (route === '/chat/' || route === '/chat') return ok(chatResponse(bodyConversationId(bodyText), bodyMessage(bodyText)))
   if (route === '/chat/conversations') return ok(CHAT_CONVERSATIONS)
   if (route.startsWith('/chat/conversations/')) {
     if (m === 'DELETE') return { status: 204 }
@@ -701,8 +1054,14 @@ export function matchRoute(method: string, route: string, bodyText?: string): De
   }
   if (route.startsWith('/chat/actions/')) return ok({ action_id: 'demo', status: 'executed', success: true, error_code: null, verdict: null, result: null })
 
-  // Benchmark (page renders empty rather than crashing)
-  if (route.startsWith('/benchmark')) return ok({ datasets: [], models: [], results: [], status: { running: false } })
+  // Benchmark page
+  if (route === '/benchmark/datasets') return ok({ datasets: BENCH_DATASETS })
+  if (route === '/benchmark/models') return ok({ models: BENCH_MODELS })
+  if (route === '/benchmark/results') return ok({ results: BENCH_RESULTS })
+  if (route === '/benchmark/status') return ok({ is_running: false })
+  if (route === '/benchmark/run') return ok({ status: 'started', detail: 'demo: benchmark not executed' })
+  if (route === '/benchmark/export') return ok({ results: BENCH_RESULTS, content: benchLatex() })
+  if (route.startsWith('/benchmark')) return ok({ datasets: [], models: {}, results: [], status: { is_running: false } })
 
   // WebSocket token (demo has no live socket; empty token)
   if (route === '/ws/token') return ok({ token: '' })
