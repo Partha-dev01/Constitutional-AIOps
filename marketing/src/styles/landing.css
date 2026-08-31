@@ -148,26 +148,28 @@
 .aurora::after {
   content: '';
   position: absolute;
-  width: 62vw;
-  height: 62vw;
+  width: 58vw;
+  height: 58vw;
   border-radius: 9999px;
-  filter: blur(90px);
-  opacity: 0.5;
+  filter: blur(110px);
+  opacity: 0.22;
   will-change: transform;
 }
 
+/* Both fields stay on-brand blue so the base dark-navy theme dominates; the
+   drift keeps it alive without a colour wash. */
 .aurora::before {
-  top: -18vw;
-  left: -10vw;
-  background: radial-gradient(circle at center, hsl(var(--primary) / 0.55), transparent 65%);
-  animation: aurora-a 22s ease-in-out infinite;
+  top: -22vw;
+  left: -14vw;
+  background: radial-gradient(circle at center, hsl(var(--primary) / 0.45), transparent 60%);
+  animation: aurora-a 24s ease-in-out infinite;
 }
 
 .aurora::after {
-  right: -12vw;
-  bottom: -22vw;
-  background: radial-gradient(circle at center, hsl(262 83% 60% / 0.5), transparent 65%);
-  animation: aurora-b 26s ease-in-out infinite;
+  right: -16vw;
+  bottom: -26vw;
+  background: radial-gradient(circle at center, hsl(214 90% 32% / 0.4), transparent 60%);
+  animation: aurora-b 28s ease-in-out infinite;
 }
 
 @keyframes aurora-a {
