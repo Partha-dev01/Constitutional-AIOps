@@ -1,7 +1,7 @@
-import { Link } from 'react-router-dom'
 import { Shield, ArrowRight } from 'lucide-react'
 import { useReveal } from '../../hooks/useReveal'
 import { ShotFrame } from './ShotFrame'
+import { APP_URL } from '../../config'
 
 /**
  * Landing hero. Pure static — no network calls. The masked grid is
@@ -61,8 +61,8 @@ export function HeroSection() {
           className="hero-enter mt-10 flex flex-col gap-3 sm:flex-row"
           style={{ animationDelay: '550ms' }}
         >
-          <Link
-            to="/login?next=/"
+          <a
+            href={APP_URL}
             className="group inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             Open the Dashboard
@@ -70,7 +70,7 @@ export function HeroSection() {
               className="h-4 w-4 transition-transform group-hover:translate-x-0.5"
               aria-hidden="true"
             />
-          </Link>
+          </a>
           <a
             href="#architecture"
             className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-6 py-3 text-sm font-semibold text-foreground transition-colors hover:border-primary/50 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"

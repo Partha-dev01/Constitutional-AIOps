@@ -5,7 +5,6 @@ import { Layout } from './components/Layout'
 import { RequireAuth } from './components/RequireAuth'
 import { ErrorBoundary } from './components/ErrorBoundary'
 // First-paint-critical pages — kept eager
-import { Landing } from './pages/Landing'
 import { Login } from './pages/Login'
 import { Dashboard } from './pages/Dashboard'
 import { useAuthStore } from './lib/auth'
@@ -44,10 +43,14 @@ function PageFallback() {
 }
 
 /**
- * Public root gate: logged-out visitors (with enforcement on) see the public
- * Landing page at /; everyone else (signed in, or enforcement off) gets the
- * Dashboard inside the app shell. Renders nothing until the auth store has
- * bootstrapped so the wrong variant never flashes.
+ * Public root gate: logged-out visitors (with enforcement on) are sent to the
+ * login page; everyone else (signed in, or enforcement off) gets the Dashboard
+ * inside the app shell. Renders nothing until the auth store has bootstrapped so
+ * the wrong variant never flashes.
+ *
+ * The branded marketing landing was moved OUT of the app into the standalone
+ * front-door `marketing/` site (served serverlessly), so the self-hostable app
+ * ships no marketing. Our hosted instance runs this exact same vanilla app.
  */
 function RootGate() {
   const user = useAuthStore((s) => s.user)
@@ -55,7 +58,7 @@ function RootGate() {
   const status = useAuthStore((s) => s.status)
 
   if (status !== 'ready') return null
-  if (authRequired && !user) return <Landing />
+  if (authRequired && !user) return <Navigate to="/login" replace />
   return (
     <Layout>
       <Dashboard />
@@ -79,7 +82,7 @@ function App() {
       <Routes>
         {/* Public login page rendered OUTSIDE the sidebar Layout */}
         <Route path="/login" element={<Login />} />
-        {/* The landing page moved to the public root */}
+        {/* Legacy path: redirect to the root (which sends logged-out users to login) */}
         <Route path="/welcome" element={<Navigate to="/" replace />} />
         {/* Public root: Landing (logged out, enforcement on) or Dashboard */}
         <Route path="/" element={<RootGate />} />
