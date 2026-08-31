@@ -17,7 +17,9 @@ import { TeamFooter } from '../components/landing/TeamFooter'
  */
 export function Landing() {
   return (
-    <div className="min-h-screen overflow-x-hidden bg-background font-sans text-foreground">
+    <div className="relative min-h-screen overflow-x-hidden font-sans text-foreground">
+      {/* Animated colour-field backdrop (fixed, decorative, behind everything). */}
+      <div className="aurora" aria-hidden="true" />
       <LandingHeader />
       <HeroSection />
       <StatsBand />

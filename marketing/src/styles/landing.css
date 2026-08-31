@@ -131,6 +131,86 @@
   animation: tool-pulse 1.8s ease-in-out infinite;
 }
 
+/* --------------------------- Aurora backdrop ---------------------------- */
+/* Rich animated backdrop: two large, heavily-blurred colour fields drift
+ * behind the whole page. Fixed + decorative; Landing renders <div.aurora>
+ * first and it sits at the very back via a negative z-index. */
+.aurora {
+  position: fixed;
+  inset: 0;
+  z-index: -10;
+  pointer-events: none;
+  overflow: hidden;
+  background: hsl(var(--background));
+}
+
+.aurora::before,
+.aurora::after {
+  content: '';
+  position: absolute;
+  width: 62vw;
+  height: 62vw;
+  border-radius: 9999px;
+  filter: blur(90px);
+  opacity: 0.5;
+  will-change: transform;
+}
+
+.aurora::before {
+  top: -18vw;
+  left: -10vw;
+  background: radial-gradient(circle at center, hsl(var(--primary) / 0.55), transparent 65%);
+  animation: aurora-a 22s ease-in-out infinite;
+}
+
+.aurora::after {
+  right: -12vw;
+  bottom: -22vw;
+  background: radial-gradient(circle at center, hsl(262 83% 60% / 0.5), transparent 65%);
+  animation: aurora-b 26s ease-in-out infinite;
+}
+
+@keyframes aurora-a {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(8vw, 6vw, 0) scale(1.15);
+  }
+}
+
+@keyframes aurora-b {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(-7vw, -5vw, 0) scale(1.2);
+  }
+}
+
+/* ------------------------------ Hero logo ------------------------------- */
+/* The shield mark glows and gently breathes in the hero. drop-shadow layers
+ * a neon halo behind the transparent PNG edges. */
+.logo-glow {
+  animation: logo-pulse 4.5s ease-in-out infinite;
+}
+
+@keyframes logo-pulse {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 14px hsl(var(--primary) / 0.45))
+      drop-shadow(0 0 40px hsl(var(--primary) / 0.28));
+    transform: translateY(0);
+  }
+  50% {
+    filter: drop-shadow(0 0 26px hsl(var(--primary) / 0.7))
+      drop-shadow(0 0 64px hsl(var(--primary) / 0.45));
+    transform: translateY(-5px);
+  }
+}
+
 /* ------------------------- Reduced-motion kills ------------------------- */
 /* Single kill block: every animated/transitioning class above snaps to its
  * final, fully-visible state. JS-driven motion (parallax, count-ups, header
@@ -141,7 +221,10 @@
   .glass-header,
   .flow-line,
   .flow-return,
-  .validator-ring {
+  .validator-ring,
+  .aurora::before,
+  .aurora::after,
+  .logo-glow {
     opacity: 1;
     transform: none;
     animation: none;
