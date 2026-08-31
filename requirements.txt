@@ -27,7 +27,7 @@ opentelemetry-exporter-otlp>=1.21.0
 opentelemetry-instrumentation-fastapi>=0.42b0
 
 # Logging
-loguru>=0.7.2
+loguru>=0.7.3
 
 # Async
 asyncio>=3.4.3
