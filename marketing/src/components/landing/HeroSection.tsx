@@ -1,4 +1,4 @@
-import { Shield, ArrowRight } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { useReveal } from '../../hooks/useReveal'
 import { ShotFrame } from './ShotFrame'
 import { APP_URL, DEMO_URL } from '../../config'
@@ -26,10 +26,12 @@ export function HeroSection() {
       />
 
       <div className="relative mx-auto flex max-w-5xl flex-col items-center px-6 pb-20 pt-32 text-center sm:pb-24 sm:pt-40">
-        <div className="mb-6 flex items-center justify-center gap-3">
-          <Shield
-            className="h-12 w-12 shrink-0 text-primary sm:h-16 sm:w-16"
+        <div className="mb-6 flex flex-col items-center justify-center gap-4 sm:flex-row">
+          <img
+            src="/logo-mark.png"
+            alt=""
             aria-hidden="true"
+            className="logo-glow h-20 w-20 shrink-0 rounded-2xl sm:h-24 sm:w-24"
           />
           <h1 className="text-4xl font-bold tracking-tight sm:text-6xl">
             <span className="hero-word" style={{ animationDelay: '80ms' }}>

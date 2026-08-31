@@ -1,4 +1,4 @@
-import { Shield, GraduationCap, ArrowRight } from 'lucide-react'
+import { GraduationCap, ArrowRight } from 'lucide-react'
 import { APP_URL } from '../../config'
 
 const SECTION_LINKS = [
@@ -16,7 +16,12 @@ export function TeamFooter() {
           {/* Brand */}
           <div>
             <div className="mb-4 flex items-center gap-2">
-              <Shield className="h-7 w-7 text-primary" aria-hidden="true" />
+              <img
+                src="/logo-mark.png"
+                alt=""
+                aria-hidden="true"
+                className="h-8 w-8 rounded-lg"
+              />
               <span className="text-lg font-bold">Constitutional AIOps</span>
             </div>
             <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">

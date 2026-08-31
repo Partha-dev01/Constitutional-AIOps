@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { Shield } from 'lucide-react'
 import { APP_URL } from '../../config'
 
 const ANCHORS = [
@@ -52,7 +51,12 @@ export function LandingHeader() {
           href="#top"
           className="flex items-center gap-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <Shield className="h-7 w-7 text-primary" aria-hidden="true" />
+          <img
+            src="/logo-mark.png"
+            alt=""
+            aria-hidden="true"
+            className="h-8 w-8 rounded-lg"
+          />
           <span className="text-base font-bold tracking-tight">Constitutional AIOps</span>
         </a>
 
