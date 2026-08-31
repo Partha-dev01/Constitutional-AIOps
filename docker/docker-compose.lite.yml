@@ -78,6 +78,20 @@ services:
       - AUTH_SECRET_KEY=${AUTH_SECRET_KEY:-}
       # /ws guard token — REQUIRED when ENVIRONMENT=production (see main.py).
       - WS_TOKEN=${WS_TOKEN:-}
+      # Public self-service signup (hosted demo only; OFF by default so a
+      # self-host stays admin-managed). Set AIOPS_ENABLE_PUBLIC_SIGNUP=true plus
+      # the captcha/SMTP vars in .env to turn it on. Captcha + email are both
+      # optional (soft email verification); see docs/DEPLOYMENT.md §6.1.
+      - AIOPS_ENABLE_PUBLIC_SIGNUP=${AIOPS_ENABLE_PUBLIC_SIGNUP:-false}
+      - SIGNUP_CAPTCHA_PROVIDER=${SIGNUP_CAPTCHA_PROVIDER:-}
+      - SIGNUP_CAPTCHA_SITE_KEY=${SIGNUP_CAPTCHA_SITE_KEY:-}
+      - SIGNUP_CAPTCHA_SECRET=${SIGNUP_CAPTCHA_SECRET:-}
+      - SIGNUP_SMTP_HOST=${SIGNUP_SMTP_HOST:-}
+      - SIGNUP_SMTP_PORT=${SIGNUP_SMTP_PORT:-587}
+      - SIGNUP_SMTP_USER=${SIGNUP_SMTP_USER:-}
+      - SIGNUP_SMTP_PASSWORD=${SIGNUP_SMTP_PASSWORD:-}
+      - SIGNUP_EMAIL_FROM=${SIGNUP_EMAIL_FROM:-}
+      - PUBLIC_BASE_URL=${PUBLIC_BASE_URL:-}
     volumes:
       - aiops-lite-state:/app/data/state
       # Action-tool remediation (container restart/scale) is OFF in lite. To
