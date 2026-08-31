@@ -45,6 +45,10 @@ class UserRecord:
     role: str
     token_version: int
     created_at: str
+    # Added for public self-service signup (R3). Existing admin/operator-created
+    # rows have email=None, email_verified=False; both are optional everywhere.
+    email: Optional[str] = None
+    email_verified: bool = False
 
 
 def data_dir() -> Path:
@@ -92,9 +96,20 @@ def init_db() -> None:
             )
             """
         )
+        # Migration (R3 signup): add email columns to pre-existing databases.
+        # CREATE TABLE IF NOT EXISTS never alters an existing table, so add the
+        # columns idempotently based on the live schema.
+        existing_cols = {row[1] for row in conn.execute("PRAGMA table_info(users)")}
+        if "email" not in existing_cols:
+            conn.execute("ALTER TABLE users ADD COLUMN email TEXT")
+        if "email_verified" not in existing_cols:
+            conn.execute(
+                "ALTER TABLE users ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 0"
+            )
 
 
 def _row_to_record(row: sqlite3.Row) -> UserRecord:
+    keys = row.keys()
     return UserRecord(
         id=row["id"],
         username=row["username"],
@@ -102,17 +117,29 @@ def _row_to_record(row: sqlite3.Row) -> UserRecord:
         role=row["role"],
         token_version=int(row["token_version"]),
         created_at=row["created_at"],
+        email=row["email"] if "email" in keys else None,
+        email_verified=bool(row["email_verified"]) if "email_verified" in keys else False,
     )
 
 
-def create_user(username: str, password: str, role: str = "user") -> UserRecord:
-    """Create a user. Raises ValueError for bad input or duplicate username."""
+def create_user(
+    username: str,
+    password: str,
+    role: str = "user",
+    email: Optional[str] = None,
+    email_verified: bool = False,
+) -> UserRecord:
+    """Create a user. Raises ValueError for bad input or a duplicate username/email."""
     username = (username or "").strip()
     if not username:
         raise ValueError("Username must not be empty")
     if role not in VALID_ROLES:
         raise ValueError(f"Role must be one of {VALID_ROLES}")
     validate_password_policy(password, username)
+
+    email = (email or "").strip().lower() or None
+    if email is not None and get_by_email(email) is not None:
+        raise ValueError(f"Email '{email}' already exists")
 
     record = UserRecord(
         id=uuid.uuid4().hex,
@@ -121,13 +148,15 @@ def create_user(username: str, password: str, role: str = "user") -> UserRecord:
         role=role,
         token_version=1,
         created_at=datetime.now(timezone.utc).isoformat(),
+        email=email,
+        email_verified=bool(email_verified),
     )
     init_db()
     try:
         with closing(_connect()) as conn, conn:
             conn.execute(
-                "INSERT INTO users (id, username, password_hash, role, token_version, created_at)"
-                " VALUES (?, ?, ?, ?, ?, ?)",
+                "INSERT INTO users (id, username, password_hash, role, token_version,"
+                " created_at, email, email_verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     record.id,
                     record.username,
@@ -135,6 +164,8 @@ def create_user(username: str, password: str, role: str = "user") -> UserRecord:
                     record.role,
                     record.token_version,
                     record.created_at,
+                    record.email,
+                    1 if record.email_verified else 0,
                 ),
             )
     except sqlite3.IntegrityError as exc:
@@ -149,6 +180,29 @@ def get_by_username(username: str) -> Optional[UserRecord]:
             "SELECT * FROM users WHERE username = ?", (username,)
         ).fetchone()
     return _row_to_record(row) if row else None
+
+
+def get_by_email(email: str) -> Optional[UserRecord]:
+    """Look up a user by (case-insensitive) email. None when absent."""
+    email = (email or "").strip().lower()
+    if not email:
+        return None
+    init_db()
+    with closing(_connect()) as conn:
+        row = conn.execute(
+            "SELECT * FROM users WHERE email = ?", (email,)
+        ).fetchone()
+    return _row_to_record(row) if row else None
+
+
+def mark_email_verified(user_id: str) -> bool:
+    """Flag a user's email as verified. Returns False when the id is unknown."""
+    init_db()
+    with closing(_connect()) as conn, conn:
+        cur = conn.execute(
+            "UPDATE users SET email_verified = 1 WHERE id = ?", (user_id,)
+        )
+    return cur.rowcount > 0
 
 
 def list_users() -> list[UserRecord]:
@@ -287,10 +341,12 @@ __all__ = [
     "data_dir",
     "delete_user",
     "ensure_initial_admin",
+    "get_by_email",
     "get_by_username",
     "get_user_settings",
     "init_db",
     "list_users",
+    "mark_email_verified",
     "set_password",
     "set_user_settings",
 ]

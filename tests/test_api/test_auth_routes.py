@@ -203,12 +203,19 @@ class TestLogout:
 class TestConfigAndMe:
     @pytest.mark.asyncio
     async def test_config_public_shape_default_off(self, auth_env):
-        assert await auth_routes.get_auth_config() == {"auth_required": False}
+        assert await auth_routes.get_auth_config() == {
+            "auth_required": False,
+            "signup_enabled": False,
+            "captcha_provider": "",
+            "captcha_site_key": "",
+        }
 
     @pytest.mark.asyncio
     async def test_config_reflects_enforcement(self, auth_env, monkeypatch):
         monkeypatch.setenv("AUTH_REQUIRED", "true")
-        assert await auth_routes.get_auth_config() == {"auth_required": True}
+        config = await auth_routes.get_auth_config()
+        assert config["auth_required"] is True
+        assert config["signup_enabled"] is False
 
     @pytest.mark.asyncio
     async def test_me_returns_user_shape(self, auth_env):

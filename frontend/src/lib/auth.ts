@@ -43,11 +43,23 @@ export interface AuthState {
   user: AuthUser | null;
   /** Whether the backend enforces in-app auth (AUTH_REQUIRED). */
   authRequired: boolean;
+  /** Whether public self-service signup is available (hosted demo only). */
+  signupEnabled: boolean;
+  /** '' when captcha is off, else 'turnstile' | 'hcaptcha'. */
+  captchaProvider: string;
+  /** Public captcha site key for the signup widget ('' when off). */
+  captchaSiteKey: string;
   /** Bootstrap lifecycle: routes render only once 'ready'. */
   status: AuthStatus;
   /** Fetch /auth/config (+ /auth/me when enforced). Safe to call once at mount. */
   bootstrap: () => Promise<void>;
   login: (username: string, password: string) => Promise<AuthUser>;
+  signup: (
+    username: string,
+    email: string,
+    password: string,
+    captchaToken?: string,
+  ) => Promise<AuthUser>;
   logout: (everywhere?: boolean) => Promise<void>;
   /** Drop the cached user (used by the global 401 handler). */
   clearUser: () => void;
@@ -56,6 +68,9 @@ export interface AuthState {
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   authRequired: false,
+  signupEnabled: false,
+  captchaProvider: '',
+  captchaSiteKey: '',
   status: 'idle',
 
   bootstrap: async () => {
@@ -63,10 +78,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ status: 'loading' });
 
     let authRequired = false;
+    let signupEnabled = false;
+    let captchaProvider = '';
+    let captchaSiteKey = '';
     let user: AuthUser | null = null;
     try {
       const config = await api.auth.config();
       authRequired = config.auth_required;
+      signupEnabled = config.signup_enabled ?? false;
+      captchaProvider = config.captcha_provider ?? '';
+      captchaSiteKey = config.captcha_site_key ?? '';
       if (authRequired) {
         try {
           user = await api.auth.me();
@@ -85,11 +106,29 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     // Never clobber a login that completed while this bootstrap was in
     // flight: the /auth/me probe above may have run before the session
     // cookie existed and report null for a user who is now signed in.
-    set((state) => ({ user: state.user ?? user, authRequired, status: 'ready' }));
+    set((state) => ({
+      user: state.user ?? user,
+      authRequired,
+      signupEnabled,
+      captchaProvider,
+      captchaSiteKey,
+      status: 'ready',
+    }));
   },
 
   login: async (username: string, password: string) => {
     const result = await api.auth.login(username, password);
+    set({ user: result.user });
+    return result.user;
+  },
+
+  signup: async (username: string, email: string, password: string, captchaToken?: string) => {
+    const result = await api.auth.signup({
+      username,
+      email,
+      password,
+      captcha_token: captchaToken,
+    });
     set({ user: result.user });
     return result.user;
   },

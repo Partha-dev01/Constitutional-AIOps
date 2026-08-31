@@ -244,6 +244,29 @@ docker compose up -d
 | `CONFIDENCE_THRESHOLD_AUTO` | `0.90` | Auto-approve threshold |
 | `CONFIDENCE_THRESHOLD_APPROVAL` | `0.70` | Require approval threshold |
 
+#### Public self-service signup (hosted demo only)
+
+Off by default — a self-host deployment keeps user creation admin-only. Turn it
+on ONLY on the hosted demo instance. The abuse controls (captcha, email
+verification) are all optional and configured by env; with none set, signup
+still enforces the password policy and a per-IP rate limit.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `AIOPS_ENABLE_PUBLIC_SIGNUP` | `false` | Master flag. When true, `POST /api/v1/auth/signup` creates `role=user` accounts and the SPA shows a "Create an account" link. Leave false for self-host |
+| `SIGNUP_CAPTCHA_PROVIDER` | _(unset)_ | `turnstile` or `hcaptcha`; unset disables captcha. When set, signups are rejected unless the token passes server-side siteverify |
+| `SIGNUP_CAPTCHA_SITE_KEY` | _(unset)_ | Public site key rendered by the SPA widget |
+| `SIGNUP_CAPTCHA_SECRET` | _(unset)_ | Server secret for siteverify. If a provider is set but this is empty, signup fails closed |
+| `SIGNUP_SMTP_HOST` / `SIGNUP_SMTP_PORT` | _(unset)_ / `587` | SMTP relay for the verification email (e.g. the Amazon SES SMTP endpoint `email-smtp.<region>.amazonaws.com`). Unset = the link is logged, not mailed (account still works) |
+| `SIGNUP_SMTP_USER` / `SIGNUP_SMTP_PASSWORD` | _(unset)_ | SMTP credentials (SES SMTP username/password) |
+| `SIGNUP_EMAIL_FROM` | `no-reply@localhost` | From address on the verification email |
+| `PUBLIC_BASE_URL` | _(unset)_ | Base URL used to build the verification link (e.g. `https://aiops-node.example.com`) |
+
+New accounts are usable immediately (the shared demo has no per-tenant data);
+email verification is a soft confirmation that flips an `email_verified` flag
+when the link is opened, so it does not depend on the box being awake when the
+user clicks it later.
+
 ### 6.2 Docker Compose Files
 
 | File | Purpose |

@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Loader2, LogIn, Shield } from 'lucide-react'
 import { ApiError } from '../lib/api'
 import { useAuthStore } from '../lib/auth'
@@ -27,6 +27,7 @@ export function Login() {
 
   const user = useAuthStore((s) => s.user)
   const authRequired = useAuthStore((s) => s.authRequired)
+  const signupEnabled = useAuthStore((s) => s.signupEnabled)
   const status = useAuthStore((s) => s.status)
   const login = useAuthStore((s) => s.login)
 
@@ -154,6 +155,18 @@ export function Login() {
             )}
           </button>
         </form>
+
+        {signupEnabled && (
+          <p className="mt-6 text-center text-sm text-muted-foreground">
+            New here?{' '}
+            <Link
+              to={`/signup${next !== '/' ? `?next=${encodeURIComponent(next)}` : ''}`}
+              className="font-medium text-primary hover:underline"
+            >
+              Create an account
+            </Link>
+          </p>
+        )}
       </div>
     </div>
   )
