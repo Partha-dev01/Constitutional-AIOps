@@ -2,7 +2,15 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 
+// The no-login demo build (VITE_DEMO_MODE=true) is hosted under /demo/ on the
+// marketing CloudFront, so its assets must resolve from that sub-path. The
+// normal app build keeps the root base. Paired with HashRouter in the demo
+// build (see main.tsx), a single /demo/index.html serves every route with no
+// server-side rewrite.
+const isDemo = process.env.VITE_DEMO_MODE === 'true'
+
 export default defineConfig({
+  base: isDemo ? '/demo/' : '/',
   plugins: [react()],
   resolve: {
     alias: {

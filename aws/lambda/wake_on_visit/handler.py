@@ -44,6 +44,7 @@ Environment:
 
 import json
 import os
+import socket
 import urllib.error
 import urllib.request
 
@@ -57,6 +58,12 @@ _HOSTINGER_TOKEN = os.environ.get("HOSTINGER_API_TOKEN", "")
 _HOSTINGER_DOMAIN = os.environ.get("HOSTINGER_DOMAIN", "")
 _DNS_RECORD_NAME = os.environ.get("DNS_RECORD_NAME", "")
 _DNS_TTL = int(os.environ.get("DNS_TTL", "60"))
+# The box is only redirected to once its web server actually accepts TLS
+# connections on this port. EC2 "running" fires ~1-3 min before Caddy binds
+# 443, so redirecting on state alone lands the visitor on a dead socket
+# ("refuses to connect"). Overridable; 443 is the Caddy HTTPS listener.
+_APP_READY_PORT = int(os.environ.get("APP_READY_PORT", "443"))
+_APP_READY_TIMEOUT = float(os.environ.get("APP_READY_TIMEOUT", "2.5"))
 
 _HOSTINGER_BASE = "https://developers.hostinger.com/api/dns/v1/zones"
 _HTTP_TIMEOUT = 10  # seconds per Hostinger call (Lambda timeout is 20s)
@@ -191,12 +198,33 @@ def _sync_dns(ip: str) -> bool:
         return False
 
 
+def _app_is_ready(ip: str) -> bool:
+    """True once the box's web server accepts connections on _APP_READY_PORT.
+
+    EC2 reaching "running" only means the OS booted; Caddy/the app come up a
+    minute or three later. A plain TCP connect is exactly the check that
+    distinguishes "nothing is listening yet" (the "refuses to connect" the
+    visitor was seeing) from "the front door is serving". Cheap, no TLS, no
+    Host/SNI juggling."""
+    try:
+        with socket.create_connection((ip, _APP_READY_PORT), timeout=_APP_READY_TIMEOUT):
+            return True
+    except OSError:
+        return False
+
+
 def _handle_running(instance: dict) -> dict:
-    """Box is up: re-point DNS at its current IP, then hand the visitor off."""
+    """Box is up: only once it is actually SERVING do we re-point DNS at its
+    current IP and hand the visitor off. Otherwise keep holding (the page
+    auto-refreshes) so nobody lands on a not-yet-listening socket."""
     ip = instance.get("PublicIpAddress")
     if not ip:
         # Running but the public IP is not attached yet -> let the page refresh.
         return _holding_page("Waking the app…", "The server is up; assigning its address.")
+    if not _app_is_ready(ip):
+        # OS is up but the app isn't serving on 443 yet -> hold, don't bounce
+        # the visitor to a dead socket. This is the fix for "refuses to connect".
+        return _holding_page("Waking the app…", "The server is up; starting the application.")
     if not _sync_dns(ip):
         # DNS not confirmed (transient Hostinger error) -> hold and retry rather
         # than redirect to a possibly-stale address.
