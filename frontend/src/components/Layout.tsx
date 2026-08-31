@@ -6,7 +6,6 @@ import {
   MessageSquare,
   Settings,
   Activity,
-  Shield,
   Cpu,
   BarChart3,
   FlaskConical,
@@ -56,6 +55,11 @@ export function Layout({ children }: LayoutProps) {
 
   // ≥ md (768px) → static column (full or icon-rail). < md → off-canvas drawer.
   const isDesktop = useMediaQuery('(min-width: 768px)')
+
+  // Where the top-left brand links. Our hosted build sets VITE_LANDING_URL to
+  // the marketing site; a self-host build leaves it unset, and the brand links
+  // to the app home (Dashboard) instead so it never dead-ends.
+  const landingUrl = import.meta.env.VITE_LANDING_URL as string | undefined
 
   // Desktop: full(w-64) ↔ icon-rail(w-16), persisted in localStorage.
   const [collapsed, setCollapsed] = useState<boolean>(() => {
@@ -151,17 +155,35 @@ export function Layout({ children }: LayoutProps) {
             title="Expand sidebar"
             className="flex items-center justify-center rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary/40"
           >
-            <Shield className="h-7 w-7 text-primary" aria-hidden="true" />
+            <img src="/logo-mark.png" alt="" aria-hidden="true" className="h-7 w-7 rounded-md" />
           </button>
         ) : (
           <>
-            <div className="flex min-w-0 items-center gap-2">
-              <Shield className="h-8 w-8 shrink-0 text-primary" aria-hidden="true" />
-              <div className="min-w-0">
-                <h1 className="truncate text-lg font-bold">Constitutional</h1>
-                <p className="text-xs text-muted-foreground">AIOps</p>
-              </div>
-            </div>
+            {landingUrl ? (
+              <a
+                href={landingUrl}
+                aria-label="Constitutional AIOps — landing page"
+                className="flex min-w-0 items-center gap-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/40"
+              >
+                <img src="/logo-mark.png" alt="" aria-hidden="true" className="h-9 w-9 shrink-0 rounded-lg" />
+                <div className="min-w-0">
+                  <h1 className="truncate text-lg font-bold">Constitutional</h1>
+                  <p className="text-xs text-muted-foreground">AIOps</p>
+                </div>
+              </a>
+            ) : (
+              <Link
+                to="/"
+                aria-label="Constitutional AIOps — home"
+                className="flex min-w-0 items-center gap-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/40"
+              >
+                <img src="/logo-mark.png" alt="" aria-hidden="true" className="h-9 w-9 shrink-0 rounded-lg" />
+                <div className="min-w-0">
+                  <h1 className="truncate text-lg font-bold">Constitutional</h1>
+                  <p className="text-xs text-muted-foreground">AIOps</p>
+                </div>
+              </Link>
+            )}
             {/* Desktop collapse toggle — hidden on mobile (drawer uses its own). */}
             <button
               type="button"
@@ -319,7 +341,7 @@ export function Layout({ children }: LayoutProps) {
           >
             <Menu className="h-5 w-5" aria-hidden="true" />
           </button>
-          <Shield className="h-6 w-6 shrink-0 text-primary" aria-hidden="true" />
+          <img src="/logo-mark.png" alt="" aria-hidden="true" className="h-6 w-6 shrink-0 rounded" />
           <span className="truncate text-sm font-semibold">Constitutional AIOps</span>
         </div>
 

@@ -165,6 +165,11 @@ class PasswordChangeRequest(BaseModel):
     password: str = Field(..., min_length=1, max_length=512)
 
 
+class SelfPasswordChangeRequest(BaseModel):
+    current_password: str = Field(..., min_length=1, max_length=512)
+    new_password: str = Field(..., min_length=1, max_length=512)
+
+
 def _public_user(username: str, role: str) -> dict[str, str]:
     return {"username": username, "role": role}
 
@@ -244,6 +249,40 @@ async def logout(
 async def me(user: User = Depends(require_user)) -> dict[str, str]:
     user = coerce_user(user)
     return _public_user(user.username, user.role)
+
+
+@router.post(
+    "/password",
+    summary="Change your own password",
+    description="Self-service password change for the signed-in user: verifies the "
+    "current password, then applies the store's password policy to the new one.",
+)
+async def change_own_password(
+    body: SelfPasswordChangeRequest, user: User = Depends(require_user)
+) -> dict[str, Any]:
+    user = coerce_user(user)
+    if is_synthetic(user):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password change is unavailable while authentication is disabled.",
+        )
+    if store.authenticate(user.username, body.current_password) is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Current password is incorrect",
+        )
+    try:
+        changed = store.set_password(user.username, body.new_password)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
+        ) from exc
+    if not changed:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
+    logger.info("User %s changed their own password", user.username)
+    return {"ok": True}
 
 
 @router.get(

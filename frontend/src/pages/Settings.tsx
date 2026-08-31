@@ -17,6 +17,7 @@ import {
   Wrench,
   Waypoints,
   ArrowLeftRight,
+  UserCog,
 } from 'lucide-react'
 import api, {
   HealthResponse,
@@ -31,6 +32,7 @@ import api, {
   ServingModeStatus,
 } from '../lib/api'
 import { TopologySchemaEditor } from '../components/TopologySchemaEditor'
+import { AccountSettings } from '../components/AccountSettings'
 
 // ── re-export for tests / other imports ─────────────────────────────────────
 export type { ConstitutionalSettings, NotificationSettings, TelemetrySettings, RemediationSettings }
@@ -109,7 +111,7 @@ const ACTION_TOOL_OPTIONS: { name: ActionToolName; label: string; description: s
 // ── main component ────────────────────────────────────────────────────────────
 export function Settings() {
   const [activeTab, setActiveTab] = useState<
-    'constitutional' | 'remediation' | 'notifications' | 'telemetry' | 'models' | 'prompts' | 'topology'
+    'constitutional' | 'remediation' | 'notifications' | 'telemetry' | 'models' | 'prompts' | 'topology' | 'account'
   >('constitutional')
   const [health, setHealth] = useState<HealthResponse | null>(null)
   const [loading, setLoading] = useState(false)
@@ -308,6 +310,7 @@ export function Settings() {
     { id: 'models', label: 'Models', icon: Cpu },
     { id: 'prompts', label: 'System Prompts', icon: FileText },
     { id: 'topology', label: 'Topology Schema', icon: Waypoints },
+    { id: 'account', label: 'Account', icon: UserCog },
   ] as const
 
   return (
@@ -1182,6 +1185,9 @@ export function Settings() {
         )}
         {/* ━━ Topology Schema (editable + LLM-generated platform topology) ━━ */}
         {activeTab === 'topology' && <TopologySchemaEditor />}
+
+        {/* ━━ Account (self password change + admin user management) ━━ */}
+        {activeTab === 'account' && <AccountSettings />}
       </div>
     </div>
   )
