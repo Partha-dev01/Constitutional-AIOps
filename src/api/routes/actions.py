@@ -34,6 +34,7 @@ from src.api.schemas.action import (
     ConstitutionalValidation,
     PendingApprovals,
 )
+from src.auth.deps import auth_required, get_current_user
 from src.confidence import ConfidenceCalculator, ConfidenceBreakdown
 
 logger = logging.getLogger(__name__)
@@ -104,6 +105,22 @@ async def create_action(
     Returns:
         Created action with validation results
     """
+    # skip_validation marks the action APPROVED outright and bypasses the
+    # constitutional validation of the record — an admin-only escape hatch.
+    # (Execution still passes the tool-level gate: AIOPS_ENABLE_ACTION_TOOLS +
+    # container whitelist + validator, so this cannot force a real mutation. But
+    # a non-admin — including a public-signup role=user account — must not be
+    # able to forge an auto-approved, unvalidated action record.) When auth
+    # enforcement is off the request already runs as the synthetic admin, so the
+    # dev/self-host default is unchanged.
+    if action_create.skip_validation and auth_required():
+        current = get_current_user(request)
+        if current is None or current.role != "admin":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="skip_validation requires admin privileges",
+            )
+
     action_id = _generate_action_id()
     now = datetime.utcnow()
 

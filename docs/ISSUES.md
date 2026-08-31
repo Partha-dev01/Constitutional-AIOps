@@ -46,6 +46,29 @@ None currently.
 
 ## ✅ Resolved Issues
 
+### 2026-08-31 (Phase 5c redesign R4 - security audit + hardening)
+
+Full audit of the security-critical paths: the session/auth core, the new public
+signup (R3), the remediation consent gate, the constitutional validator, the
+action-tools kill-switch, and the demo-chaos production gate. The audit confirmed
+the core is sound — scrypt password hashing with a throwaway dummy-hash timing
+equaliser, constant-time HMAC session verification with a server-store
+`token_version` freshness re-check (so "log out everywhere" and password changes
+invalidate old sessions), role read from the database rather than the token,
+every non-public router behind the auth dependency, a fail-closed action-tool
+gate (kill-switch + container whitelist + validator, enforced identically on the
+REST and programmatic paths, with the executors re-checking the whitelist and
+clamping replicas), a non-overridable Tier-1 safety layer (explicit human
+approval clears only Tier-2), CORS that refuses the wildcard-plus-credentials
+combination, docs/OpenAPI disabled in production, and a mandatory WebSocket token
+in production. Two real gaps were found and fixed; one low-risk item is accepted.
+
+| ID | Issue | Resolution |
+|----|-------|------------|
+| SEC-001 | The action-create endpoint's `skip_validation` flag (which marks an action APPROVED and bypasses the record's constitutional validation) was documented "admin only" but enforced no admin check — any authenticated user, including a public-signup `role=user` account, could forge an auto-approved, unvalidated action record. (Execution still passes the tool-level gate, so it could not force a real container mutation; this is a defense-in-depth / contract gap, not a direct RCE) | Gate `skip_validation` behind an admin-role check when auth enforcement is on; a non-admin gets 403. When enforcement is off the request already runs as the synthetic admin, so the dev/self-host default is unchanged. Covered by new tests (non-admin refused, admin allowed, auth-off allowed) |
+| SEC-002 | The public-signup per-IP throttle was bypassable: the attempt counter was incremented only on captcha-failure / create-failure / success, so a request that failed the email-format check returned early **without** being counted — an attacker could send unlimited malformed-email probes without ever tripping the limit | Charge every attempt against the per-IP window up front, immediately after the lock check and before any validation branch. Removed the now-redundant later counter calls. New test asserts malformed-email attempts count toward the limit and eventually lock out a valid signup |
+| SEC-003 (accepted, low) | Public signup reveals whether an email is already registered (a duplicate returns 409) — a minor account-enumeration/privacy signal | Accepted as-is for the shared hosted demo: username-taken feedback is standard and expected signup UX, suppressing only the email case would degrade UX while username enumeration remains inherent, and the demo is a single shared showcase backend. Documented rather than code-changed |
+
 ### 2026-08-31 (Phase 5c redesign R2 - serverless marketing + bot-filtered wake)
 
 Correcting the front-door oversight: the old front door 302'd **every** hit to the box and woke it on every request (an accidental visit or any crawler started the VM), and the marketing landing needed the VM up just to render. R2 splits the CloudFront front door so marketing is always-on and VM-independent, and only a deliberate human launch wakes the box. Verified live end to end without waking the box.
