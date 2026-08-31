@@ -275,19 +275,22 @@ async def signup(request: Request, body: SignupRequest, response: Response) -> d
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="Too many signups from this address. Try again later.",
         )
+    # Count every attempt against the per-IP window up front, BEFORE the
+    # validation branches. Recording only on captcha-fail / create-fail / success
+    # let a malformed-email (or otherwise early-returning) probe bypass the
+    # throttle entirely; charging the attempt here closes that hole.
+    _record_signup(ip, now)
 
     email = body.email.strip().lower()
     if not signup_mod.is_valid_email(email):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Enter a valid email address")
 
     if not signup_mod.verify_captcha(body.captcha_token, ip):
-        _record_signup(ip, now)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Captcha verification failed")
 
     try:
         record = store.create_user(body.username, body.password, role="user", email=email)
     except ValueError as exc:
-        _record_signup(ip, now)  # count failed attempts too (abuse control)
         detail = str(exc)
         code = (
             status.HTTP_409_CONFLICT
@@ -296,7 +299,6 @@ async def signup(request: Request, body: SignupRequest, response: Response) -> d
         )
         raise HTTPException(status_code=code, detail=detail) from exc
 
-    _record_signup(ip, now)
     # Best-effort verification email; the account is usable immediately either way
     # (soft verification sidesteps the sleeping-box wrinkle).
     email_sent = signup_mod.send_verification_email(

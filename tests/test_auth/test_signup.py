@@ -206,6 +206,24 @@ class TestSignupRoute:
         assert exc.value.status_code == 429
 
     @pytest.mark.asyncio
+    async def test_invalid_email_attempts_count_toward_throttle(self, signup_env):
+        # R4: a malformed-email probe must still be charged against the per-IP
+        # window, otherwise the throttle is trivially bypassed by never sending
+        # a valid email. After MAX bad attempts even a valid signup is locked.
+        ip = "198.51.100.7"
+        for _ in range(auth_routes.SIGNUP_MAX_PER_WINDOW):
+            with pytest.raises(HTTPException) as bad:
+                await auth_routes.signup(
+                    _request(ip=ip), _signup_body(email="not-an-email"), Response()
+                )
+            assert bad.value.status_code == 400
+        with pytest.raises(HTTPException) as locked:
+            await auth_routes.signup(
+                _request(ip=ip), _signup_body(email="ok@example.com"), Response()
+            )
+        assert locked.value.status_code == 429
+
+    @pytest.mark.asyncio
     async def test_verify_marks_email_verified(self, signup_env):
         rec = store.create_user("v1", "a-long-password-1", email="v1@example.com")
         tok = signup.make_verify_token(rec.id, "v1@example.com")

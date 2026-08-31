@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Security audit + hardening (front-door redesign R4)
+- Audited the security-critical paths (auth/session core, the new public signup, the
+  remediation consent gate, the constitutional validator, the action-tools kill-switch,
+  and the demo-chaos production gate). The core held up; two real gaps were fixed.
+- **Action `skip_validation` is now admin-only.** `POST /api/v1/actions` with
+  `skip_validation=true` (which marks an action APPROVED and bypasses the record's
+  constitutional validation) previously enforced no admin check despite the "admin only"
+  contract, so any authenticated user could forge an auto-approved, unvalidated action
+  record. It now returns 403 for a non-admin when auth enforcement is on; unchanged when
+  enforcement is off (synthetic admin). Execution was always gated separately, so this was
+  a defense-in-depth gap, not an RCE.
+- **Public-signup throttle no longer bypassable.** Every signup attempt is now charged
+  against the per-IP window up front; a malformed-email probe used to return before being
+  counted, letting an attacker sidestep the limit entirely.
+- New tests: `tests/test_api/test_actions_authz.py` and a throttle-bypass case in
+  `tests/test_auth/test_signup.py`. See `docs/ISSUES.md` (SEC-001..003) for the full
+  findings, including one accepted low-risk item (signup email enumeration).
+
 ### Public self-service signup for the hosted demo (front-door redesign R3)
 - New `POST /api/v1/auth/signup` creates a `role=user` account and logs the visitor
   straight in (same httpOnly session cookie as login). It is **off by default**
