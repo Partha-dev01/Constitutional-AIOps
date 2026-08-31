@@ -62,7 +62,7 @@ transformers>=4.30.0
 
 # HuggingFace Datasets (for LEMMA-RCA benchmark download)
 datasets>=2.14.0
-huggingface-hub>=0.17.0
+huggingface-hub>=1.29.0
 
 # Agent Orchestration (LangGraph state machine for dual-agent pipeline)
 langgraph>=0.2.0
