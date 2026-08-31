@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Serverless marketing + bot-filtered wake (front-door redesign R2)
+- The front door no longer wakes the demo box on every hit. The existing CloudFront distribution
+  now has a **path split**: a private S3 origin (the built `marketing/` site, served via an
+  S3 Origin Access Control) is the **default** behavior — always-on, cached, and independent of
+  the demo VM — while a dedicated `/launch` behavior is the only path that routes to the wake
+  Lambda. Plain visits and crawlers hit S3 and never start the box.
+- The wake Lambda gained a **bot filter**: an automated or absent `User-Agent` is refused (403)
+  before any `StartInstances`, so a crawler that reaches `/launch` still cannot wake the box.
+  `marketing/public/robots.txt` disallows `/launch`. The marketing CTA builds with
+  `VITE_APP_URL=/launch`.
+- The new S3 bucket, its OAC and its bucket policy are drift-tracked in `terraform/lite/marketing.tf`
+  (import-adopted). Redeploy runbook: `marketing/README.md`.
+
 ### Marketing/app separation (front-door redesign R1)
 - The branded marketing landing page was extracted OUT of the app into a new standalone,
   fully static `marketing/` site (its own Vite project, sibling to `frontend/`). The

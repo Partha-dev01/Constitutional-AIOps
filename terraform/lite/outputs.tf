@@ -27,3 +27,13 @@ output "app_node_url" {
   description = "The box's own URL (302 target once awake; A record kept current by the Lambda)."
   value       = "https://${var.app_node_domain}"
 }
+
+output "marketing_bucket" {
+  description = "Private S3 bucket serving the always-on marketing site (CloudFront default origin)."
+  value       = aws_s3_bucket.marketing.id
+}
+
+output "marketing_s3_oac_id" {
+  description = "S3-type OAC the distribution uses to read the marketing bucket."
+  value       = aws_cloudfront_origin_access_control.marketing_s3.id
+}

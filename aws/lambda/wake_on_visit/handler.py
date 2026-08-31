@@ -3,8 +3,17 @@ Wake-on-visit Lambda for the Constitutional AIOps LITE tier (5c WS4).
 
 Fronts the sleep-when-idle deployment instance so there is NO fixed public IP /
 Elastic IP (the ~$3.60/mo the $2-3 target avoids). Sits behind CloudFront on an
-HTTP Function URL that the app domain points at. On each request:
+HTTP Function URL that the app domain points at.
 
+Front-door path split (redesign R2): the always-on marketing site is served
+statically from S3 as the CloudFront default behavior, and ONLY the `/launch`
+behavior routes here. So plain visits and crawlers hitting `/` never reach this
+Lambda and never wake the box -- only a deliberate launch does. As defense in
+depth, an automated/absent User-Agent is refused here BEFORE StartInstances.
+
+On each (human) /launch request:
+
+  * bot / no UA        -> 403, no wake (never touches EC2).
   * stopped            -> ec2.StartInstances + a 200 auto-refreshing "waking up" page.
   * pending / stopping -> the same holding page (still transitioning).
   * running            -> point the app's DNS name at the box's CURRENT public IP,
@@ -54,6 +63,21 @@ _HTTP_TIMEOUT = 10  # seconds per Hostinger call (Lambda timeout is 20s)
 # Hostinger's WAF 403s the default "Python-urllib/*" UA, so send an explicit one.
 _UA = "constitutional-aiops-wake/1.0"
 
+# Bot / crawler filter. CloudFront routes ONLY the /launch behavior to this
+# Lambda (plain marketing paths are served always-on from S3 and never reach
+# here), and robots.txt disallows /launch -- but a misbehaving crawler that hits
+# /launch anyway must NOT wake the box (cost + abuse control). Any request whose
+# User-Agent looks automated (or is absent) is refused BEFORE StartInstances is
+# ever called. Real browser clicks -- including the holding page's auto-refresh
+# -- carry a normal UA and pass through untouched.
+_BOT_UA_MARKERS = (
+    "bot", "crawl", "spider", "slurp", "bingpreview", "facebookexternalhit",
+    "embedly", "quora link preview", "pinterest", "vkshare", "w3c_validator",
+    "semrush", "ahrefs", "mj12", "dotbot", "petalbot", "yandex", "duckduckbot",
+    "curl", "wget", "python-requests", "python-urllib", "go-http-client",
+    "java/", "okhttp", "headless", "scrapy", "httpclient",
+)
+
 _ec2 = boto3.client("ec2")
 
 # Warm-context cache: the last IP we confirmed into DNS. While the execution
@@ -62,6 +86,37 @@ _ec2 = boto3.client("ec2")
 # None and re-syncs once (idempotent). This keeps Hostinger traffic to just the
 # minutes right after a wake, not every request (CloudFront caching is off).
 _LAST_IP = None
+
+
+def _looks_like_bot(user_agent: str) -> bool:
+    """True for automated clients (or a missing UA). A genuine human clicking
+    the marketing "launch" CTA always sends a normal browser UA."""
+    ua = (user_agent or "").lower()
+    if not ua:
+        return True
+    return any(marker in ua for marker in _BOT_UA_MARKERS)
+
+
+def _refuse_bot() -> dict:
+    """Refuse a bot on /launch WITHOUT waking the box."""
+    return {
+        "statusCode": 403,
+        "headers": {
+            "Content-Type": "text/plain; charset=utf-8",
+            "Cache-Control": "no-store",
+            "X-Robots-Tag": "noindex, nofollow",
+        },
+        "body": "This endpoint launches the live demo and is not available to automated clients.",
+    }
+
+
+def _user_agent(event) -> str:
+    """Function URL (payload v2.0) lower-cases header names; be defensive anyway."""
+    headers = (event or {}).get("headers") or {}
+    for key, value in headers.items():
+        if key.lower() == "user-agent":
+            return value or ""
+    return ""
 
 
 def _holding_page(title: str, message: str) -> dict:
@@ -157,6 +212,11 @@ def handler(event, context):  # noqa: ARG001 - Lambda signature
     if not _INSTANCE_ID:
         return {"statusCode": 500, "headers": {"Content-Type": "text/plain"},
                 "body": "TARGET_INSTANCE_ID not configured"}
+
+    # Only genuine human intent wakes the box. CloudFront routes only /launch
+    # here; refuse crawlers/scanners before any EC2 call so bots never wake it.
+    if _looks_like_bot(_user_agent(event)):
+        return _refuse_bot()
 
     resp = _ec2.describe_instances(InstanceIds=[_INSTANCE_ID])
     reservations = resp.get("Reservations", [])

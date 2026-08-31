@@ -46,6 +46,17 @@ None currently.
 
 ## ✅ Resolved Issues
 
+### 2026-08-31 (Phase 5c redesign R2 - serverless marketing + bot-filtered wake)
+
+Correcting the front-door oversight: the old front door 302'd **every** hit to the box and woke it on every request (an accidental visit or any crawler started the VM), and the marketing landing needed the VM up just to render. R2 splits the CloudFront front door so marketing is always-on and VM-independent, and only a deliberate human launch wakes the box. Verified live end to end without waking the box.
+
+| ID | Issue | Resolution |
+|----|-------|------------|
+| FD-007 | Front door woke the box on every request (marketing needed the VM up; bots/crawlers/accidental visits all triggered a start) | Path-split the CDN distribution: a private object-store origin (an S3-type Origin Access Control) holding the built `marketing/` site is the **default** behavior (always-on, cached, VM-independent), and a dedicated `/launch` behavior (copied verbatim from the working wake-Lambda default) is the only path routed to the wake Lambda. Plain `/` and crawlers hit the static origin and never wake the box. `robots.txt` disallows `/launch`. Verified: `/`, `/assets/*`, `/robots.txt` → 200 from the static origin; `/launch` reached the Lambda; box stayed `stopped` throughout |
+| FD-008 | The wake Lambda woke the box on **any** path (no bot/crawler filter) | Added a User-Agent bot filter (`_looks_like_bot`): an automated or absent UA is refused with 403 **before** any compute-start call. Real browser clicks (incl. the holding page's auto-refresh) pass. Defense-in-depth atop the structural path split; the IAM-auth'd Function URL means only the CDN-via-OAC can invoke it. Verified: `/launch` with a bot UA → 403, box not started |
+| FD-009 | Bare `/` returned the object store's `403 AccessDenied` after repointing the default origin to the static site | The distribution had no default root object (the Lambda origin had served `/` directly). Set the default root object to `index.html`; `/` now returns the marketing page (200) |
+| FD-010 | The scoped deploy IAM user could not perform the R2 work: **no object-store permissions at all**, and no CDN cache-invalidation permission. It also lacks `GetFunctionConfiguration` (so the `function-updated` waiter fails — use `get-function` `LastUpdateStatus` instead) | Added two **least-privilege** inline policies to the deploy user via the admin profile: one scoped to just the marketing bucket (bucket admin + object put/get/delete) and one scoped to just the distribution (create/get/list invalidation). All R2 object-store/CDN ops then ran as the scoped deploy user, not admin |
+
 ### 2026-08-30 → 08-31 (Phase 5c - lite-tier "sleep/wake" deployment front door)
 
 Standing up the low-cost, no-fixed-IP deployment tier: a public hostname on a CDN (branded TLS) fronts a wake-on-visit Lambda that starts an on-demand EC2 box when it is asleep and 302-redirects to it when it is running; the app targets an external (Bedrock OpenAI-compatible) LLM endpoint. All items below are resolved and the full public path was verified (CDN 302 → box, both TLS legs valid, app returns 200).

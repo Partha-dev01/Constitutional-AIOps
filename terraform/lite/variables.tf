@@ -71,3 +71,16 @@ variable "account_id" {
   type        = string
   default     = "000000000000"
 }
+
+# --- Marketing origin (R2: always-on static site) ------------------------
+variable "marketing_bucket_name" {
+  description = "Private S3 bucket holding the built marketing site (CloudFront default origin)."
+  type        = string
+  default     = "aiops-marketing-000000000000"
+}
+
+variable "marketing_s3_oac_id" {
+  description = "OAC ID (s3 origin type) the distribution uses to read the marketing bucket."
+  type        = string
+  default     = "EXXXXXXXXXXXXX"
+}

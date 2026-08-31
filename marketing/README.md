@@ -25,14 +25,45 @@ npm run dev        # local preview on :3100
 
 The call-to-action buttons ("Sign in" / "Open the Dashboard" / "Launch demo")
 point at `VITE_APP_URL`. In production this is the **front-door launch path**
-that wakes the demo box on genuine human intent (wired in R2). Plain visits to
-the marketing root must never wake the box.
+`/launch` — a relative path on the same front-door domain that routes to the
+wake Lambda and starts the demo box on genuine human intent. Plain visits to the
+marketing root (`/`) are served from S3 and never wake the box.
 
 ```bash
-VITE_APP_URL="https://<front-door-domain>/launch" npm run build
+VITE_APP_URL=/launch npm run build
 ```
 
 Default (unset): `/login?next=/` (relative), useful for local preview only.
+
+## Deploy / redeploy (S3 + CloudFront, bot-filtered wake)
+
+The site is the CDN **default** origin (always-on); `/launch` is a separate
+behavior that routes to the wake Lambda. The concrete bucket name and
+distribution ID are deployment-specific and live in the gitignored
+`terraform/lite/terraform.tfvars` (and the private ops notes), not in this repo.
+Export them, then:
+
+```bash
+MARKETING_BUCKET=<your-marketing-bucket>
+DIST_ID=<your-cdn-distribution-id>
+
+# 1. Build with the production launch path.
+VITE_APP_URL=/launch npm run build
+
+# 2. Sync to the private marketing bucket (removes stale files).
+aws s3 sync dist/ "s3://$MARKETING_BUCKET/" --delete --profile <deploy-profile>
+
+# 3. Invalidate so viewers get the new build immediately (cache is optimized).
+aws cloudfront create-invalidation --distribution-id "$DIST_ID" \
+  --paths '/*' --profile <deploy-profile>
+```
+
+The bucket is private (all public access blocked, ACLs off, SSE-S3); only this
+distribution can read it, via an S3-type Origin Access Control. The bucket, its
+policy and the OAC are drift-tracked in `../terraform/lite/marketing.tf`. The
+distribution's origins/behaviors and `DefaultRootObject=index.html` were set out
+of band during the R2 cutover (the wake Lambda's code+env are managed the same
+way); Terraform references the distribution read-only.
 
 ## What lives here
 
