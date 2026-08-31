@@ -2,41 +2,41 @@
 Wake-on-visit Lambda for the Constitutional AIOps LITE tier (5c WS4).
 
 Fronts the sleep-when-idle deployment instance so there is NO fixed public IP /
-Elastic IP (the ~$3.60/mo the $2-3 target avoids). Wired to an HTTP Function URL
-that the app domain points at. On each request:
+Elastic IP (the ~$3.60/mo the $2-3 target avoids). Sits behind CloudFront on an
+HTTP Function URL that the app domain points at. On each request:
 
-  * stopped   -> ec2.StartInstances + a 200 auto-refreshing "waking up" page.
+  * stopped            -> ec2.StartInstances + a 200 auto-refreshing "waking up" page.
   * pending / stopping -> the same holding page (still transitioning).
-  * running   -> hand the visitor off to the app (see _handle_running / HANDOFF).
+  * running            -> point the app's DNS name at the box's CURRENT public IP,
+                          then 302 the visitor to APP_URL.
+
+Why the Lambda owns the DNS update: with no Elastic IP the box's public IPv4
+changes on every start, so APP_URL's A record has to be re-pointed each wake.
+The box's DNS is on Hostinger, which does NOT allow NS delegation of a subdomain
+(so a Route53 dyn-DNS zone can't be reached publicly). Hostinger *does* allow an
+A record, so this Lambda UPSERTs it directly via the Hostinger DNS REST API. The
+Hostinger token lives in this Lambda's (encrypted-at-rest) environment -- never
+on the internet-exposed box. This replaces the earlier box-side dyn-DNS
+(aws/dyn-dns.sh), which is retired.
 
 Pairs with aws/idle-check.sh (the "stop when idle" half). Together they give
 "always reachable, sleeps when idle".
 
 Environment:
   TARGET_INSTANCE_ID   (required)  e.g. i-0123456789abcdef0
-  APP_URL              (required for the running handoff) e.g. https://aiops.example.com
+  APP_URL              (required)  302 target once up, e.g. https://aiops-node.example.com
+  HOSTINGER_API_TOKEN  (required)  Bearer token for the Hostinger DNS API
+  HOSTINGER_DOMAIN     (required)  the Hostinger-managed zone, e.g. example.com
+  DNS_RECORD_NAME      (required)  the subdomain record to keep current, e.g. aiops-node
+  DNS_TTL              optional, default 60
   HOLDING_REFRESH_SEC  optional, default 8
   (AWS_REGION is provided by the Lambda runtime.)
-
---------------------------------------------------------------------------------
-OPEN LIVE-DESIGN DECISIONS (settle in the Chunk-B live session, not guessed here):
-  1. Running-state handoff. With NO Elastic IP the instance's public address
-     changes on every start, and a TLS cert for APP_URL won't match the raw ec2
-     DNS name. Options:
-       (A) 302 redirect to APP_URL, where a stable low-TTL record already
-           resolves to the box once up (e.g. the box self-updates an A record on
-           boot). Implemented below by default.
-       (B) Full reverse-proxy through the Lambda (fetch from the instance, return
-           the response). Simplest DNS, but the Lambda then carries all traffic
-           (cost/latency) and needs extra work for WebSockets. Slots into
-           _handle_running() without touching the wake logic.
-  2. Custom domain on a Function URL. Function URLs expose *.lambda-url.<region>.
-     on.aws with their OWN cert; a branded APP_DOMAIN in front needs CloudFront
-     (or API Gateway) for a matching cert. Decide the fronting in the live wiring.
---------------------------------------------------------------------------------
 """
 
+import json
 import os
+import urllib.error
+import urllib.request
 
 import boto3
 
@@ -44,7 +44,24 @@ _INSTANCE_ID = os.environ.get("TARGET_INSTANCE_ID", "")
 _APP_URL = os.environ.get("APP_URL", "")
 _REFRESH = int(os.environ.get("HOLDING_REFRESH_SEC", "8"))
 
+_HOSTINGER_TOKEN = os.environ.get("HOSTINGER_API_TOKEN", "")
+_HOSTINGER_DOMAIN = os.environ.get("HOSTINGER_DOMAIN", "")
+_DNS_RECORD_NAME = os.environ.get("DNS_RECORD_NAME", "")
+_DNS_TTL = int(os.environ.get("DNS_TTL", "60"))
+
+_HOSTINGER_BASE = "https://developers.hostinger.com/api/dns/v1/zones"
+_HTTP_TIMEOUT = 10  # seconds per Hostinger call (Lambda timeout is 20s)
+# Hostinger's WAF 403s the default "Python-urllib/*" UA, so send an explicit one.
+_UA = "constitutional-aiops-wake/1.0"
+
 _ec2 = boto3.client("ec2")
+
+# Warm-context cache: the last IP we confirmed into DNS. While the execution
+# environment is reused, a matching IP means DNS is already correct, so we skip
+# the Hostinger calls entirely and just redirect. A cold start resets this to
+# None and re-syncs once (idempotent). This keeps Hostinger traffic to just the
+# minutes right after a wake, not every request (CloudFront caching is off).
+_LAST_IP = None
 
 
 def _holding_page(title: str, message: str) -> dict:
@@ -71,8 +88,64 @@ def _holding_page(title: str, message: str) -> dict:
     }
 
 
-def _handle_running() -> dict:
-    """Option (A): redirect to the stable app URL (see module docstring)."""
+def _hostinger_upsert_a(ip: str) -> None:
+    """UPSERT _DNS_RECORD_NAME A -> ip. overwrite=true replaces only this
+    name+type (other records in the shared zone are untouched)."""
+    body = json.dumps({
+        "overwrite": True,
+        "zone": [{
+            "name": _DNS_RECORD_NAME,
+            "type": "A",
+            "ttl": _DNS_TTL,
+            "records": [{"content": ip}],
+        }],
+    }).encode("utf-8")
+    req = urllib.request.Request(
+        f"{_HOSTINGER_BASE}/{_HOSTINGER_DOMAIN}",
+        data=body,
+        headers={
+            "Authorization": f"Bearer {_HOSTINGER_TOKEN}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "User-Agent": _UA,
+        },
+        method="PUT",
+    )
+    with urllib.request.urlopen(req, timeout=_HTTP_TIMEOUT) as resp:
+        resp.read()
+
+
+def _sync_dns(ip: str) -> bool:
+    """Ensure the Hostinger A record points at ip. Returns True when the record
+    is (now) set, False on any error. The warm-context cache skips Hostinger
+    entirely once an IP is confirmed for this execution context; otherwise a
+    single idempotent UPSERT (overwrite) sets it -- no read round-trip."""
+    global _LAST_IP
+    if ip == _LAST_IP:
+        return True
+    if not (_HOSTINGER_TOKEN and _HOSTINGER_DOMAIN and _DNS_RECORD_NAME):
+        print("dns: Hostinger env not fully configured; skipping DNS sync")
+        return False
+    try:
+        _hostinger_upsert_a(ip)
+        _LAST_IP = ip
+        print(f"dns: {_DNS_RECORD_NAME}.{_HOSTINGER_DOMAIN} A -> {ip}")
+        return True
+    except Exception as exc:  # noqa: BLE001
+        print(f"dns: update failed for {_DNS_RECORD_NAME}.{_HOSTINGER_DOMAIN}: {exc}")
+        return False
+
+
+def _handle_running(instance: dict) -> dict:
+    """Box is up: re-point DNS at its current IP, then hand the visitor off."""
+    ip = instance.get("PublicIpAddress")
+    if not ip:
+        # Running but the public IP is not attached yet -> let the page refresh.
+        return _holding_page("Waking the app…", "The server is up; assigning its address.")
+    if not _sync_dns(ip):
+        # DNS not confirmed (transient Hostinger error) -> hold and retry rather
+        # than redirect to a possibly-stale address.
+        return _holding_page("Waking the app…", "The server is up; finalizing its address.")
     return {
         "statusCode": 302,
         "headers": {"Location": _APP_URL, "Cache-Control": "no-store"},
@@ -92,10 +165,11 @@ def handler(event, context):  # noqa: ARG001 - Lambda signature
         return {"statusCode": 500, "headers": {"Content-Type": "text/plain"},
                 "body": "target instance not found"}
 
-    state = instances[0]["State"]["Name"]
+    instance = instances[0]
+    state = instance["State"]["Name"]
 
     if state == "running":
-        return _handle_running()
+        return _handle_running(instance)
 
     if state == "stopped":
         # Only start from a fully-stopped state (can't start while "stopping").

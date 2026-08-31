@@ -1,7 +1,7 @@
 # Constitutional AIOps - Issue Tracker
 
 > **Version**: 0.13.0
-> **Last Updated**: 2026-07-11
+> **Last Updated**: 2026-08-31
 > **Open Issues**: 10 (all low/medium/info, none blocking)
 > **Blockers**: 0
 
@@ -45,6 +45,22 @@ None currently.
 ---
 
 ## ✅ Resolved Issues
+
+### 2026-08-30 → 08-31 (Phase 5c - lite-tier "sleep/wake" deployment front door)
+
+Standing up the low-cost, no-fixed-IP deployment tier: a public hostname on a CDN (branded TLS) fronts a wake-on-visit Lambda that starts an on-demand EC2 box when it is asleep and 302-redirects to it when it is running; the app targets an external (Bedrock OpenAI-compatible) LLM endpoint. All items below are resolved and the full public path was verified (CDN 302 → box, both TLS legs valid, app returns 200).
+
+| ID | Issue | Resolution |
+|----|-------|------------|
+| LITE-001 | Lite box backend image build failed with `no space left on device`: `torch>=2.0.0` pulls the full CUDA build (~3.1GB image) and overflowed the 20GB root disk on a CPU-only box | CPU-only torch via a `TORCH_INDEX_URL` build ARG (backend image ~3.1GB → ~1.3GB). torch/sentence-transformers are used only by the benchmark evaluator and the embedding service (the latter degrades gracefully on ImportError), so the chat path is unaffected |
+| LITE-002 | Both agents reported unhealthy: the endpoint base URL had no trailing slash, so httpx dropped the `/v1` path segment (`/openai/v1` + `chat/completions` → `/openai/chat/completions`), producing an `UnknownOperationException` | `model_router` now normalizes the base URL (ensures a trailing slash) at client-creation time; the raw configured URL is left untouched so existing tests still pass |
+| LITE-003 | Health-probe false negative: the Bedrock OpenAI-compatible endpoint returns 404 on `GET /models` (vLLM/Ollama return 200), so healthy agents were marked down | Health check falls back to a minimal `max_tokens=1` `chat/completions` call when `/models` is not 200 |
+| FD-001 | The DNS provider does not allow NS-delegation of a subdomain (API rejects the NS record type; confirmed in provider docs), so the planned "box updates its own cloud DNS zone, reached via a delegated subdomain" dynamic-DNS design was impossible | Pivoted: the wake Lambda updates the app subdomain's A record directly via the DNS provider's REST API, using a token held only in the Lambda's server-side environment (never on the internet-exposed box). The delegated cloud zone was abandoned |
+| FD-002 | Lambda DNS-update calls got HTTP 403 from the DNS provider: its WAF blocks the default `Python-urllib/*` User-Agent | Send an explicit `User-Agent` header on the provider API calls |
+| FD-003 | Lambda "read operation timed out" talking to the DNS provider API (default 5s too tight) | Raised the HTTP timeout to 10s, dropped a redundant GET (single idempotent PUT plus a warm-invocation IP cache), and raised the Lambda timeout 15s → 20s |
+| FD-004 | Could not add the public app hostname's CNAME while an A record still existed on the same name (the provider enforces CNAME exclusivity) | Delete the old A record first, then add the CNAME (zone contents verified intact around the change) |
+| FD-005 | Caddy could not issue its Let's Encrypt certificate on first boot: ACME hit NXDOMAIN before the DNS record had propagated, then backed off | Once the Lambda-set A record resolved publicly, restarting the Caddy container nudged ACME past its backoff; the cert issued and HTTPS returned 200 |
+| FD-006 | **Front-door blocker:** CDN → Lambda Function URL returned `403 AccessDeniedException` even though the Function URL was `AWS_IAM`, Origin Access Control (OAC, sigv4/always/lambda) was attached, the origin-request policy stripped the Host header, and the resource policy allowed the CDN service principal `lambda:InvokeFunctionUrl` scoped to the distribution. A directly SigV4-signed IAM-user request to the same URL succeeded, isolating the failure to the CDN service principal | **Root cause:** an OAC → Lambda Function URL origin requires **two** resource-policy statements for the CDN service principal — `lambda:InvokeFunctionUrl` **and** `lambda:InvokeFunction` — and only the former had been created. The IAM user succeeded because its identity policy supplied `InvokeFunction`; the CDN service principal has no identity policy, so the missing statement denied it. Added the `lambda:InvokeFunction` grant (same distribution `SourceArn` condition). Front door now returns 302 and the full public path works. Diagnostics tried and ruled out first: re-saving the distribution, a full OAC detach/reattach, and rebuilding the resource policy into the canonical `add-permission --function-url-auth-type` form |
 
 ### 2026-07-11 (v0.12.0 - Conversation delete SQLite fallback)
 
@@ -419,7 +435,8 @@ curl http://localhost:8000/api/v1/telemetry/processor/status
 | Benchmark Fixed | 7 |
 | Codebase Fixed | 9 |
 | Documentation Fixed | 6 |
-| Total Resolved | 54+ |
+| Phase 5c Deployment / Front Door Fixed | 9 |
+| Total Resolved | 63+ |
 
 ---
 
@@ -451,5 +468,5 @@ When adding new issues, use this format:
 
 ---
 
-**Last Updated**: 2026-07-11
+**Last Updated**: 2026-08-31
 **Version**: 0.13.0
