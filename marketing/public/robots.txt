@@ -1,0 +1,6 @@
+# Marketing site for Constitutional AIOps (served always-on from S3/CloudFront).
+# The marketing pages are static and safe to crawl. The /launch path is the
+# demo-wake trigger: it starts a sleeping EC2 box, so crawlers must not hit it.
+User-agent: *
+Allow: /
+Disallow: /launch

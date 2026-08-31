@@ -12,3 +12,5 @@ origin_access_control_id   = "EXXXXXXXXXXXXX"          # discover.sh
 front_domain               = "aiops.example.com"       # the branded front door (CNAME -> CloudFront)
 app_node_domain            = "aiops-node.example.com"  # the box's own hostname (A kept current by the Lambda)
 account_id                 = "000000000000"            # discover.sh (sts get-caller-identity)
+marketing_bucket_name      = "aiops-marketing-000000000000"  # R2 marketing origin (private, OAC)
+marketing_s3_oac_id        = "EXXXXXXXXXXXXX"          # discover.sh (s3-type OAC on the distribution)
