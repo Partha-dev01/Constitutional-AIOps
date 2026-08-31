@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Marketing/app separation (front-door redesign R1)
+- The branded marketing landing page was extracted OUT of the app into a new standalone,
+  fully static `marketing/` site (its own Vite project, sibling to `frontend/`). The
+  self-hostable app now ships **no** marketing: logged-out visitors at `/` are sent to the
+  login page, and the app Docker image (`Dockerfile.frontend`, which builds only `frontend/`)
+  excludes the marketing entirely. Our hosted instance runs the same vanilla self-host (parity).
+- Moved with history preserved: `pages/Landing.tsx`, `components/landing/*`, `styles/landing.css`
+  → `marketing/src/…`; `landing.spec.ts` → `marketing/e2e/`. The marketing CTAs are now plain
+  anchors pointing at a build-time `VITE_APP_URL` (the front-door launch path that wakes the demo
+  box on genuine human intent, wired in a later step), not in-app routes.
+- Both projects build clean (`tsc` typecheck + `vite build`); the app bundle no longer contains a
+  Landing chunk. `post-deploy.spec.ts` is unaffected (it runs authed, so `/` is the Dashboard).
+
 ## [0.13.0] - 2026-07-11
 
 ### Production auth gate, chat latency, interactive suggested actions, production look

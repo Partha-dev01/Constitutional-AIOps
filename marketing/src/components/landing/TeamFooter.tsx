@@ -1,5 +1,5 @@
-import { Link } from 'react-router-dom'
 import { Shield, GraduationCap, ArrowRight } from 'lucide-react'
+import { APP_URL } from '../../config'
 
 const SECTION_LINKS = [
   { href: '#features', label: 'Features' },
@@ -59,8 +59,8 @@ export function TeamFooter() {
         </div>
 
         <div className="mt-14 flex flex-col items-center gap-8 border-t border-border pt-10 sm:flex-row sm:justify-between">
-          <Link
-            to="/login?next=/"
+          <a
+            href={APP_URL}
             className="group inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             Open the Dashboard
@@ -68,7 +68,7 @@ export function TeamFooter() {
               className="h-4 w-4 transition-transform group-hover:translate-x-0.5"
               aria-hidden="true"
             />
-          </Link>
+          </a>
 
           <p className="text-xs text-muted-foreground">
             Constitutional AIOps · v0.7.0

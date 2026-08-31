@@ -5,7 +5,6 @@ import { BrowserRouter } from 'react-router-dom'
 import App from './App'
 import { ToastProvider } from './components/ui/toast'
 import './index.css'
-import './styles/landing.css'
 import './styles/chat.css'
 import './styles/schema.css'
 
