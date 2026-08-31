@@ -1,0 +1,14 @@
+# Copy to terraform.tfvars (gitignored) or let ./discover.sh generate it.
+# The defaults in variables.tf are placeholders; fill in the real values here.
+
+region                     = "us-east-1"
+instance_id                = "i-0123456789abcdef0"
+instance_type              = "t3.medium"
+instance_ami               = "ami-xxxxxxxxxxxxxxxxx"   # discover.sh
+security_group_name        = "aiops-lite-sg"
+lambda_function_name       = "aiops-wake-on-visit"
+cloudfront_distribution_id = "E1XXXXXXXXXXXX"          # discover.sh
+origin_access_control_id   = "EXXXXXXXXXXXXX"          # discover.sh
+front_domain               = "aiops.example.com"       # the branded front door (CNAME -> CloudFront)
+app_node_domain            = "aiops-node.example.com"  # the box's own hostname (A kept current by the Lambda)
+account_id                 = "000000000000"            # discover.sh (sts get-caller-identity)
