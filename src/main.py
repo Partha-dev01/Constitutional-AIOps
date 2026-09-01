@@ -353,8 +353,13 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Telemetry health check failed: {e}")
 
-    # Initialize and start Background Telemetry Processor
-    # This implements the "System 1" continuous scanning from Research_V7.tex
+    # Initialize and start Background Telemetry Processor.
+    # This implements the "System 1" continuous scanning from Research_V7.tex.
+    # It ALWAYS runs: when no telemetry backend is reachable (e.g. the lite tier
+    # without LGTM) each 30s cycle just collects an empty window and idles, so the
+    # Agents/Telemetry "scanning" status stays honestly alive instead of dead.
+    # (An earlier opt-out env silenced the harmless idle log-noise but made the
+    # processor-status card read "stopped" on the hosted box — removed.)
     app.state.background_processor = BackgroundTelemetryProcessor(
         fast_annotator=app.state.fast_annotator,
         reasoning_agent=app.state.reasoning_agent,
@@ -418,10 +423,85 @@ app = FastAPI(
     ),
     version=__version__,
     lifespan=lifespan,
-    docs_url="/docs" if _DOCS_ENABLED else None,
-    redoc_url="/redoc" if _DOCS_ENABLED else None,
+    # Built-in Swagger/ReDoc are light-themed; disable them and serve our own
+    # brand dark-themed docs below (S1). openapi_url stays gated the same way.
+    docs_url=None,
+    redoc_url=None,
     openapi_url="/openapi.json" if _DOCS_ENABLED else None,
 )
+
+
+# ── Dark-themed API docs (S1) ────────────────────────────────────────────────
+# Reuse FastAPI's own Swagger UI page (correct pinned swagger-ui-dist + OAuth2
+# redirect) and inject a brand dark-theme <style> before </head>. Assets load
+# from cdn.jsdelivr.net, which the edge Caddyfile's relaxed /docs CSP allows;
+# inline <style> is permitted there too. Only registered when docs are enabled.
+if _DOCS_ENABLED:
+    from fastapi.openapi.docs import (
+        get_redoc_html,
+        get_swagger_ui_html,
+        get_swagger_ui_oauth2_redirect_html,
+    )
+    from fastapi.responses import HTMLResponse as _HTMLResponse
+
+    _SWAGGER_DARK_CSS = (
+        "<style>"
+        "body{background:#0a0e1a}"
+        ".swagger-ui,.swagger-ui .info .title,.swagger-ui .info p,.swagger-ui .info li,"
+        ".swagger-ui .info table,.swagger-ui label,.swagger-ui .opblock-tag,"
+        ".swagger-ui .opblock .opblock-summary-operation-id,"
+        ".swagger-ui .opblock .opblock-summary-path,"
+        ".swagger-ui .opblock .opblock-summary-path__deprecated,"
+        ".swagger-ui .opblock-description-wrapper p,.swagger-ui .opblock-title_normal p,"
+        ".swagger-ui .response-col_status,.swagger-ui table thead tr td,"
+        ".swagger-ui table thead tr th,.swagger-ui .parameter__name,"
+        ".swagger-ui .parameter__type,.swagger-ui .prop-type,.swagger-ui .model,"
+        ".swagger-ui .model-title{color:#e8eefb}"
+        ".swagger-ui .topbar{display:none}"
+        ".swagger-ui .info a,.swagger-ui .scheme-container .schemes>label{color:#4d9fff}"
+        ".swagger-ui .scheme-container{background:#111c33;box-shadow:none;border-bottom:1px solid #1e2b45}"
+        ".swagger-ui .opblock .opblock-section-header{background:#0d1526;box-shadow:none}"
+        ".swagger-ui .opblock{background:#111c33;border-color:#1e2b45;box-shadow:none}"
+        ".swagger-ui .opblock .opblock-summary{border-color:#1e2b45}"
+        ".swagger-ui section.models,.swagger-ui section.models .model-container{background:#111c33;border-color:#1e2b45}"
+        ".swagger-ui section.models.is-open h4{border-color:#1e2b45}"
+        ".swagger-ui input,.swagger-ui textarea,.swagger-ui select{background:#0d1526;color:#e8eefb;border:1px solid #1e2b45}"
+        ".swagger-ui .btn{color:#e8eefb;border-color:#33415c;background:#0d1526}"
+        ".swagger-ui .btn.authorize{color:#4d9fff;border-color:#3b82f6}"
+        ".swagger-ui .btn.authorize svg{fill:#4d9fff}"
+        ".swagger-ui .microlight,.swagger-ui .highlight-code,.swagger-ui .markdown code,"
+        ".swagger-ui .renderedMarkdown code,.swagger-ui .opblock-body pre.microlight{background:#05070d;color:#cfe3ff}"
+        ".swagger-ui table.model tbody tr td,.swagger-ui .model-box{background:transparent;color:#c7d2e5}"
+        ".swagger-ui .tab li,.swagger-ui .response-col_links{color:#8b97ab}"
+        ".swagger-ui .dialog-ux .modal-ux{background:#0d1526;border:1px solid #1e2b45}"
+        ".swagger-ui .dialog-ux .modal-ux-header h3,.swagger-ui .dialog-ux .modal-ux-content h4,"
+        ".swagger-ui .dialog-ux .modal-ux-content p{color:#e8eefb}"
+        ".swagger-ui svg:not(:root){fill:#8b97ab}"
+        "</style>"
+    )
+
+    @app.get("/docs", include_in_schema=False)
+    async def _custom_swagger_ui() -> _HTMLResponse:
+        resp = get_swagger_ui_html(
+            openapi_url=app.openapi_url or "/openapi.json",
+            title=f"{app.title} — API reference",
+            oauth2_redirect_url=app.swagger_ui_oauth2_redirect_url,
+            swagger_favicon_url="/favicon-32.png",
+        )
+        html = resp.body.decode("utf-8").replace("</head>", _SWAGGER_DARK_CSS + "</head>")
+        return _HTMLResponse(html)
+
+    @app.get(app.swagger_ui_oauth2_redirect_url, include_in_schema=False)
+    async def _swagger_ui_redirect() -> _HTMLResponse:
+        return get_swagger_ui_oauth2_redirect_html()
+
+    @app.get("/redoc", include_in_schema=False)
+    async def _custom_redoc() -> _HTMLResponse:
+        return get_redoc_html(
+            openapi_url=app.openapi_url or "/openapi.json",
+            title=f"{app.title} — API reference",
+            redoc_favicon_url="/favicon-32.png",
+        )
 
 
 # Request-body-size cap for /api/* (Batch F #5). Pure-ASGI middleware, no new

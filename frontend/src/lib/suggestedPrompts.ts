@@ -8,11 +8,15 @@
  * (private mode, quota, SSR).
  */
 
+// Deployment-agnostic defaults: they showcase the product without hard-wiring a
+// specific service or backend, so they work on the lite tier (no LGTM/Neo4j)
+// just as well as the full stack. The old set named nextcloud/neo4j/prometheus
+// and forced tool calls that hard-fail when those backends are not deployed.
 export const DEFAULT_PROMPTS: string[] = [
-  'Show similar past incidents for nextcloud',
-  'What are the dependencies of neo4j?',
-  'Analyze recent error logs for prometheus',
-  'Summarize current system health',
+  'Summarize the current health of my system',
+  'Which services are running right now?',
+  'How would you diagnose a sudden spike in errors?',
+  'What does the constitutional safety gate do before an action runs?',
 ]
 
 const RECENTS_KEY = 'aiops.chat.recentPrompts'

@@ -9,6 +9,7 @@ import {
   AlertTriangle,
   CheckCircle,
   Info,
+  KeyRound,
 } from 'lucide-react'
 
 /**
@@ -109,6 +110,16 @@ export function TopologySchemaEditor({
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
 
+  // T1: AI generation runs on the user's own LLM, so the endpoint + API key are
+  // captured HERE, before the Generate action. Backed by GET/PUT /settings/models
+  // (fast agent values preserved on save; the key is write-only).
+  const [llmUrl, setLlmUrl] = useState('')
+  const [llmModel, setLlmModel] = useState('')
+  const [llmKey, setLlmKey] = useState('')
+  const [llmKeySet, setLlmKeySet] = useState(false)
+  const [llmFast, setLlmFast] = useState<{ url: string; model: string }>({ url: '', model: '' })
+  const [llmSaving, setLlmSaving] = useState(false)
+
   const setDoc = (doc: SchemaDoc) => {
     setMode(doc.mode)
     setJsonText(JSON.stringify({ nodes: doc.nodes, edges: doc.edges }, null, 2))
@@ -135,6 +146,66 @@ export function TopologySchemaEditor({
   useEffect(() => {
     void loadSchema()
   }, [loadSchema])
+
+  // T1: preload the reasoning-agent endpoint the AI generator will call.
+  const loadModels = useCallback(async () => {
+    try {
+      const res = await fetch('/api/v1/settings/models', { credentials: 'same-origin' })
+      if (!res.ok) return
+      const c = (await res.json()) as {
+        fastAgentUrl: string
+        fastAgentModel: string
+        reasoningAgentUrl: string
+        reasoningAgentModel: string
+        fastApiKeySet?: boolean
+        reasoningApiKeySet?: boolean
+      }
+      setLlmUrl(c.reasoningAgentUrl)
+      setLlmModel(c.reasoningAgentModel)
+      setLlmFast({ url: c.fastAgentUrl, model: c.fastAgentModel })
+      setLlmKeySet(Boolean(c.reasoningApiKeySet || c.fastApiKeySet))
+    } catch {
+      /* endpoint unreachable — leave blank; Generate stays disabled until set */
+    }
+  }, [])
+
+  useEffect(() => {
+    void loadModels()
+  }, [loadModels])
+
+  const handleSaveLlm = async () => {
+    setLlmSaving(true)
+    setError(null)
+    setNotice(null)
+    try {
+      const body: Record<string, unknown> = {
+        fastAgentUrl: llmFast.url,
+        fastAgentModel: llmFast.model,
+        reasoningAgentUrl: llmUrl.trim(),
+        reasoningAgentModel: llmModel.trim(),
+      }
+      if (llmKey) body.apiKey = llmKey
+      const res = await fetch('/api/v1/settings/models', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify(body),
+      })
+      if (!res.ok) {
+        setError(await readError(res))
+        return
+      }
+      const c = (await res.json()) as { fastApiKeySet?: boolean; reasoningApiKeySet?: boolean }
+      setLlmKey('')
+      setLlmKeySet(Boolean(c.reasoningApiKeySet || c.fastApiKeySet))
+      setNotice('LLM endpoint saved — the AI generator will use it.')
+      setTimeout(() => setNotice(null), 5000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save the LLM endpoint')
+    } finally {
+      setLlmSaving(false)
+    }
+  }
 
   const handleGenerate = async () => {
     if (!prompt.trim()) return
@@ -356,10 +427,66 @@ export function TopologySchemaEditor({
           </span>
         </div>
         <p className="text-sm text-muted-foreground mb-3">
-          Describe the architecture you want. The Reasoning Agent (Qwen3-14B) drafts a schema; it is
+          Describe the architecture you want. Your reasoning model drafts a schema; it is
           validated against the strict shape and shown as a preview below — nothing changes until you
           click Apply.
         </p>
+
+        {/* T1: the AI generator calls YOUR LLM, so set the endpoint + API key here,
+            BEFORE generating. Saved to Settings → Models (fast-agent values kept).
+            Hidden in the setup wizard, which has a dedicated LLM step. */}
+        {!extraGenerator && (
+          <div className="mb-4 rounded-lg border border-border bg-background/40 p-4">
+            <p className="text-sm font-medium flex items-center gap-2">
+              <KeyRound className="h-4 w-4 text-primary" /> LLM endpoint for generation
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5 mb-3">
+              AI generation runs on your reasoning model. Set its OpenAI-compatible endpoint and API
+              key first{llmKeySet ? ' — an API key is already saved (leave blank to keep it).' : '.'}
+            </p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <input
+                type="url"
+                value={llmUrl}
+                onChange={(e) => setLlmUrl(e.target.value)}
+                placeholder="https://your-endpoint/v1"
+                aria-label="Reasoning model endpoint URL"
+                data-testid="topology-llm-url"
+                className="w-full px-3 py-2 text-sm bg-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+              <input
+                type="text"
+                value={llmModel}
+                onChange={(e) => setLlmModel(e.target.value)}
+                placeholder="model name"
+                aria-label="Reasoning model name"
+                data-testid="topology-llm-model"
+                className="w-full px-3 py-2 text-sm bg-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+            <input
+              type="password"
+              value={llmKey}
+              onChange={(e) => setLlmKey(e.target.value)}
+              placeholder={llmKeySet ? '•••••••• (leave blank to keep current key)' : 'API key (blank for local endpoints)'}
+              aria-label="LLM API key"
+              autoComplete="off"
+              data-testid="topology-llm-key"
+              className="mt-2 w-full px-3 py-2 text-sm bg-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+            <button
+              type="button"
+              onClick={handleSaveLlm}
+              disabled={llmSaving || !llmUrl.trim()}
+              data-testid="topology-llm-save"
+              className="mt-3 flex items-center gap-2 px-4 py-2 bg-muted text-foreground rounded-lg text-sm font-medium hover:bg-muted/80 disabled:opacity-50"
+            >
+              {llmSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
+              Save endpoint
+            </button>
+          </div>
+        )}
+
         <textarea
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
@@ -371,7 +498,7 @@ export function TopologySchemaEditor({
         <button
           type="button"
           onClick={handleGenerate}
-          disabled={generating || !prompt.trim()}
+          disabled={generating || !prompt.trim() || !llmUrl.trim()}
           data-testid="topology-generate"
           className="mt-3 flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
         >

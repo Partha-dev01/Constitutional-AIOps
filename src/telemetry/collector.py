@@ -5,6 +5,7 @@ Collects telemetry data from LGTM stack (Loki, Grafana, Tempo, Mimir/Prometheus)
 Provides unified interface for accessing logs, metrics, and traces.
 """
 
+import asyncio
 import logging
 import re
 from dataclasses import dataclass, field
@@ -255,6 +256,16 @@ class TelemetryCollector:
         except Exception as e:
             logger.warning(f"Failed to collect logs: {e}")
 
+        # Fallback log source: when no Loki/LGTM logs are available (the lite
+        # tier, or any host without a Loki), read the host's OWN Docker container
+        # logs via the mounted socket so the System-1 background scanner still has
+        # REAL telemetry to annotate. Best-effort -> empty when Docker is
+        # unreachable. On the full stack Loki returns logs, so this never runs.
+        if not window.logs:
+            window.logs = await self._collect_docker_logs(
+                service=service, start_time=start_time, end_time=end_time,
+            )
+
         # Collect metrics
         try:
             window.metrics = await self.query_metrics(
@@ -281,6 +292,30 @@ class TelemetryCollector:
         )
 
         return window
+
+    async def _collect_docker_logs(
+        self,
+        service: str,
+        start_time: datetime,
+        end_time: datetime,
+        limit: int = 500,
+    ) -> list[LogEntry]:
+        """Best-effort fallback: read recent container logs off the local Docker
+        socket when no Loki backend is present. Lazily imported to break the
+        import cycle, and run on a worker thread (the Docker SDK is blocking)."""
+        try:
+            from src.telemetry.docker_source import collect_container_logs
+
+            return await asyncio.to_thread(
+                collect_container_logs,
+                since=start_time,
+                until=end_time,
+                service=service,
+                max_total=limit,
+            )
+        except Exception as e:  # noqa: BLE001 - fallback must never break collection
+            logger.debug(f"Docker log fallback failed: {e}")
+            return []
 
     async def query_logs(
         self,

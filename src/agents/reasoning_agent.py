@@ -717,6 +717,32 @@ class ReasoningAgent(BaseAgent):
                 return steps[0].get("action")
         return None
 
+    def record_activity(
+        self,
+        activity_type: str,
+        input_text: str,
+        output_text: str,
+        latency_ms: float = 0.0,
+        status: str = "success",
+    ) -> None:
+        """Public, best-effort hook to record an externally-driven activity.
+
+        The API chat tool loop drives the ModelRouter directly (see
+        chat.py:_make_chat_completion), so those turns never pass through
+        process()/_log_activity. Calling this from the chat route keeps the
+        Agents activity feed honest about real interactive work. Never raises.
+        """
+        try:
+            self._log_activity(
+                activity_type=activity_type,
+                input_text=input_text,
+                output_text=output_text,
+                latency_ms=latency_ms,
+                status=status,
+            )
+        except Exception:  # noqa: BLE001 - activity logging is best-effort
+            self.logger.debug("record_activity failed", exc_info=True)
+
     def _log_activity(
         self,
         activity_type: str,

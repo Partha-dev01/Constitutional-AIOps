@@ -71,7 +71,8 @@ services:
       - ENVIRONMENT=${ENVIRONMENT:-production}
       - DEBUG=false
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
-      - API_WORKERS=${API_WORKERS:-2}
+      # (API_WORKERS removed — the backend CMD runs a single uvicorn worker and
+      # never reads it, so passing it was dead config.)
       - AIOPS_DATA_DIR=/app/data/state
       # Serve the interactive API reference (Swagger /docs, ReDoc, OpenAPI) even
       # in production. OFF by default (self-host stays closed); our hosted box

@@ -47,6 +47,7 @@ import os
 import socket
 import urllib.error
 import urllib.request
+from urllib.parse import unquote
 
 import boto3
 
@@ -126,22 +127,97 @@ def _user_agent(event) -> str:
     return ""
 
 
-def _holding_page(title: str, message: str) -> dict:
+def _safe_next(event) -> str:
+    """A validated same-origin path to hand off to AFTER wake (e.g. /launch?next=/docs
+    → land on the app's /docs). Only an absolute in-app path is allowed; anything
+    with a scheme, a protocol-relative `//`, whitespace or excessive length is
+    dropped so this can never become an open redirect."""
+    params = (event or {}).get("queryStringParameters") or {}
+    raw = params.get("next") or ""
+    try:
+        raw = unquote(raw)
+    except Exception:  # noqa: BLE001
+        return ""
+    if not raw or not raw.startswith("/") or raw.startswith("//"):
+        return ""
+    if len(raw) > 256 or any(c in raw for c in " \t\r\n\\"):
+        return ""
+    return raw
+
+
+# Branded "waking up" page. The primary readiness path is a client-side favicon
+# probe against APP_URL that redirects the instant the box is genuinely serving
+# AND this browser's DNS resolves to the live IP -- so no full-page reload flicker
+# and no landing on a stale/dead socket. A slow reload + <noscript> meta refresh
+# remain only as backstops. __APP_URL__/__TITLE__/__MSG__/__BACKSTOP__ are
+# substituted (never f-string: the CSS/JS is full of literal braces).
+_HOLDING_TEMPLATE = """<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<noscript><meta http-equiv="refresh" content="10"></noscript>
+<title>Waking Constitutional AIOps…</title>
+<style>
+:root{--bg:#0a0e1a;--bg2:#0d1526;--card:#111c33;--line:#1e2b45;--fg:#e8eefb;--muted:#8b97ab;--brand:#3b82f6;--brand2:#4d9fff}
+*{box-sizing:border-box}html,body{margin:0;height:100%}
+body{min-height:100vh;display:flex;align-items:center;justify-content:center;font:16px/1.55 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--fg);background:radial-gradient(60% 55% at 50% 28%,rgba(59,130,246,.16),transparent 70%),linear-gradient(180deg,var(--bg),var(--bg2));background-attachment:fixed}
+.card{width:min(92vw,30rem);padding:2.5rem 2rem;text-align:center;background:linear-gradient(180deg,rgba(17,28,51,.9),rgba(13,21,38,.9));border:1px solid var(--line);border-radius:20px;box-shadow:0 20px 60px -20px rgba(0,0,0,.7)}
+.mark{width:76px;height:76px;margin:0 auto .25rem;display:block;filter:drop-shadow(0 0 14px rgba(77,159,255,.55));animation:breathe 3.2s ease-in-out infinite}
+@keyframes breathe{0%,100%{transform:scale(1);opacity:.92}50%{transform:scale(1.05);opacity:1}}
+.brand{font-size:.95rem;font-weight:700;letter-spacing:.02em;margin:.25rem 0 1.5rem}.brand b{color:var(--brand2)}
+.spin{width:2.75rem;height:2.75rem;margin:0 auto 1.25rem;border:3px solid rgba(255,255,255,.10);border-top-color:var(--brand2);border-radius:50%;animation:s .9s linear infinite}
+@keyframes s{to{transform:rotate(360deg)}}
+h1{font-size:1.35rem;margin:.2rem 0 .5rem;font-weight:650}
+.msg{color:var(--muted);margin:0 0 1.25rem}
+.bar{height:4px;border-radius:99px;background:rgba(255,255,255,.07);overflow:hidden;margin:1.25rem 0 1rem}
+.bar i{display:block;height:100%;width:35%;border-radius:99px;background:linear-gradient(90deg,transparent,var(--brand),var(--brand2),transparent);animation:slide 1.6s ease-in-out infinite}
+@keyframes slide{0%{transform:translateX(-120%)}100%{transform:translateX(320%)}}
+.meta{font-size:.82rem;color:var(--muted)}.meta b{color:var(--fg);font-variant-numeric:tabular-nums}
+.fine{font-size:.78rem;color:#5f6c82;margin-top:1rem}
+@media (prefers-reduced-motion:reduce){.mark,.spin,.bar i{animation:none}}
+</style></head>
+<body><div class="card" role="status" aria-live="polite">
+<svg class="mark" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+<path d="M32 4 56 12v18c0 15-10.4 24.3-24 30C18.4 54.3 8 45 8 30V12L32 4Z" stroke="#4d9fff" stroke-width="2.4" fill="rgba(59,130,246,.06)"/>
+<circle cx="32" cy="29" r="7.5" stroke="#4d9fff" stroke-width="2.2"/>
+<path d="M32 14v7M32 37v9M20 24l5 4M44 24l-5 4M18 33h7M46 33h-7" stroke="#3b82f6" stroke-width="2" stroke-linecap="round"/>
+<circle cx="32" cy="13" r="1.8" fill="#4d9fff"/><circle cx="18" cy="23" r="1.8" fill="#4d9fff"/><circle cx="46" cy="23" r="1.8" fill="#4d9fff"/><circle cx="17" cy="33" r="1.8" fill="#4d9fff"/><circle cx="47" cy="33" r="1.8" fill="#4d9fff"/>
+</svg>
+<div class="brand">Constitutional <b>AIOps</b></div>
+<div class="spin" aria-hidden="true"></div>
+<h1 id="title">__TITLE__</h1>
+<p class="msg" id="msg">__MSG__</p>
+<div class="bar" aria-hidden="true"><i></i></div>
+<p class="meta"><b id="elapsed">0s</b> elapsed · usually ready in 1-2 min</p>
+<p class="fine">This page moves on automatically the moment the app is ready. No need to refresh.</p>
+</div>
+<script>
+var APP_URL="__APP_URL__",TARGET="__TARGET__",KEY="aiops.wake.start",start;
+try{start=Number(sessionStorage.getItem(KEY))||0}catch(e){start=0}
+if(!start){start=Date.now();try{sessionStorage.setItem(KEY,String(start))}catch(e){}}
+var titleEl=document.getElementById("title"),msgEl=document.getElementById("msg"),elEl=document.getElementById("elapsed");
+function tick(){var s=Math.max(0,Math.round((Date.now()-start)/1000));elEl.textContent=s+"s";
+if(s>=90){titleEl.textContent="Almost ready";msgEl.textContent="Finishing startup and health checks."}
+else if(s>=30){titleEl.textContent="Loading services";msgEl.textContent="The server is up; bringing the app online."}}
+tick();setInterval(tick,1000);
+var done=false;
+function go(){if(done)return;done=true;try{sessionStorage.removeItem(KEY)}catch(e){}location.replace(TARGET)}
+function probe(){if(done)return;var img=new Image();img.onload=go;img.onerror=function(){};img.src=APP_URL+"/favicon.ico?ts="+Date.now()}
+probe();setInterval(probe,3000);
+setTimeout(function(){if(!done)location.reload()},__BACKSTOP__000);
+</script></body></html>"""
+
+
+def _holding_page(title: str, message: str, next_path: str = "") -> dict:
     html = (
-        "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">"
-        f"<meta http-equiv=\"refresh\" content=\"{_REFRESH}\">"
-        "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
-        f"<title>{title}</title><style>"
-        "body{margin:0;min-height:100vh;display:flex;align-items:center;"
-        "justify-content:center;font:16px/1.5 system-ui,sans-serif;"
-        "background:#0f1115;color:#e6e6e6}.card{max-width:30rem;padding:2rem;"
-        "text-align:center}.spin{width:2.5rem;height:2.5rem;margin:0 auto 1.25rem;"
-        "border:3px solid #333;border-top-color:#6ea8fe;border-radius:50%;"
-        "animation:s 1s linear infinite}@keyframes s{to{transform:rotate(360deg)}}"
-        "h1{font-size:1.25rem;margin:.25rem 0}p{color:#9aa4b2}</style></head>"
-        f"<body><div class=\"card\"><div class=\"spin\"></div><h1>{title}</h1>"
-        f"<p>{message}</p><p style=\"font-size:.85rem\">This page refreshes "
-        "automatically.</p></div></body></html>"
+        _HOLDING_TEMPLATE
+        .replace("__APP_URL__", _APP_URL)  # base host — the favicon readiness probe
+        .replace("__TARGET__", _APP_URL + next_path)  # where the visitor lands
+        .replace("__TITLE__", title)
+        .replace("__MSG__", message)
+        # Backstop full reload only if the client probe never fires (StartInstances
+        # didn't take). Kept well above the 3s probe cadence so it is rare.
+        .replace("__BACKSTOP__", str(max(15, _REFRESH * 3)))
     )
     return {
         "statusCode": 200,
@@ -213,25 +289,25 @@ def _app_is_ready(ip: str) -> bool:
         return False
 
 
-def _handle_running(instance: dict) -> dict:
+def _handle_running(instance: dict, next_path: str = "") -> dict:
     """Box is up: only once it is actually SERVING do we re-point DNS at its
     current IP and hand the visitor off. Otherwise keep holding (the page
     auto-refreshes) so nobody lands on a not-yet-listening socket."""
     ip = instance.get("PublicIpAddress")
     if not ip:
         # Running but the public IP is not attached yet -> let the page refresh.
-        return _holding_page("Waking the app…", "The server is up; assigning its address.")
+        return _holding_page("Waking the app…", "The server is up; assigning its address.", next_path)
     if not _app_is_ready(ip):
         # OS is up but the app isn't serving on 443 yet -> hold, don't bounce
         # the visitor to a dead socket. This is the fix for "refuses to connect".
-        return _holding_page("Waking the app…", "The server is up; starting the application.")
+        return _holding_page("Waking the app…", "The server is up; starting the application.", next_path)
     if not _sync_dns(ip):
         # DNS not confirmed (transient Hostinger error) -> hold and retry rather
         # than redirect to a possibly-stale address.
-        return _holding_page("Waking the app…", "The server is up; finalizing its address.")
+        return _holding_page("Waking the app…", "The server is up; finalizing its address.", next_path)
     return {
         "statusCode": 302,
-        "headers": {"Location": _APP_URL, "Cache-Control": "no-store"},
+        "headers": {"Location": _APP_URL + next_path, "Cache-Control": "no-store"},
         "body": "",
     }
 
@@ -246,6 +322,9 @@ def handler(event, context):  # noqa: ARG001 - Lambda signature
     if _looks_like_bot(_user_agent(event)):
         return _refuse_bot()
 
+    # Optional same-origin path to land on after wake (e.g. /launch?next=/docs).
+    nxt = _safe_next(event)
+
     resp = _ec2.describe_instances(InstanceIds=[_INSTANCE_ID])
     reservations = resp.get("Reservations", [])
     instances = reservations[0]["Instances"] if reservations else []
@@ -257,7 +336,7 @@ def handler(event, context):  # noqa: ARG001 - Lambda signature
     state = instance["State"]["Name"]
 
     if state == "running":
-        return _handle_running(instance)
+        return _handle_running(instance, nxt)
 
     if state == "stopped":
         # Only start from a fully-stopped state (can't start while "stopping").
@@ -267,7 +346,7 @@ def handler(event, context):  # noqa: ARG001 - Lambda signature
         except Exception:  # noqa: BLE001
             pass
         return _holding_page("Waking the app…",
-                             "The server was asleep to save cost. Starting it now.")
+                             "The server was asleep to save cost. Starting it now.", nxt)
 
     # pending / stopping / shutting-down / etc. -> wait it out; next refresh acts.
-    return _holding_page("Waking the app…", f"The server is {state}. Almost there.")
+    return _holding_page("Waking the app…", f"The server is {state}. Almost there.", nxt)

@@ -3,13 +3,15 @@ import { APP_URL, SHOW_SELFHOST } from '../../config'
 
 // #self-host is only present when the SelfHostSection is rendered (post public
 // flip), so its nav anchor is added conditionally to avoid a dead link.
+// Absolute (/#...) so they resolve from the docs page too, not only the
+// landing. Docs is now its own page (/docs.html), not an in-page anchor.
 const ANCHORS = [
-  { href: '#features', label: 'Features' },
-  { href: '#architecture', label: 'Architecture' },
-  { href: '#live', label: 'Live demo' },
-  { href: '#docs', label: 'Docs' },
-  ...(SHOW_SELFHOST ? [{ href: '#self-host', label: 'Self-host' }] : []),
-  { href: '#about', label: 'About' },
+  { href: '/#features', label: 'Features' },
+  { href: '/#architecture', label: 'Architecture' },
+  { href: '/#live', label: 'Live demo' },
+  { href: '/docs.html', label: 'Docs' },
+  ...(SHOW_SELFHOST ? [{ href: '/#self-host', label: 'Self-host' }] : []),
+  { href: '/#about', label: 'About' },
 ]
 
 /**
@@ -52,7 +54,7 @@ export function LandingHeader() {
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-6">
         {/* Brand (mirrors the app Layout wordmark) */}
         <a
-          href="#top"
+          href="/"
           className="flex items-center gap-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <img
