@@ -31,7 +31,7 @@ export function HeroSection() {
             src="/logo-mark.png"
             alt=""
             aria-hidden="true"
-            className="logo-glow h-20 w-20 shrink-0 rounded-full sm:h-24 sm:w-24"
+            className="logo-glow h-20 w-20 shrink-0 sm:h-24 sm:w-24"
           />
           <h1 className="text-4xl font-bold tracking-tight sm:text-6xl">
             <span className="hero-word" style={{ animationDelay: '80ms' }}>

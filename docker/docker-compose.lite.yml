@@ -94,9 +94,14 @@ services:
       - PUBLIC_BASE_URL=${PUBLIC_BASE_URL:-}
     volumes:
       - aiops-lite-state:/app/data/state
-      # Action-tool remediation (container restart/scale) is OFF in lite. To
-      # enable it, uncomment the docker socket mount and set AIOPS_ENABLE_ACTION_TOOLS=true:
-      # - /var/run/docker.sock:/var/run/docker.sock
+      # Docker socket: lets the backend read REAL container status so the
+      # Dashboard "Service Availability" + Infrastructure pages show the actual
+      # running containers (backend/frontend/caddy) and their health, instead of
+      # an empty "Docker unavailable" fallback. Trade-off: a container with the
+      # host Docker socket can control the daemon, so keep the box locked down.
+      # This mount alone does NOT enable restart/scale remediation — that is a
+      # SEPARATE opt-in that also needs AIOPS_ENABLE_ACTION_TOOLS=true (left off).
+      - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - aiops-network
     restart: unless-stopped

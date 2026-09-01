@@ -185,11 +185,38 @@ def _fallback_nodes() -> dict[str, dict[str, Any]]:
     }
 
 
+def _reflect_reality_fallback(
+    docker_health: dict[str, str],
+) -> tuple[dict[str, dict[str, Any]], list[tuple[str, str]], str]:
+    """The seed constants FILTERED to what is actually deployed on this host.
+
+    The seed describes the full reference platform (12 services), but a lite /
+    bring-your-own-endpoint deployment runs only a handful of them. When a
+    Docker signal is available we keep only the platform services that have a
+    real container in THIS deployment (any state) plus the dependency edges
+    whose endpoints both survive — so the Command Center reflects what is
+    genuinely running instead of the full reference stack. With no Docker signal
+    at all (socket not mounted, CI, or only non-platform containers present) we
+    return the complete static set so the view is never blank. Docker presence
+    (not Prometheus ``up``, which also lists configured-but-absent targets) is
+    the authoritative "is this service part of this deployment" signal.
+    """
+    all_nodes = _fallback_nodes()
+    live_ids = set(docker_health)
+    kept = {sid: info for sid, info in all_nodes.items() if sid in live_ids}
+    if not kept:
+        return all_nodes, list(PLATFORM_DEPENDENCIES), "fallback"
+    edges = [(s, t) for (s, t) in PLATFORM_DEPENDENCIES if s in kept and t in kept]
+    return kept, edges, "live"
+
+
 async def _load_topology_nodes(
     neo4j_client: Any,
+    docker_health: dict[str, str],
 ) -> tuple[dict[str, dict[str, Any]], list[tuple[str, str]], str]:
     """Load Service nodes (kind IS NOT NULL filters episode-derived junk) and
-    DEPENDS_ON edges from Neo4j; fall back to the seed constants."""
+    DEPENDS_ON edges from Neo4j; fall back to the deployment-reflecting seed
+    (see :func:`_reflect_reality_fallback`)."""
     if neo4j_client is not None:
         try:
             async with neo4j_client.session() as session:
@@ -245,7 +272,7 @@ async def _load_topology_nodes(
         except Exception as e:
             logger.warning(f"Topology node query failed, using fallback: {e}")
 
-    return _fallback_nodes(), list(PLATFORM_DEPENDENCIES), "fallback"
+    return _reflect_reality_fallback(docker_health)
 
 
 def _coerce_dt(value: Any) -> datetime | None:
@@ -598,11 +625,14 @@ async def get_topology(
     except Exception as e:  # noqa: BLE001 - custom mode must never break the live view
         logger.warning(f"Custom topology resolution failed, using discovered: {e}")
 
-    nodes_raw, dep_edges, source = await _load_topology_nodes(neo4j_client)
+    # Compute the live signals up front: docker_health also drives the
+    # deployment-reflecting fallback in _load_topology_nodes (lite shows only
+    # the services actually running here, not the full reference stack).
+    docker_health = _docker_health()
+    prom_health = await _prometheus_health(telemetry_collector)
+    nodes_raw, dep_edges, source = await _load_topology_nodes(neo4j_client, docker_health)
     episodes = await _load_episodes(neo4j_client, window_start)
     edge_hosts = await _discover_edge_hosts(telemetry_collector)
-    prom_health = await _prometheus_health(telemetry_collector)
-    docker_health = _docker_health()
 
     escalation_cutoff = now - timedelta(hours=ESCALATION_WINDOW_HOURS)
     per_service: dict[str, list[dict[str, Any]]] = defaultdict(list)

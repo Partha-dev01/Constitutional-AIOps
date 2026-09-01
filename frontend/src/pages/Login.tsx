@@ -77,7 +77,7 @@ export function Login() {
       <div className="w-full max-w-sm rounded-lg border border-border bg-card p-8 shadow-sm">
         {/* Brand wordmark, matching components/Layout.tsx */}
         <div className="mb-6 flex items-center justify-center gap-2">
-          <img src="/logo-mark.png" alt="" aria-hidden="true" className="h-10 w-10 rounded-full" />
+          <img src="/logo-mark.png" alt="" aria-hidden="true" className="h-10 w-10" />
           <div>
             <p className="text-lg font-bold leading-tight">Constitutional</p>
             <p className="text-xs text-muted-foreground">AIOps</p>

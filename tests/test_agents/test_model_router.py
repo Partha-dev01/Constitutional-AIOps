@@ -265,3 +265,74 @@ class TestLLMConfigApiKeyResolution:
         llm = LLMConfig()
         assert llm.fast_agent_api_key == "fast-only"
         assert llm.reasoning_agent_api_key == "shared"
+
+
+class TestReconfigure:
+    """Live reconfigure() + current_endpoint_config() (Settings -> Models, #7)."""
+
+    def test_current_endpoint_config_never_leaks_key(self, monkeypatch):
+        """The GET-shape dict reports whether a key is set, never the key itself."""
+        import src.config as _cfg_module
+
+        # Config is instantiated at import, so patch the live instance (mirrors
+        # test_init_uses_config_urls) rather than setenv, which lands too late.
+        monkeypatch.setattr(_cfg_module.config.llm, "fast_agent_api_key", "super-secret")
+        monkeypatch.setattr(_cfg_module.config.llm, "reasoning_agent_api_key", "super-secret")
+        router = ModelRouter(
+            fast_agent_url="http://byo:9000/v1",
+            reasoning_agent_url="http://byo:9000/v1",
+        )
+        cfg = router.current_endpoint_config()
+        assert cfg["fast_agent_url"] == "http://byo:9000/v1"
+        assert cfg["fast_api_key_set"] is True
+        assert cfg["reasoning_api_key_set"] is True
+        # No value field carries the actual secret.
+        assert "super-secret" not in str(cfg)
+
+    @pytest.mark.asyncio
+    async def test_reconfigure_updates_urls_models_and_key(self):
+        """reconfigure() swaps URLs + model overrides + auth in place (same object)."""
+        router = ModelRouter(
+            fast_agent_url="http://old:8000/v1",
+            reasoning_agent_url="http://old:8001/v1",
+        )
+        obj_id = id(router)
+        await router.reconfigure(
+            fast_url="https://api.example.com/v1",
+            reasoning_url="https://api.example.com/v1",
+            fast_model="my-fast",
+            reasoning_model="my-reasoning",
+            fast_api_key="k1",
+            reasoning_api_key="k1",
+        )
+        assert id(router) == obj_id  # holders keep a valid reference
+        assert router.fast_agent_url == "https://api.example.com/v1"
+        assert router._fast_model_name() == "my-fast"
+        assert router._reasoning_model_name() == "my-reasoning"
+        # Trailing slash normalized on the live client base_url.
+        assert str(router._fast_client.base_url) == "https://api.example.com/v1/"
+        assert router._fast_client.headers.get("authorization") == "Bearer k1"
+        assert router.current_endpoint_config()["fast_api_key_set"] is True
+
+    @pytest.mark.asyncio
+    async def test_reconfigure_partial_leaves_other_fields(self):
+        """Passing only a URL leaves the model override + key untouched."""
+        router = ModelRouter(
+            fast_agent_url="http://old:8000/v1",
+            reasoning_agent_url="http://old:8001/v1",
+        )
+        await router.reconfigure(fast_model="pinned-model", fast_api_key="keep-me")
+        await router.reconfigure(fast_url="http://new:8000/v1")
+        assert router.fast_agent_url == "http://new:8000/v1"
+        assert router._fast_model_name() == "pinned-model"
+        assert router._fast_client.headers.get("authorization") == "Bearer keep-me"
+
+    @pytest.mark.asyncio
+    async def test_reconfigure_empty_key_clears_auth(self):
+        """An explicit empty key clears the Authorization header."""
+        router = ModelRouter(fast_agent_url="http://x/v1", reasoning_agent_url="http://x/v1")
+        await router.reconfigure(fast_api_key="secret", reasoning_api_key="secret")
+        assert router._fast_client.headers.get("authorization") == "Bearer secret"
+        await router.reconfigure(fast_api_key="", reasoning_api_key="")
+        assert "authorization" not in router._fast_client.headers
+        assert router.current_endpoint_config()["fast_api_key_set"] is False

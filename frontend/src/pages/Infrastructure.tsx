@@ -22,7 +22,7 @@ import {
   AlertTriangle,
   Save,
 } from 'lucide-react'
-import apiClient from '../lib/api'
+import apiClient, { ApiError } from '../lib/api'
 import type { DemoScenario, DemoStatus } from '../lib/api'
 import { useToast } from '../components/ui/toast'
 
@@ -89,6 +89,10 @@ export function Infrastructure() {
   // --- Demo / Chaos panel state (t3 demo agent orchestration) ---
   const [demoScenarios, setDemoScenarios] = useState<DemoScenario[]>([])
   const [demoStatus, setDemoStatus] = useState<DemoStatus | null>(null)
+  // Demo/chaos mode is disabled on lite / bring-your-own-endpoint deployments
+  // (the backend returns 403). When that happens we hide the whole panel and
+  // stop polling instead of logging console errors on every tick.
+  const [demoAvailable, setDemoAvailable] = useState(true)
   /** Per-scenario in-flight flag, keyed by `${scenarioId}:${action}`. */
   const [demoBusy, setDemoBusy] = useState<Record<string, boolean>>({})
   const [demoTargetInput, setDemoTargetInput] = useState<string>('')
@@ -190,6 +194,7 @@ export function Infrastructure() {
       const data = await apiClient.demo.scenarios()
       setDemoScenarios(data.scenarios || [])
     } catch (err) {
+      if (err instanceof ApiError && err.status === 403) { setDemoAvailable(false); return }
       console.error('Failed to fetch demo scenarios:', err)
     }
   }, [])
@@ -201,6 +206,7 @@ export function Infrastructure() {
       // Seed the editable target URL once from the server (don't clobber edits).
       setDemoTargetInput((prev) => (prev ? prev : data.target_url || ''))
     } catch (err) {
+      if (err instanceof ApiError && err.status === 403) { setDemoAvailable(false); setDemoStatus(null); return }
       console.error('Failed to fetch demo status:', err)
       setDemoStatus(null)
     }
@@ -244,13 +250,14 @@ export function Infrastructure() {
   // Load the demo scenario catalog once, then poll live status every 8s while
   // the panel is mounted (cleared on unmount).
   useEffect(() => {
+    if (!demoAvailable) return
     fetchDemoScenarios()
     fetchDemoStatus()
     const id = setInterval(() => {
       void fetchDemoStatus()
     }, 8000)
     return () => clearInterval(id)
-  }, [fetchDemoScenarios, fetchDemoStatus])
+  }, [demoAvailable, fetchDemoScenarios, fetchDemoStatus])
 
   // --- Selection + monitoring handlers (moved verbatim) ---
   const toggleContainerSelection = (containerName: string) => {
@@ -889,7 +896,7 @@ export function Infrastructure() {
       {/* D) Demo / Chaos panel — launch fault scenarios against the t3 demo
           agent and watch live status. Additive section; existing test-ids
           above are untouched. */}
-      <div className="bg-card rounded-lg border border-border" data-testid="demo-panel">
+      <div className={`bg-card rounded-lg border border-border${demoAvailable ? '' : ' hidden'}`} data-testid="demo-panel">
         <div className="p-4 border-b border-border">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>

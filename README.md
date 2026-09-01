@@ -2,7 +2,7 @@
 
 > Autonomous Infrastructure Management with Constitutional AI Safety
 
-**Version**: 0.7.0 | **Status**: Production Ready | **Last Updated**: 2026-01-29
+**Version**: 0.8.0 | **Status**: Production deployed (AWS lite tier) | **Last Updated**: 2026-09-01
 
 [![License](https://img.shields.io/badge/license-Proprietary-red.svg)]()
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)]()
@@ -25,13 +25,13 @@ Constitutional AIOps is an autonomous infrastructure management system that comb
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                 │
 │  ┌───────────────────────────────────────────────────────────┐  │
-│  │  FAST AGENT (Port 8081)                                   │  │
+│  │  FAST AGENT (Port 8000)                                   │  │
 │  │  Model: Qwen3-4B Q4_K_M | Latency: <100ms P95             │  │
 │  │  Purpose: Telemetry annotation, classification            │  │
 │  └───────────────────────────────────────────────────────────┘  │
 │                                                                 │
 │  ┌───────────────────────────────────────────────────────────┐  │
-│  │  REASONING AGENT (Port 8082)                              │  │
+│  │  REASONING AGENT (Port 8001)                              │  │
 │  │  Model: Qwen3-14B Q4_K_M | Latency: 200-500ms P95         │  │
 │  │  Purpose: RCA, remediation planning, human chat           │  │
 │  └───────────────────────────────────────────────────────────┘  │
@@ -43,88 +43,53 @@ Constitutional AIOps is an autonomous infrastructure management system that comb
 
 ## Quick Start
 
+The recommended self-host is the **lite** profile: backend + frontend + your own
+OpenAI-compatible LLM endpoint. No GPU, no bundled models, no Neo4j. See
+[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for the full guide.
+
 ### Prerequisites
 
-- Docker & Docker Compose
-- Python 3.11+
-- Node.js 20+
-- NVIDIA GPU with 24GB VRAM (for production)
+- Docker & Docker Compose v2
+- An OpenAI-compatible LLM endpoint (vLLM, Ollama, AWS Bedrock, OpenAI, ...)
+- ~2GB RAM, ~20GB disk
 
-### Local Development (No GPU)
+### Lite Self-Host (no GPU)
 
 ```bash
-# Clone repository
-git clone https://github.com/your-org/constitutional-aiops.git
+# Clone
+git clone https://github.com/Partha-dev01/Aiops_Final.git constitutional-aiops
 cd constitutional-aiops
 
-# Setup environment
+# Configure your LLM endpoint (both agents may share one URL + model)
 cp .env.example .env
-pip install -r requirements.txt
-pip install -r requirements-dev.txt
+#   set FAST_AGENT_URL / REASONING_AGENT_URL / *_MODEL, and LLM_API_KEY if the
+#   endpoint needs a bearer token.
 
-# Start local stack (with mock LLM)
-docker-compose -f docker-compose.yml -f docker/docker-compose.local.yml up -d
+# Start (self-contained)
+docker compose -f docker/docker-compose.lite.yml up -d
 
-# Run backend
-python -m uvicorn src.main:app --reload
-
-# Run frontend (separate terminal)
-cd frontend && npm install && npm run dev
+# Open http://localhost:3000  (backend http://localhost:8000/docs)
 ```
 
-### GPU Deployment (AWS g6.xlarge)
+### Local Development (mock LLM)
 
 ```bash
-# Download models (~12GB total)
-./scripts/download-models.sh
-
-# Start with GPU
-docker-compose -f docker-compose.yml -f docker/docker-compose.gpu.yml up -d
-
-# Verify models loaded
-curl http://localhost:8081/health  # Fast Agent
-curl http://localhost:8082/health  # Reasoning Agent
+docker compose -f docker-compose.yml -f docker/docker-compose.local.yml up -d
+# Backend hot-reload:  cd src && uvicorn main:app --reload
+# Frontend hot-reload: cd frontend && npm install && npm run dev
 ```
 
-### Hybrid Deployment (Jarvis Labs + Local)
+### Full GPU Stack (research reference config)
 
-Best for development: Run LLMs on Jarvis Labs GPU cloud, everything else locally.
+Both models on one 24GB GPU (vLLM AWQ): Qwen3-4B (fast, :8000) + Qwen3-14B
+(reasoning, :8001), plus Neo4j and the LGTM observability stack.
 
 ```bash
-# 1. Launch Ollama template on Jarvis Labs (A5000 $0.49/hr)
-# 2. SSH in and run the setup script (stores models in /home for persistence):
-ssh -i .ssh/jarvis_labs_key -p 11114 root@ssho.jarvislabs.ai 'bash -s' < scripts/setup-jarvis-ollama.sh
-
-# 3. Set API endpoint in .env
-echo "JARVIS_OLLAMA_URL=https://[your-endpoint].notebooks.jarvislabs.net" >> .env
-
-# 4. Start local services
-docker compose -f docker-compose.yml -f docker/docker-compose.hybrid.yml up -d
-
-# 5. Open http://localhost:3000
+cp .env.production.example .env   # set NEO4J_PASSWORD, AUTH_*, WS_TOKEN, ...
+docker compose -f docker-compose.yml -f docker/docker-compose.gpu.yml up -d
+curl http://localhost:8000/health   # fast agent
+curl http://localhost:8001/health   # reasoning agent
 ```
-
-**Models**: Qwen3-4B (fast agent) + Qwen3-14B (reasoning agent) - both fit on A5000 24GB with 8GB free.
-
-#### Rebuilding After Code Changes
-
-After making changes to frontend or backend code, rebuild and restart:
-
-```bash
-# Stop current containers
-docker compose -f docker-compose.yml -f docker/docker-compose.hybrid.yml down
-
-# Rebuild with new code (force rebuild)
-docker compose -f docker-compose.yml -f docker/docker-compose.hybrid.yml build --no-cache frontend backend
-
-# Start services
-docker compose -f docker-compose.yml -f docker/docker-compose.hybrid.yml up -d
-
-# Or quick rebuild and restart in one command:
-docker compose -f docker-compose.yml -f docker/docker-compose.hybrid.yml up -d --build
-```
-
-See [Jarvis Labs Deployment Guide](docs/JARVIS_LABS_DEPLOYMENT.md) for detailed instructions.
 
 ## Deployment Options
 

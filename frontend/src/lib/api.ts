@@ -234,6 +234,30 @@ export interface ServingModeStatus {
   requested_at: string | null;
   updated_at: string | null;
 }
+
+/** LLM endpoint config (Settings -> Models). The API key is never returned. */
+export interface ModelsConfig {
+  fastAgentUrl: string;
+  fastAgentModel: string;
+  reasoningAgentUrl: string;
+  reasoningAgentModel: string;
+  fastApiKeySet: boolean;
+  reasoningApiKeySet: boolean;
+}
+
+/** PUT body. apiKey is write-only: omit to keep the stored key, '' to clear. */
+export interface ModelsConfigUpdate {
+  fastAgentUrl: string;
+  fastAgentModel: string;
+  reasoningAgentUrl: string;
+  reasoningAgentModel: string;
+  apiKey?: string;
+}
+
+export interface ModelsTestResult {
+  fast_agent: boolean;
+  reasoning_agent: boolean;
+}
 // ---- end Settings types ----
 
 // ---- Demo / Chaos types ----
@@ -1139,6 +1163,14 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ mode }),
       }),
+    getModels: () => request<ModelsConfig>('/settings/models'),
+    saveModels: (body: ModelsConfigUpdate) =>
+      request<ModelsConfig>('/settings/models', {
+        method: 'PUT',
+        body: JSON.stringify(body),
+      }),
+    testModels: () =>
+      request<ModelsTestResult>('/settings/models/test', { method: 'POST' }),
   },
 };
 

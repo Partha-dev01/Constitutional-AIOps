@@ -20,7 +20,7 @@ export function TeamFooter() {
                 src="/logo-mark.png"
                 alt=""
                 aria-hidden="true"
-                className="h-8 w-8 rounded-full"
+                className="h-8 w-8"
               />
               <span className="text-lg font-bold">Constitutional AIOps</span>
             </div>

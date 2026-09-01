@@ -133,15 +133,24 @@ class ModelRouter:
         # so httpx joins the relative "chat/completions" / "models" paths without
         # dropping a URL segment. self.fast_agent_url stays the raw configured
         # value (introspection / logging); only the HTTP client base is normalized.
+        # Track the auth keys + runtime model-name overrides so the router can be
+        # reconfigured LIVE (see reconfigure()) from Settings -> Models, and so
+        # GET /settings/models can report whether a key is set WITHOUT exposing it.
+        # Overrides start as None => the Mode 1/2 name resolution below is unchanged.
+        self._fast_api_key: str = _cfg_module.config.llm.fast_agent_api_key
+        self._reasoning_api_key: str = _cfg_module.config.llm.reasoning_agent_api_key
+        self._fast_model_override: Optional[str] = None
+        self._reasoning_model_override: Optional[str] = None
+
         self._fast_client = httpx.AsyncClient(
             base_url=self._ensure_trailing_slash(self.fast_agent_url),
             timeout=_cfg_module.config.llm.fast_agent_timeout,
-            headers=self._auth_headers(_cfg_module.config.llm.fast_agent_api_key),
+            headers=self._auth_headers(self._fast_api_key),
         )
         self._reasoning_client = httpx.AsyncClient(
             base_url=self._ensure_trailing_slash(self.reasoning_agent_url),
             timeout=_cfg_module.config.llm.reasoning_agent_timeout,
-            headers=self._auth_headers(_cfg_module.config.llm.reasoning_agent_api_key),
+            headers=self._auth_headers(self._reasoning_api_key),
         )
 
         # Latency tracking for benchmarking
@@ -184,17 +193,23 @@ class ModelRouter:
     def _fast_model_name(self) -> str:
         """Served model name for fast-agent requests.
 
-        Mode 1 default keeps the legacy contract: read src.config at CALL time
-        (late binding — tests monkeypatch config.llm after construction).
-        Only an authoritative profile (explicitly injected, or resolved
-        Mode 2) supplies the name itself.
+        A live override (set via reconfigure() from Settings -> Models) wins
+        over everything so an operator's UI change takes effect immediately.
+        Otherwise the Mode 1 default keeps the legacy contract: read src.config
+        at CALL time (late binding — tests monkeypatch config.llm after
+        construction). Only an authoritative profile (explicitly injected, or
+        resolved Mode 2) supplies the name itself.
         """
+        if self._fast_model_override:
+            return self._fast_model_override
         if self._profile_authoritative:
             return self.profile.fast_model
         return _cfg_module.config.llm.fast_agent_model
 
     def _reasoning_model_name(self) -> str:
         """Served model name for reasoning-agent requests (see _fast_model_name)."""
+        if self._reasoning_model_override:
+            return self._reasoning_model_override
         if self._profile_authoritative:
             return self.profile.reasoning_model
         return _cfg_module.config.llm.reasoning_agent_model
@@ -243,7 +258,86 @@ class ModelRouter:
         """Close HTTP clients."""
         await self._fast_client.aclose()
         await self._reasoning_client.aclose()
-    
+
+    async def reconfigure(
+        self,
+        *,
+        fast_url: Optional[str] = None,
+        reasoning_url: Optional[str] = None,
+        fast_model: Optional[str] = None,
+        reasoning_model: Optional[str] = None,
+        fast_api_key: Optional[str] = None,
+        reasoning_api_key: Optional[str] = None,
+    ) -> None:
+        """Apply a new bring-your-own-endpoint config to the LIVE router in place.
+
+        Rebuilds the internal httpx clients (base_url + Authorization header) and
+        sets the served model-name overrides WITHOUT replacing the ModelRouter
+        instance, so every holder (fast_annotator, reasoning_agent, the
+        orchestrator) keeps a valid reference and the change takes effect on the
+        very next request. Only non-None fields change; pass "" to a key to clear it.
+
+        The old clients are closed best-effort after the swap. A request already in
+        flight against an old client during a reconfigure is rare (a deliberate admin
+        save) and just errors out for a retry — acceptable for the single-operator
+        lite box this feature targets.
+        """
+        if fast_url is not None:
+            self.fast_agent_url = fast_url.strip()
+        if reasoning_url is not None:
+            self.reasoning_agent_url = reasoning_url.strip()
+        if fast_model is not None:
+            self._fast_model_override = fast_model.strip() or None
+        if reasoning_model is not None:
+            self._reasoning_model_override = reasoning_model.strip() or None
+        if fast_api_key is not None:
+            self._fast_api_key = fast_api_key.strip()
+        if reasoning_api_key is not None:
+            self._reasoning_api_key = reasoning_api_key.strip()
+
+        old_fast, old_reasoning = self._fast_client, self._reasoning_client
+        self._fast_client = httpx.AsyncClient(
+            base_url=self._ensure_trailing_slash(self.fast_agent_url),
+            timeout=_cfg_module.config.llm.fast_agent_timeout,
+            headers=self._auth_headers(self._fast_api_key),
+        )
+        self._reasoning_client = httpx.AsyncClient(
+            base_url=self._ensure_trailing_slash(self.reasoning_agent_url),
+            timeout=_cfg_module.config.llm.reasoning_agent_timeout,
+            headers=self._auth_headers(self._reasoning_api_key),
+        )
+        for client in (old_fast, old_reasoning):
+            try:
+                await client.aclose()
+            except Exception as exc:  # noqa: BLE001
+                logger.debug("Old LLM client close failed (ignored): %s", exc)
+
+        # Never log the key itself — only whether auth is now on.
+        logger.info(
+            "ModelRouter reconfigured: fast=%s (%s) reasoning=%s (%s) auth=%s",
+            self.fast_agent_url,
+            self._fast_model_name(),
+            self.reasoning_agent_url,
+            self._reasoning_model_name(),
+            "on" if (self._fast_api_key or self._reasoning_api_key) else "off",
+        )
+
+    def current_endpoint_config(self) -> dict[str, Any]:
+        """Effective bring-your-own-endpoint config for GET /settings/models.
+
+        NEVER includes the API key itself — only whether one is set. Reads the
+        live URLs + resolved model names so the UI shows what is actually in
+        force (env, a Mode 2 profile, or a prior UI reconfigure), not a guess.
+        """
+        return {
+            "fast_agent_url": self.fast_agent_url,
+            "fast_agent_model": self._fast_model_name(),
+            "reasoning_agent_url": self.reasoning_agent_url,
+            "reasoning_agent_model": self._reasoning_model_name(),
+            "fast_api_key_set": bool((self._fast_api_key or "").strip()),
+            "reasoning_api_key_set": bool((self._reasoning_api_key or "").strip()),
+        }
+
     def get_fast_client(self) -> httpx.AsyncClient:
         """Get HTTP client for fast agent."""
         return self._fast_client
