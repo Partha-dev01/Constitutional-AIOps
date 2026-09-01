@@ -258,6 +258,27 @@ export interface ModelsTestResult {
   fast_agent: boolean;
   reasoning_agent: boolean;
 }
+
+/** First-run onboarding wizard state (mirrors the backend OnboardingState). */
+export interface OnboardingState {
+  completed: boolean;
+  skipped: boolean;
+  /** Furthest wizard step index reached (0-based). */
+  step: number;
+}
+
+/** One monitoring source probe result from POST /settings/monitoring/test. */
+export interface MonitoringProbeResult {
+  ok: boolean;
+  detail: string;
+}
+
+/** Per-source results; a source is absent when no URL was supplied for it. */
+export interface MonitoringTestResult {
+  loki?: MonitoringProbeResult | null;
+  prometheus?: MonitoringProbeResult | null;
+  tempo?: MonitoringProbeResult | null;
+}
 // ---- end Settings types ----
 
 // ---- Demo / Chaos types ----
@@ -281,6 +302,87 @@ export interface DemoChaosResult {
   detail: string;
 }
 // ---- end Demo / Chaos types ----
+
+// ---- Infrastructure types ----
+/** One monitored container from GET /infrastructure/containers (backend ContainerInfo). */
+export interface InfrastructureContainer {
+  name: string;
+  service: string;
+  status: string;
+  health?: string | null;
+  port?: string | null;
+  image?: string | null;
+  description?: string | null;
+  monitored: boolean;
+}
+
+/** GET /infrastructure/containers response (backend InfrastructureResponse). */
+export interface InfrastructureStatus {
+  containers: InfrastructureContainer[];
+  total: number;
+  healthy: number;
+  unhealthy: number;
+}
+// ---- end Infrastructure types ----
+
+// ---- Topology schema types (setup wizard + Settings editor) ----
+export interface TopologySchemaNode {
+  id: string;
+  label: string;
+  kind: string;
+  tier: number;
+  port?: number | null;
+  description?: string | null;
+}
+
+export interface TopologySchemaEdge {
+  source: string;
+  target: string;
+  relationship: string;
+  kind: string;
+}
+
+/** Live topology schema document (GET/PUT /topology/schema). */
+export interface TopologySchemaDoc {
+  mode: 'discovered' | 'custom';
+  nodes: TopologySchemaNode[];
+  edges: TopologySchemaEdge[];
+}
+
+/** A validated candidate schema returned as a preview (backend GenerateSchemaResponse). */
+export interface TopologyGenerateResult {
+  preview?: boolean;
+  nodes: TopologySchemaNode[];
+  edges: TopologySchemaEdge[];
+  note?: string;
+}
+
+/** One service sent to the wizard generators (matches backend topology WizardService). */
+export interface WizardServicePayload {
+  name: string;
+  role?: string;
+  tier?: number | null;
+  port?: number | null;
+  dependsOn?: string[];
+}
+// ---- end Topology schema types ----
+
+// ---- Prompts types ----
+/** A system prompt (backend SystemPrompt). */
+export interface PromptDoc {
+  name: string;
+  description: string;
+  prompt: string;
+  agent: string;
+  editable: boolean;
+}
+
+/** POST /prompts/generate result (base-prompt draft, not persisted). */
+export interface PromptGenerateResult {
+  prompt: string;
+  note?: string;
+}
+// ---- end Prompts types ----
 
 export interface ConversationSummary {
   conversation_id: string;
@@ -1147,6 +1249,43 @@ export const api = {
     },
   },
 
+  // Infrastructure (used by the setup wizard to prefill the Services step).
+  infrastructure: {
+    getContainers: () => request<InfrastructureStatus>('/infrastructure/containers'),
+  },
+
+  // Topology schema (setup wizard: read the live schema; generate from services).
+  topology: {
+    getSchema: () => request<TopologySchemaDoc>('/topology/schema'),
+    generateFromServices: (body: {
+      services: WizardServicePayload[];
+      mode?: 'template' | 'llm';
+    }) =>
+      request<TopologyGenerateResult>('/topology/generate', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+  },
+
+  // System prompts (setup wizard: draft + save the base assistant prompt).
+  prompts: {
+    get: (name: string) => request<PromptDoc>(`/prompts/${encodeURIComponent(name)}`),
+    update: (name: string, prompt: string) =>
+      request<PromptDoc>(`/prompts/${encodeURIComponent(name)}`, {
+        method: 'PUT',
+        body: JSON.stringify({ prompt }),
+      }),
+    generate: (body: {
+      services: WizardServicePayload[];
+      topology: { nodes: TopologySchemaNode[]; edges: TopologySchemaEdge[] };
+      mode?: 'template' | 'llm';
+    }) =>
+      request<PromptGenerateResult>('/prompts/generate', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+  },
+
   // Settings
   settings: {
     get: () => request<AllSettings>('/settings/'),
@@ -1171,6 +1310,21 @@ export const api = {
       }),
     testModels: () =>
       request<ModelsTestResult>('/settings/models/test', { method: 'POST' }),
+
+    // Live-probe monitoring sources server-side (setup wizard Monitoring step).
+    testMonitoring: (body: { lokiUrl?: string; prometheusUrl?: string; tempoUrl?: string }) =>
+      request<MonitoringTestResult>('/settings/monitoring/test', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+
+    // First-run onboarding wizard state (instance-global, own JSON file).
+    getOnboarding: () => request<OnboardingState>('/settings/onboarding'),
+    saveOnboarding: (body: OnboardingState) =>
+      request<OnboardingState>('/settings/onboarding', {
+        method: 'PUT',
+        body: JSON.stringify(body),
+      }),
   },
 };
 

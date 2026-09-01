@@ -9,9 +9,12 @@ import json
 import logging
 import os
 from pathlib import Path
+from typing import Any, Literal
 
 from fastapi import APIRouter, FastAPI, HTTPException, Request, status
 from pydantic import BaseModel, Field
+
+from src.onboarding.generators import build_base_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +38,27 @@ class PromptUpdate(BaseModel):
 class PromptsListResponse(BaseModel):
     """Response listing all prompts."""
     prompts: list[SystemPrompt]
+
+
+class GeneratePromptRequest(BaseModel):
+    """Onboarding wizard: draft a base prompt from services + topology.
+
+    ``mode=template`` (default) is deterministic + offline; ``mode=llm`` refines
+    it with the reasoning model, FALLING BACK to the template on any failure so
+    setup never breaks. The draft is NOT persisted — the wizard Applies it via
+    ``PUT /prompts/reasoning_chat``.
+    """
+
+    services: list[dict[str, Any]] = Field(default_factory=list)
+    topology: dict[str, Any] = Field(default_factory=dict)
+    mode: Literal["template", "llm"] = "template"
+
+
+class GeneratePromptResponse(BaseModel):
+    """A suggested base-prompt draft (preview, not persisted)."""
+
+    prompt: str
+    note: str = ""
 
 
 # Default prompts
@@ -399,6 +423,94 @@ async def reset_single_prompt(request: Request, prompt_name: str) -> SystemPromp
     logger.info(f"Reset prompt '{prompt_name}' to default")
 
     return await get_prompt(request, prompt_name)
+
+
+_BASE_PROMPT_SYSTEM = (
+    "You are helping configure an AIOps assistant. Output ONLY the system prompt "
+    "text for an operations assistant — no preamble, no markdown fences, no "
+    "<think> tags, no commentary."
+)
+
+
+def _extract_prompt_text(response: Any) -> str:
+    """Pull text out of an OpenAI-compatible completion (or a plain string)."""
+    if isinstance(response, str):
+        text = response
+    elif isinstance(response, dict):
+        try:
+            text = str(response["choices"][0]["message"]["content"] or "")
+        except (KeyError, IndexError, TypeError):
+            text = ""
+    else:
+        content = getattr(response, "content", None)
+        text = str(content) if content is not None else ""
+    if "</think>" in text:
+        text = text.split("</think>")[-1]
+    return text.strip()
+
+
+@router.post(
+    "/generate",
+    response_model=GeneratePromptResponse,
+    summary="Generate Base Prompt (onboarding)",
+    description=(
+        "Draft a base operations-assistant system prompt from the services + "
+        "topology entered in the onboarding wizard. ``mode=template`` (default) "
+        "is deterministic + offline; ``mode=llm`` refines it with the reasoning "
+        "model and falls back to the template on any failure. The draft is NOT "
+        "persisted — Apply it via PUT /prompts/reasoning_chat."
+    ),
+)
+async def generate_base_prompt(
+    request: Request, body: GeneratePromptRequest
+) -> GeneratePromptResponse:
+    """Deterministic (or LLM-refined) base-prompt draft. Never persists."""
+    template = build_base_prompt(body.services, body.topology)
+
+    if body.mode == "llm":
+        model_router = getattr(request.app.state, "model_router", None)
+        if model_router is None:
+            return GeneratePromptResponse(
+                prompt=template,
+                note="No LLM endpoint is configured yet; drafted a template base "
+                "prompt. Edit, then Save.",
+            )
+        user_prompt = (
+            "Write a concise base system prompt for an AIOps operations assistant "
+            "for this platform. Describe the platform accurately and instruct the "
+            "assistant to ground answers in telemetry, reason with the service "
+            "dependency graph, and route every infrastructure change through the "
+            "Constitutional AI approval process. Here is a template to improve:\n\n"
+            f"{template}"
+        )
+        try:
+            response = await model_router.reasoning_completion(
+                user_prompt, max_tokens=1200, system_prompt=_BASE_PROMPT_SYSTEM
+            )
+            text = _extract_prompt_text(response)
+            if len(text) >= 10:
+                return GeneratePromptResponse(
+                    prompt=text[:10000],
+                    note="AI-assisted draft. Review and edit, then Save.",
+                )
+            return GeneratePromptResponse(
+                prompt=template,
+                note="AI assist returned nothing usable; using the template. "
+                "Edit, then Save.",
+            )
+        except Exception as exc:  # noqa: BLE001 - LLM must never break setup
+            logger.warning(
+                "Wizard LLM base-prompt generate failed; using template: %s", exc
+            )
+            return GeneratePromptResponse(
+                prompt=template,
+                note="AI assist was unavailable; using the template. Edit, then Save.",
+            )
+
+    return GeneratePromptResponse(
+        prompt=template,
+        note="Drafted a base prompt from your services. Review and edit, then Save.",
+    )
 
 
 __all__ = ["router", "apply_persisted_prompts"]

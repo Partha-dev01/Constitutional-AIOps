@@ -29,11 +29,12 @@ discovered one (see ``src/api/routes/graph_topology.py``).
 import json
 import logging
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal, Optional
 
 from fastapi import APIRouter, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
+from src.onboarding.generators import build_topology_from_services
 from src.persistence import store as persistence_store
 from src.topology.schema import (
     ALLOWED_EDGE_KINDS,
@@ -90,6 +91,29 @@ class GenerateSchemaResponse(BaseModel):
     nodes: list[dict[str, Any]]
     edges: list[dict[str, Any]]
     note: str = Field("", description="Optional info note (e.g. retry happened)")
+
+
+class WizardService(BaseModel):
+    """One service as entered in the onboarding Quick-Setup wizard."""
+
+    name: str = Field(..., min_length=1, max_length=128)
+    role: str = Field("", max_length=64)
+    tier: Optional[int] = Field(None, ge=0, le=20)
+    port: Optional[int] = Field(None, ge=0, le=65535)
+    dependsOn: list[str] = Field(default_factory=list)
+
+
+class GenerateFromServicesRequest(BaseModel):
+    """Structured services list from the wizard's Services step.
+
+    ``mode`` picks how the candidate is built:
+      * ``template`` (default) — deterministic, offline, no LLM.
+      * ``llm`` — refine the template with the reasoning model, FALLING BACK to
+        the template on any failure so setup never breaks.
+    """
+
+    services: list[WizardService] = Field(default_factory=list)
+    mode: Literal["template", "llm"] = "template"
 
 
 # ---------------------------------------------------------------------------
@@ -527,6 +551,109 @@ async def sync_topology_schema_from_live(request: Request) -> GenerateSchemaResp
     )
     return GenerateSchemaResponse(
         preview=True, nodes=out["nodes"], edges=out["edges"], note=note
+    )
+
+
+def _services_description(services: list[dict[str, Any]]) -> str:
+    """Compose a natural-language description of the wizard's services for the
+    LLM refine pass (the deterministic schema is passed separately as CURRENT)."""
+    lines = ["Build a platform topology for these services the operator listed:"]
+    for svc in services:
+        name = str(svc.get("name") or "").strip()
+        if not name:
+            continue
+        parts = [f"- {name}"]
+        role = str(svc.get("role") or "").strip()
+        if role:
+            parts.append(f"(role: {role})")
+        deps = svc.get("dependsOn") or svc.get("depends_on") or []
+        if isinstance(deps, list):
+            dep_names = [str(d).strip() for d in deps if str(d or "").strip()]
+            if dep_names:
+                parts.append("depends on " + ", ".join(dep_names))
+        lines.append(" ".join(parts))
+    lines.append(
+        "Keep exactly these services; set sensible kinds, tiers and dependency edges."
+    )
+    return "\n".join(lines)
+
+
+@router.post(
+    "/generate",
+    response_model=GenerateSchemaResponse,
+    summary="Generate Topology Schema from a services list (onboarding)",
+    description=(
+        "Build a candidate topology from the structured services entered in the "
+        "onboarding wizard. ``mode=template`` (default) is deterministic + offline; "
+        "``mode=llm`` refines it with the reasoning model and falls back to the "
+        "template on any failure. Returned as a PREVIEW (NOT persisted): review, "
+        "edit, then Apply (PUT /schema)."
+    ),
+)
+async def generate_topology_from_services(
+    request: Request, body: GenerateFromServicesRequest
+) -> GenerateSchemaResponse:
+    """Deterministic (or LLM-refined) topology from the wizard's services list."""
+    services = [s.model_dump() for s in body.services]
+    if not any(str(s.get("name") or "").strip() for s in services):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={
+                "message": "Provide at least one service with a name.",
+                "errors": ["no services supplied"],
+            },
+        )
+
+    raw = build_topology_from_services(services)
+    try:
+        base_schema = validate_topology_schema(raw)
+    except SchemaValidationError as exc:  # defensive: the builder guarantees validity
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={
+                "message": "Could not build a valid topology from the services.",
+                "errors": exc.errors,
+            },
+        )
+    base_payload = _schema_to_payload(base_schema)
+
+    if body.mode == "llm":
+        model_router = getattr(request.app.state, "model_router", None)
+        if model_router is None:
+            return GenerateSchemaResponse(
+                preview=True,
+                nodes=base_payload["nodes"],
+                edges=base_payload["edges"],
+                note="No LLM endpoint is configured yet, so this is the "
+                "template-generated topology. Edit as needed, then Apply.",
+            )
+        prompt = _build_generate_prompt(_services_description(services), base_schema)
+        try:
+            enhanced = await _generate_once(model_router, prompt)
+            out = _schema_to_payload(enhanced)
+            return GenerateSchemaResponse(
+                preview=True,
+                nodes=out["nodes"],
+                edges=out["edges"],
+                note="AI-assisted draft built from your services. Review and edit, then Apply.",
+            )
+        except Exception as exc:  # noqa: BLE001 - LLM must never break setup
+            logger.warning(
+                "Wizard LLM topology enhance failed; using template: %s", exc
+            )
+            return GenerateSchemaResponse(
+                preview=True,
+                nodes=base_payload["nodes"],
+                edges=base_payload["edges"],
+                note="AI assist was unavailable, so this is the template-generated "
+                "topology. Edit as needed, then Apply.",
+            )
+
+    return GenerateSchemaResponse(
+        preview=True,
+        nodes=base_payload["nodes"],
+        edges=base_payload["edges"],
+        note="Generated from your services. Review and edit, then Apply.",
     )
 
 

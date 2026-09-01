@@ -19,6 +19,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal, Optional
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
@@ -660,6 +661,159 @@ async def test_models_config(
         fast_agent=bool(health.get("fast_agent")),
         reasoning_agent=bool(health.get("reasoning_agent")),
     )
+
+
+# ---------------------------------------------------------------------------
+# Onboarding state (first-run Quick-Setup wizard)
+# ---------------------------------------------------------------------------
+#
+# Instance-global (the wizard configures instance-level things: services,
+# topology, base prompt, LLM endpoint, monitoring). Stored in its OWN file
+# under AIOPS_DATA_DIR — NOT in settings.json and NOT in AllSettings — so a
+# ``PUT /settings`` (which rewrites the whole settings.json) can never wipe it,
+# and it stays clear of the per-user / admin role-scoping on that endpoint.
+
+
+class OnboardingState(BaseModel):
+    """First-run wizard progress. ``step`` is the furthest step reached."""
+
+    completed: bool = False
+    skipped: bool = False
+    step: int = Field(0, ge=0, le=50)
+
+
+def _onboarding_path() -> Path:
+    """Path to the persisted onboarding-state JSON (beside settings.json)."""
+    return _settings_path().parent / "onboarding.json"
+
+
+def _load_onboarding() -> OnboardingState:
+    """Load onboarding state; defaults (fresh instance) on absent/corrupt."""
+    raw = _read_json_file(_onboarding_path()) or {}
+    try:
+        return OnboardingState(
+            **{k: v for k, v in raw.items() if k in {"completed", "skipped", "step"}}
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Invalid persisted onboarding state, using defaults: %s", exc)
+        return OnboardingState()
+
+
+@router.get(
+    "/onboarding",
+    response_model=OnboardingState,
+    summary="Get Onboarding State",
+    description="First-run Quick-Setup wizard progress (instance-global).",
+)
+async def get_onboarding(user: User = Depends(require_user)) -> OnboardingState:
+    return _load_onboarding()
+
+
+@router.put(
+    "/onboarding",
+    response_model=OnboardingState,
+    summary="Save Onboarding State",
+    description=(
+        "Persist wizard progress (mark completed / skipped, or record the "
+        "furthest step reached). Admin only."
+    ),
+)
+async def put_onboarding(
+    body: OnboardingState, user: User = Depends(require_user)
+) -> OnboardingState:
+    user = coerce_user(user)
+    if not is_synthetic(user) and user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins may change onboarding state",
+        )
+    _write_json_file(_onboarding_path(), body.model_dump())
+    return body
+
+
+# ---------------------------------------------------------------------------
+# Monitoring source live-test (onboarding wizard Monitoring step)
+# ---------------------------------------------------------------------------
+#
+# Server-side reachability probe of the operator's Loki / Prometheus / Tempo
+# URLs (browser CORS would otherwise block a client-side check). Admin only:
+# it issues a GET from the server to an arbitrary URL, so gate it and return
+# only reachability + the HTTP status, never the response body. Redirects are
+# NOT followed (httpx AsyncClient default) so it can't be bounced internally.
+
+
+class MonitoringTestRequest(BaseModel):
+    """Monitoring source URLs to probe (any subset; blanks are skipped)."""
+
+    lokiUrl: Optional[str] = None
+    prometheusUrl: Optional[str] = None
+    tempoUrl: Optional[str] = None
+
+
+class ProbeResult(BaseModel):
+    ok: bool
+    detail: str = ""
+
+
+class MonitoringTestResult(BaseModel):
+    """Per-source result; a source is absent when no URL was supplied for it."""
+
+    loki: Optional[ProbeResult] = None
+    prometheus: Optional[ProbeResult] = None
+    tempo: Optional[ProbeResult] = None
+
+
+async def _probe_health(url: str, health_path: str) -> ProbeResult:
+    """GET a source's health endpoint with a fast-fail timeout.
+
+    2xx → ok. A non-2xx means the host is reachable but the path/service looks
+    wrong. Any network/timeout error (``httpx.RequestError`` covers the
+    ConnectTimeout/ReadTimeout/ConnectError family) → not reachable.
+    """
+    base = (url or "").strip().rstrip("/")
+    if not base:
+        return ProbeResult(ok=False, detail="no URL supplied")
+    target = base + health_path
+    timeout = httpx.Timeout(4.0, connect=3.0)
+    try:
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            resp = await client.get(target)
+    except httpx.RequestError as exc:
+        return ProbeResult(ok=False, detail=f"unreachable ({type(exc).__name__})")
+    except Exception as exc:  # noqa: BLE001 - a probe must never raise
+        return ProbeResult(ok=False, detail=f"error ({type(exc).__name__})")
+    if 200 <= resp.status_code < 300:
+        return ProbeResult(ok=True, detail=f"reachable (HTTP {resp.status_code})")
+    return ProbeResult(ok=False, detail=f"reachable but HTTP {resp.status_code}")
+
+
+@router.post(
+    "/monitoring/test",
+    response_model=MonitoringTestResult,
+    summary="Test Monitoring Sources",
+    description=(
+        "Server-side reachability probe of the supplied Loki (/ready), "
+        "Prometheus (/-/healthy) and Tempo (/ready) URLs. Admin only. Returns "
+        "reachability + HTTP status only, never response bodies."
+    ),
+)
+async def test_monitoring(
+    body: MonitoringTestRequest, user: User = Depends(require_user)
+) -> MonitoringTestResult:
+    user = coerce_user(user)
+    if not is_synthetic(user) and user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins may test monitoring sources",
+        )
+    result = MonitoringTestResult()
+    if body.lokiUrl and body.lokiUrl.strip():
+        result.loki = await _probe_health(body.lokiUrl, "/ready")
+    if body.prometheusUrl and body.prometheusUrl.strip():
+        result.prometheus = await _probe_health(body.prometheusUrl, "/-/healthy")
+    if body.tempoUrl and body.tempoUrl.strip():
+        result.tempo = await _probe_health(body.tempoUrl, "/ready")
+    return result
 
 
 __all__ = [

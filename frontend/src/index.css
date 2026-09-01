@@ -261,3 +261,18 @@ body {
     animation: none;
   }
 }
+
+/* ---------------------------------------------------------------------------
+ * Onboarding wizard: step entrance (reuses the reveal-up keyframe). The keyed
+ * step container replays this each time the current step changes. Killed under
+ * reduced-motion below.
+ * ------------------------------------------------------------------------- */
+.wiz-step {
+  animation: reveal-up 0.32s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wiz-step {
+    animation: none;
+  }
+}
