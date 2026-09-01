@@ -48,14 +48,20 @@
 	@api path /api/*
 	handle @api {
 		import security_headers
-		reverse_proxy backend:8000
+		reverse_proxy backend:8000 {
+			lb_try_duration 20s
+			lb_try_interval 500ms
+		}
 	}
 
 	# WebSocket stream (app-layer WS_TOKEN / session-cookie guarded in the backend).
 	@ws path /ws
 	handle @ws {
 		import security_headers
-		reverse_proxy backend:8000
+		reverse_proxy backend:8000 {
+			lb_try_duration 20s
+			lb_try_interval 500ms
+		}
 	}
 
 	# Interactive API reference: Swagger UI (/docs), ReDoc (/redoc) and the
@@ -73,7 +79,10 @@
 			Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; img-src 'self' data: https://fastapi.tiangolo.com https://cdn.jsdelivr.net; font-src 'self' data: https://fonts.gstatic.com; worker-src 'self' blob:; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; object-src 'none'"
 			-Server
 		}
-		reverse_proxy backend:8000
+		reverse_proxy backend:8000 {
+			lb_try_duration 20s
+			lb_try_interval 500ms
+		}
 	}
 
 	# SPA — everything else.
