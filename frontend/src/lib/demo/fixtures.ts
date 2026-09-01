@@ -499,6 +499,17 @@ const SERVING_MODE = {
   updated_at: iso(120),
 }
 
+// GET/PUT /settings/models — the bring-your-own LLM endpoint config the Models
+// tab renders. Key is never present (write-only); the demo runs unauthenticated.
+const MODELS_CONFIG = {
+  fastAgentUrl: 'http://localhost:8000/v1',
+  fastAgentModel: 'qwen3-4b',
+  reasoningAgentUrl: 'http://localhost:8001/v1',
+  reasoningAgentModel: 'qwen3-14b',
+  fastApiKeySet: false,
+  reasoningApiKeySet: false,
+}
+
 // ---------------------------------------------------------------------------
 // Demo / chaos orchestration (shown on the Console/Infrastructure surfaces)
 // ---------------------------------------------------------------------------
@@ -1019,6 +1030,8 @@ export function matchRoute(method: string, route: string, bodyText?: string): De
     return ok(SETTINGS)
   }
   if (route === '/settings/serving-mode') return ok(SERVING_MODE)
+  if (route === '/settings/models') return ok(MODELS_CONFIG)
+  if (route === '/settings/models/test') return ok({ fast_agent: true, reasoning_agent: true })
   if (route === '/settings/reset') return ok(SETTINGS)
   if (route.startsWith('/prompts')) return ok({ prompts: [] })
 

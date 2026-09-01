@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Activity, AlertTriangle, CheckCircle, Clock, RefreshCw, Loader2, Wifi, WifiOff, Server } from 'lucide-react'
-import api, { DashboardStats, HealthResponse, isComponentHealthy } from '../lib/api'
+import api, { DashboardStats, HealthResponse, ModelsConfig, isComponentHealthy } from '../lib/api'
 import { useWebSocket, EventType } from '../lib/websocket'
 
 interface ServiceStatus {
@@ -26,10 +26,18 @@ function formatLatency(ms: number): string {
   return ms < 1000 ? `${ms.toFixed(0)}ms` : `${(ms / 1000).toFixed(1)}s`
 }
 
+/** Host[:port] of a configured endpoint URL, for honest display (never a
+ *  hardcoded port — a remote endpoint like Bedrock has no local port). */
+function endpointHost(url?: string): string {
+  if (!url) return '—'
+  try { return new URL(url).host } catch { return url }
+}
+
 export function Dashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [health, setHealth] = useState<HealthResponse | null>(null)
   const [agentMetrics, setAgentMetrics] = useState<AgentMetricsLite | null>(null)
+  const [modelsCfg, setModelsCfg] = useState<ModelsConfig | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date())
@@ -77,16 +85,20 @@ export function Dashboard() {
     setLoading(true)
     setError(null)
     try {
-      const [healthData, statsData, containersResponse, metricsResponse] = await Promise.all([
+      const [healthData, statsData, containersResponse, metricsResponse, modelsData] = await Promise.all([
         api.health.check(),
         api.dashboard.getStats(),
         fetch('/api/v1/infrastructure/containers').then(r => r.ok ? r.json() : { containers: [] }),
         // Real measured LLM latency/request counts (same source as the Metrics page).
         fetch('/api/v1/metrics').then(r => r.ok ? r.json() : null).catch(() => null),
+        // Live endpoint config (same source as Settings -> Models) so the agent
+        // cards show the actual model + endpoint, never hardcoded values.
+        api.settings.getModels().catch(() => null),
       ])
       setHealth(healthData)
       setStats(statsData)
       setAgentMetrics(metricsResponse)
+      setModelsCfg(modelsData)
       setLastRefresh(new Date())
 
       // Update services with container data (current status only — no
@@ -226,20 +238,21 @@ export function Dashboard() {
         </div>
       )}
 
-      {/* Model Status — latency/requests are REAL measured values from
-          /api/v1/metrics (previously hardcoded placeholder numbers). */}
+      {/* Model Status — model name, endpoint, latency and requests are ALL real
+          live values (Settings -> Models config + /api/v1/metrics); nothing here
+          is hardcoded. */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <ModelCard
           name="Fast Agent"
-          model="Qwen3-4B-AWQ"
-          port={8000}
+          model={modelsCfg?.fastAgentModel || '—'}
+          endpoint={endpointHost(modelsCfg?.fastAgentUrl)}
           status={isComponentHealthy(health, 'fast_agent') ? 'online' : 'offline'}
           stats={agentMetrics?.fast_agent}
         />
         <ModelCard
           name="Reasoning Agent"
-          model="Qwen3-14B-AWQ"
-          port={8001}
+          model={modelsCfg?.reasoningAgentModel || '—'}
+          endpoint={endpointHost(modelsCfg?.reasoningAgentUrl)}
           status={isComponentHealthy(health, 'reasoning_agent') ? 'online' : 'offline'}
           stats={agentMetrics?.reasoning_agent}
         />
@@ -372,13 +385,13 @@ function StatCard({
 function ModelCard({
   name,
   model,
-  port,
+  endpoint,
   status,
   stats,
 }: {
   name: string
   model: string
-  port: number
+  endpoint: string
   status: string
   /** Real measured latency/requests from /api/v1/metrics; undefined = no data. */
   stats?: AgentLatencyLite
@@ -399,13 +412,13 @@ function ModelCard({
         </span>
       </div>
       <div className="space-y-2 text-sm">
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">Model</span>
-          <span>{model}</span>
+        <div className="flex justify-between gap-4">
+          <span className="text-muted-foreground shrink-0">Model</span>
+          <span className="truncate text-right" title={model}>{model}</span>
         </div>
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">Port</span>
-          <span>{port}</span>
+        <div className="flex justify-between gap-4">
+          <span className="text-muted-foreground shrink-0">Endpoint</span>
+          <span className="truncate text-right" title={endpoint}>{endpoint}</span>
         </div>
         <div className="flex justify-between">
           <span className="text-muted-foreground">Avg / P95 Latency</span>

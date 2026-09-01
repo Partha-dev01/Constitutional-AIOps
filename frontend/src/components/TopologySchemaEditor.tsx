@@ -4,6 +4,7 @@ import {
   Sparkles,
   Save,
   RotateCcw,
+  RefreshCw,
   AlertTriangle,
   CheckCircle,
   Info,
@@ -81,6 +82,7 @@ export function TopologySchemaEditor() {
   const [prompt, setPrompt] = useState('')
   const [loading, setLoading] = useState(false)
   const [generating, setGenerating] = useState(false)
+  const [syncing, setSyncing] = useState(false)
   const [applying, setApplying] = useState(false)
   const [isPreview, setIsPreview] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -140,6 +142,33 @@ export function TopologySchemaEditor() {
       setError(err instanceof Error ? err.message : 'Generation failed')
     } finally {
       setGenerating(false)
+    }
+  }
+
+  const handleSyncLive = async () => {
+    setSyncing(true)
+    setError(null)
+    setNotice(null)
+    try {
+      const res = await fetch('/api/v1/topology/schema/sync-live', {
+        method: 'POST',
+        credentials: 'same-origin',
+      })
+      if (!res.ok) {
+        setError(await readError(res))
+        return
+      }
+      const data = (await res.json()) as GenerateResponse
+      setJsonText(JSON.stringify({ nodes: data.nodes, edges: data.edges }, null, 2))
+      setIsPreview(true)
+      setNotice(
+        data.note ??
+          'Synced from live infrastructure — review the JSON below, then click Apply to make it the live topology.',
+      )
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Sync failed')
+    } finally {
+      setSyncing(false)
     }
   }
 
@@ -220,6 +249,28 @@ export function TopologySchemaEditor() {
           <span className="text-sm">{notice}</span>
         </div>
       )}
+
+      {/* Sync from live infrastructure */}
+      <div className="bg-card rounded-lg border border-border p-6">
+        <h2 className="text-lg font-semibold flex items-center gap-2 mb-1">
+          <RefreshCw className="h-5 w-5 text-primary" /> Sync from live infrastructure
+        </h2>
+        <p className="text-sm text-muted-foreground mb-3">
+          Snapshot what is actually running on this host — the services with a live container and any
+          discovered remote hosts — into an editable schema. Shown as a preview; nothing changes until
+          you click Apply. Use this to make the Command Center graph match a lite or custom deployment.
+        </p>
+        <button
+          type="button"
+          onClick={handleSyncLive}
+          disabled={syncing || loading}
+          data-testid="topology-sync-live"
+          className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
+        >
+          {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+          Sync from live infrastructure
+        </button>
+      </div>
 
       {/* Generate with AI */}
       <div className="bg-card rounded-lg border border-border p-6">

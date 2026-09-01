@@ -114,7 +114,7 @@ PLATFORM_SERVICES: list[dict[str, Any]] = [
         "label": "Qwen3-4B",
         "kind": "llm",
         "tier": 2,
-        "port": 8081,
+        "port": 8000,
         "description": "Fast Annotator model (System 1): telemetry annotation and anomaly classification",
     },
     {
@@ -122,7 +122,7 @@ PLATFORM_SERVICES: list[dict[str, Any]] = [
         "label": "Qwen3-14B",
         "kind": "llm",
         "tier": 2,
-        "port": 8082,
+        "port": 8001,
         "description": "Reasoning Agent model (System 2): RCA, remediation planning and operator chat",
     },
 ]

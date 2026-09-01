@@ -18,6 +18,8 @@ import {
   Waypoints,
   ArrowLeftRight,
   UserCog,
+  Link2,
+  KeyRound,
 } from 'lucide-react'
 import api, {
   HealthResponse,
@@ -30,6 +32,9 @@ import api, {
   RemediationMode,
   ActionToolName,
   ServingModeStatus,
+  ModelsConfig,
+  ModelsConfigUpdate,
+  ModelsTestResult,
 } from '../lib/api'
 import { TopologySchemaEditor } from '../components/TopologySchemaEditor'
 import { AccountSettings } from '../components/AccountSettings'
@@ -114,7 +119,6 @@ export function Settings() {
     'constitutional' | 'remediation' | 'notifications' | 'telemetry' | 'models' | 'prompts' | 'topology' | 'account'
   >('constitutional')
   const [health, setHealth] = useState<HealthResponse | null>(null)
-  const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [settingsLoading, setSettingsLoading] = useState(false)
@@ -251,14 +255,11 @@ export function Settings() {
   }
 
   const fetchHealth = async () => {
-    setLoading(true)
     try {
       const data = await api.health.check()
       setHealth(data)
     } catch (err) {
       console.error('Failed to fetch health:', err)
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -383,8 +384,9 @@ export function Settings() {
         })}
       </div>
 
-      {/* ── Tab content — max-width widened; 2-col grid where sensible ──── */}
-      <div className="max-w-6xl">
+      {/* ── Tab content — full width (2-col grid stays symmetric); pulled up
+             slightly to tighten the gap under the tab ribbon ──── */}
+      <div className="-mt-2">
 
         {/* ━━ Constitutional AI ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
         {activeTab === 'constitutional' && (
@@ -937,95 +939,8 @@ export function Settings() {
         {/* ━━ Models ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
         {activeTab === 'models' && (
           <div className="space-y-6">
-          <ServingModeCard />
-          <div className="grid gap-6 lg:grid-cols-2">
-            <div className="bg-card rounded-lg border border-border p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold">Model Status</h2>
-                <button
-                  onClick={fetchHealth}
-                  disabled={loading}
-                  className="flex items-center gap-2 px-3 py-1.5 text-sm bg-muted text-muted-foreground rounded-lg hover:bg-muted/80 disabled:opacity-50"
-                >
-                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-                  Refresh
-                </button>
-              </div>
-              <div className="space-y-4">
-                <ModelStatusCard
-                  name="Fast Agent"
-                  model="Qwen3-4B-AWQ"
-                  port={8000}
-                  status={isComponentHealthy(health, 'fast_agent') ? 'online' : 'offline'}
-                  purpose="Telemetry annotation, classification"
-                  context="4K tokens"
-                  latency="<100ms P95"
-                />
-                <ModelStatusCard
-                  name="Reasoning Agent"
-                  model="Qwen3-14B-AWQ"
-                  port={8001}
-                  status={isComponentHealthy(health, 'reasoning_agent') ? 'online' : 'offline'}
-                  purpose="RCA, remediation planning, human chat"
-                  context="8K tokens"
-                  latency="200-500ms P95"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-6">
-              <div className="bg-card rounded-lg border border-border p-6">
-                <h2 className="text-lg font-semibold mb-4">Architecture</h2>
-                <div className="space-y-3 text-sm">
-                  <div className="flex justify-between py-2 border-b border-border">
-                    <span className="text-muted-foreground">Configuration</span>
-                    <span className="font-medium">Simultaneous Dual-Model</span>
-                  </div>
-                  <div className="flex justify-between py-2 border-b border-border">
-                    <span className="text-muted-foreground">Total VRAM</span>
-                    <span className="font-medium">24GB (NVIDIA L4)</span>
-                  </div>
-                  <div className="flex justify-between py-2 border-b border-border">
-                    <span className="text-muted-foreground">Used VRAM</span>
-                    <span className="font-medium">~15GB</span>
-                  </div>
-                  <div className="flex justify-between py-2 border-b border-border">
-                    <span className="text-muted-foreground">Model Loading</span>
-                    <span className="font-medium">Always Loaded (TTL: -1)</span>
-                  </div>
-                  <div className="flex justify-between py-2">
-                    <span className="text-muted-foreground">Swap Latency</span>
-                    <span className="font-medium text-green-500">0ms (simultaneous)</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Graph Memory */}
-              <div className="bg-card rounded-lg border border-border p-6">
-                <h2 className="text-lg font-semibold mb-4">Graph Memory</h2>
-                <div className="flex items-center gap-3 mb-4">
-                  <Database className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <span className="font-medium">Neo4j</span>
-                    <span
-                      className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
-                        isComponentHealthy(health, 'neo4j')
-                          ? 'bg-green-500/10 text-green-500'
-                          : 'bg-yellow-500/10 text-yellow-500'
-                      }`}
-                    >
-                      {isComponentHealthy(health, 'neo4j') ? 'Connected' : 'In-memory fallback'}
-                    </span>
-                  </div>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {isComponentHealthy(health, 'neo4j')
-                    ? 'Using Neo4j for persistent episodic memory and service dependency graphs.'
-                    : 'Neo4j not available. Using in-memory episode store with similarity search.'}
-                </p>
-              </div>
-            </div>
-          </div>
+            <ServingModeCard />
+            <LlmEndpointsCard health={health} />
           </div>
         )}
 
@@ -1208,6 +1123,20 @@ const SERVING_MODE_INFO: Record<1 | 2, { title: string; description: string }> =
   },
 }
 
+/** True when the agent endpoint is a local engine on this host — the only case
+ *  where the Mode 1 <-> Mode 2 serving swap (the host-side aiops-mode-swap
+ *  watcher restarting local vLLM engines) applies. Remote / bring-your-own
+ *  endpoints (e.g. Bedrock) have no local engines to swap, so the card hides. */
+function isLocalEngineUrl(url?: string): boolean {
+  if (!url) return false
+  try {
+    const h = new URL(url).hostname
+    return h === 'localhost' || h === '127.0.0.1' || h === '::1'
+  } catch {
+    return false
+  }
+}
+
 function ServingModeCard() {
   const [status, setStatus] = useState<ServingModeStatus | null>(null)
   const [confirmTarget, setConfirmTarget] = useState<1 | 2 | null>(null)
@@ -1217,6 +1146,9 @@ function ServingModeCard() {
   const [unreachable, setUnreachable] = useState(false)
   const [requestError, setRequestError] = useState<string | null>(null)
   const [posting, setPosting] = useState(false)
+  // null = not yet known; the card only renders once confirmed local so it never
+  // flashes on remote/BYO deployments where the swap does not apply.
+  const [localEngines, setLocalEngines] = useState<boolean | null>(null)
 
   const refresh = useCallback(async () => {
     try {
@@ -1237,6 +1169,16 @@ function ServingModeCard() {
   useEffect(() => {
     refresh()
   }, [refresh])
+
+  // Decide whether local engines back the agents (see isLocalEngineUrl).
+  useEffect(() => {
+    let alive = true
+    api.settings
+      .getModels()
+      .then((m) => { if (alive) setLocalEngines(isLocalEngineUrl(m.fastAgentUrl)) })
+      .catch(() => { if (alive) setLocalEngines(false) })
+    return () => { alive = false }
+  }, [])
 
   const swapActive =
     swapTarget !== null ||
@@ -1268,6 +1210,10 @@ function ServingModeCard() {
 
   const currentMode = status?.mode ?? null
   const targetMode = swapTarget ?? status?.requested_mode ?? null
+
+  // Remote / bring-your-own endpoints have no local engines to swap — hide the
+  // whole card there (null while still resolving, so it never flashes).
+  if (localEngines !== true) return null
 
   return (
     <div className="bg-card rounded-lg border border-border p-6" data-testid="serving-mode-card">
@@ -1438,62 +1384,345 @@ function ToggleSetting({
   )
 }
 
-function ModelStatusCard({
-  name,
+/**
+ * Settings -> Models: view + edit the bring-your-own LLM endpoint config
+ * (URL + served model per agent + an optional API key). Reads the REAL config
+ * from GET /settings/models (no more hardcoded VRAM / GPU / port claims), saves
+ * via PUT (applied live, no restart), and can probe the endpoints on demand.
+ * The API key is write-only: it is never returned, and a blank field on save
+ * keeps whatever key is already stored.
+ */
+function LlmEndpointsCard({ health }: { health: HealthResponse | null }) {
+  const [cfg, setCfg] = useState<ModelsConfig | null>(null)
+  const [fastUrl, setFastUrl] = useState('')
+  const [fastModel, setFastModel] = useState('')
+  const [reasoningUrl, setReasoningUrl] = useState('')
+  const [reasoningModel, setReasoningModel] = useState('')
+  const [apiKey, setApiKey] = useState('')
+  const [sameEndpoint, setSameEndpoint] = useState(true)
+  const [loading, setLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [testing, setTesting] = useState(false)
+  const [testResult, setTestResult] = useState<ModelsTestResult | null>(null)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const c = await api.settings.getModels()
+      setCfg(c)
+      setFastUrl(c.fastAgentUrl)
+      setFastModel(c.fastAgentModel)
+      setReasoningUrl(c.reasoningAgentUrl)
+      setReasoningModel(c.reasoningAgentModel)
+      setSameEndpoint(
+        c.fastAgentUrl === c.reasoningAgentUrl && c.fastAgentModel === c.reasoningAgentModel,
+      )
+    } catch {
+      setError('Could not load the LLM endpoint configuration — is the backend running?')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  const keyIsSet = Boolean(cfg?.fastApiKeySet || cfg?.reasoningApiKeySet)
+
+  const persist = async (clearKey: boolean) => {
+    setSaving(true)
+    setError(null)
+    setTestResult(null)
+    try {
+      const body: ModelsConfigUpdate = {
+        fastAgentUrl: fastUrl.trim(),
+        fastAgentModel: fastModel.trim(),
+        reasoningAgentUrl: (sameEndpoint ? fastUrl : reasoningUrl).trim(),
+        reasoningAgentModel: (sameEndpoint ? fastModel : reasoningModel).trim(),
+      }
+      if (clearKey) body.apiKey = ''
+      else if (apiKey.trim()) body.apiKey = apiKey.trim()
+
+      const updated = await api.settings.saveModels(body)
+      setCfg(updated)
+      setFastUrl(updated.fastAgentUrl)
+      setFastModel(updated.fastAgentModel)
+      setReasoningUrl(updated.reasoningAgentUrl)
+      setReasoningModel(updated.reasoningAgentModel)
+      setApiKey('')
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2500)
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Save failed — only an admin can change the LLM endpoints.',
+      )
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const runTest = async () => {
+    setTesting(true)
+    setTestResult(null)
+    setError(null)
+    try {
+      setTestResult(await api.settings.testModels())
+    } catch {
+      setError('Could not run the connection test.')
+    } finally {
+      setTesting(false)
+    }
+  }
+
+  const canSave = Boolean(
+    fastUrl.trim() &&
+      fastModel.trim() &&
+      (sameEndpoint || (reasoningUrl.trim() && reasoningModel.trim())),
+  )
+
+  const inputClass =
+    'w-full px-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary'
+
+  return (
+    <div className="grid gap-6 lg:grid-cols-2">
+      {/* Editable endpoint form */}
+      <div className="bg-card rounded-lg border border-border p-6">
+        <div className="flex items-center justify-between mb-1">
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <Link2 className="h-5 w-5 text-muted-foreground" />
+            LLM Endpoints
+          </h2>
+          {loading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+        </div>
+        <p className="text-sm text-muted-foreground mb-4">
+          Bring your own OpenAI-compatible endpoint. Saved changes apply live — no restart.
+        </p>
+
+        {error && (
+          <div className="mb-4 flex items-start gap-2 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-500">
+            <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        <div className="space-y-4">
+          <label className="flex items-center gap-3 text-sm cursor-pointer">
+            <input
+              type="checkbox"
+              checked={sameEndpoint}
+              onChange={(e) => setSameEndpoint(e.target.checked)}
+              className="h-4 w-4 accent-primary"
+            />
+            <span>Use the same endpoint and model for both agents</span>
+          </label>
+
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">
+              {sameEndpoint ? 'Endpoint URL' : 'Fast agent — endpoint URL'}
+            </label>
+            <input
+              type="url"
+              value={fastUrl}
+              onChange={(e) => setFastUrl(e.target.value)}
+              placeholder="https://api.example.com/v1"
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">
+              {sameEndpoint ? 'Model name' : 'Fast agent — model name'}
+            </label>
+            <input
+              type="text"
+              value={fastModel}
+              onChange={(e) => setFastModel(e.target.value)}
+              placeholder="qwen3-4b"
+              className={inputClass}
+            />
+          </div>
+
+          {!sameEndpoint && (
+            <>
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">
+                  Reasoning agent — endpoint URL
+                </label>
+                <input
+                  type="url"
+                  value={reasoningUrl}
+                  onChange={(e) => setReasoningUrl(e.target.value)}
+                  placeholder="https://api.example.com/v1"
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">
+                  Reasoning agent — model name
+                </label>
+                <input
+                  type="text"
+                  value={reasoningModel}
+                  onChange={(e) => setReasoningModel(e.target.value)}
+                  placeholder="qwen3-14b"
+                  className={inputClass}
+                />
+              </div>
+            </>
+          )}
+
+          <div>
+            <label className="flex items-center gap-1 text-xs font-medium text-muted-foreground mb-1">
+              <KeyRound className="h-3 w-3" />
+              API key {keyIsSet && <span className="text-green-500">(set)</span>}
+            </label>
+            <input
+              type="password"
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              placeholder={keyIsSet ? '•••••••• (leave blank to keep)' : 'Optional — for a secured endpoint'}
+              autoComplete="off"
+              className={inputClass}
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Sent as <code>Authorization: Bearer</code>. Stored on the server and never shown again.
+              {keyIsSet && (
+                <>
+                  {' '}
+                  <button
+                    type="button"
+                    onClick={() => persist(true)}
+                    disabled={saving}
+                    className="text-red-500 hover:underline disabled:opacity-50"
+                  >
+                    Remove key
+                  </button>
+                </>
+              )}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 pt-1">
+            <button
+              onClick={() => persist(false)}
+              disabled={saving || !canSave}
+              className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
+            >
+              {saving ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : saved ? (
+                <CheckCircle className="h-4 w-4" />
+              ) : (
+                <Save className="h-4 w-4" />
+              )}
+              {saved ? 'Saved!' : 'Save endpoints'}
+            </button>
+            <button
+              onClick={runTest}
+              disabled={testing}
+              className="flex items-center gap-2 px-4 py-2 bg-muted text-muted-foreground rounded-lg text-sm font-medium hover:bg-muted/80 disabled:opacity-50"
+            >
+              {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+              Test connection
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Live status + graph memory (all real, no hardcoded hardware claims) */}
+      <div className="space-y-6">
+        <div className="bg-card rounded-lg border border-border p-6">
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <Cpu className="h-5 w-5 text-muted-foreground" />
+            Live Status
+          </h2>
+          <div className="space-y-3">
+            <EndpointStatusRow
+              label="Fast agent"
+              model={cfg?.fastAgentModel}
+              online={isComponentHealthy(health, 'fast_agent')}
+              tested={testResult?.fast_agent}
+            />
+            <EndpointStatusRow
+              label="Reasoning agent"
+              model={cfg?.reasoningAgentModel}
+              online={isComponentHealthy(health, 'reasoning_agent')}
+              tested={testResult?.reasoning_agent}
+            />
+          </div>
+          <p className="text-xs text-muted-foreground mt-4">
+            Online reflects the periodic health probe. Test connection runs an on-demand probe of
+            the saved endpoints.
+          </p>
+        </div>
+
+        <div className="bg-card rounded-lg border border-border p-6">
+          <h2 className="text-lg font-semibold mb-4">Graph Memory</h2>
+          <div className="flex items-center gap-3 mb-4">
+            <Database className="h-5 w-5 text-muted-foreground" />
+            <div>
+              <span className="font-medium">Neo4j</span>
+              <span
+                className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
+                  isComponentHealthy(health, 'neo4j')
+                    ? 'bg-green-500/10 text-green-500'
+                    : 'bg-yellow-500/10 text-yellow-500'
+                }`}
+              >
+                {isComponentHealthy(health, 'neo4j') ? 'Connected' : 'In-memory fallback'}
+              </span>
+            </div>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            {isComponentHealthy(health, 'neo4j')
+              ? 'Using Neo4j for persistent episodic memory and service dependency graphs.'
+              : 'Neo4j not deployed. Using the in-memory episode store with similarity search.'}
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function EndpointStatusRow({
+  label,
   model,
-  port,
-  status,
-  purpose,
-  context,
-  latency,
+  online,
+  tested,
 }: {
-  name: string
-  model: string
-  port: number
-  status: 'online' | 'offline'
-  purpose: string
-  context: string
-  latency: string
+  label: string
+  model?: string
+  online: boolean
+  tested?: boolean
 }) {
   return (
-    <div className="p-4 bg-muted/50 rounded-lg">
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <Cpu className="h-5 w-5 text-muted-foreground" />
-          <h3 className="font-semibold">{name}</h3>
-        </div>
+    <div className="flex items-center justify-between rounded-lg border border-border/60 bg-muted/30 px-3 py-2">
+      <div className="min-w-0">
+        <p className="text-sm font-medium">{label}</p>
+        <p className="text-xs text-muted-foreground truncate font-mono">
+          {model || 'not configured'}
+        </p>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        {tested !== undefined && (
+          <span className={`text-xs ${tested ? 'text-green-500' : 'text-red-500'}`}>
+            {tested ? 'reachable' : 'unreachable'}
+          </span>
+        )}
         <span
           className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${
-            status === 'online' ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'
+            online ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'
           }`}
         >
-          {status === 'online' ? (
-            <CheckCircle className="h-3 w-3" />
-          ) : (
-            <AlertTriangle className="h-3 w-3" />
-          )}
-          {status}
+          {online ? <CheckCircle className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
+          {online ? 'online' : 'offline'}
         </span>
       </div>
-      <div className="grid grid-cols-2 gap-2 text-sm">
-        <div>
-          <span className="text-muted-foreground">Model:</span>
-          <span className="ml-2">{model}</span>
-        </div>
-        <div>
-          <span className="text-muted-foreground">Port:</span>
-          <span className="ml-2">{port}</span>
-        </div>
-        <div>
-          <span className="text-muted-foreground">Context:</span>
-          <span className="ml-2">{context}</span>
-        </div>
-        <div>
-          <span className="text-muted-foreground">Latency:</span>
-          <span className="ml-2">{latency}</span>
-        </div>
-      </div>
-      <p className="text-xs text-muted-foreground mt-2">{purpose}</p>
     </div>
   )
 }

@@ -155,7 +155,7 @@ export function Layout({ children }: LayoutProps) {
             title="Expand sidebar"
             className="flex items-center justify-center rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary/40"
           >
-            <img src="/logo-mark.png" alt="" aria-hidden="true" className="h-7 w-7 rounded-full" />
+            <img src="/logo-mark.png" alt="" aria-hidden="true" className="h-7 w-7" />
           </button>
         ) : (
           <>
@@ -165,7 +165,7 @@ export function Layout({ children }: LayoutProps) {
                 aria-label="Constitutional AIOps — landing page"
                 className="flex min-w-0 items-center gap-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/40"
               >
-                <img src="/logo-mark.png" alt="" aria-hidden="true" className="h-9 w-9 shrink-0 rounded-full" />
+                <img src="/logo-mark.png" alt="" aria-hidden="true" className="h-9 w-9 shrink-0" />
                 <div className="min-w-0">
                   <h1 className="truncate text-lg font-bold">Constitutional</h1>
                   <p className="text-xs text-muted-foreground">AIOps</p>
@@ -177,7 +177,7 @@ export function Layout({ children }: LayoutProps) {
                 aria-label="Constitutional AIOps — home"
                 className="flex min-w-0 items-center gap-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/40"
               >
-                <img src="/logo-mark.png" alt="" aria-hidden="true" className="h-9 w-9 shrink-0 rounded-full" />
+                <img src="/logo-mark.png" alt="" aria-hidden="true" className="h-9 w-9 shrink-0" />
                 <div className="min-w-0">
                   <h1 className="truncate text-lg font-bold">Constitutional</h1>
                   <p className="text-xs text-muted-foreground">AIOps</p>
@@ -341,7 +341,7 @@ export function Layout({ children }: LayoutProps) {
           >
             <Menu className="h-5 w-5" aria-hidden="true" />
           </button>
-          <img src="/logo-mark.png" alt="" aria-hidden="true" className="h-6 w-6 shrink-0 rounded-full" />
+          <img src="/logo-mark.png" alt="" aria-hidden="true" className="h-6 w-6 shrink-0" />
           <span className="truncate text-sm font-semibold">Constitutional AIOps</span>
         </div>
 

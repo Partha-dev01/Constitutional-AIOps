@@ -491,4 +491,180 @@ async def request_serving_mode(
     return _current_serving_mode_status()
 
 
-__all__ = ["router", "get_remediation_settings", "get_constitutional_settings"]
+# ---------------------------------------------------------------------------
+# LLM endpoints (bring-your-own model) — Settings -> Models
+# ---------------------------------------------------------------------------
+#
+# The LLM endpoint config (URL + served model per agent + an optional API key)
+# used to be env-only (FAST_AGENT_URL / REASONING_AGENT_URL / *_MODEL / LLM_API_KEY),
+# so a self-hoster had to edit .env and rebuild. These endpoints let an operator
+# view + change it from the UI. A save both:
+#   * persists to the same settings.json (survives a restart), AND
+#   * applies LIVE via app.state.model_router.reconfigure() (no restart needed).
+# SECURITY: the API key is WRITE-ONLY. GET never returns it — only booleans
+# ("…ApiKeySet"). On PUT, apiKey=null leaves the stored key untouched, apiKey=""
+# clears it, any other value sets it. The key is never written to a log.
+
+
+class ModelsConfig(BaseModel):
+    """Effective LLM-endpoint config (GET). Never carries the API key itself."""
+
+    fastAgentUrl: str
+    fastAgentModel: str
+    reasoningAgentUrl: str
+    reasoningAgentModel: str
+    fastApiKeySet: bool = False
+    reasoningApiKeySet: bool = False
+
+
+class ModelsConfigUpdate(BaseModel):
+    """Editable LLM-endpoint config (PUT)."""
+
+    fastAgentUrl: str = Field(..., min_length=1)
+    fastAgentModel: str = Field(..., min_length=1)
+    reasoningAgentUrl: str = Field(..., min_length=1)
+    reasoningAgentModel: str = Field(..., min_length=1)
+    # Shared bearer key applied to both agents. None => leave the stored key
+    # unchanged; "" => clear it; any other value => set it. Write-only.
+    apiKey: Optional[str] = None
+
+
+class ModelsTestResult(BaseModel):
+    """Per-agent liveness result for the 'Test connection' button."""
+
+    fast_agent: bool
+    reasoning_agent: bool
+
+
+def get_models_settings() -> Optional[dict[str, Any]]:
+    """Return the persisted LLM-endpoint overrides, or None if unset.
+
+    Exported so main.py can re-apply a UI-saved endpoint config to the freshly
+    built ModelRouter at startup (persisted config wins over env, and survives a
+    restart). The returned dict may include the stored ``apiKey`` for
+    reconfigure() — callers MUST NOT return it to a client.
+    """
+    models = _load_persisted().get("models")
+    return models if isinstance(models, dict) and models else None
+
+
+def _models_config_response(request: Request) -> ModelsConfig:
+    """Build the key-free GET response from the LIVE router (or config fallback)."""
+    router_obj = getattr(request.app.state, "model_router", None)
+    if router_obj is not None and hasattr(router_obj, "current_endpoint_config"):
+        c = router_obj.current_endpoint_config()
+        return ModelsConfig(
+            fastAgentUrl=c["fast_agent_url"],
+            fastAgentModel=c["fast_agent_model"],
+            reasoningAgentUrl=c["reasoning_agent_url"],
+            reasoningAgentModel=c["reasoning_agent_model"],
+            fastApiKeySet=bool(c["fast_api_key_set"]),
+            reasoningApiKeySet=bool(c["reasoning_api_key_set"]),
+        )
+    # Router not built yet (e.g. very early call): fall back to raw config.
+    from src.config import config as _cfg
+
+    return ModelsConfig(
+        fastAgentUrl=_cfg.llm.fast_agent_url,
+        fastAgentModel=_cfg.llm.fast_agent_model,
+        reasoningAgentUrl=_cfg.llm.reasoning_agent_url,
+        reasoningAgentModel=_cfg.llm.reasoning_agent_model,
+        fastApiKeySet=bool((_cfg.llm.fast_agent_api_key or "").strip()),
+        reasoningApiKeySet=bool((_cfg.llm.reasoning_agent_api_key or "").strip()),
+    )
+
+
+@router.get(
+    "/models",
+    response_model=ModelsConfig,
+    summary="Get LLM Endpoint Config",
+    description="Current bring-your-own LLM endpoint config (URLs + served model names). The API key is never returned — only whether one is set.",
+)
+async def get_models_config(
+    request: Request, user: User = Depends(require_user)
+) -> ModelsConfig:
+    return _models_config_response(request)
+
+
+@router.put(
+    "/models",
+    response_model=ModelsConfig,
+    summary="Update LLM Endpoint Config",
+    description="Persist + apply the LLM endpoint config live (no restart). Admin only. The API key is write-only: omit it to keep the stored one, send \"\" to clear it.",
+)
+async def update_models_config(
+    request: Request,
+    body: ModelsConfigUpdate,
+    user: User = Depends(require_user),
+) -> ModelsConfig:
+    user = coerce_user(user)
+    if not is_synthetic(user) and user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins may change the LLM endpoints",
+        )
+
+    # Persist (including the key). Merge onto any existing stored block so an
+    # omitted apiKey keeps the previously stored key.
+    persisted = _load_persisted()
+    stored = persisted.get("models") if isinstance(persisted.get("models"), dict) else {}
+    new_key = stored.get("apiKey", "")
+    if body.apiKey is not None:
+        new_key = body.apiKey  # "" clears, any other value sets
+    persisted["models"] = {
+        "fastAgentUrl": body.fastAgentUrl.strip(),
+        "fastAgentModel": body.fastAgentModel.strip(),
+        "reasoningAgentUrl": body.reasoningAgentUrl.strip(),
+        "reasoningAgentModel": body.reasoningAgentModel.strip(),
+        "apiKey": new_key,
+    }
+    _save_persisted(persisted)
+
+    # Apply LIVE to the running router (best-effort — a bad URL simply fails on
+    # the next LLM call; the config is persisted regardless).
+    router_obj = getattr(request.app.state, "model_router", None)
+    if router_obj is not None and hasattr(router_obj, "reconfigure"):
+        try:
+            await router_obj.reconfigure(
+                fast_url=body.fastAgentUrl,
+                reasoning_url=body.reasoningAgentUrl,
+                fast_model=body.fastAgentModel,
+                reasoning_model=body.reasoningAgentModel,
+                fast_api_key=new_key,
+                reasoning_api_key=new_key,
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Live model-router reconfigure failed (persisted anyway): %s", exc)
+
+    return _models_config_response(request)
+
+
+@router.post(
+    "/models/test",
+    response_model=ModelsTestResult,
+    summary="Test LLM Endpoints",
+    description="Probe the currently-configured fast + reasoning endpoints and report which respond. Save first to test edited values.",
+)
+async def test_models_config(
+    request: Request, user: User = Depends(require_user)
+) -> ModelsTestResult:
+    router_obj = getattr(request.app.state, "model_router", None)
+    if router_obj is None:
+        return ModelsTestResult(fast_agent=False, reasoning_agent=False)
+    try:
+        health = await router_obj.health_check()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("LLM endpoint test failed: %s", exc)
+        return ModelsTestResult(fast_agent=False, reasoning_agent=False)
+    return ModelsTestResult(
+        fast_agent=bool(health.get("fast_agent")),
+        reasoning_agent=bool(health.get("reasoning_agent")),
+    )
+
+
+__all__ = [
+    "router",
+    "get_remediation_settings",
+    "get_constitutional_settings",
+    "get_models_settings",
+]

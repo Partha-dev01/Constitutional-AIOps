@@ -5,6 +5,7 @@ const ANCHORS = [
   { href: '#features', label: 'Features' },
   { href: '#architecture', label: 'Architecture' },
   { href: '#live', label: 'Live demo' },
+  { href: '#self-host', label: 'Self-host' },
   { href: '#about', label: 'About' },
 ]
 
@@ -55,7 +56,7 @@ export function LandingHeader() {
             src="/logo-mark.png"
             alt=""
             aria-hidden="true"
-            className="h-8 w-8 rounded-full"
+            className="h-8 w-8"
           />
           <span className="text-base font-bold tracking-tight">Constitutional AIOps</span>
         </a>

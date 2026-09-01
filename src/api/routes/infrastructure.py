@@ -64,10 +64,13 @@ def _save_dismissed_hosts(labels: set[str]) -> None:
     except Exception as exc:  # noqa: BLE001
         logger.warning("Failed to persist dismissed hosts: %s", exc)
 
-# In-memory store for monitored containers
+# In-memory store for monitored containers. Includes the lite-tier trio
+# (backend/frontend/caddy) so a lite deploy with the Docker socket mounted
+# reports its REAL running containers, plus the full-stack services.
 _monitored_containers: set[str] = {
     "aiops-frontend",
     "aiops-backend",
+    "aiops-caddy",
     "aiops-neo4j",
     "aiops-loki",
     "aiops-prometheus",
@@ -134,6 +137,28 @@ def _get_docker_client():
         return None
 
 
+def _container_image_ref(container: Any) -> str:
+    """Best-effort image label that never lets a missing image abort collection.
+
+    ``container.image`` lazily inspects the image by ID and raises ImageNotFound
+    (404) when that image is dangling — e.g. right after a rebuild replaces it,
+    which would otherwise take down the whole container list. The container's own
+    config already carries the image reference string (no extra API call), so
+    prefer that and only fall back to the lazy lookup, guarding every path.
+    """
+    try:
+        cfg_image = (container.attrs.get("Config", {}) or {}).get("Image", "") or ""
+        if cfg_image:
+            return cfg_image
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        img = container.image
+        return img.tags[0] if img.tags else str(img.id)[:12]
+    except Exception:  # noqa: BLE001
+        return "unknown"
+
+
 def _collect_container_status(
     monitored: set[str],
 ) -> tuple[list[ContainerInfo], int, int]:
@@ -157,46 +182,50 @@ def _collect_container_status(
             if name not in monitored:
                 continue
 
-            c_status = container.status
-            health: str | None = None
-            health_state = container.attrs.get("State", {}).get("Health", {})
-            if health_state:
-                health = health_state.get("Status", "unknown")
+            try:
+                c_status = container.status
+                health: str | None = None
+                health_state = container.attrs.get("State", {}).get("Health", {})
+                if health_state:
+                    health = health_state.get("Status", "unknown")
 
-            image = (
-                container.image.tags[0]
-                if container.image.tags
-                else str(container.image.id)[:12]
-            )
-            ports = _format_ports(container.ports)
-            service = (
-                name.replace("aiops-", "") if name.startswith("aiops-") else name
-            )
+                image = _container_image_ref(container)
+                ports = _format_ports(container.ports)
+                service = (
+                    name.replace("aiops-", "") if name.startswith("aiops-") else name
+                )
 
-            if c_status == "running":
-                if health in ("healthy", None):
-                    healthy_count += 1
-                    if health is None:
-                        health = "healthy"
+                if c_status == "running":
+                    if health in ("healthy", None):
+                        healthy_count += 1
+                        if health is None:
+                            health = "healthy"
+                    else:
+                        unhealthy_count += 1
                 else:
                     unhealthy_count += 1
-            else:
-                unhealthy_count += 1
-                if health is None:
-                    health = "unhealthy"
+                    if health is None:
+                        health = "unhealthy"
 
-            containers.append(
-                ContainerInfo(
-                    name=name,
-                    service=service,
-                    status=c_status,
-                    health=health,
-                    port=ports,
-                    image=image,
-                    description=_get_container_description(service),
-                    monitored=True,
+                containers.append(
+                    ContainerInfo(
+                        name=name,
+                        service=service,
+                        status=c_status,
+                        health=health,
+                        port=ports,
+                        image=image,
+                        description=_get_container_description(service),
+                        monitored=True,
+                    )
                 )
-            )
+            except Exception as exc:  # noqa: BLE001
+                # One unreadable container (e.g. a dangling image SHA right after
+                # a rebuild) must never empty the whole monitored list.
+                logger.warning(
+                    "Skipping container %s during status collection: %s", name, exc
+                )
+                continue
     finally:
         docker_client.close()
 
@@ -216,11 +245,7 @@ def _discover_all_containers(monitored: set[str]) -> list[DiscoveredContainer]:
         discovered: list[DiscoveredContainer] = []
         for container in all_containers:
             name = container.name
-            image = (
-                container.image.tags[0]
-                if container.image.tags
-                else str(container.image.id)[:12]
-            )
+            image = _container_image_ref(container)
             ports = _format_ports(container.ports)
             created = (
                 container.attrs.get("Created", "")[:19]
@@ -568,6 +593,7 @@ def _get_container_description(service: str) -> str:
     descriptions = {
         "frontend": "React frontend with nginx proxy",
         "backend": "FastAPI backend server",
+        "caddy": "Reverse proxy and TLS edge (Let's Encrypt)",
         "neo4j": "Graph database for episodic memory",
         "loki": "Log aggregation system",
         "prometheus": "Metrics collection and storage",
@@ -580,35 +606,18 @@ def _get_container_description(service: str) -> str:
 
 
 async def _get_static_containers(request: Request) -> InfrastructureResponse:
-    """Fallback static container list when Docker is unavailable."""
-    expected_containers = [
-        {"name": "aiops-frontend", "service": "frontend", "image": "constitutional-aiops-frontend", "port": "3000"},
-        {"name": "aiops-backend", "service": "backend", "image": "constitutional-aiops-backend", "port": "8000"},
-        {"name": "aiops-neo4j", "service": "neo4j", "image": "neo4j:5.15-community", "port": "7474, 7687"},
-        {"name": "aiops-loki", "service": "loki", "image": "grafana/loki:2.9.3", "port": "3100"},
-        {"name": "aiops-prometheus", "service": "prometheus", "image": "prom/prometheus:v2.48.0", "port": "9090"},
-        {"name": "aiops-tempo", "service": "tempo", "image": "grafana/tempo:2.3.1", "port": "3200"},
-        {"name": "aiops-grafana", "service": "grafana", "image": "grafana/grafana:10.2.3", "port": "3001"},
-        {"name": "aiops-otel-collector", "service": "otel-collector", "image": "otel/opentelemetry-collector-contrib", "port": "4317, 4318"},
-        {"name": "nextcloud", "service": "nextcloud", "image": "nextcloud:latest", "port": "8080"},
-    ]
+    """Honest fallback when the Docker socket is unavailable.
 
-    containers = []
-    for c in expected_containers:
-        containers.append(ContainerInfo(
-            name=c["name"],
-            service=c["service"],
-            status="unknown",
-            health="unknown",
-            port=c["port"],
-            image=c["image"],
-            description=_get_container_description(c["service"]),
-            monitored=c["name"] in _monitored_containers,
-        ))
-
+    Returns an EMPTY list rather than a fabricated roster of "unknown"
+    containers. Listing services that may not even be deployed (the lite tier
+    runs only backend/frontend/caddy, not the full LGTM stack) would be
+    misleading — the Dashboard/Infrastructure pages already render a clean
+    "no containers visible" empty state from an empty list. Mount the Docker
+    socket (see docker-compose.lite.yml) to surface real container health.
+    """
     return InfrastructureResponse(
-        containers=containers,
-        total=len(containers),
+        containers=[],
+        total=0,
         healthy=0,
         unhealthy=0,
     )

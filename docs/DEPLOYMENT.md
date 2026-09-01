@@ -1,253 +1,246 @@
 # Constitutional AIOps - Deployment Guide
 
-> **Version**: 0.4.0
-> **Last Updated**: 2025-12-30
-> **Status**: Production Ready
+> **Version**: 0.5.0
+> **Last Updated**: 2026-09-01
+> **Status**: Production deployed (AWS lite tier, TLS)
 
 ---
 
 ## Table of Contents
 
-1. [Quick Start](#1-quick-start)
+1. [Quick Start (self-host)](#1-quick-start-self-host)
 2. [Deployment Options](#2-deployment-options)
-3. [Jarvis Labs Hybrid (Recommended)](#3-jarvis-labs-hybrid-recommended)
-4. [Local Development](#4-local-development)
-5. [AWS Deployment](#5-aws-deployment)
-6. [Configuration Reference](#6-configuration-reference)
-7. [Troubleshooting](#7-troubleshooting)
+3. [Bring Your Own LLM Endpoint](#3-bring-your-own-llm-endpoint)
+4. [Lite Self-Host](#4-lite-self-host)
+5. [Full GPU Stack (reference config)](#5-full-gpu-stack-reference-config)
+6. [Local Development](#6-local-development)
+7. [Configuration Reference](#7-configuration-reference)
+8. [Troubleshooting](#8-troubleshooting)
 
 ---
 
-## 1. Quick Start
+## 1. Quick Start (self-host)
+
+The fastest path is the **lite** profile: backend + frontend + your own
+OpenAI-compatible LLM endpoint. No GPU, no bundled models, no Neo4j, no
+observability stack required.
+
+```bash
+# 1. Clone
+git clone https://github.com/Partha-dev01/Aiops_Final.git constitutional-aiops
+cd constitutional-aiops
+
+# 2. Configure your LLM endpoint
+cp .env.example .env
+#   edit .env and set FAST_AGENT_URL / REASONING_AGENT_URL / *_MODEL
+#   (both agents may point at the SAME endpoint + model), plus LLM_API_KEY
+#   if your endpoint needs a bearer token.
+
+# 3. Start (self-contained — do NOT layer it on docker-compose.yml)
+docker compose -f docker/docker-compose.lite.yml up -d
+
+# 4. Open the app
+#   Frontend  http://localhost:3000
+#   Backend   http://localhost:8000/docs
+```
+
+That is the whole thing. The app degrades gracefully without Neo4j and the
+LGTM observability stack (it falls back to an in-memory episode store and the
+Graph/Metrics pages show fallback data), so this is a genuine one-command
+self-host, not a crippled build.
 
 ### Prerequisites
 
 | Requirement | Version | Notes |
 |-------------|---------|-------|
 | Docker | 24+ | With Docker Compose v2 |
-| RAM | 8GB+ | For local services |
-| Disk | 20GB | For containers and logs |
-
-### 10-Minute Setup (Jarvis Labs Hybrid)
-
-```bash
-# 1. Clone repository
-git clone https://github.com/Partha-dev01/Aiops_Final.git
-cd constitutional-aiops
-
-# 2. Start services (connects to Jarvis Labs for LLM)
-docker compose up -d
-
-# 3. Access the application
-open http://localhost:3000       # Dashboard
-open http://localhost:8000/docs  # API docs
-open http://localhost:3001       # Grafana
-```
+| RAM | 2GB+ | Measured steady-state RSS is ~0.74 GiB (backend + frontend + edge) |
+| Disk | 20GB | CPU-only image is ~1.3GB |
+| LLM endpoint | any OpenAI-compatible | vLLM, Ollama, AWS Bedrock, OpenAI, ... (see [§3](#3-bring-your-own-llm-endpoint)) |
 
 ---
 
 ## 2. Deployment Options
 
-| Option | LLM Location | GPU Required | Cost | Best For |
-|--------|--------------|--------------|------|----------|
-| **Jarvis Labs Hybrid** | Cloud (A5000 24GB) | No (local) | $0.49/hr | **Recommended** |
-| Local Development | Mock server | No | Free | Development |
-| AWS g6.xlarge | Self-hosted | Yes (L4 24GB) | $0.35/hr | Self-contained |
+| Option | LLM | GPU | Compose file | Best for |
+|--------|-----|-----|--------------|----------|
+| **Lite self-host** | Bring your own endpoint | No | `docker/docker-compose.lite.yml` | **Recommended** — cheap, portable, one command |
+| Full GPU stack | Local vLLM dual-engine | Yes (24GB) | `docker-compose.yml` + `docker/docker-compose.{gpu,production}.yml` | The research-paper reference configuration |
+| Local development | Mock server | No | `docker-compose.yml` + `docker/docker-compose.local.yml` | UI/API development without any LLM |
 
-### Architecture Comparison
-
-```
-JARVIS LABS HYBRID (Recommended):
-├── Local: Frontend, Backend, Neo4j, LGTM stack
-└── Cloud: Ollama with Qwen3-4B + Qwen3-14B (both always loaded)
-
-LOCAL DEVELOPMENT:
-├── Local: All services
-└── LLM: Mock server (returns canned responses)
-
-AWS SELF-CONTAINED:
-└── All on g6.xlarge: Services + Ollama + Models
-```
+The lite tier is what runs the hosted AWS deployment: a small (t3/t4g.small,
+2GiB) instance with the LLM offloaded to a remote endpoint, fronted by Caddy
+with Let's Encrypt TLS.
 
 ---
 
-## 3. Jarvis Labs Hybrid (Recommended)
+## 3. Bring Your Own LLM Endpoint
 
-### 3.1 Why Jarvis Labs?
-
-| Feature | Benefit |
-|---------|---------|
-| A5000 24GB GPU | Both models fit simultaneously |
-| $0.49/hour | Cost-effective for development |
-| Ollama pre-installed | No setup required |
-| HTTPS API | Secure remote access |
-| Pause/Resume | Only pay when using |
-
-### 3.2 Jarvis Labs Setup
-
-1. **Create Account**: [jarvislabs.ai](https://jarvislabs.ai)
-2. **Launch Instance**:
-   - Template: **Ollama**
-   - GPU: **A5000 24GB** or higher
-   - Storage: 50GB+
-3. **Pull Models** (via Jarvis Labs terminal):
-   ```bash
-   ollama pull qwen3:4b
-   ollama pull qwen3:14b
-   ```
-4. **Get Endpoint URL**: `https://[instance-id].notebooks.jarvislabs.net`
-
-### 3.3 Local Configuration
-
-Update `docker-compose.yml` or create `.env`:
+The app talks to any **OpenAI-compatible** chat-completions endpoint. It uses
+two logical agents — a *fast* annotator and a *reasoning* agent — but they may
+point at the **same** URL and model for a minimal single-endpoint setup, or at
+two separate endpoints for the dual-engine reference configuration.
 
 ```bash
-# .env file
-# The *_URL points at the OpenAI-compatible base (…/v1). A trailing slash is
-# optional — it is normalized internally either way. Works with vLLM, Ollama,
-# and hosted OpenAI-compatible endpoints such as AWS Bedrock's /openai/v1.
-FAST_AGENT_URL=https://[your-instance].notebooks.jarvislabs.net/v1
-REASONING_AGENT_URL=https://[your-instance].notebooks.jarvislabs.net/v1
-FAST_AGENT_MODEL=qwen3:4b
-REASONING_AGENT_MODEL=qwen3:14b
-# Optional: bearer token for a secured bring-your-own endpoint. Leave unset for
-# an unauthenticated local endpoint (behaviour unchanged). A single LLM_API_KEY
-# covers both agents; FAST_AGENT_API_KEY / REASONING_AGENT_API_KEY override it
-# per agent. A minimal one-endpoint self-host can point both *_URL/*_MODEL at the
-# same value and set one LLM_API_KEY.
-# LLM_API_KEY=sk-...
+# Point both agents at the same endpoint + model (minimal setup):
+FAST_AGENT_URL=https://your-endpoint.example.com/v1
+REASONING_AGENT_URL=https://your-endpoint.example.com/v1
+FAST_AGENT_MODEL=your-model
+REASONING_AGENT_MODEL=your-model
+
+# Bearer token for a secured endpoint (optional; empty = no Authorization header).
+# LLM_API_KEY covers both agents; the per-agent keys override it if set.
+LLM_API_KEY=sk-...
+# FAST_AGENT_API_KEY=...
+# REASONING_AGENT_API_KEY=...
 ```
 
-### 3.4 Start Services
+The `*_URL` points at the OpenAI-compatible base (`…/v1`). A trailing slash is
+optional — it is normalized internally either way.
 
-```bash
-# Start all local services
-docker compose up -d
+### Endpoint examples
 
-# Verify health
-curl http://localhost:8000/api/v1/health
-```
+| Provider | `*_URL` | `*_MODEL` | Notes |
+|----------|---------|-----------|-------|
+| **vLLM** (self-hosted) | `http://your-host:8000/v1` | the `--served-model-name` | Colon-free names auto-disable thinking |
+| **Ollama** (self-hosted) | `http://your-host:11434/v1` | `qwen3:4b` etc. | Colon in the name keeps thinking on |
+| **AWS Bedrock** | `https://bedrock-runtime.<region>.amazonaws.com/openai/v1` | `qwen.qwen3-32b-v1:0` etc. | Set `LLM_API_KEY` to a Bedrock API key |
+| **OpenAI** | `https://api.openai.com/v1` | `gpt-4o-mini` etc. | Set `LLM_API_KEY` to your OpenAI key |
 
-### 3.5 Verify LLM Connectivity
-
-```bash
-# Check models available on Jarvis Labs
-curl https://[your-instance].notebooks.jarvislabs.net/api/tags
-
-# Should show:
-# {"models":[{"name":"qwen3:4b",...},{"name":"qwen3:14b",...}]}
-```
+You can also change all of this at runtime from **Settings → Models** in the
+app — the endpoint, model names, and a write-only API key apply live without a
+restart.
 
 ---
 
-## 4. Local Development
+## 4. Lite Self-Host
 
-### 4.1 No GPU Mode (Mock LLM)
+The lite profile (`docker/docker-compose.lite.yml`) is self-contained. Use it
+alone, not layered on `docker-compose.yml`.
 
-For development without GPU access:
+### 4.1 Localhost (no TLS)
 
 ```bash
-# Start with mock LLM server
+docker compose -f docker/docker-compose.lite.yml up -d
+# frontend  http://localhost:3000
+# backend   http://localhost:8000
+```
+
+The SPA calls the backend cross-origin at `:8000`, so `CORS_ORIGINS` defaults to
+`http://localhost:3000` (already set for you).
+
+### 4.2 Public edge (Caddy + Let's Encrypt TLS)
+
+Enable the `edge` profile to put Caddy in front on a real domain. Frontend and
+backend stay internal; only Caddy binds 80/443.
+
+```bash
+# .env must set APP_DOMAIN + ACME_EMAIL, and PUBLIC_API_URL=/api/v1 so the
+# SPA bundle is same-origin under the domain.
+APP_DOMAIN=aiops.example.com
+ACME_EMAIL=you@example.com
+PUBLIC_API_URL=/api/v1
+
+docker compose -f docker/docker-compose.lite.yml --profile edge up -d
+```
+
+### 4.3 What lite includes (and what it drops)
+
+| Component | Lite | Behaviour |
+|-----------|------|-----------|
+| Backend (FastAPI) | ✅ | CPU-only image (~1.3GB); embeddings/BERTScore run on CPU |
+| Frontend (React/nginx) | ✅ | Static SPA |
+| Caddy edge (TLS) | optional (`--profile edge`) | Let's Encrypt on `APP_DOMAIN` |
+| Neo4j graph memory | ❌ | Graceful in-memory episode store with similarity search |
+| LGTM observability | ❌ | Graph/Metrics pages show fallback data |
+| Local GPU/models | ❌ | Bring your own endpoint (see [§3](#3-bring-your-own-llm-endpoint)) |
+
+### 4.4 Container health on the Dashboard
+
+The lite backend mounts the host Docker socket
+(`/var/run/docker.sock`) read-only so the **Dashboard → Service Availability**
+and **Infrastructure** pages show the real running containers and their health.
+This does **not** enable restart/scale remediation — that is a separate opt-in
+(`AIOPS_ENABLE_ACTION_TOOLS=true`, off by default). A container with the host
+socket can control the daemon, so keep the box locked down.
+
+---
+
+## 5. Full GPU Stack (reference config)
+
+The research-paper configuration runs both models locally on one 24GB GPU
+(vLLM AWQ-marlin): Qwen3-4B (fast, port 8000) + Qwen3-14B (reasoning, port
+8001), always loaded, plus Neo4j and the full LGTM observability stack.
+
+```bash
+# On a GPU host (e.g. AWS g6.xlarge L4 24GB) with the NVIDIA container toolkit:
+git clone https://github.com/Partha-dev01/Aiops_Final.git constitutional-aiops
+cd constitutional-aiops
+cp .env.production.example .env   # set NEO4J_PASSWORD, AUTH_*, WS_TOKEN, ...
+docker compose -f docker-compose.yml -f docker/docker-compose.gpu.yml up -d
+```
+
+This is heavier (~8.8GB of memory limits across Neo4j + LGTM + services) and is
+not required to run the product — the lite tier is the recommended self-host.
+
+---
+
+## 6. Local Development
+
+### 6.1 No-GPU mock LLM
+
+```bash
 docker compose -f docker-compose.yml -f docker/docker-compose.local.yml up -d
 ```
 
-The mock server returns canned responses for testing UI/API flow.
+The mock server returns canned responses for exercising the UI/API without any
+real endpoint.
 
-### 4.2 Development Workflow
+### 6.2 Hot-reload workflow
 
 ```bash
-# Backend hot-reload
+# Backend
 cd src && uvicorn main:app --reload --port 8000
-
-# Frontend hot-reload (new terminal)
+# Frontend (new terminal)
 cd frontend && npm run dev
 ```
 
-### 4.3 Running Tests
+### 6.3 Tests + lint
 
 ```bash
-# All tests
 pytest tests/ -v
-
-# With coverage
-pytest tests/ --cov=src --cov-report=html
-
-# Linting
-black src/ --check
-isort src/ --check
+black src/ --check && isort src/ --check
 ```
 
 ---
 
-## 5. AWS Deployment
+## 7. Configuration Reference
 
-### 5.1 Instance Requirements
-
-| Setting | Value |
-|---------|-------|
-| Instance Type | **g6.xlarge** |
-| GPU | NVIDIA L4 24GB |
-| vCPU | 4 |
-| RAM | 16GB |
-| Storage | 100GB gp3 |
-| Pricing | ~$0.35/hr (Spot) |
-
-### 5.2 Quick AWS Setup
-
-```bash
-# 1. Launch g6.xlarge with Deep Learning AMI
-# 2. SSH into instance
-ssh -i your-key.pem ubuntu@<instance-ip>
-
-# 3. Install Ollama
-curl -fsSL https://ollama.com/install.sh | sh
-
-# 4. Pull models
-ollama pull qwen3:4b
-ollama pull qwen3:14b
-
-# 5. Clone and start
-git clone https://github.com/Partha-dev01/Aiops_Final.git
-cd constitutional-aiops
-docker compose up -d
-```
-
-### 5.3 Security Groups
-
-| Port | Service | Access |
-|------|---------|--------|
-| 22 | SSH | Your IP |
-| 3000 | Frontend | 0.0.0.0/0 |
-| 8000 | Backend API | 0.0.0.0/0 |
-| 3001 | Grafana | 0.0.0.0/0 |
-| 7474 | Neo4j Browser | Your IP |
-
----
-
-## 6. Configuration Reference
-
-### 6.1 Environment Variables
+### 7.1 Environment variables
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `FAST_AGENT_URL` | `http://localhost:8081/v1` | Fast agent Ollama endpoint |
-| `REASONING_AGENT_URL` | `http://localhost:8082/v1` | Reasoning agent endpoint |
-| `FAST_AGENT_MODEL` | `qwen3:4b` | Fast agent model name |
-| `REASONING_AGENT_MODEL` | `qwen3:14b` | Reasoning agent model |
-| `LLM_API_KEY` | _(unset)_ | Shared bearer token for a secured BYO endpoint; applies to both agents. Empty = no `Authorization` header sent |
-| `FAST_AGENT_API_KEY` | _(falls back to `LLM_API_KEY`)_ | Per-agent bearer token override for the fast endpoint |
-| `REASONING_AGENT_API_KEY` | _(falls back to `LLM_API_KEY`)_ | Per-agent bearer token override for the reasoning endpoint |
-| `NEO4J_URI` | `bolt://localhost:7687` | Neo4j connection URI |
-| `NEO4J_PASSWORD` | `changeme_neo4j_password` | Neo4j password |
-| `LOKI_URL` | `http://localhost:3100` | Loki log endpoint |
-| `PROMETHEUS_URL` | `http://localhost:9090` | Prometheus endpoint |
+| `FAST_AGENT_URL` | `http://localhost:8000/v1` | Fast-agent OpenAI-compatible base |
+| `REASONING_AGENT_URL` | `http://localhost:8001/v1` | Reasoning-agent base (may equal the fast URL) |
+| `FAST_AGENT_MODEL` | `qwen3-4b` | Fast-agent model name |
+| `REASONING_AGENT_MODEL` | `qwen3-14b` | Reasoning-agent model name |
+| `LLM_API_KEY` | _(unset)_ | Shared bearer token for a secured endpoint; applies to both agents. Empty = no `Authorization` header |
+| `FAST_AGENT_API_KEY` | _(falls back to `LLM_API_KEY`)_ | Per-agent bearer override for the fast endpoint |
+| `REASONING_AGENT_API_KEY` | _(falls back to `LLM_API_KEY`)_ | Per-agent bearer override for the reasoning endpoint |
+| `AUTH_REQUIRED` | `false` | Gate the app behind the built-in session login. Set with `AUTH_ADMIN_USER` / `AUTH_ADMIN_PASSWORD` / `AUTH_SECRET_KEY` |
+| `WS_TOKEN` | _(unset)_ | Required when `ENVIRONMENT=production`; guards the `/ws` websocket |
+| `APP_DOMAIN` | _(unset)_ | Domain for the Caddy `edge` profile |
+| `ACME_EMAIL` | `admin@example.com` | Let's Encrypt contact for the `edge` profile |
+| `PUBLIC_API_URL` | `http://localhost:8000/api/v1` | SPA build-time API base; set to `/api/v1` for same-origin edge |
+| `NEO4J_URI` | `bolt://localhost:7687` | Neo4j URI (full stack only; lite falls back to in-memory) |
+| `NEO4J_PASSWORD` | _(required in production)_ | Neo4j password (a dummy is fine on lite — no server runs) |
 | `CONFIDENCE_THRESHOLD_AUTO` | `0.90` | Auto-approve threshold |
-| `CONFIDENCE_THRESHOLD_APPROVAL` | `0.70` | Require approval threshold |
+| `CONFIDENCE_THRESHOLD_APPROVAL` | `0.70` | Require-approval threshold |
 
 #### Public self-service signup (hosted demo only)
 
 Off by default — a self-host deployment keeps user creation admin-only. Turn it
-on ONLY on the hosted demo instance. The abuse controls (captcha, email
+on ONLY on a hosted demo instance. The abuse controls (captcha, email
 verification) are all optional and configured by env; with none set, signup
 still enforces the password policy and a per-IP rate limit.
 
@@ -267,94 +260,60 @@ email verification is a soft confirmation that flips an `email_verified` flag
 when the link is opened, so it does not depend on the box being awake when the
 user clicks it later.
 
-### 6.2 Docker Compose Files
-
-| File | Purpose |
-|------|---------|
-| `docker-compose.yml` | Main configuration (uses Jarvis Labs by default) |
-| `docker/docker-compose.local.yml` | Override for local dev (mock LLM) |
-| `docker/docker-compose.gpu.yml` | Override for self-hosted GPU |
-
-### 6.3 Service Ports
+### 7.2 Service ports (lite)
 
 | Port | Service |
 |------|---------|
 | 3000 | Frontend (nginx) |
-| 3001 | Grafana |
-| 3100 | Loki |
-| 3200 | Tempo |
-| 4317 | OTEL gRPC |
-| 4318 | OTEL HTTP |
-| 7474 | Neo4j Browser |
-| 7687 | Neo4j Bolt |
 | 8000 | Backend API |
-| 9090 | Prometheus |
+| 80 / 443 | Caddy edge (`--profile edge` only) |
+
+The full GPU stack adds Neo4j (7474/7687), Grafana (3001), Loki (3100), Tempo
+(3200), Prometheus (9090), and the OTEL collector (4317/4318).
 
 ---
 
-## 7. Troubleshooting
+## 8. Troubleshooting
 
-### 7.1 Common Issues
+### 8.1 Common issues
 
-#### LLM Connection Failed
+#### Agents show "offline" / LLM errors
 ```bash
-# Check Jarvis Labs endpoint
-curl -s https://[instance].notebooks.jarvislabs.net/api/tags
+# Verify your endpoint answers an OpenAI-compatible request:
+curl -s "$FAST_AGENT_URL/models" -H "Authorization: Bearer $LLM_API_KEY"
 
-# If fails, verify:
-# 1. Jarvis Labs instance is running
-# 2. URL is correct in .env or docker-compose.yml
-# 3. Models are pulled (qwen3:4b, qwen3:14b)
-```
-
-#### Backend Health Degraded
-```bash
-# Check component status
+# Then check the backend's view:
 curl http://localhost:8000/api/v1/health | jq
+```
+Check `FAST_AGENT_URL` / `REASONING_AGENT_URL` / `*_MODEL` in `.env`, and that
+`LLM_API_KEY` is set if the endpoint requires auth. You can also fix all of
+these live from **Settings → Models**.
 
-# Common causes:
-# - Neo4j not ready (wait 30s after startup)
-# - LLM endpoint unreachable
+#### Dashboard "Service Availability" is empty
+The lite backend needs the Docker socket mounted (it is, in
+`docker-compose.lite.yml`). Confirm the mount and that the daemon is reachable:
+```bash
+docker exec aiops-backend python -c "import docker; print([c.name for c in docker.from_env().containers.list()])"
 ```
 
-#### Frontend Shows "Offline"
+#### Frontend shows "Offline"
 ```bash
-# Verify API is accessible
 curl http://localhost:8000/api/v1/health
-
-# Check nginx logs
 docker logs aiops-frontend
 ```
 
-#### Neo4j Connection Failed
-```bash
-# Check Neo4j is running
-docker logs aiops-neo4j
-
-# Verify credentials
-# Default: neo4j / changeme_neo4j_password
-```
-
-### 7.2 Logs
+### 8.2 Logs
 
 ```bash
-# All services
-docker compose logs -f
-
-# Specific service
+docker compose -f docker/docker-compose.lite.yml logs -f
 docker logs -f aiops-backend
-docker logs -f aiops-frontend
-docker logs -f aiops-neo4j
 ```
 
-### 7.3 Reset Everything
+### 8.3 Reset
 
 ```bash
-# Stop and remove all containers + volumes
-docker compose down -v
-
-# Fresh start
-docker compose up -d
+docker compose -f docker/docker-compose.lite.yml down -v   # removes volumes too
+docker compose -f docker/docker-compose.lite.yml up -d
 ```
 
 ---
@@ -362,29 +321,23 @@ docker compose up -d
 ## Quick Commands Reference
 
 ```bash
-# Start all services
-docker compose up -d
+# Start (lite)
+docker compose -f docker/docker-compose.lite.yml up -d
 
-# Stop all services
-docker compose down
+# Start (lite + TLS edge)
+docker compose -f docker/docker-compose.lite.yml --profile edge up -d
 
-# View logs
-docker compose logs -f
+# Stop
+docker compose -f docker/docker-compose.lite.yml down
 
 # Rebuild after code changes
-docker compose build --no-cache && docker compose up -d
+docker compose -f docker/docker-compose.lite.yml up -d --build
 
-# Check health
+# Health
 curl http://localhost:8000/api/v1/health
-
-# Access points
-# Dashboard:  http://localhost:3000
-# API Docs:   http://localhost:8000/docs
-# Grafana:    http://localhost:3001
-# Neo4j:      http://localhost:7474
 ```
 
 ---
 
-**Last Updated**: 2025-12-27
-**Version**: 0.3.1
+**Last Updated**: 2026-09-01
+**Version**: 0.5.0

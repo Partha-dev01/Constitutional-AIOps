@@ -41,6 +41,8 @@ from src.topology.schema import (
     ALLOWED_RELATIONSHIPS,
     MAX_EDGES,
     MAX_NODES,
+    SchemaEdge,
+    SchemaNode,
     SchemaValidationError,
     TopologySchema,
     discovered_schema_from_seed,
@@ -423,6 +425,108 @@ async def reset_topology_schema() -> TopologySchemaResponse:
         mode=persistence_store.TOPOLOGY_MODE_DISCOVERED,
         nodes=payload["nodes"],
         edges=payload["edges"],
+    )
+
+
+@router.post(
+    "/schema/sync-live",
+    response_model=GenerateSchemaResponse,
+    summary="Sync Topology Schema from Live Infrastructure",
+    description=(
+        "Build a candidate topology from what is ACTUALLY running on this host "
+        "right now — the platform services with a live Docker container plus any "
+        "Prometheus-discovered edge hosts, and the dependency/telemetry edges "
+        "between them. Returned as a PREVIEW (NOT persisted): review it, then "
+        "Apply to make it the live topology. On a lite / bring-your-own-endpoint "
+        "deployment this reflects the real small footprint instead of the full "
+        "reference stack — schema and live view stay in step."
+    ),
+)
+async def sync_topology_schema_from_live(request: Request) -> GenerateSchemaResponse:
+    """Snapshot the live infrastructure into an editable candidate schema (preview)."""
+    telemetry_collector = getattr(request.app.state, "telemetry_collector", None)
+    # Local import keeps this module importable in langgraph-free CI and avoids a
+    # circular import with graph_topology at module load.
+    from src.api.routes.graph_topology import _discover_edge_hosts, _docker_health
+
+    docker_health = _docker_health()
+    edge_hosts = await _discover_edge_hosts(telemetry_collector)
+
+    seed = discovered_schema_from_seed()
+    live_ids = set(docker_health)
+    nodes = [n for n in seed.nodes if n.id in live_ids]
+    if not nodes:
+        # No docker signal (socket not mounted / CI) or only non-platform
+        # containers present: fall back to the full reference so a sync is never
+        # blank. Docker presence is the authoritative "deployed here" signal.
+        nodes = list(seed.nodes)
+    kept_ids = {n.id for n in nodes}
+    edges = [e for e in seed.edges if e.source in kept_ids and e.target in kept_ids]
+
+    # Overlay Prometheus-discovered remote edge hosts, pinned one tier below the
+    # deepest kept service, shipping telemetry to loki + prometheus when present.
+    edge_tier = max((n.tier for n in nodes), default=0) + 1
+    for label in sorted(edge_hosts):
+        eid = f"edge:{label}"
+        if eid in kept_ids:
+            continue
+        nodes.append(
+            SchemaNode(
+                id=eid,
+                label=label,
+                kind="edge-host",
+                tier=edge_tier,
+                description=f"Monitored remote host '{label}' (Prometheus-discovered)",
+            )
+        )
+        kept_ids.add(eid)
+        for tgt in ("loki", "prometheus"):
+            if tgt in kept_ids:
+                edges.append(
+                    SchemaEdge(
+                        source=eid,
+                        target=tgt,
+                        relationship="SHIPS_TELEMETRY",
+                        kind="dynamic",
+                    )
+                )
+
+    payload = {
+        "nodes": [n.model_dump() for n in nodes],
+        "edges": [e.model_dump() for e in edges],
+    }
+    # Re-validate through the same strict guardrail so a synced candidate is
+    # shape-identical to an Applied one (and never persisted unvalidated).
+    try:
+        schema = validate_topology_schema(payload)
+    except SchemaValidationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={
+                "message": "Could not build a valid topology from live infrastructure.",
+                "errors": exc.errors,
+            },
+        )
+
+    out = _schema_to_payload(schema)
+    if live_ids:
+        note = (
+            f"Synced from live infrastructure: {len(out['nodes'])} running "
+            "component(s) detected. Review below, then Apply to make this the live topology."
+        )
+    else:
+        note = (
+            "No live Docker signal detected (this host may not mount the Docker "
+            "socket); showing the full reference topology instead. Edit as needed, then Apply."
+        )
+    logger.info(
+        "Topology synced from live: %d nodes, %d edges (docker_services=%d)",
+        len(out["nodes"]),
+        len(out["edges"]),
+        len(live_ids),
+    )
+    return GenerateSchemaResponse(
+        preview=True, nodes=out["nodes"], edges=out["edges"], note=note
     )
 
 

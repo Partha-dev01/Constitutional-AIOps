@@ -47,4 +47,21 @@ async function boot(): Promise<void> {
   )
 }
 
+// A new deploy changes chunk hashes and purges the old ones; a client holding a
+// stale index.html then 404s on a lazy route chunk ("Failed to fetch dynamically
+// imported module"). Recover by reloading ONCE to pick up the fresh index +
+// chunks (guarded against a reload loop; the ErrorBoundary is the final fallback).
+window.addEventListener('vite:preloadError', () => {
+  let recentlyReloaded = false
+  try {
+    const KEY = 'aiops:chunk-reload-at'
+    const last = Number(sessionStorage.getItem(KEY) || '0')
+    recentlyReloaded = Date.now() - last < 10000
+    if (!recentlyReloaded) sessionStorage.setItem(KEY, String(Date.now()))
+  } catch {
+    /* storage unavailable (e.g. private mode): fall through to a single reload */
+  }
+  if (!recentlyReloaded) window.location.reload()
+})
+
 void boot()

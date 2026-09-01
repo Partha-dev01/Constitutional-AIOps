@@ -165,6 +165,28 @@ async def lifespan(app: FastAPI):
     # Initialize ModelRouter
     app.state.model_router = ModelRouter()
 
+    # Re-apply any UI-saved LLM endpoint override (Settings -> Models). Persisted
+    # config wins over env and survives a restart; done before the agents bind so
+    # they never see the pre-override state. Non-fatal — a bad stored value just
+    # fails on the first LLM call. The key is never logged.
+    try:
+        from src.api.routes.settings import get_models_settings
+
+        _models = get_models_settings()
+        if _models:
+            _key = _models.get("apiKey", "")
+            await app.state.model_router.reconfigure(
+                fast_url=_models.get("fastAgentUrl"),
+                reasoning_url=_models.get("reasoningAgentUrl"),
+                fast_model=_models.get("fastAgentModel"),
+                reasoning_model=_models.get("reasoningAgentModel"),
+                fast_api_key=_key,
+                reasoning_api_key=_key,
+            )
+            logger.info("Applied persisted LLM endpoint override from Settings -> Models")
+    except Exception as e:  # noqa: BLE001
+        logger.warning(f"Could not apply persisted LLM endpoint override (non-fatal): {e}")
+
     # Initialize agents with shared router
     app.state.fast_annotator = FastAnnotator(model_router=app.state.model_router)
     app.state.reasoning_agent = ReasoningAgent(model_router=app.state.model_router)
