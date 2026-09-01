@@ -61,6 +61,12 @@ services:
       # graceful in-memory fallback). NEO4J_PASSWORD is a dummy only so the
       # production secret-guard (_require_password) does not refuse to boot.
       - NEO4J_PASSWORD=${NEO4J_PASSWORD:-lite-unused}
+      # Lite ships WITHOUT Neo4j, so the startup connect must FAIL FAST to the
+      # in-memory fallback. The default 8-attempt backoff wastes ~75s retrying a
+      # dead port, and because that runs inside the FastAPI lifespan it BLOCKS
+      # uvicorn from accepting connections — so the edge 502s the entire cold-wake
+      # window. One attempt = instant connection-refused -> fallback (~sub-second).
+      - NEO4J_CONNECT_MAX_ATTEMPTS=${NEO4J_CONNECT_MAX_ATTEMPTS:-1}
       # --- App ---
       - ENVIRONMENT=${ENVIRONMENT:-production}
       - DEBUG=false

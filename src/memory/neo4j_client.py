@@ -7,6 +7,7 @@ Stores incidents, actions, and their relationships for pattern learning.
 
 import asyncio
 import logging
+import os
 from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Any, AsyncGenerator, Optional
@@ -63,7 +64,9 @@ class Neo4jClient:
 
         logger.info(f"Neo4jClient initialized (uri: {self.uri})")
 
-    async def connect(self, max_attempts: int = 8, base_delay: float = 3.0) -> bool:
+    async def connect(
+        self, max_attempts: Optional[int] = None, base_delay: Optional[float] = None
+    ) -> bool:
         """
         Establish connection to Neo4j, retrying while it comes up.
 
@@ -73,13 +76,28 @@ class Neo4jClient:
         can race ahead of Neo4j. Retrying with backoff makes the one-shot startup
         connect resilient to that race instead of permanently disabling memory.
 
+        On deployments that deliberately ship WITHOUT Neo4j (the lite tier: the
+        app degrades to an in-memory episode store), the 8-attempt backoff is
+        ~75s of wasted, startup-BLOCKING retry against a port that will never
+        answer — and since this runs inside the FastAPI lifespan, uvicorn does
+        not accept connections until it finishes, so the edge returns 502 for
+        that whole window on every cold wake. Such deployments set
+        ``NEO4J_CONNECT_MAX_ATTEMPTS=1`` to fail fast to the in-memory fallback.
+
         Args:
-            max_attempts: Total connection attempts before giving up.
-            base_delay: Base seconds between attempts (grows linearly, capped 15s).
+            max_attempts: Total connection attempts before giving up. Defaults to
+                ``NEO4J_CONNECT_MAX_ATTEMPTS`` env (else 8).
+            base_delay: Base seconds between attempts (grows linearly, capped
+                15s). Defaults to ``NEO4J_CONNECT_BASE_DELAY`` env (else 3.0).
 
         Returns:
             True if connection successful, False otherwise
         """
+        if max_attempts is None:
+            max_attempts = max(1, int(os.getenv("NEO4J_CONNECT_MAX_ATTEMPTS", "8")))
+        if base_delay is None:
+            base_delay = float(os.getenv("NEO4J_CONNECT_BASE_DELAY", "3.0"))
+
         if not NEO4J_AVAILABLE:
             logger.warning("Neo4j driver not available, skipping connection")
             return False
