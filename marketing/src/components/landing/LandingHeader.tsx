@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react'
-import { APP_URL } from '../../config'
+import { APP_URL, SHOW_SELFHOST } from '../../config'
 
+// #self-host is only present when the SelfHostSection is rendered (post public
+// flip), so its nav anchor is added conditionally to avoid a dead link.
 const ANCHORS = [
   { href: '#features', label: 'Features' },
   { href: '#architecture', label: 'Architecture' },
   { href: '#live', label: 'Live demo' },
-  { href: '#self-host', label: 'Self-host' },
+  { href: '#docs', label: 'Docs' },
+  ...(SHOW_SELFHOST ? [{ href: '#self-host', label: 'Self-host' }] : []),
   { href: '#about', label: 'About' },
 ]
 
