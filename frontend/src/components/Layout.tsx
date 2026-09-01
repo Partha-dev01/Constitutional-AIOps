@@ -23,6 +23,8 @@ import { cn } from '../lib/utils'
 import api, { HealthResponse, isComponentHealthy } from '../lib/api'
 import { useAuthStore } from '../lib/auth'
 import { useMediaQuery } from '../hooks/useMediaQuery'
+import { SetupNudge } from './SetupNudge'
+import { DEMO_MODE } from '../lib/demo/flag'
 
 interface LayoutProps {
   children: ReactNode
@@ -346,6 +348,7 @@ export function Layout({ children }: LayoutProps) {
         </div>
 
         <main className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
+          {!DEMO_MODE && <SetupNudge />}
           {children}
         </main>
       </div>

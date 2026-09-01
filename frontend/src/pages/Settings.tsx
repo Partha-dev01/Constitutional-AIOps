@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { Link } from 'react-router-dom'
 import {
   Save,
   RefreshCw,
@@ -14,6 +15,7 @@ import {
   FileText,
   RotateCcw,
   RotateCw,
+  Rocket,
   Wrench,
   Waypoints,
   ArrowLeftRight,
@@ -21,6 +23,7 @@ import {
   Link2,
   KeyRound,
 } from 'lucide-react'
+import { DEMO_MODE } from '../lib/demo/flag'
 import api, {
   HealthResponse,
   isComponentHealthy,
@@ -328,6 +331,15 @@ export function Settings() {
               <Loader2 className="h-3 w-3 animate-spin" />
               Loading…
             </span>
+          )}
+          {!DEMO_MODE && (
+            <Link
+              to="/setup"
+              className="flex items-center gap-2 px-3 py-2 bg-muted text-muted-foreground rounded-lg font-medium hover:bg-muted/80 text-sm"
+            >
+              <Rocket className="h-4 w-4" />
+              Setup guide
+            </Link>
           )}
           <button
             onClick={handleResetSettings}

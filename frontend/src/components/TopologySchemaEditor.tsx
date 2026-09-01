@@ -5,6 +5,7 @@ import {
   Save,
   RotateCcw,
   RefreshCw,
+  Network,
   AlertTriangle,
   CheckCircle,
   Info,
@@ -56,6 +57,22 @@ interface GenerateResponse {
 
 const ALLOWED_KINDS = 'gateway, frontend, backend, datastore, observability, llm, edge, edge-host'
 
+interface TopologySchemaEditorProps {
+  /**
+   * Optional "generate from what you entered" action shown above the AI prompt
+   * generator (the setup wizard uses it to seed a schema from the services the
+   * user just listed). Absent in the Settings usage, where behaviour is
+   * unchanged. ``run`` returns the same preview shape as the AI generator.
+   */
+  extraGenerator?: {
+    label: string
+    description: string
+    run: () => Promise<GenerateResponse>
+  }
+  /** Called after a schema is successfully applied (the wizard advances on it). */
+  onApplied?: () => void
+}
+
 /** Pull `{message, errors[]}` out of a 422 body; fall back to the status code. */
 async function readError(res: Response): Promise<string> {
   try {
@@ -76,12 +93,16 @@ async function readError(res: Response): Promise<string> {
   return `HTTP ${res.status}`
 }
 
-export function TopologySchemaEditor() {
+export function TopologySchemaEditor({
+  extraGenerator,
+  onApplied,
+}: TopologySchemaEditorProps = {}) {
   const [mode, setMode] = useState<'discovered' | 'custom'>('discovered')
   const [jsonText, setJsonText] = useState('')
   const [prompt, setPrompt] = useState('')
   const [loading, setLoading] = useState(false)
   const [generating, setGenerating] = useState(false)
+  const [extraGenerating, setExtraGenerating] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [applying, setApplying] = useState(false)
   const [isPreview, setIsPreview] = useState(false)
@@ -145,6 +166,26 @@ export function TopologySchemaEditor() {
     }
   }
 
+  const handleExtraGenerate = async () => {
+    if (!extraGenerator) return
+    setExtraGenerating(true)
+    setError(null)
+    setNotice(null)
+    try {
+      const data = await extraGenerator.run()
+      setJsonText(JSON.stringify({ nodes: data.nodes, edges: data.edges }, null, 2))
+      setIsPreview(true)
+      setNotice(
+        data.note ??
+          'Preview generated from your services — review the JSON below, then click Apply to make it the live topology.',
+      )
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Generation failed')
+    } finally {
+      setExtraGenerating(false)
+    }
+  }
+
   const handleSyncLive = async () => {
     setSyncing(true)
     setError(null)
@@ -197,6 +238,7 @@ export function TopologySchemaEditor() {
       }
       setDoc((await res.json()) as SchemaDoc)
       setNotice('Applied — the platform topology now uses this custom schema.')
+      onApplied?.()
       setTimeout(() => setNotice(null), 6000)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Apply failed')
@@ -247,6 +289,30 @@ export function TopologySchemaEditor() {
         >
           <CheckCircle className="h-4 w-4 mt-0.5 shrink-0" />
           <span className="text-sm">{notice}</span>
+        </div>
+      )}
+
+      {/* Generate from the services the wizard collected (setup wizard only). */}
+      {extraGenerator && (
+        <div className="bg-card rounded-lg border border-border p-6">
+          <h2 className="text-lg font-semibold flex items-center gap-2 mb-1">
+            <Network className="h-5 w-5 text-primary" /> {extraGenerator.label}
+          </h2>
+          <p className="text-sm text-muted-foreground mb-3">{extraGenerator.description}</p>
+          <button
+            type="button"
+            onClick={handleExtraGenerate}
+            disabled={extraGenerating || loading}
+            data-testid="topology-generate-from-services"
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
+          >
+            {extraGenerating ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Network className="h-4 w-4" />
+            )}
+            {extraGenerator.label}
+          </button>
         </div>
       )}
 

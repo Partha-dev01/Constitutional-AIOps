@@ -33,6 +33,7 @@ const Benchmark = lazy(() =>
 const Settings = lazy(() =>
   import('./pages/Settings').then((m) => ({ default: m.Settings })),
 )
+const Setup = lazy(() => import('./pages/Setup').then((m) => ({ default: m.Setup })))
 
 /** On-theme loading fallback for lazy-loaded route chunks */
 function PageFallback() {
@@ -120,6 +121,18 @@ function App() {
         <Route path="/welcome" element={<Navigate to="/" replace />} />
         {/* Public root: Landing (logged out, enforcement on) or Dashboard */}
         <Route path="/" element={<RootGate />} />
+        {/* First-run Quick-Setup wizard: full-screen, OUTSIDE the sidebar shell,
+            but still auth-gated. A specific path outranks the "*" splat below. */}
+        <Route
+          path="/setup"
+          element={
+            <RequireAuth>
+              <Suspense fallback={<PageFallback />}>
+                <Setup />
+              </Suspense>
+            </RequireAuth>
+          }
+        />
         {/* Everything else lives inside the authed app shell */}
         <Route
           path="*"
