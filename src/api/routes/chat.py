@@ -1607,6 +1607,24 @@ async def _finalize_chat_turn(
     # reloaded conversation can replay its reasoning timeline + insight cards.
     _persist_save_conversation(conversation)
 
+    # Surface this chat turn in the Agents "Reasoning Agent" activity feed. The
+    # tool-loop path drives the ModelRouter directly and so never passes through
+    # ReasoningAgent.process()/_log_activity; record it here (once per turn, at
+    # the shared tail for both /chat and /chat/stream) so the feed reflects real
+    # interactive work instead of staying empty. Best-effort, never fatal.
+    try:
+        reasoning_agent = getattr(request.app.state, "reasoning_agent", None)
+        if reasoning_agent is not None and hasattr(reasoning_agent, "record_activity"):
+            reasoning_agent.record_activity(
+                activity_type="chat",
+                input_text=user_message_text,
+                output_text=content,
+                latency_ms=float((metadata or {}).get("latency_ms", 0) or 0),
+                status="success",
+            )
+    except Exception as exc:  # noqa: BLE001 - activity logging must never break chat
+        logger.debug("Chat activity logging failed (ignored): %s", exc)
+
     # confidence is Optional: None for a genuine off-domain refusal (the UI then
     # hides the confidence gauge), an evidence-based 0.5–0.9 otherwise.
     return ChatResponse(

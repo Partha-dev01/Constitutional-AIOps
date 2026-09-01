@@ -11,9 +11,20 @@ import {
   ChevronDown,
   ChevronUp,
 } from 'lucide-react'
-import api, { HealthResponse, isComponentHealthy } from '../lib/api'
+import api, { HealthResponse, isComponentHealthy, ModelsConfig } from '../lib/api'
 import { JsonView } from '../components/JsonView'
 import { Tabs, TabPanel } from '../components/ui/Tabs'
+
+/** Compact host:port (or the raw string) for honest endpoint display. */
+function endpointLabel(url?: string): string {
+  if (!url) return 'Not configured'
+  try {
+    const u = new URL(url)
+    return u.port ? `${u.hostname}:${u.port}` : u.hostname
+  } catch {
+    return url
+  }
+}
 
 // Tab type
 type AgentTab = 'fast' | 'reasoning'
@@ -33,6 +44,8 @@ interface AgentActivity {
 export function Agents() {
   const [activeTab, setActiveTab] = useState<AgentTab>('fast')
   const [health, setHealth] = useState<HealthResponse | null>(null)
+  // Real configured endpoints — no more hardcoded Qwen3/port/context claims.
+  const [models, setModels] = useState<ModelsConfig | null>(null)
 
   // Fast Agent state
   const [fastActivity, setFastActivity] = useState<AgentActivity[]>([])
@@ -94,6 +107,17 @@ export function Agents() {
     fetchHealth()
     const interval = setInterval(fetchHealth, 30000)
     return () => clearInterval(interval)
+  }, [])
+
+  // Load the real endpoint config so the status cards show the configured model
+  // + endpoint instead of a hardcoded dual-Qwen claim (honest on lite / BYO).
+  useEffect(() => {
+    let alive = true
+    api.settings
+      .getModels()
+      .then((m) => { if (alive) setModels(m) })
+      .catch(() => { /* endpoint config unavailable — cards fall back to labels */ })
+    return () => { alive = false }
   }, [])
 
   // Fetch tab-specific data when tab changes
@@ -214,8 +238,8 @@ export function Agents() {
                     <Cpu className={`h-5 w-5 ${fastAgentOnline ? 'text-green-500' : 'text-red-500'}`} />
                   </div>
                   <div>
-                    <h3 className="font-semibold">Qwen3-4B-AWQ</h3>
-                    <p className="text-sm text-muted-foreground">Port 8000 • Context: 4K tokens</p>
+                    <h3 className="font-semibold">{models?.fastAgentModel || 'Fast agent'}</h3>
+                    <p className="text-sm text-muted-foreground">{endpointLabel(models?.fastAgentUrl)}</p>
                   </div>
                 </div>
                 <span className={`px-3 py-1 rounded-full text-sm ${
@@ -260,6 +284,14 @@ export function Agents() {
                             <span className="text-xs text-muted-foreground">
                               {activity.latency_ms}ms
                             </span>
+                            {activity.model && (
+                              <span
+                                className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground"
+                                title="Model that produced this"
+                              >
+                                {activity.model}
+                              </span>
+                            )}
                           </div>
                           {expandedIds.has(activity.id) ? (
                             <div className="mt-2 space-y-2">
@@ -335,8 +367,8 @@ export function Agents() {
                     <Brain className={`h-5 w-5 ${reasoningAgentOnline ? 'text-green-500' : 'text-red-500'}`} />
                   </div>
                   <div>
-                    <h3 className="font-semibold">Qwen3-14B-AWQ</h3>
-                    <p className="text-sm text-muted-foreground">Port 8001 • Context: 8K tokens</p>
+                    <h3 className="font-semibold">{models?.reasoningAgentModel || 'Reasoning agent'}</h3>
+                    <p className="text-sm text-muted-foreground">{endpointLabel(models?.reasoningAgentUrl)}</p>
                   </div>
                 </div>
                 <span className={`px-3 py-1 rounded-full text-sm ${
@@ -382,6 +414,14 @@ export function Agents() {
                             <span className="text-xs text-muted-foreground">
                               {activity.latency_ms}ms
                             </span>
+                            {activity.model && (
+                              <span
+                                className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground"
+                                title="Model that produced this"
+                              >
+                                {activity.model}
+                              </span>
+                            )}
                           </div>
                           {expandedIds.has(activity.id) ? (
                             <div className="mt-2 space-y-2">

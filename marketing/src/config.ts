@@ -11,6 +11,17 @@
 export const APP_URL: string = import.meta.env.VITE_APP_URL ?? '/login?next=/'
 
 /**
+ * Route an in-app destination through the CTA / wake URL so a cold box wakes
+ * first, THEN lands on the requested path (the wake Lambda validates `next` and
+ * only honours a same-origin absolute path). Preserves any existing query on
+ * APP_URL. Example: appPath('/docs') → '/launch?next=%2Fdocs' in production.
+ */
+export function appPath(next: string): string {
+  const sep = APP_URL.includes('?') ? '&' : '?'
+  return `${APP_URL}${sep}next=${encodeURIComponent(next)}`
+}
+
+/**
  * Where "See how it works" sends visitors: the always-on, no-login demo that
  * runs the real app UI from bundled fixture data (no box wake, $0). Hosted
  * statically under /demo/ on this same site. The explicit index.html avoids

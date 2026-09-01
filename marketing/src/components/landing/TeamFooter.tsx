@@ -1,11 +1,13 @@
 import { GraduationCap, ArrowRight } from 'lucide-react'
 import { APP_URL } from '../../config'
 
+// Absolute (/#...) so they work from the docs page too; Docs is its own page.
 const SECTION_LINKS = [
-  { href: '#features', label: 'Features' },
-  { href: '#architecture', label: 'Architecture' },
-  { href: '#live', label: 'Live demo' },
-  { href: '#about', label: 'About' },
+  { href: '/#features', label: 'Features' },
+  { href: '/#architecture', label: 'Architecture' },
+  { href: '/#live', label: 'Live demo' },
+  { href: '/docs.html', label: 'Docs' },
+  { href: '/#about', label: 'About' },
 ]
 
 export function TeamFooter() {
