@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   UserCircle2,
   KeyRound,
@@ -9,6 +10,7 @@ import {
   Loader2,
   CheckCircle,
   AlertTriangle,
+  LogOut,
 } from 'lucide-react'
 import api, { AdminUserListItem } from '../lib/api'
 import { useAuthStore } from '../lib/auth'
@@ -50,6 +52,20 @@ export function AccountSettings() {
 }
 
 function ProfileCard({ username, role }: { username: string; role: string }) {
+  const navigate = useNavigate()
+  const logout = useAuthStore((s) => s.logout)
+  const [busy, setBusy] = useState<'one' | 'all' | null>(null)
+
+  const doLogout = async (everywhere: boolean) => {
+    setBusy(everywhere ? 'all' : 'one')
+    try {
+      await logout(everywhere)
+      navigate('/login')
+    } finally {
+      setBusy(null)
+    }
+  }
+
   return (
     <div className="rounded-lg border border-border bg-card p-6">
       <div className="mb-4 flex items-center gap-2">
@@ -71,6 +87,33 @@ function ProfileCard({ username, role }: { username: string; role: string }) {
           </dd>
         </div>
       </dl>
+
+      <div className="mt-6 border-t border-border pt-4">
+        <p className="mb-3 text-sm font-medium">Session</p>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => void doLogout(false)}
+            disabled={busy !== null}
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+          >
+            {busy === 'one' ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}
+            Log out
+          </button>
+          <button
+            type="button"
+            onClick={() => void doLogout(true)}
+            disabled={busy !== null}
+            className="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
+          >
+            {busy === 'all' ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}
+            Log out of all devices
+          </button>
+        </div>
+        <p className="mt-2 text-xs text-muted-foreground">
+          Logging out of all devices ends every active session for this account.
+        </p>
+      </div>
     </div>
   )
 }

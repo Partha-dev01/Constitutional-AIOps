@@ -55,7 +55,7 @@ export function LandingHeader() {
             src="/logo-mark.png"
             alt=""
             aria-hidden="true"
-            className="h-8 w-8 rounded-lg"
+            className="h-8 w-8 rounded-full"
           />
           <span className="text-base font-bold tracking-tight">Constitutional AIOps</span>
         </a>
