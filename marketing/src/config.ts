@@ -19,3 +19,20 @@ export const APP_URL: string = import.meta.env.VITE_APP_URL ?? '/login?next=/'
  * every in-app route lives in the URL fragment. Overridable via VITE_DEMO_URL.
  */
 export const DEMO_URL: string = import.meta.env.VITE_DEMO_URL ?? '/demo/index.html'
+
+/**
+ * Where the Docs "interactive API reference" opens: the running app's Swagger /
+ * OpenAPI UI (served at /docs when the backend opts in via AIOPS_ENABLE_DOCS).
+ * Env-overridable (VITE_DOCS_URL) so the hosted build can point at the app
+ * origin; the committed default is same-origin /docs (self-host friendly, and
+ * never hardcodes a deployment domain).
+ */
+export const DOCS_URL: string = import.meta.env.VITE_DOCS_URL ?? '/docs'
+
+/**
+ * Whether to show the "Self-host" section + nav anchor. OFF by default so the
+ * public marketing build never ships the self-host walkthrough (a real
+ * `git clone` + AGPL notice) while the repository is still private. Set
+ * VITE_SHOW_SELFHOST=true for the build made at the public-source flip.
+ */
+export const SHOW_SELFHOST: boolean = import.meta.env.VITE_SHOW_SELFHOST === 'true'

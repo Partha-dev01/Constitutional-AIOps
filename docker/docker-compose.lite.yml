@@ -67,6 +67,10 @@ services:
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - API_WORKERS=${API_WORKERS:-2}
       - AIOPS_DATA_DIR=/app/data/state
+      # Serve the interactive API reference (Swagger /docs, ReDoc, OpenAPI) even
+      # in production. OFF by default (self-host stays closed); our hosted box
+      # sets it true so the public Docs "API reference" link works.
+      - AIOPS_ENABLE_DOCS=${AIOPS_ENABLE_DOCS:-false}
       # CORS: the origin the browser loads the SPA from. Localhost profile is
       # cross-origin (SPA :3000 -> API :8000) so it must be listed; the edge
       # profile is same-origin under APP_DOMAIN.

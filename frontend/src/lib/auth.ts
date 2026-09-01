@@ -14,7 +14,33 @@
  */
 
 import { create } from 'zustand';
-import api, { AUTH_UNAUTHORIZED_EVENT, AuthUser } from './api';
+import api, { AUTH_UNAUTHORIZED_EVENT, AuthConfigResponse, AuthUser } from './api';
+
+/**
+ * Fetch /auth/config, retrying a few times on transient failure.
+ *
+ * bootstrap() runs ONCE at mount, so a single hiccup here decides the whole
+ * session. The hosted box is stopped when idle and woken on demand: right after
+ * a wake the SPA can load a beat before the backend finishes starting, so the
+ * first /auth/config can 5xx or refuse the connection. Riding that out with a
+ * short backoff means the common case self-heals with no user action (no manual
+ * "restart the browser"). Returns the config, or null only after every attempt
+ * failed — the caller then fails SAFE.
+ */
+async function fetchAuthConfigWithRetry(): Promise<AuthConfigResponse | null> {
+  const delaysMs = [0, 500, 1200, 2500];
+  for (let attempt = 0; attempt < delaysMs.length; attempt += 1) {
+    if (delaysMs[attempt] > 0) {
+      await new Promise((resolve) => setTimeout(resolve, delaysMs[attempt]));
+    }
+    try {
+      return await api.auth.config();
+    } catch {
+      // transient (backend warming up / network): try again
+    }
+  }
+  return null;
+}
 
 /**
  * localStorage prefix used by useConversationHistory's per-user cache
@@ -82,8 +108,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     let captchaProvider = '';
     let captchaSiteKey = '';
     let user: AuthUser | null = null;
-    try {
-      const config = await api.auth.config();
+
+    const config = await fetchAuthConfigWithRetry();
+    if (config) {
       authRequired = config.auth_required;
       signupEnabled = config.signup_enabled ?? false;
       captchaProvider = config.captcha_provider ?? '';
@@ -97,10 +124,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           user = null;
         }
       }
-    } catch {
-      // /auth/config unreachable: fall back to the backend default
-      // (enforcement off) so a transient hiccup never bricks the SPA.
-      authRequired = false;
+    } else {
+      // /auth/config still unreachable after retries. FAIL SAFE: assume auth is
+      // required so the app routes to /login (a form the user can act on),
+      // never rendering the dashboard shell for an unverified session. The old
+      // fail-OPEN default (authRequired=false) rendered the dashboard, whose
+      // data calls then 401'd and bounced /login <-> / in a loop that only a
+      // full browser restart cleared. A reload or a successful login recovers
+      // the moment the backend is reachable again.
+      authRequired = true;
     }
 
     // Never clobber a login that completed while this bootstrap was in

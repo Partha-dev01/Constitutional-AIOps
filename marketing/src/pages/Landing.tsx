@@ -4,8 +4,10 @@ import { StatsBand } from '../components/landing/StatsBand'
 import { FeatureGrid } from '../components/landing/FeatureGrid'
 import { ArchitectureBand } from '../components/landing/ArchitectureBand'
 import { ProofSection } from '../components/landing/ProofSection'
+import { DocsSection } from '../components/landing/DocsSection'
 import { SelfHostSection } from '../components/landing/SelfHostSection'
 import { TeamFooter } from '../components/landing/TeamFooter'
+import { SHOW_SELFHOST } from '../config'
 
 /**
  * Public landing page mounted at /welcome, OUTSIDE the sidebar Layout. It makes
@@ -14,7 +16,7 @@ import { TeamFooter } from '../components/landing/TeamFooter'
  *
  * The fixed LandingHeader overlays the hero (which carries its own top
  * padding), so no page-level offset is needed. Anchor targets: #features,
- * #architecture, #live, #self-host, #about.
+ * #architecture, #live, #docs, (#self-host when enabled), #about.
  */
 export function Landing() {
   return (
@@ -27,7 +29,8 @@ export function Landing() {
       <FeatureGrid />
       <ArchitectureBand />
       <ProofSection />
-      <SelfHostSection />
+      <DocsSection />
+      {SHOW_SELFHOST && <SelfHostSection />}
       <TeamFooter />
     </div>
   )

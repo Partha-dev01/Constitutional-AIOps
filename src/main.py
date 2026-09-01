@@ -394,11 +394,15 @@ async def lifespan(app: FastAPI):
     logger.info("Constitutional AIOps shutdown complete")
 
 
-# Interactive docs / OpenAPI schema are dev-only (Batch F #5). In production
-# (ENVIRONMENT=production) we publish no machine-readable API map: passing None
-# disables /docs, /redoc and /openapi.json. They stay on everywhere else so
-# local dev keeps its Swagger UI. Same prod flag as WS_TOKEN/secret guards.
+# Interactive docs / OpenAPI schema are dev-only by DEFAULT (Batch F #5): in
+# production we publish no machine-readable API map unless an operator opts back
+# in with AIOPS_ENABLE_DOCS=true. Our hosted instance sets it so the public
+# Swagger reference (linked from the marketing Docs section) works; a plain
+# self-host stays closed. They are always on outside production.
 _IS_PRODUCTION = os.getenv("ENVIRONMENT", "local").lower() == "production"
+_DOCS_ENABLED = (not _IS_PRODUCTION) or os.getenv(
+    "AIOPS_ENABLE_DOCS", "false"
+).lower() == "true"
 
 # Max request body for /api/* endpoints (Batch F #5). Mirrors the Caddy
 # /ingest body cap so a caller past the auth wall can't stream a huge JSON body
@@ -414,9 +418,9 @@ app = FastAPI(
     ),
     version=__version__,
     lifespan=lifespan,
-    docs_url=None if _IS_PRODUCTION else "/docs",
-    redoc_url=None if _IS_PRODUCTION else "/redoc",
-    openapi_url=None if _IS_PRODUCTION else "/openapi.json",
+    docs_url="/docs" if _DOCS_ENABLED else None,
+    redoc_url="/redoc" if _DOCS_ENABLED else None,
+    openapi_url="/openapi.json" if _DOCS_ENABLED else None,
 )
 
 
