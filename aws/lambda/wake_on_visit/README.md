@@ -5,7 +5,8 @@ $2-3/mo target holds. Pairs with `aws/idle-check.sh` (the "stop when idle" half)
 
 **Status: DEPLOYED and verified end-to-end.** The app domain (on a CDN with a
 branded cert) points at a CloudFront distribution whose origin is this Lambda's
-Function URL. A visit wakes the box and 302-redirects to it once it is running.
+Function URL. A visit wakes the box; the holding page hands the visitor over to
+it once the box is genuinely reachable from their browser.
 
 ## What it does
 On each HTTP hit (via a Function URL, fronted by CloudFront):
@@ -13,7 +14,19 @@ On each HTTP hit (via a Function URL, fronted by CloudFront):
 - `stopped` → `ec2:StartInstances` + a 200 auto-refreshing holding page.
 - `pending` / `stopping` → the holding page (still transitioning).
 - `running` → re-point the app subdomain's A record at the box's CURRENT public
-  IP, then 302 the visitor to `APP_URL`.
+  IP, then serve the holding page. The page's **client-side** readiness probe
+  navigates to `APP_URL` the instant *this browser* can reach the box.
+
+### Why no server-side 302 (the "took too long to respond" fix)
+The box has no Elastic IP, so its public IP changes on every wake and the A
+record is re-pointed each time. A server-side 302 fires the moment the Lambda
+sees the box ready — but the visitor's browser may still hold the PREVIOUS
+(now-dead) IP in its DNS cache, so the bounce lands on a dead address and times
+out. Instead the holding page probes `APP_URL` client-side (an `<img>` load plus
+a no-cors `fetch`) and only navigates once this browser resolves the live box.
+`DNS_TTL` is kept low (30s) so the stale window is short, and a guaranteed-exit
+timer (`HOLDING_GUARANTEED_EXIT_SEC`, default 120s, comfortably above the TTL)
+navigates anyway if the probes are blocked.
 
 Why the Lambda owns the DNS update: with no Elastic IP the box's public IPv4
 changes on every start, so the A record has to be re-pointed each wake. The box's
@@ -28,12 +41,13 @@ never on the internet-exposed box. This replaces the retired box-side
 | Var | Required | Example |
 |---|---|---|
 | `TARGET_INSTANCE_ID` | yes | `i-0123456789abcdef0` |
-| `APP_URL` | yes | `https://aiops-node.example.com` (302 target once up) |
+| `APP_URL` | yes | `https://aiops-node.example.com` (app host handed to once up) |
 | `HOSTINGER_API_TOKEN` | yes | Bearer token for the Hostinger DNS API — **never commit** |
 | `HOSTINGER_DOMAIN` | yes | the Hostinger-managed zone, e.g. `example.com` |
 | `DNS_RECORD_NAME` | yes | the subdomain record to keep current, e.g. `aiops-node` |
-| `DNS_TTL` | no (60) | `60` |
+| `DNS_TTL` | no (30) | `30` — low, so a stale cached IP clears fast |
 | `HOLDING_REFRESH_SEC` | no (8) | `8` |
+| `HOLDING_GUARANTEED_EXIT_SEC` | no (120) | `120` — client-side last-resort nav; keep above `DNS_TTL` |
 
 Function timeout is 20s (each Hostinger call has a 10s HTTP timeout). A warm-IP
 cache keeps Hostinger traffic to the minutes right after a wake, not every request.
@@ -101,5 +115,6 @@ aws lambda add-permission --function-name <FUNCTION_NAME> \
    AllViewerExceptHostHeader origin request policy + CachingDisabled), then point
    the app domain's CNAME at the distribution.
 5. Smoke test: with the box stopped, hit the domain → holding page + the instance
-   moves to `pending`; hit again when `running` → the A record updates and you're
-   302'd to `APP_URL`.
+   moves to `pending`; keep the page open → once `running` the A record updates and
+   the page's client-side probe navigates to `APP_URL` the moment your browser can
+   reach the box (no manual refresh needed).

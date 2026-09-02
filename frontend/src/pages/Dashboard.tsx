@@ -1,7 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Activity, AlertTriangle, CheckCircle, Clock, RefreshCw, Loader2, Wifi, WifiOff, Server } from 'lucide-react'
+import { Activity, AlertTriangle, CheckCircle, Clock, RefreshCw, Loader2, Wifi, WifiOff, Server, Container } from 'lucide-react'
 import api, { DashboardStats, HealthResponse, ModelsConfig, isComponentHealthy } from '../lib/api'
 import { useWebSocket, EventType } from '../lib/websocket'
+import { useContainerStats } from '../hooks/useContainerStats'
+import type { ContainerStatsState } from '../hooks/useContainerStats'
+import { Sparkline } from '../components/viz/Sparkline'
 
 interface ServiceStatus {
   name: string
@@ -42,6 +45,10 @@ export function Dashboard() {
   const [error, setError] = useState<string | null>(null)
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date())
   const [services, setServices] = useState<ServiceStatus[]>([])
+
+  // Live per-service CPU%/mem% (Docker-socket source on the lite tier). Polls on
+  // its own 5s cadence and accumulates a rolling client-side window.
+  const liveStats = useContainerStats({ intervalMs: 5000 })
 
   // WebSocket connection for real-time updates
   const { isConnected, subscribe } = useWebSocket({
@@ -258,44 +265,11 @@ export function Dashboard() {
         />
       </div>
 
-      {/* Action Success Rate */}
-      <div className="bg-card rounded-lg border border-border p-6">
-        <h2 className="text-lg font-semibold mb-4">Remediation Performance</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="text-center p-4 bg-muted/50 rounded-lg">
-            <p className={`text-3xl font-bold ${
-              (stats?.actions.success_rate ?? 1) >= 0.9
-                ? 'text-green-500'
-                : (stats?.actions.success_rate ?? 1) >= 0.7
-                  ? 'text-yellow-500'
-                  : 'text-red-500'
-            }`}>
-              {`${(((stats?.actions.success_rate ?? 1)) * 100).toFixed(0)}%`}
-            </p>
-            <p className="text-sm text-muted-foreground">Success Rate</p>
-          </div>
-          <div className="text-center p-4 bg-muted/50 rounded-lg">
-            <p className="text-3xl font-bold">
-              {stats?.actions.executed_today === 0
-                ? 'None'
-                : stats?.actions.executed_today || 0}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              {stats?.actions.executed_today === 0 ? 'No actions today' : 'Actions Today'}
-            </p>
-          </div>
-          <div className="text-center p-4 bg-muted/50 rounded-lg">
-            <p className="text-3xl font-bold">
-              {stats?.incidents.mttr_minutes != null
-                ? `${stats.incidents.mttr_minutes}ms`
-                : 'N/A'}
-            </p>
-            {/* This value is the backend→agent health-probe ping, not LLM
-                inference latency — label it honestly. */}
-            <p className="text-sm text-muted-foreground">API Health Probe</p>
-          </div>
-        </div>
-      </div>
+      {/* Live System Metrics — real per-service CPU%/mem% sampled from the
+          Docker socket (or Prometheus), plotted as they arrive. Replaces the
+          old static "Remediation Performance" tiles. Only real sampled points
+          are drawn; a first sample shows a single dot, never fabricated history. */}
+      <LiveMetricsBand stats={liveStats} successRate={stats?.actions.success_rate ?? null} />
 
       {/* Service Availability - Moved to bottom */}
       <div className="bg-card rounded-lg border border-border p-6">
@@ -351,6 +325,99 @@ export function Dashboard() {
           )}
         </div>
       </div>
+    </div>
+  )
+}
+
+/**
+ * Live per-service resource metrics band. Renders one card per reporting
+ * container with a CPU% and a memory% sparkline built from the rolling window.
+ * Honest states: a spinner while the first sample lands, a source-aware hint
+ * when nothing reports, and only real points on the graphs.
+ */
+function LiveMetricsBand({
+  stats,
+  successRate,
+}: {
+  stats: ContainerStatsState
+  successRate: number | null
+}) {
+  const { series, source, loading, error } = stats
+  const hasData = series.length > 0
+
+  return (
+    <div className="bg-card rounded-lg border border-border p-6">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="flex items-center gap-2 text-lg font-semibold">
+          <Activity className="h-5 w-5" />
+          Live System Metrics
+          {source === 'docker' && (
+            <span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-muted/60 px-2 py-0.5 text-[11px] font-normal text-muted-foreground">
+              <Container className="h-3 w-3" />
+              Local Docker socket
+            </span>
+          )}
+        </h2>
+        <div className="flex items-center gap-3">
+          {successRate != null && (
+            <span className="rounded-full border border-border/60 bg-muted/50 px-2.5 py-1 text-xs text-muted-foreground">
+              Remediation success{' '}
+              <span className="font-semibold text-foreground">{(successRate * 100).toFixed(0)}%</span>
+            </span>
+          )}
+          {hasData && (
+            <span className="flex items-center gap-1 text-xs text-green-500">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-green-500" />
+              Live
+            </span>
+          )}
+        </div>
+      </div>
+
+      {hasData ? (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {series.map((s) => (
+            <div key={s.service} className="rounded-lg border border-border/60 bg-muted/30 p-3">
+              <div className="mb-1.5 flex items-center justify-between gap-2">
+                <span className="truncate text-sm font-medium" title={s.service}>{s.label}</span>
+                <span className="shrink-0 text-xs text-muted-foreground">
+                  {s.latestCpu != null ? `${s.latestCpu.toFixed(1)}% CPU` : '—'}
+                </span>
+              </div>
+              <div className="text-blue-500">
+                <Sparkline values={s.cpu} min={0} height={34} ariaLabel={`${s.label} CPU percent trend`} />
+              </div>
+              <div className="mb-1 mt-2 flex items-center justify-between gap-2">
+                <span className="text-xs text-muted-foreground">Memory</span>
+                <span className="shrink-0 text-xs text-muted-foreground">
+                  {s.latestMem != null ? `${s.latestMem.toFixed(1)}%` : '—'}
+                  {s.latestMemMb != null ? ` · ${s.latestMemMb.toFixed(0)} MB` : ''}
+                </span>
+              </div>
+              <div className="text-emerald-500">
+                <Sparkline values={s.mem} min={0} max={100} height={26} ariaLabel={`${s.label} memory percent trend`} />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="py-8 text-center text-muted-foreground">
+          {loading ? (
+            <Loader2 className="mx-auto h-6 w-6 animate-spin opacity-60" aria-label="Collecting metrics" />
+          ) : error ? (
+            <p className="text-sm">Couldn't load live metrics: {error}</p>
+          ) : (
+            <>
+              <Activity className="mx-auto mb-2 h-8 w-8 opacity-50" />
+              <p className="text-sm">No live metrics yet</p>
+              <p className="mt-1 text-xs">
+                Enable the local Docker socket source in{' '}
+                <a href="/settings" className="text-primary hover:underline">Settings → Telemetry</a>, or connect Prometheus.
+              </p>
+            </>
+          )}
+        </div>
+      )}
     </div>
   )
 }

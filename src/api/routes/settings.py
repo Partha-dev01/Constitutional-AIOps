@@ -101,6 +101,11 @@ DEFAULT_SETTINGS: dict[str, Any] = {
         "prometheusUrl": "http://prometheus:9090",
         "tempoEnabled": True,
         "tempoUrl": "http://tempo:3200",
+        # Local Docker-socket fallback source (lite / self-host with no LGTM).
+        # Default ON: it only ever activates when Loki/Prometheus return nothing,
+        # so the full observability stack is unaffected; an operator can still
+        # turn it off here.
+        "dockerEnabled": True,
         "retentionDays": 30,
     },
     "remediation": {
@@ -135,6 +140,17 @@ def get_remediation_settings() -> dict[str, Any]:
     an older persisted file that predates this section still upgrades cleanly.
     """
     return _merge_with_defaults(_load_persisted())["remediation"]
+
+
+def get_telemetry_settings() -> dict[str, Any]:
+    """Return the merged ``telemetry`` settings section.
+
+    Exported so the telemetry routes can gate the local Docker-socket fallback
+    source on ``dockerEnabled`` (defaults ON for lite / self-host; the full LGTM
+    stack can turn it off). Deep-merges persisted over defaults so a legacy file
+    upgrades cleanly.
+    """
+    return _merge_with_defaults(_load_persisted())["telemetry"]
 
 
 def get_constitutional_settings() -> dict[str, Any]:
@@ -181,6 +197,9 @@ class TelemetrySettingsModel(BaseModel):
     prometheusUrl: str = "http://prometheus:9090"
     tempoEnabled: bool = True
     tempoUrl: str = "http://tempo:3200"
+    # Local Docker-socket fallback source (see DEFAULT_SETTINGS). Only activates
+    # when Loki/Prometheus yield nothing, so it never shadows a real LGTM stack.
+    dockerEnabled: bool = True
     retentionDays: int = Field(30, ge=7, le=365)
 
 
@@ -743,11 +762,13 @@ async def put_onboarding(
 
 
 class MonitoringTestRequest(BaseModel):
-    """Monitoring source URLs to probe (any subset; blanks are skipped)."""
+    """Monitoring sources to probe. URLs: any subset (blanks are skipped). The
+    local Docker socket has no URL, so a ``docker=true`` flag requests it."""
 
     lokiUrl: Optional[str] = None
     prometheusUrl: Optional[str] = None
     tempoUrl: Optional[str] = None
+    docker: Optional[bool] = None
 
 
 class ProbeResult(BaseModel):
@@ -756,11 +777,12 @@ class ProbeResult(BaseModel):
 
 
 class MonitoringTestResult(BaseModel):
-    """Per-source result; a source is absent when no URL was supplied for it."""
+    """Per-source result; a source is absent when it was not requested."""
 
     loki: Optional[ProbeResult] = None
     prometheus: Optional[ProbeResult] = None
     tempo: Optional[ProbeResult] = None
+    docker: Optional[ProbeResult] = None
 
 
 async def _probe_health(url: str, health_path: str) -> ProbeResult:
@@ -813,6 +835,19 @@ async def test_monitoring(
         result.prometheus = await _probe_health(body.prometheusUrl, "/-/healthy")
     if body.tempoUrl and body.tempoUrl.strip():
         result.tempo = await _probe_health(body.tempoUrl, "/ready")
+    if body.docker:
+        # Local Docker socket: not a URL probe. Run the blocking SDK call off the
+        # event loop; report reachability + running-container count.
+        import asyncio
+
+        from src.telemetry.docker_source import docker_socket_status
+
+        status_info = await asyncio.to_thread(docker_socket_status)
+        if status_info.get("available"):
+            n = status_info.get("containers", 0)
+            result.docker = ProbeResult(ok=True, detail=f"reachable ({n} container{'s' if n != 1 else ''})")
+        else:
+            result.docker = ProbeResult(ok=False, detail="socket unreachable")
     return result
 
 
@@ -820,5 +855,6 @@ __all__ = [
     "router",
     "get_remediation_settings",
     "get_constitutional_settings",
+    "get_telemetry_settings",
     "get_models_settings",
 ]

@@ -81,6 +81,7 @@ const DEFAULT_TELEMETRY: TelemetrySettings = {
   prometheusUrl: 'http://prometheus:9090',
   tempoEnabled: true,
   tempoUrl: 'http://tempo:3200',
+  dockerEnabled: true,
   retentionDays: 30,
 }
 
@@ -115,6 +116,74 @@ const ACTION_TOOL_OPTIONS: { name: ActionToolName; label: string; description: s
     description: 'Scale a whitelisted service (0–5 replicas)',
   },
 ]
+
+/**
+ * Local Docker-socket telemetry source card (Settings -> Telemetry). Toggles
+ * the fallback source on/off and live-tests the socket. Self-contained test
+ * state so it doesn't touch the page's save cycle.
+ */
+function DockerSourceCard({
+  telemetry,
+  setTelemetry,
+}: {
+  telemetry: TelemetrySettings
+  setTelemetry: (t: TelemetrySettings) => void
+}) {
+  const [testing, setTesting] = useState(false)
+  const [result, setResult] = useState<{ ok: boolean; detail: string } | null>(null)
+
+  const runTest = async () => {
+    setTesting(true)
+    setResult(null)
+    try {
+      const res = await api.settings.testMonitoring({ docker: true })
+      setResult(res.docker ?? { ok: false, detail: 'no result' })
+    } catch (e) {
+      setResult({ ok: false, detail: e instanceof Error ? e.message : 'test failed' })
+    } finally {
+      setTesting(false)
+    }
+  }
+
+  return (
+    <div className="bg-card rounded-lg border border-border p-6">
+      <h2 className="mb-1 flex items-center gap-2 text-lg font-semibold">
+        <Database className="h-5 w-5" />
+        Local source (no LGTM required)
+      </h2>
+      <p className="mb-4 text-sm text-muted-foreground">
+        Reads logs and live CPU / memory metrics straight from the host's Docker
+        socket. It only activates when Loki / Prometheus return nothing, so a full
+        observability stack is never shadowed. Recommended for the lite / self-host tier.
+      </p>
+      <ToggleSetting
+        label="Local Docker socket"
+        description="Fallback logs & metrics when no LGTM stack is present"
+        checked={telemetry.dockerEnabled}
+        testId="toggle-docker-source"
+        onChange={(checked) => setTelemetry({ ...telemetry, dockerEnabled: checked })}
+      />
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={runTest}
+          disabled={testing}
+          data-testid="test-docker-source"
+          className="flex items-center gap-2 rounded-lg border border-border bg-muted px-3 py-1.5 text-sm hover:bg-muted/80 disabled:opacity-50"
+        >
+          {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+          Test connection
+        </button>
+        {result && (
+          <span className={`inline-flex items-center gap-1.5 text-sm ${result.ok ? 'text-green-500' : 'text-red-500'}`}>
+            {result.ok ? <CheckCircle className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+            {result.detail}
+          </span>
+        )}
+      </div>
+    </div>
+  )
+}
 
 // ── main component ────────────────────────────────────────────────────────────
 export function Settings() {
@@ -824,6 +893,7 @@ export function Settings() {
 
         {/* ━━ Telemetry ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
         {activeTab === 'telemetry' && (
+          <div className="space-y-6">
           <div className="grid gap-6 lg:grid-cols-2">
             <div className="bg-card rounded-lg border border-border p-6">
               <h2 className="text-lg font-semibold mb-4">LGTM Stack Configuration</h2>
@@ -945,6 +1015,8 @@ export function Settings() {
                 </div>
               </div>
             </div>
+          </div>
+          <DockerSourceCard telemetry={telemetry} setTelemetry={setTelemetry} />
           </div>
         )}
 

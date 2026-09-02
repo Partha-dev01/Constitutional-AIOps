@@ -195,6 +195,8 @@ export interface TelemetrySettings {
   prometheusUrl: string;
   tempoEnabled: boolean;
   tempoUrl: string;
+  /** Local Docker-socket fallback source (lite / self-host with no LGTM). */
+  dockerEnabled: boolean;
   retentionDays: number;
 }
 
@@ -273,13 +275,52 @@ export interface MonitoringProbeResult {
   detail: string;
 }
 
-/** Per-source results; a source is absent when no URL was supplied for it. */
+/** Per-source results; a source is absent when it was not requested. */
 export interface MonitoringTestResult {
   loki?: MonitoringProbeResult | null;
   prometheus?: MonitoringProbeResult | null;
   tempo?: MonitoringProbeResult | null;
+  /** Local Docker socket probe (present only when docker=true was requested). */
+  docker?: MonitoringProbeResult | null;
 }
 // ---- end Settings types ----
+
+// ---- Telemetry (logs + metrics; Docker-socket fallback on lite) ----
+/** One log line from GET /telemetry/logs. */
+export interface TelemetryLogEntry {
+  timestamp: string;
+  level: 'INFO' | 'WARN' | 'ERROR' | 'DEBUG';
+  service: string;
+  message: string;
+  labels?: Record<string, string>;
+}
+
+/** GET /telemetry/logs response. `source` = loki | docker | none. */
+export interface TelemetryLogsResponse {
+  logs: TelemetryLogEntry[];
+  total: number;
+  query?: string | null;
+  source: string;
+}
+
+/** One metric point from GET /telemetry/metrics. `service`/`metric` are set by
+ *  the Docker fallback (container + metric key like `cpu_percent`). */
+export interface TelemetryMetricPoint {
+  timestamp: string;
+  value: number;
+  label: string;
+  service?: string;
+  metric?: string;
+}
+
+/** GET /telemetry/metrics response. `source` = prometheus | docker | none. */
+export interface TelemetryMetricsResponse {
+  metrics: TelemetryMetricPoint[];
+  range: string;
+  step: string;
+  source: string;
+}
+// ---- end Telemetry types ----
 
 // ---- Demo / Chaos types ----
 export interface DemoScenario {
@@ -1254,6 +1295,27 @@ export const api = {
     getContainers: () => request<InfrastructureStatus>('/infrastructure/containers'),
   },
 
+  // Telemetry (logs + metrics). On the lite tier with no LGTM these fall back to
+  // the local Docker socket; the `source` field tells the UI where data came from.
+  telemetry: {
+    logs: (params?: { limit?: number; level?: string; service?: string; sinceMinutes?: number }) => {
+      const sp = new URLSearchParams();
+      if (params?.limit) sp.set('limit', String(params.limit));
+      if (params?.level && params.level !== 'all') sp.set('level', params.level);
+      if (params?.service) sp.set('service', params.service);
+      if (params?.sinceMinutes) sp.set('since_minutes', String(params.sinceMinutes));
+      const qs = sp.toString();
+      return request<TelemetryLogsResponse>(`/telemetry/logs${qs ? `?${qs}` : ''}`);
+    },
+    metrics: (params?: { range?: string; service?: string }) => {
+      const sp = new URLSearchParams();
+      if (params?.range) sp.set('range', params.range);
+      if (params?.service) sp.set('service', params.service);
+      const qs = sp.toString();
+      return request<TelemetryMetricsResponse>(`/telemetry/metrics${qs ? `?${qs}` : ''}`);
+    },
+  },
+
   // Topology schema (setup wizard: read the live schema; generate from services).
   topology: {
     getSchema: () => request<TopologySchemaDoc>('/topology/schema'),
@@ -1312,7 +1374,8 @@ export const api = {
       request<ModelsTestResult>('/settings/models/test', { method: 'POST' }),
 
     // Live-probe monitoring sources server-side (setup wizard Monitoring step).
-    testMonitoring: (body: { lokiUrl?: string; prometheusUrl?: string; tempoUrl?: string }) =>
+    // `docker: true` probes the local Docker socket (no URL).
+    testMonitoring: (body: { lokiUrl?: string; prometheusUrl?: string; tempoUrl?: string; docker?: boolean }) =>
       request<MonitoringTestResult>('/settings/monitoring/test', {
         method: 'POST',
         body: JSON.stringify(body),
