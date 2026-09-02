@@ -18,6 +18,7 @@ import {
   Wrench,
   Network,
   GitBranch,
+  BookOpen,
 } from 'lucide-react'
 import { cn } from '../lib/utils'
 import api, { HealthResponse, isComponentHealthy } from '../lib/api'
@@ -43,6 +44,7 @@ const navigation = [
   { name: 'MCP Tools', href: '/mcp', icon: Wrench, group: 'AI' },
   { name: 'Benchmark', href: '/benchmark', icon: FlaskConical, group: 'AI' },
   { name: 'Settings', href: '/settings', icon: Settings, group: 'Admin' },
+  { name: 'Docs', href: '/guide', icon: BookOpen, group: 'Admin' },
 ]
 
 const SIDEBAR_COLLAPSED_KEY = 'aiops.sidebar.collapsed'
