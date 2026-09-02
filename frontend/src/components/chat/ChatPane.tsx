@@ -6,14 +6,16 @@ import { ChatComposer } from './ChatComposer'
 import { ChatMessage } from './ChatMessage'
 import type { ChatMessageData } from './ChatMessage'
 import type { MessageInsights } from './InsightCards'
-import type { ProposedAction } from '../../lib/api'
+import type { ProposedAction, TopologySchemaDoc } from '../../lib/api'
 import { ConversationSidebar } from './ConversationSidebar'
 import { SuggestedPrompts } from './SuggestedPrompts'
+import { LiveServicesCard } from './LiveServicesCard'
 import { ToolCallTimeline } from './ToolCallTimeline'
 import { deriveToolSteps, enrichToolStepsWithResponse } from '../../hooks/useToolSteps'
 import type { ToolStep } from '../../hooks/useToolSteps'
 import { useConversationHistory } from '../../hooks/useConversationHistory'
-import { selectPrompts, pushRecentPrompt, getRecentPrompts } from '../../lib/suggestedPrompts'
+import { selectPrompts, pushRecentPrompt, getRecentPrompts, DEFAULT_PROMPTS } from '../../lib/suggestedPrompts'
+import { buildSuggestedQuestions, pruneStaleRecents } from '../../lib/suggestedQuestions'
 import { prefersReducedMotion } from '../../lib/utils'
 
 const PLACEHOLDER = 'Ask about incidents, metrics, or request analysis...'
@@ -82,6 +84,10 @@ export function ChatPane({ variant = 'page', seedContext, injectedPrompt, classN
   const [proposedById, setProposedById] = useState<Record<string, ProposedAction>>({})
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [prompts, setPrompts] = useState<string[]>(() => selectPrompts())
+  /** The live topology, fetched once, so suggested chips are service-aware. The
+   *  ref is read synchronously by rebuildPrompts; the state drives the live card. */
+  const topologyRef = useRef<TopologySchemaDoc | null>(null)
+  const [topology, setTopology] = useState<TopologySchemaDoc | null>(null)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -98,6 +104,36 @@ export function ChatPane({ variant = 'page', seedContext, injectedPrompt, classN
   }, [seedContext])
 
   const history = useConversationHistory()
+
+  // Rebuild the empty-state chips: recents (pruned of services no longer in the
+  // topology) first, then topology-tuned questions when a real topology exists,
+  // else the generic defaults. Called at mount, after each send, and on reset.
+  const rebuildPrompts = useCallback(() => {
+    const schema = topologyRef.current
+    const recents = pruneStaleRecents(getRecentPrompts(), schema)
+    const serviceQuestions = buildSuggestedQuestions(schema)
+    setPrompts(selectPrompts(recents, serviceQuestions.length > 0 ? serviceQuestions : DEFAULT_PROMPTS))
+  }, [])
+
+  // Fetch the live topology once so the chips reflect the ACTUAL services. On
+  // failure the generic defaults (already set) stand. Cheap: one cached GET.
+  useEffect(() => {
+    let cancelled = false
+    api.topology
+      .getSchema()
+      .then((schema) => {
+        if (cancelled) return
+        topologyRef.current = schema
+        setTopology(schema)
+        rebuildPrompts()
+      })
+      .catch(() => {
+        /* No topology endpoint / not configured — keep the generic defaults. */
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [rebuildPrompts])
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({
@@ -257,7 +293,7 @@ export function ChatPane({ variant = 'page', seedContext, injectedPrompt, classN
 
       // Persist to the recent-prompt ring (best-effort) and refresh chips.
       pushRecentPrompt(trimmed)
-      setPrompts(selectPrompts(getRecentPrompts()))
+      rebuildPrompts()
 
       try {
         const response = await api.chat.send({
@@ -333,6 +369,7 @@ export function ChatPane({ variant = 'page', seedContext, injectedPrompt, classN
       commitToolSteps,
       startTypewriter,
       history,
+      rebuildPrompts,
     ],
   )
 
@@ -358,8 +395,8 @@ export function ChatPane({ variant = 'page', seedContext, injectedPrompt, classN
     setToolStepsById({})
     setError(null)
     setSidebarOpen(false)
-    setPrompts(selectPrompts(getRecentPrompts()))
-  }, [])
+    rebuildPrompts()
+  }, [rebuildPrompts])
 
   const handleSelectConversation = useCallback(
     async (id: string) => {
@@ -529,8 +566,11 @@ export function ChatPane({ variant = 'page', seedContext, injectedPrompt, classN
           )}
 
           {showSuggestions && (
-            <div className="flex flex-1 items-center justify-center px-2 py-4">
+            <div className="flex flex-1 flex-col items-center justify-center gap-4 px-2 py-4">
               <SuggestedPrompts prompts={prompts} onPick={handlePickPrompt} dense={embedded} />
+              {topology && topology.nodes.length > 0 && (
+                <LiveServicesCard nodes={topology.nodes} onPick={handlePickPrompt} dense={embedded} />
+              )}
             </div>
           )}
 

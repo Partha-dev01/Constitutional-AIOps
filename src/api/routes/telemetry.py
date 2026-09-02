@@ -4,6 +4,7 @@ Constitutional AIOps - Telemetry API Routes
 Provides endpoints for accessing logs, metrics, and traces from the LGTM stack.
 """
 
+import asyncio
 import logging
 from datetime import datetime, timedelta
 from typing import Any
@@ -18,6 +19,19 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def _docker_source_enabled() -> bool:
+    """Whether the local Docker-socket fallback source is enabled (Settings ->
+    telemetry -> dockerEnabled). Defaults ON for lite / self-host; the fallback
+    only ever runs when Loki/Prometheus yield nothing, so this never shadows a
+    real LGTM stack. Never raises."""
+    try:
+        from src.api.routes.settings import get_telemetry_settings
+
+        return bool(get_telemetry_settings().get("dockerEnabled", True))
+    except Exception:  # noqa: BLE001 - default on if settings are unreadable
+        return True
+
+
 class LogEntry(BaseModel):
     """Log entry from Loki."""
     timestamp: str
@@ -28,24 +42,35 @@ class LogEntry(BaseModel):
 
 
 class LogsResponse(BaseModel):
-    """Response containing log entries."""
+    """Response containing log entries. ``source`` names where the logs came
+    from (``loki``, the ``docker`` socket fallback, or ``none``) so the UI can
+    show an honest, source-aware empty state."""
     logs: list[LogEntry]
     total: int
     query: str | None = None
+    source: str = "loki"
 
 
 class MetricPoint(BaseModel):
-    """Metric data point."""
+    """Metric data point. ``service`` / ``metric`` are populated by the Docker
+    fallback source (the container name and a stable metric key like
+    ``cpu_percent``) so the dashboard can group a series without parsing the
+    human ``label``; they are empty for LGTM-sourced points."""
     timestamp: str
     value: float
     label: str
+    service: str = ""
+    metric: str = ""
 
 
 class MetricsResponse(BaseModel):
-    """Response containing metrics."""
+    """Response containing metrics. ``source`` names where the data came from
+    (``loki``/``prometheus``, ``docker`` fallback, or ``none``) so the UI can
+    show honest, source-aware empty states."""
     metrics: list[MetricPoint]
     range: str
     step: str
+    source: str = "prometheus"
 
 
 class TraceSpan(BaseModel):
@@ -93,55 +118,74 @@ async def get_logs(
     """
     telemetry_collector = getattr(request.app.state, "telemetry_collector", None)
 
-    if telemetry_collector is None:
-        # Return empty response
-        return LogsResponse(logs=[], total=0, query=query)
+    end_time = datetime.utcnow()
+    start_time = end_time - timedelta(minutes=since_minutes)
 
-    try:
-        # Calculate time window
-        end_time = datetime.utcnow()
-        start_time = end_time - timedelta(minutes=since_minutes)
+    # Build LogQL query. Select by the `container` label, which both the local
+    # promtail and the remote Alloy edge streams carry; a substring match lets a
+    # service name also resolve the local `aiops-` container-name prefix and the
+    # remote container name alike. (When service is None the collector applies
+    # its own '{container=~".+"}' default.)
+    logql_query = query
+    if logql_query is None and service:
+        logql_query = f'{{container=~"(?i).*{logql_escape(service)}.*"}}'
+    if level:
+        # Anchor on a stream selector before appending the level line-filter;
+        # match every container stream when no service was specified.
+        base = logql_query if logql_query is not None else '{container=~".+"}'
+        logql_query = f'{base} |~ "(?i){logql_escape(level)}"'
 
-        # Build LogQL query. Select by the `container` label, which both the local
-        # promtail and the remote Alloy edge streams carry; a substring match lets a
-        # service name also resolve the local `aiops-` container-name prefix and the
-        # remote container name alike. (When service is None the collector applies
-        # its own '{container=~".+"}' default.)
-        logql_query = query
-        if logql_query is None and service:
-            logql_query = f'{{container=~"(?i).*{logql_escape(service)}.*"}}'
-
-        if level:
-            # Anchor on a stream selector before appending the level line-filter;
-            # match every container stream when no service was specified.
-            base = logql_query if logql_query is not None else '{container=~".+"}'
-            logql_query = f'{base} |~ "(?i){logql_escape(level)}"'
-
-        # Query Loki via collector
-        logs_data = await telemetry_collector.query_logs(
-            service=service or "all",
-            start_time=start_time,
-            end_time=end_time,
-            query=logql_query,
-            limit=limit,
-        )
-
-        logs = [
-            LogEntry(
-                timestamp=entry.timestamp.isoformat() if hasattr(entry, 'timestamp') else str(entry.get("timestamp", datetime.utcnow().isoformat())),
-                level=entry.level if hasattr(entry, 'level') else entry.get("level", "INFO"),
-                service=entry.service if hasattr(entry, 'service') else entry.get("service", "unknown"),
-                message=entry.message if hasattr(entry, 'message') else entry.get("message", ""),
-                labels=entry.labels if hasattr(entry, 'labels') else entry.get("labels", {}),
+    # 1) Primary source: Loki via the collector (present on the full LGTM stack).
+    logs_data: list[Any] = []
+    if telemetry_collector is not None:
+        try:
+            logs_data = await telemetry_collector.query_logs(
+                service=service or "all",
+                start_time=start_time,
+                end_time=end_time,
+                query=logql_query,
+                limit=limit,
             )
-            for entry in logs_data
-        ]
+        except Exception as e:  # noqa: BLE001
+            logger.warning(f"Failed to query logs: {e}")
+            logs_data = []
 
-        return LogsResponse(logs=logs, total=len(logs), query=logql_query)
+    source = "loki" if logs_data else "none"
 
-    except Exception as e:
-        logger.warning(f"Failed to query logs: {e}")
-        return LogsResponse(logs=[], total=0, query=query)
+    # 2) Fallback source: the local Docker socket (lite / self-host with no Loki).
+    # Only when Loki produced nothing AND the source is enabled, so a real LGTM
+    # stack is never shadowed. The `level` line-filter still applies below.
+    if not logs_data and _docker_source_enabled():
+        try:
+            from src.telemetry.docker_source import collect_container_logs
+
+            logs_data = await asyncio.to_thread(
+                collect_container_logs,
+                since=start_time,
+                until=end_time,
+                service=service,
+                max_total=limit,
+            )
+            if level:
+                want = level.strip().lower()
+                logs_data = [e for e in logs_data if getattr(e, "level", "").lower() == want]
+            if logs_data:
+                source = "docker"
+        except Exception as e:  # noqa: BLE001 - fallback must never break the route
+            logger.debug(f"Docker log fallback failed: {e}")
+
+    logs = [
+        LogEntry(
+            timestamp=entry.timestamp.isoformat() if hasattr(entry, 'timestamp') else str(entry.get("timestamp", datetime.utcnow().isoformat())),
+            level=entry.level if hasattr(entry, 'level') else entry.get("level", "INFO"),
+            service=entry.service if hasattr(entry, 'service') else entry.get("service", "unknown"),
+            message=entry.message if hasattr(entry, 'message') else entry.get("message", ""),
+            labels=entry.labels if hasattr(entry, 'labels') else entry.get("labels", {}),
+        )
+        for entry in logs_data
+    ]
+
+    return LogsResponse(logs=logs, total=len(logs), query=logql_query, source=source)
 
 
 @router.get(
@@ -165,11 +209,8 @@ async def get_metrics(
     """
     telemetry_collector = getattr(request.app.state, "telemetry_collector", None)
 
-    if telemetry_collector is None:
-        return MetricsResponse(metrics=[], range=range, step=step)
-
+    # Parse time range (e.g., "1h" -> 60 minutes); tolerate a bad value.
     try:
-        # Parse time range (e.g., "1h" -> 60 minutes)
         range_value = int(range[:-1])
         range_unit = range[-1]
         if range_unit == 'h':
@@ -178,42 +219,66 @@ async def get_metrics(
             minutes = range_value * 60 * 24
         else:
             minutes = range_value
+    except (ValueError, IndexError):
+        minutes = 60
 
-        end_time = datetime.utcnow()
-        start_time = end_time - timedelta(minutes=minutes)
+    end_time = datetime.utcnow()
+    start_time = end_time - timedelta(minutes=minutes)
 
-        # Build metrics queries for container/service.
-        # No default: pass None (all hosts) when no service/edge is specified so
-        # the summary is not hard-scoped to a single demo host.
-        service_name = service or None
-        metrics_queries = None
-        if query:
-            metrics_queries = [query]
-        elif metric:
-            metrics_queries = [metric]
+    # Build metrics queries for container/service.
+    # No default: pass None (all hosts) when no service/edge is specified so
+    # the summary is not hard-scoped to a single demo host.
+    service_name = service or None
+    metrics_queries = None
+    if query:
+        metrics_queries = [query]
+    elif metric:
+        metrics_queries = [metric]
 
-        # Query Prometheus via collector
-        metrics_data = await telemetry_collector.query_metrics(
-            service=service_name,
-            start_time=start_time,
-            end_time=end_time,
-            metrics=metrics_queries,
-        )
-
-        metrics = [
-            MetricPoint(
-                timestamp=point.timestamp.isoformat() if hasattr(point, 'timestamp') else str(point.get("timestamp", datetime.utcnow().isoformat())),
-                value=float(point.value if hasattr(point, 'value') else point.get("value", 0)),
-                label=point.name if hasattr(point, 'name') else point.get("label", "unknown"),
+    # 1) Primary source: Prometheus via the collector (full LGTM stack).
+    metrics_data: list[Any] = []
+    if telemetry_collector is not None:
+        try:
+            metrics_data = await telemetry_collector.query_metrics(
+                service=service_name,
+                start_time=start_time,
+                end_time=end_time,
+                metrics=metrics_queries,
             )
-            for point in metrics_data
-        ]
+        except Exception as e:  # noqa: BLE001
+            logger.warning(f"Failed to query metrics: {e}")
+            metrics_data = []
 
-        return MetricsResponse(metrics=metrics, range=range, step=step)
+    source = "prometheus" if metrics_data else "none"
 
-    except Exception as e:
-        logger.warning(f"Failed to query metrics: {e}")
-        return MetricsResponse(metrics=[], range=range, step=step)
+    # 2) Fallback source: live per-container CPU%/mem% off the local Docker
+    # socket (lite / self-host with no Prometheus). Only when Prometheus gave
+    # nothing AND a custom query/metric was NOT requested (those are PromQL and
+    # have no Docker equivalent) AND the source is enabled.
+    if not metrics_data and not query and not metric and _docker_source_enabled():
+        try:
+            from src.telemetry.docker_source import collect_container_stats
+
+            metrics_data = await asyncio.to_thread(
+                collect_container_stats, service=service_name,
+            )
+            if metrics_data:
+                source = "docker"
+        except Exception as e:  # noqa: BLE001 - fallback must never break the route
+            logger.debug(f"Docker metrics fallback failed: {e}")
+
+    metrics = [
+        MetricPoint(
+            timestamp=point.timestamp.isoformat() if hasattr(point, 'timestamp') else str(point.get("timestamp", datetime.utcnow().isoformat())),
+            value=float(point.value if hasattr(point, 'value') else point.get("value", 0)),
+            label=point.name if hasattr(point, 'name') else point.get("label", "unknown"),
+            service=(point.labels.get("container", "") if hasattr(point, 'labels') and isinstance(point.labels, dict) else ""),
+            metric=(point.labels.get("metric", "") if hasattr(point, 'labels') and isinstance(point.labels, dict) else ""),
+        )
+        for point in metrics_data
+    ]
+
+    return MetricsResponse(metrics=metrics, range=range, step=step, source=source)
 
 
 @router.get(

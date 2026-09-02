@@ -709,6 +709,7 @@ function MonitoringStep() {
   const [loki, setLoki] = useState('')
   const [prom, setProm] = useState('')
   const [tempo, setTempo] = useState('')
+  const [dockerEnabled, setDockerEnabled] = useState(true)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [testing, setTesting] = useState(false)
@@ -727,6 +728,7 @@ function MonitoringStep() {
         setLoki(s.telemetry.lokiUrl)
         setProm(s.telemetry.prometheusUrl)
         setTempo(s.telemetry.tempoUrl)
+        setDockerEnabled(s.telemetry.dockerEnabled)
       })
       .catch((e) => {
         if (alive) setError(e instanceof Error ? e.message : 'Failed to load monitoring settings')
@@ -749,6 +751,7 @@ function MonitoringStep() {
           lokiUrl: loki.trim() || undefined,
           prometheusUrl: prom.trim() || undefined,
           tempoUrl: tempo.trim() || undefined,
+          docker: true,
         }),
       )
     } catch (e) {
@@ -774,6 +777,7 @@ function MonitoringStep() {
           prometheusEnabled: prom.trim().length > 0,
           tempoUrl: tempo.trim(),
           tempoEnabled: tempo.trim().length > 0,
+          dockerEnabled,
         },
       })
       setSettings(saved)
@@ -818,6 +822,33 @@ function MonitoringStep() {
               </div>
             )
           })}
+
+          {/* Local Docker-socket source — no URL, just an on/off + a live test.
+              The fallback that makes Telemetry/Dashboard work with no LGTM. */}
+          <div className="rounded-xl border border-border bg-card/50 p-4">
+            <label className="flex cursor-pointer items-start gap-3">
+              <input
+                type="checkbox"
+                checked={dockerEnabled}
+                onChange={(e) => setDockerEnabled(e.target.checked)}
+                data-testid="setup-docker-toggle"
+                className="mt-1 h-4 w-4 rounded border-border"
+              />
+              <span>
+                <span className="text-sm font-medium">Local Docker socket</span>
+                <span className="block text-xs text-muted-foreground">
+                  No LGTM stack? Read logs and live CPU / memory metrics from the host's
+                  Docker socket. Recommended for the lite / self-host tier.
+                </span>
+              </span>
+            </label>
+            {result?.docker && (
+              <p className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                <ProbeChip ok={result.docker.ok} />
+                <span className="truncate">{result.docker.detail}</span>
+              </p>
+            )}
+          </div>
 
           <div className="flex flex-wrap items-center gap-2">
             <button type="button" onClick={handleSave} disabled={saving} className={WIZ_BTN_PRIMARY}>

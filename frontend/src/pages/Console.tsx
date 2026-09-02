@@ -3,6 +3,7 @@ import type { PointerEvent as ReactPointerEvent } from 'react'
 import { AlertTriangle, Columns, GripVertical, Loader2, MessageSquare, Waypoints, X } from 'lucide-react'
 import { ActiveIncidentsPanel } from '../components/incidents/ActiveIncidentsPanel'
 import { ChatPane } from '../components/chat/ChatPane'
+import { ServiceActionBar } from '../components/console/ServiceActionBar'
 import { useMediaQuery } from '../hooks/useMediaQuery'
 import type { EpisodicLink, EpisodicNode } from '../components/EpisodicGraphExplorer'
 import { buildSchemaChatContext } from '../components/schema/types'
@@ -513,6 +514,10 @@ export function Console() {
           >
             <ActiveIncidentsPanel onOpenInChat={handleOpenInChat} onCountChange={setIncidentCount} />
           </div>
+
+          {/* Service-aware quick actions — derived from the live topology. Read-only
+              actions prefill a scoped prompt; Restart routes through the consent card. */}
+          <ServiceActionBar onAction={handleOpenInChat} />
 
           {/* BOTTOM — assistant chat. flex-1 takes the remaining height; the
               ChatPane manages its own internal scroll with the composer pinned. */}

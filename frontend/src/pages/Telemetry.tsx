@@ -6,25 +6,36 @@ import {
   Activity,
   FileText,
   Search,
+  Container,
+  Database,
 } from 'lucide-react'
+import api from '../lib/api'
+import type { TelemetryLogEntry, TelemetryMetricPoint } from '../lib/api'
 
-// Telemetry data types
-interface LogEntry {
-  timestamp: string
-  level: 'INFO' | 'WARN' | 'ERROR' | 'DEBUG'
-  service: string
-  message: string
+/** Human name + icon for a telemetry data source. */
+function sourceMeta(source: string): { label: string; Icon: typeof Database } {
+  if (source === 'docker') return { label: 'Local Docker socket', Icon: Container }
+  if (source === 'loki' || source === 'prometheus') return { label: 'LGTM stack', Icon: Database }
+  return { label: 'No source', Icon: Database }
 }
 
-interface MetricPoint {
-  timestamp: string
-  value: number
-  label: string
+/** A small pill naming where the data on a panel came from. */
+function SourceBadge({ source }: { source: string }) {
+  if (source === 'none') return null
+  const { label, Icon } = sourceMeta(source)
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-muted/60 px-2 py-0.5 text-[11px] text-muted-foreground">
+      <Icon className="h-3 w-3" />
+      {label}
+    </span>
+  )
 }
 
 export function Telemetry() {
-  const [logs, setLogs] = useState<LogEntry[]>([])
-  const [metrics, setMetrics] = useState<MetricPoint[]>([])
+  const [logs, setLogs] = useState<TelemetryLogEntry[]>([])
+  const [metrics, setMetrics] = useState<TelemetryMetricPoint[]>([])
+  const [logsSource, setLogsSource] = useState<string>('none')
+  const [metricsSource, setMetricsSource] = useState<string>('none')
   const [telemetryLoading, setTelemetryLoading] = useState(false)
   const [logFilter, setLogFilter] = useState<string>('all')
   // Free-text filter over message + service (the search box used to be dead).
@@ -34,16 +45,16 @@ export function Telemetry() {
     setTelemetryLoading(true)
     try {
       const [logsRes, metricsRes] = await Promise.all([
-        fetch('/api/v1/telemetry/logs?limit=50'),
-        fetch('/api/v1/telemetry/metrics?range=1h'),
+        api.telemetry.logs({ limit: 50 }).catch(() => null),
+        api.telemetry.metrics({ range: '1h' }).catch(() => null),
       ])
-      if (logsRes.ok) {
-        const data = await logsRes.json()
-        setLogs(data.logs || [])
+      if (logsRes) {
+        setLogs(logsRes.logs || [])
+        setLogsSource(logsRes.source || 'none')
       }
-      if (metricsRes.ok) {
-        const data = await metricsRes.json()
-        setMetrics(data.metrics || [])
+      if (metricsRes) {
+        setMetrics(metricsRes.metrics || [])
+        setMetricsSource(metricsRes.source || 'none')
       }
     } catch (err) {
       console.error('Failed to fetch telemetry:', err)
@@ -58,6 +69,15 @@ export function Telemetry() {
     fetchTelemetry()
   }, [])
 
+  // Honest, source-aware subtitle: name where the data is actually coming from.
+  const anySource = metricsSource !== 'none' ? metricsSource : logsSource
+  const subtitle =
+    anySource === 'docker'
+      ? 'Logs and live metrics read from the local Docker socket'
+      : anySource === 'loki' || anySource === 'prometheus'
+        ? 'Logs, metrics, and traces from the LGTM stack'
+        : 'Connect a monitoring source to see logs and metrics'
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -67,9 +87,7 @@ export function Telemetry() {
             <Network className="h-6 w-6" />
             Telemetry
           </h1>
-          <p className="text-muted-foreground">
-            Logs, metrics, and traces from the LGTM stack
-          </p>
+          <p className="text-muted-foreground">{subtitle}</p>
         </div>
         <button
           onClick={fetchTelemetry}
@@ -104,6 +122,7 @@ export function Telemetry() {
           <h3 className="font-semibold flex items-center gap-2">
             <FileText className="h-4 w-4" />
             Recent Logs
+            <SourceBadge source={logsSource} />
           </h3>
           <div className="relative w-full sm:w-auto">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -154,7 +173,10 @@ export function Telemetry() {
             <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
               <FileText className="h-8 w-8 mb-2 opacity-50" />
               <p className="text-sm">No logs available</p>
-              <p className="text-xs mt-1">Configure Loki endpoint in Settings</p>
+              <p className="text-xs mt-1 text-center px-4">
+                Add a Loki endpoint or enable the local Docker socket source in{' '}
+                <a href="/settings" className="text-primary hover:underline">Settings → Telemetry</a>
+              </p>
             </div>
           )}
         </div>
@@ -165,10 +187,11 @@ export function Telemetry() {
         <h3 className="font-semibold mb-4 flex items-center gap-2">
           <Activity className="h-4 w-4" />
           Metrics Summary
+          <SourceBadge source={metricsSource} />
         </h3>
         {metrics.length > 0 ? (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {metrics.slice(0, 4).map((metric, i) => (
+            {metrics.slice(0, 8).map((metric, i) => (
               <div key={i} className="p-3 bg-muted/50 rounded-lg text-center">
                 <p className="text-2xl font-bold">{metric.value.toFixed(1)}</p>
                 <p className="text-xs text-muted-foreground">{metric.label}</p>
@@ -178,7 +201,10 @@ export function Telemetry() {
         ) : (
           <div className="text-center py-6 text-muted-foreground">
             <p className="text-sm">No metrics available</p>
-            <p className="text-xs mt-1">Configure Prometheus endpoint in Settings</p>
+            <p className="text-xs mt-1 px-4">
+              Add a Prometheus endpoint or enable the local Docker socket source in{' '}
+              <a href="/settings" className="text-primary hover:underline">Settings → Telemetry</a>
+            </p>
           </div>
         )}
       </div>
