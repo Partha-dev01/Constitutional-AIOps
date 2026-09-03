@@ -5,12 +5,13 @@ Health check endpoints for monitoring system status.
 Checks connectivity to LLM endpoints, Neo4j, and observability stack.
 """
 
+import base64
 import logging
 import time
 from datetime import datetime
 from typing import Any
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, Response
 from pydantic import BaseModel, Field
 
 from src.version import __version__
@@ -220,6 +221,53 @@ async def liveness_check() -> LivenessResponse:
     return LivenessResponse(
         alive=True,
         timestamp=datetime.utcnow(),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Wake readiness probe (lite / sleep-when-idle tier).
+#
+# The wake holding page (aws/lambda/wake_on_visit) must hand the visitor over to
+# the app ONLY once the BACKEND is actually serving -- not merely once the
+# frontend's static files are up. On the lite box nginx answers static requests
+# (e.g. /favicon.ico) ~20-30s BEFORE the backend finishes booting, so a probe
+# against a static file hands off early and drops the visitor on a login whose
+# API calls then 502. This endpoint is the backend-readiness signal that closes
+# that gap.
+#
+# Why a 1x1 PNG rather than JSON: the holding page is served from a DIFFERENT
+# origin (the CloudFront / Lambda front door) than the app, so its readiness
+# check is a cross-origin <img> load -- which needs no CORS and whose onload
+# fires ONLY on a genuine 200 image. While the backend is starting the edge
+# returns 502 for /api/* (img.onerror -> no hand-off); the moment it answers
+# this PNG the page navigates. A JSON body cannot drive <img>, and a no-cors
+# fetch cannot tell 200 from 502, so the image is the clean gate. It is public:
+# the health router is mounted at /api/v1 WITHOUT the auth dependency (main.py).
+# ---------------------------------------------------------------------------
+# A verified 1x1 transparent PNG (68 bytes), decoded once at import.
+_WAKE_PROBE_PNG: bytes = base64.b64decode(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNgAAIAAAUAAen63NgAAAAASUVORK5CYII="
+)
+
+
+@router.get(
+    "/wake-probe.png",
+    summary="Wake Readiness Probe",
+    description=(
+        "Tiny always-200 PNG the sleep-when-idle front door's holding page loads "
+        "cross-origin to detect that THIS backend is serving before handing the "
+        "visitor to the app. Public and unauthenticated."
+    ),
+    include_in_schema=False,
+)
+async def wake_probe() -> Response:
+    """Return a 1x1 PNG so the holding page's cross-origin ``<img>`` readiness
+    probe fires ``onload`` only once the backend is genuinely up. Never cached
+    (each wake serves from a fresh boot)."""
+    return Response(
+        content=_WAKE_PROBE_PNG,
+        media_type="image/png",
+        headers={"Cache-Control": "no-store"},
     )
 
 
