@@ -1,0 +1,147 @@
+name: deploy
+
+# Continuous deployment to the live lite box.
+#
+# Safety contract (see docs + the mega-plan 5d CD section):
+#   - Runs ONLY on push to main of the canonical repo (never forks, never
+#     pull_request / pull_request_target).
+#   - Manual trigger (workflow_dispatch) is the human gate: only a maintainer
+#     can start a deploy. The 'production' environment holds the role ARN as a
+#     secret; required-reviewer approval turns on automatically once the repo
+#     is public (or on a plan that supports environment protection on private
+#     repos), at which point the commented push-to-main trigger can be
+#     re-enabled for hands-off CD.
+#   - Auth is OIDC only (no long-lived AWS keys in GitHub): the job assumes a
+#     dedicated, least-privilege IAM role whose trust is scoped to this repo's
+#     main ref.
+#   - Delivery is SSM RunShellScript (no SSH key in CI): the runner uploads a
+#     build bundle to a private S3 prefix, then tells the box to pull it and
+#     run the lite compose. The box pulls from S3 via its own instance role.
+#   - The box's idle-stop timer returns it to the stopped state after the
+#     deploy; the next /launch re-points DNS and boots the freshly built
+#     containers.
+#
+# Required setup before this can run (provisioned out-of-band, see the
+# provisioning plan): the GitHub OIDC provider + the scoped deploy role in AWS;
+# s3:GetObject on the artifact bucket added to the box instance role; and the
+# environment secret DEPLOY_ROLE_ARN plus the repo/environment variables
+# DEPLOY_INSTANCE_ID and DEPLOY_ARTIFACT_BUCKET. No live infra IDs are baked
+# into this file (they come from vars/secrets), preserving the Phase-5b scrub.
+
+on:
+  workflow_dispatch:
+  # Re-enable hands-off CD once the 'production' environment can enforce the
+  # required-reviewer approval gate (repo public, or a plan that supports it):
+  # push:
+  #   branches: [main]
+  #   paths:
+  #     - 'src/**'
+  #     - 'frontend/**'
+  #     - 'docker/**'
+  #     - '.github/workflows/deploy.yml'
+
+# Least-privilege GITHUB_TOKEN: any scope named here forces all others to none.
+permissions:
+  contents: read
+
+# One production deploy at a time; never interrupt an in-flight deploy.
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    # Only the canonical repo's main branch ever deploys.
+    if: github.repository == 'Partha-dev01/Aiops_Final' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      AWS_REGION: us-east-1
+      INSTANCE_ID: ${{ vars.DEPLOY_INSTANCE_ID }}
+      ARTIFACT_BUCKET: ${{ vars.DEPLOY_ARTIFACT_BUCKET }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Package deploy bundle
+        run: |
+          set -euo pipefail
+          tar --exclude='frontend/node_modules' --exclude='frontend/dist' \
+              -czf deploy-bundle.tgz src frontend docker
+          ls -la deploy-bundle.tgz
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        with:
+          role-to-assume: ${{ secrets.DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Upload bundle to S3
+        run: |
+          set -euo pipefail
+          aws s3 cp deploy-bundle.tgz \
+            "s3://${ARTIFACT_BUCKET}/deploys/${GITHUB_SHA}.tgz"
+
+      - name: Start the instance if stopped
+        run: |
+          set -euo pipefail
+          aws ec2 start-instances --instance-ids "$INSTANCE_ID"
+          aws ec2 wait instance-running --instance-ids "$INSTANCE_ID"
+
+      - name: Wait for the SSM agent to come online
+        run: |
+          set -euo pipefail
+          state=""
+          for _ in $(seq 1 30); do
+            state=$(aws ssm describe-instance-information \
+              --filters "Key=InstanceIds,Values=$INSTANCE_ID" \
+              --query 'InstanceInformationList[0].PingStatus' \
+              --output text 2>/dev/null || true)
+            if [ "$state" = "Online" ]; then echo "SSM agent online"; break; fi
+            sleep 10
+          done
+          [ "$state" = "Online" ] || { echo "SSM agent did not come online"; exit 1; }
+
+      - name: Deploy via SSM (pull bundle + rebuild lite stack)
+        run: |
+          set -euo pipefail
+          # Build the remote script; ARTIFACT_BUCKET and GITHUB_SHA are baked in
+          # here, while $ts / $(date) are escaped so they evaluate on the box.
+          remote_script=$(cat <<REMOTE
+          set -euo pipefail
+          cd /home/ubuntu/aiops
+          ts=\$(date +%Y%m%d-%H%M%S)
+          mkdir -p .predeploy-backup
+          tar --exclude=frontend/node_modules --exclude=frontend/dist \
+              -czf ".predeploy-backup/pre_\${ts}.tgz" src frontend docker || true
+          aws s3 cp "s3://${ARTIFACT_BUCKET}/deploys/${GITHUB_SHA}.tgz" /tmp/deploy.tgz
+          tar xzf /tmp/deploy.tgz -C /home/ubuntu/aiops
+          docker compose -f docker/docker-compose.lite.yml --env-file .env --profile edge up -d --build backend frontend
+          docker compose -f docker/docker-compose.lite.yml ps
+          REMOTE
+          )
+          jq -n --arg s "$remote_script" '{commands: [$s]}' > ssm-params.json
+          cmd_id=$(aws ssm send-command \
+            --instance-ids "$INSTANCE_ID" \
+            --document-name AWS-RunShellScript \
+            --comment "deploy ${GITHUB_SHA}" \
+            --parameters file://ssm-params.json \
+            --query 'Command.CommandId' --output text)
+          echo "SSM command: $cmd_id"
+          aws ssm wait command-executed --command-id "$cmd_id" --instance-id "$INSTANCE_ID" || true
+          status=$(aws ssm get-command-invocation \
+            --command-id "$cmd_id" --instance-id "$INSTANCE_ID" \
+            --query Status --output text)
+          echo "----- stdout -----"
+          aws ssm get-command-invocation --command-id "$cmd_id" --instance-id "$INSTANCE_ID" \
+            --query StandardOutputContent --output text || true
+          if [ "$status" != "Success" ]; then
+            echo "----- stderr -----"
+            aws ssm get-command-invocation --command-id "$cmd_id" --instance-id "$INSTANCE_ID" \
+              --query StandardErrorContent --output text || true
+            echo "deploy failed (status=$status)"; exit 1
+          fi
+          echo "deploy status: $status"
