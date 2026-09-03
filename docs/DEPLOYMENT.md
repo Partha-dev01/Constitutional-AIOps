@@ -52,6 +52,11 @@ docker compose -f docker/docker-compose.lite.yml --env-file .env up -d
 > `ENVIRONMENT` then falls back to its `production` default). Verified on Docker
 > Compose v5.5.0.
 
+> **Shortcut:** with `make` installed, `make lite-up` runs exactly the command
+> above, and `make lite-down` / `make lite-logs` / `make lite-build` wrap the
+> rest (`make help` lists them). The raw `docker compose` command stays the
+> portable fallback on hosts without `make`.
+
 That is the whole thing. The app degrades gracefully without Neo4j and the
 LGTM observability stack (it falls back to an in-memory episode store and the
 Graph/Metrics pages show fallback data), so this is a genuine one-command
@@ -61,7 +66,7 @@ self-host, not a crippled build.
 
 | Requirement | Version | Notes |
 |-------------|---------|-------|
-| Docker | 24+ | With Docker Compose v2 |
+| Docker | 24+ | With Docker Compose v2 — install both in one step via https://get.docker.com |
 | RAM | 2GB+ | Measured steady-state RSS is ~0.74 GiB (backend + frontend + edge) |
 | Disk | 20GB | CPU-only image is ~1.3GB |
 | LLM endpoint | any OpenAI-compatible | vLLM, Ollama, AWS Bedrock, OpenAI, ... (see [§3](#3-bring-your-own-llm-endpoint)) |
