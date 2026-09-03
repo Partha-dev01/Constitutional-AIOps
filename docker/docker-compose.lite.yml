@@ -6,14 +6,21 @@
 # back to an in-memory episode store and the Graph/Metrics pages show fallback
 # data — so this is a genuine one-command self-host, not a crippled build.
 #
+# ALWAYS pass --env-file .env. Compose reads the interpolation .env from THIS
+# file's directory (docker/), NOT the repo root, so a bare
+# `-f docker/docker-compose.lite.yml` invocation does NOT auto-load the root
+# .env. Omitting it blanks the bring-your-own endpoint AND (via the
+# ENVIRONMENT=production default below) trips the WS_TOKEN startup guard, so the
+# backend crash-loops. Verified on Docker Compose v5.5.0.
+#
 # SELF-CONTAINED — use it ALONE, not layered on docker-compose.yml:
 #
 #   Localhost (no TLS, ports published):
-#     docker compose -f docker/docker-compose.lite.yml up -d
+#     docker compose -f docker/docker-compose.lite.yml --env-file .env up -d
 #       -> frontend http://localhost:3000 , backend http://localhost:8000
 #
 #   Public edge (Caddy + Let's Encrypt TLS on a domain) — our AWS lite tier:
-#     docker compose -f docker/docker-compose.lite.yml --profile edge up -d
+#     docker compose -f docker/docker-compose.lite.yml --env-file .env --profile edge up -d
 #       -> needs APP_DOMAIN + ACME_EMAIL; frontend/backend stay internal, only
 #          Caddy binds 80/443. Its access log feeds aws/idle-check.sh.
 #
