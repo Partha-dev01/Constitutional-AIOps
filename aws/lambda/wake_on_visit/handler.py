@@ -41,7 +41,7 @@ Environment:
   HOSTINGER_API_TOKEN  (required)  Bearer token for the Hostinger DNS API
   HOSTINGER_DOMAIN     (required)  the Hostinger-managed zone, e.g. example.com
   DNS_RECORD_NAME      (required)  the subdomain record to keep current, e.g. aiops-node
-  DNS_TTL              optional, default 30 (kept low so a stale cached IP clears fast)
+  DNS_TTL              optional, default 60 (Hostinger's minimum; low so a stale cached IP clears fast)
   HOLDING_REFRESH_SEC  optional, default 8
   HOLDING_GUARANTEED_EXIT_SEC optional, default 120 (client-side last-resort nav)
   (AWS_REGION is provided by the Lambda runtime.)
@@ -63,12 +63,15 @@ _REFRESH = int(os.environ.get("HOLDING_REFRESH_SEC", "8"))
 _HOSTINGER_TOKEN = os.environ.get("HOSTINGER_API_TOKEN", "")
 _HOSTINGER_DOMAIN = os.environ.get("HOSTINGER_DOMAIN", "")
 _DNS_RECORD_NAME = os.environ.get("DNS_RECORD_NAME", "")
-# Kept LOW on purpose. The box has no Elastic IP, so its public IP changes on
-# every wake and the app's A record is re-pointed each time. A low TTL shrinks
-# the window in which a visitor's browser/resolver still holds the previous
-# (now-dead) IP -- the exact stale-cache that caused "took too long to respond"
-# right after a wake.
-_DNS_TTL = int(os.environ.get("DNS_TTL", "30"))
+# Kept as LOW as the DNS provider allows. The box has no Elastic IP, so its
+# public IP changes on every wake and the app's A record is re-pointed each
+# time. A low TTL shrinks the window in which a visitor's browser/resolver
+# still holds the previous (now-dead) IP -- the exact stale-cache that caused
+# "took too long to respond" right after a wake. Hostinger REJECTS any TTL
+# below 60 with HTTP 422 ([DNS:4005] "TTL must be at least 60 seconds"), so 60
+# is the floor -- do NOT lower it. (A 30 slipped in once and silently 422'd
+# every wake's DNS re-point, leaving the app host pinned to a dead IP.)
+_DNS_TTL = int(os.environ.get("DNS_TTL", "60"))
 # The box is only handed off to once its web server actually accepts TLS
 # connections on this port. EC2 "running" fires ~1-3 min before Caddy binds
 # 443, so acting on state alone lands the visitor on a dead socket
