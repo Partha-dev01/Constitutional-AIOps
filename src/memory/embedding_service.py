@@ -54,15 +54,21 @@ class EmbeddingService:
         self._dimensions = EMBEDDING_DIMENSIONS
         self._is_available = False
 
-        # Check if sentence-transformers is available
+        # Decide availability WITHOUT importing sentence-transformers here. That
+        # import pulls in torch + transformers (tens of seconds on a cold start),
+        # and because EmbeddingService is constructed during app startup it blocked
+        # uvicorn from serving for that whole window. importlib.util.find_spec only
+        # checks the package is installed (no heavy import); the real import is
+        # deferred to _load_model, which runs on first embed, after we are serving.
         try:
-            from sentence_transformers import SentenceTransformer
-            self._sentence_transformer_cls = SentenceTransformer
-            self._is_available = True
-            logger.info("Sentence-transformers available, will lazy-load model on first use")
-        except ImportError:
-            self._sentence_transformer_cls = None
+            import importlib.util
+            self._is_available = importlib.util.find_spec("sentence_transformers") is not None
+        except (ImportError, ValueError):
             self._is_available = False
+
+        if self._is_available:
+            logger.info("Sentence-transformers available, will lazy-load model on first use")
+        else:
             logger.warning(
                 "sentence-transformers not installed. "
                 "Install with: pip install sentence-transformers torch"
@@ -85,6 +91,7 @@ class EmbeddingService:
 
         try:
             import torch
+            from sentence_transformers import SentenceTransformer
 
             # Check for CUDA availability
             if torch.cuda.is_available():
@@ -95,9 +102,10 @@ class EmbeddingService:
                 self._device = "cpu"
                 logger.info("CUDA not available, using CPU")
 
-            # Load model
+            # Load model. This is the first heavy sentence-transformers import; it
+            # lives here (not __init__) so it never blocks app startup.
             logger.info(f"Loading embedding model: {self._model_name}")
-            self._model = self._sentence_transformer_cls(
+            self._model = SentenceTransformer(
                 self._model_name,
                 device=self._device,
             )

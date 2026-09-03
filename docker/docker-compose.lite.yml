@@ -80,6 +80,14 @@ services:
       # uvicorn from accepting connections — so the edge 502s the entire cold-wake
       # window. One attempt = instant connection-refused -> fallback (~sub-second).
       - NEO4J_CONNECT_MAX_ATTEMPTS=${NEO4J_CONNECT_MAX_ATTEMPTS:-1}
+      # LGTM observability (Loki/Prometheus/Tempo) is NOT deployed in lite. Pass
+      # these EMPTY so the telemetry collector treats each backend as absent and
+      # SKIPS the HTTP poll (no "All connection attempts failed" log spam every
+      # ~30s); logs fall back to the Docker-socket source and the dashboards read
+      # the richer /api/v1/health. The full/GPU stack sets real URLs, unaffected.
+      - LOKI_URL=${LOKI_URL:-}
+      - PROMETHEUS_URL=${PROMETHEUS_URL:-}
+      - TEMPO_URL=${TEMPO_URL:-}
       # --- App ---
       - ENVIRONMENT=${ENVIRONMENT:-production}
       - DEBUG=false
