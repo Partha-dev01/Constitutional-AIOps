@@ -176,9 +176,9 @@ class TelemetryCollector:
         self._client = httpx.AsyncClient(timeout=timeout)
 
         logger.info(f"TelemetryCollector initialized")
-        logger.info(f"  Loki: {self.loki_url}")
-        logger.info(f"  Prometheus: {self.prometheus_url}")
-        logger.info(f"  Tempo: {self.tempo_url}")
+        logger.info(f"  Loki: {self.loki_url or '(disabled)'}")
+        logger.info(f"  Prometheus: {self.prometheus_url or '(disabled)'}")
+        logger.info(f"  Tempo: {self.tempo_url or '(disabled)'}")
 
     async def close(self) -> None:
         """Close HTTP client."""
@@ -197,26 +197,32 @@ class TelemetryCollector:
             "tempo": False,
         }
 
+        # Each backend is skipped entirely when its URL is empty ("not deployed",
+        # e.g. the lite tier). Probing a dead port would only emit periodic
+        # connection errors and never flip the flag anyway.
         # Check Loki
-        try:
-            response = await self._client.get(f"{self.loki_url}/ready")
-            health["loki"] = response.status_code == 200
-        except Exception as e:
-            logger.debug(f"Loki health check failed: {e}")
+        if self.loki_url:
+            try:
+                response = await self._client.get(f"{self.loki_url}/ready")
+                health["loki"] = response.status_code == 200
+            except Exception as e:
+                logger.debug(f"Loki health check failed: {e}")
 
         # Check Prometheus
-        try:
-            response = await self._client.get(f"{self.prometheus_url}/-/ready")
-            health["prometheus"] = response.status_code == 200
-        except Exception as e:
-            logger.debug(f"Prometheus health check failed: {e}")
+        if self.prometheus_url:
+            try:
+                response = await self._client.get(f"{self.prometheus_url}/-/ready")
+                health["prometheus"] = response.status_code == 200
+            except Exception as e:
+                logger.debug(f"Prometheus health check failed: {e}")
 
         # Check Tempo
-        try:
-            response = await self._client.get(f"{self.tempo_url}/ready")
-            health["tempo"] = response.status_code == 200
-        except Exception as e:
-            logger.debug(f"Tempo health check failed: {e}")
+        if self.tempo_url:
+            try:
+                response = await self._client.get(f"{self.tempo_url}/ready")
+                health["tempo"] = response.status_code == 200
+            except Exception as e:
+                logger.debug(f"Tempo health check failed: {e}")
 
         return health
 
@@ -338,6 +344,12 @@ class TelemetryCollector:
         Returns:
             List of log entries
         """
+        # Loki not deployed (empty URL, e.g. the lite tier): skip the HTTP call so
+        # collect_window falls through to the Docker-socket log source instead of
+        # spamming a "connection refused" warning every collection cycle.
+        if not self.loki_url:
+            return []
+
         if query is None:
             # Select streams by the `container` label, which BOTH the local
             # promtail (job="containerlogs") and the remote Alloy edge agents
@@ -412,6 +424,10 @@ class TelemetryCollector:
         Returns:
             List of metric points
         """
+        # Prometheus not deployed (empty URL, e.g. the lite tier): skip the poll.
+        if not self.prometheus_url:
+            return []
+
         # default_summary: the Telemetry "Metrics Summary" case (no explicit
         # query/metric passed). Each entry is an aggregation PromQL that returns a
         # SINGLE scalar series, paired with a clean human label. We emit only the
@@ -506,6 +522,10 @@ class TelemetryCollector:
         Returns:
             List of trace spans
         """
+        # Tempo not deployed (empty URL, e.g. the lite tier): skip the poll.
+        if not self.tempo_url:
+            return []
+
         # Ensure naive datetimes are treated as UTC
         start_utc = start_time.replace(tzinfo=timezone.utc) if start_time.tzinfo is None else start_time
         end_utc = end_time.replace(tzinfo=timezone.utc) if end_time.tzinfo is None else end_time

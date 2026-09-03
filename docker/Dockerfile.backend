@@ -24,6 +24,18 @@ RUN if [ -n "$TORCH_INDEX_URL" ]; then \
     fi
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Lite tier only: pre-download the all-MiniLM-L6-v2 embedding model into the
+# image's default Hugging Face cache so the FIRST semantic-memory operation after
+# a cold wake reads it off disk instead of blocking on a ~90MB HF download. This
+# uses the SAME unpinned call the runtime makes (embedding_service._load_model),
+# so the runtime resolves the identical cached snapshot — the download is simply
+# moved to build time. Guarded exactly like the torch install above: an empty
+# TORCH_INDEX_URL (the full/GPU build) makes it a no-op, so that image is
+# unchanged and never reaches out to Hugging Face at build.
+RUN if [ -n "$TORCH_INDEX_URL" ]; then \
+        python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')"; \
+    fi
+
 # Copy application code
 COPY src/ ./src/
 COPY configs/ ./configs/
