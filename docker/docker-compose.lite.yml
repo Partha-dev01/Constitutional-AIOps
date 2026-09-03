@@ -64,9 +64,15 @@ services:
       - FAST_AGENT_API_KEY=${FAST_AGENT_API_KEY:-}
       - REASONING_AGENT_API_KEY=${REASONING_AGENT_API_KEY:-}
       # --- Neo4j/LGTM are NOT deployed in lite ---
-      # NEO4J_URI is left at its localhost default (no server -> the app's
-      # graceful in-memory fallback). NEO4J_PASSWORD is a dummy only so the
-      # production secret-guard (_require_password) does not refuse to boot.
+      # Point NEO4J_URI at the IPv4 loopback LITERAL, not "localhost". With no
+      # Neo4j running the connect must fail fast into the app's in-memory
+      # fallback; on a dual-stack box "localhost" resolves to ::1 first and the
+      # IPv6 attempt stalls ~14s inside the FastAPI lifespan (blocking uvicorn
+      # from serving for that whole window on a cold wake), whereas 127.0.0.1
+      # refuses instantly. Overridable for a self-hoster who DOES run Neo4j.
+      - NEO4J_URI=${NEO4J_URI:-bolt://127.0.0.1:7687}
+      # NEO4J_PASSWORD is a dummy only so the production secret-guard
+      # (_require_password) does not refuse to boot.
       - NEO4J_PASSWORD=${NEO4J_PASSWORD:-lite-unused}
       # Lite ships WITHOUT Neo4j, so the startup connect must FAIL FAST to the
       # in-memory fallback. The default 8-attempt backoff wastes ~75s retrying a
@@ -129,7 +135,12 @@ services:
           memory: 1024M               # measured backend RSS ~700 MiB (s78) + ~45% headroom
           cpus: '2'
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      # Liveness only (constant 200, no LLM/DB probing) so the container flips to
+      # healthy as soon as uvicorn serves -- which also releases the frontend's
+      # depends_on:service_healthy sooner on a cold wake. The richer
+      # /api/v1/health (which probes the LLM + telemetry) drives the dashboards,
+      # not this gate.
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health/live"]
       interval: 30s
       timeout: 10s
       retries: 3

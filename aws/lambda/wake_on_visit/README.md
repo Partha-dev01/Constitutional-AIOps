@@ -24,9 +24,11 @@ sees the box ready — but the visitor's browser may still hold the PREVIOUS
 (now-dead) IP in its DNS cache, so the bounce lands on a dead address and times
 out. Instead the holding page probes `APP_URL` client-side (an `<img>` load plus
 a no-cors `fetch`) and only navigates once this browser resolves the live box.
-`DNS_TTL` is kept low (30s) so the stale window is short, and a guaranteed-exit
-timer (`HOLDING_GUARANTEED_EXIT_SEC`, default 120s, comfortably above the TTL)
-navigates anyway if the probes are blocked.
+`DNS_TTL` is kept low (60s, Hostinger's floor) so the stale window is short. If
+the probe stays blocked past `HOLDING_GUARANTEED_EXIT_SEC` (default 120s), the
+page reveals a manual "Continue" link rather than auto-navigating — a blind
+timer nav into a browser still holding the previous (now-dead) IP was the
+reported ERR_CONNECTION_TIMED_OUT crash.
 
 Why the Lambda owns the DNS update: with no Elastic IP the box's public IPv4
 changes on every start, so the A record has to be re-pointed each wake. The box's
@@ -45,9 +47,9 @@ never on the internet-exposed box. This replaces the retired box-side
 | `HOSTINGER_API_TOKEN` | yes | Bearer token for the Hostinger DNS API — **never commit** |
 | `HOSTINGER_DOMAIN` | yes | the Hostinger-managed zone, e.g. `example.com` |
 | `DNS_RECORD_NAME` | yes | the subdomain record to keep current, e.g. `aiops-node` |
-| `DNS_TTL` | no (30) | `30` — low, so a stale cached IP clears fast |
+| `DNS_TTL` | no (60) | `60` — Hostinger's minimum; low so a stale cached IP clears fast (never below 60) |
 | `HOLDING_REFRESH_SEC` | no (8) | `8` |
-| `HOLDING_GUARANTEED_EXIT_SEC` | no (120) | `120` — client-side last-resort nav; keep above `DNS_TTL` |
+| `HOLDING_GUARANTEED_EXIT_SEC` | no (120) | `120` — after this, reveal a manual "Continue" link; keep above `DNS_TTL` |
 
 Function timeout is 20s (each Hostinger call has a 10s HTTP timeout). A warm-IP
 cache keeps Hostinger traffic to the minutes right after a wake, not every request.
