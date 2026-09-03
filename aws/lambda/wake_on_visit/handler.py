@@ -43,7 +43,7 @@ Environment:
   DNS_RECORD_NAME      (required)  the subdomain record to keep current, e.g. aiops-node
   DNS_TTL              optional, default 60 (Hostinger's minimum; low so a stale cached IP clears fast)
   HOLDING_REFRESH_SEC  optional, default 8
-  HOLDING_GUARANTEED_EXIT_SEC optional, default 120 (client-side last-resort nav)
+  HOLDING_GUARANTEED_EXIT_SEC optional, default 120 (after this, reveal a manual "Continue" link)
   (AWS_REGION is provided by the Lambda runtime.)
 """
 
@@ -78,12 +78,14 @@ _DNS_TTL = int(os.environ.get("DNS_TTL", "60"))
 # ("refuses to connect"). Overridable; 443 is the Caddy HTTPS listener.
 _APP_READY_PORT = int(os.environ.get("APP_READY_PORT", "443"))
 _APP_READY_TIMEOUT = float(os.environ.get("APP_READY_TIMEOUT", "2.5"))
-# Last-resort client-side navigation. The holding page normally moves on only
-# once ITS OWN probe reaches the box (so it never lands on stale DNS). If those
-# probes are blocked (a corporate proxy, an ad-blocker eating cross-origin
-# requests), navigate anyway once enough time has passed that every cached DNS
-# entry has surely expired -- comfortably above _DNS_TTL. Guarantees an exit
-# without reintroducing the stale-IP crash.
+# Manual-continue threshold. The holding page moves on by ITSELF only once its
+# own probe reaches the box (so it never lands on stale DNS). If the probe stays
+# blocked (a corporate proxy, an ad-blocker eating cross-origin requests), after
+# this many seconds the page REVEALS a manual "Continue to the app" link the
+# visitor can click -- it never auto-navigates to an unverified host, because a
+# blind timer nav into a browser still holding the previous (now-dead) IP is
+# exactly the ERR_CONNECTION_TIMED_OUT crash this design avoids. Set comfortably
+# above _DNS_TTL so a normal wake hands off via the probe well before this.
 _GEXIT = int(os.environ.get("HOLDING_GUARANTEED_EXIT_SEC", "120"))
 
 _HOSTINGER_BASE = "https://developers.hostinger.com/api/dns/v1/zones"
@@ -175,8 +177,9 @@ def _safe_next(event) -> str:
 # 302: with no Elastic IP the app's DNS changes each wake, and a server bounce
 # could send the browser to its own still-cached previous IP (ERR_CONNECTION_
 # TIMED_OUT -- the reported crash). A slow full reload re-hits /launch to keep the
-# DNS record fresh; a guaranteed-exit timer is the last resort if the probe is
-# blocked; a <noscript> meta refresh covers no-JS. __APP_URL__/__TITLE__/__MSG__/
+# DNS record fresh; if the probe stays blocked past __GEXIT__s a manual "Continue"
+# link is revealed (never a blind auto-nav); a <noscript> meta refresh covers
+# no-JS. __APP_URL__/__TITLE__/__MSG__/
 # __BACKSTOP__/__GEXIT__ are substituted (never an f-string: the CSS/JS is full of
 # literal braces).
 _HOLDING_TEMPLATE = """<!doctype html>
@@ -202,6 +205,7 @@ h1{font-size:1.35rem;margin:.2rem 0 .5rem;font-weight:650}
 @keyframes slide{0%{transform:translateX(-120%)}100%{transform:translateX(320%)}}
 .meta{font-size:.82rem;color:var(--muted)}.meta b{color:var(--fg);font-variant-numeric:tabular-nums}
 .fine{font-size:.78rem;color:#5f6c82;margin-top:1rem}
+.manual{font-size:.9rem;color:var(--fg);margin-top:.9rem}.manual a{color:var(--brand2);font-weight:600;text-decoration:none}.manual a:hover{text-decoration:underline}
 @media (prefers-reduced-motion:reduce){.mark,.spin,.bar i{animation:none}}
 </style></head>
 <body><div class="card" role="status" aria-live="polite">
@@ -216,8 +220,9 @@ h1{font-size:1.35rem;margin:.2rem 0 .5rem;font-weight:650}
 <h1 id="title">__TITLE__</h1>
 <p class="msg" id="msg">__MSG__</p>
 <div class="bar" aria-hidden="true"><i></i></div>
-<p class="meta"><b id="elapsed">0s</b> elapsed · usually ready in 1-2 min</p>
+<p class="meta"><b id="elapsed">0s</b> elapsed · usually ready in 2-4 min</p>
 <p class="fine">This page moves on automatically the moment the app is ready. No need to refresh.</p>
+<p class="manual" id="manual" hidden>Taking longer than usual. <a id="manualLink" href="#">Continue to the app →</a></p>
 </div>
 <script>
 var APP_URL="__APP_URL__",TARGET="__TARGET__",GEXIT=__GEXIT__,KEY="aiops.wake.start",start;
@@ -227,9 +232,11 @@ try{start=Number(sessionStorage.getItem(KEY))||0}catch(e){start=0}
 // can't fire immediately into a not-yet-woken box.
 if(!start||(Date.now()-start)>900000){start=Date.now();try{sessionStorage.setItem(KEY,String(start))}catch(e){}}
 var titleEl=document.getElementById("title"),msgEl=document.getElementById("msg"),elEl=document.getElementById("elapsed");
+var manualShown=false;
 function elapsed(){return Math.max(0,Math.round((Date.now()-start)/1000))}
 function tick(){var s=elapsed();elEl.textContent=s+"s";
-if(s>=90){titleEl.textContent="Almost ready";msgEl.textContent="Finishing startup and running health checks."}
+if(manualShown)return;
+if(s>=90){titleEl.textContent="Still starting";msgEl.textContent="Cold starts can take a few minutes. This page moves on by itself once the app is ready."}
 else if(s>=40){titleEl.textContent="Starting services";msgEl.textContent="The machine is up; the application is still starting."}}
 tick();setInterval(tick,1000);
 var done=false;
@@ -242,9 +249,14 @@ function go(){if(done)return;done=true;try{sessionStorage.removeItem(KEY)}catch(
 // is intentionally avoided: it resolves even on a 502 and would hand off early.)
 function probe(){if(done)return;var img=new Image();img.onload=go;img.onerror=function(){};img.src=APP_URL+"/api/v1/wake-probe.png?ts="+Date.now()}
 probe();setInterval(probe,3000);
-// Guaranteed exit: once every cached DNS entry has certainly expired, navigate
-// even if the probes were blocked. GEXIT is well above the DNS TTL.
-setInterval(function(){if(!done&&elapsed()>=GEXIT)go()},2000);
+// If the probe stays blocked past GEXIT (a proxy/ad-blocker eating the
+// cross-origin image), REVEAL a manual "Continue" link instead of auto-
+// navigating -- a blind timer nav into a browser still holding the previous
+// dead IP is the exact ERR_CONNECTION_TIMED_OUT crash this avoids. The probe
+// keeps running, so a normal wake still hands off on its own.
+var manualEl=document.getElementById("manual"),manualLink=document.getElementById("manualLink");
+manualLink.onclick=function(e){e.preventDefault();go()};
+setInterval(function(){if(!done&&!manualShown&&elapsed()>=GEXIT){manualShown=true;titleEl.textContent="Taking longer than usual";msgEl.textContent="Still starting. Keep this page open, or continue to the app.";manualEl.hidden=false}},2000);
 // Backstop full reload re-hits /launch so the Lambda keeps the DNS record
 // current while we wait; it never navigates to the box itself.
 setTimeout(function(){if(!done)location.reload()},__BACKSTOP__000);

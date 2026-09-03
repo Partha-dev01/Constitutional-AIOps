@@ -7,6 +7,7 @@ Constitutional AIOps system.
 Architecture: Simultaneous Dual-Model (Qwen3-4B + Qwen3-14B on 24GB VRAM)
 """
 
+import asyncio
 import hmac
 import logging
 import os
@@ -339,12 +340,30 @@ async def lifespan(app: FastAPI):
     app.state.ws_manager = ws_manager
     logger.info("WebSocket manager initialized")
 
-    # Verify LLM server connections
-    try:
+    # Verify LLM server connections in the BACKGROUND. A cold bring-your-own
+    # endpoint (e.g. Bedrock) can take 100s+ to answer its first probe, and
+    # awaiting it here would block uvicorn from accepting ANY connection for that
+    # whole window -- on the lite cold-wake the edge then 502s until it returns.
+    # The result is log-only, so fire it as a task and let startup proceed. Keep
+    # a reference on app.state (the event loop holds only a weak one, so an
+    # unreferenced task can be garbage-collected mid-flight) and report the
+    # outcome from a done-callback.
+    async def _probe_llm_health() -> None:
         health = await app.state.model_router.health_check()
-        logger.info(f"LLM Health: Fast Agent={health['fast_agent']}, Reasoning Agent={health['reasoning_agent']}")
-    except Exception as e:
-        logger.warning(f"LLM health check failed (will retry on requests): {e}")
+        logger.info(
+            f"LLM Health: Fast Agent={health['fast_agent']}, "
+            f"Reasoning Agent={health['reasoning_agent']}"
+        )
+
+    def _on_llm_health_done(task: "asyncio.Task[None]") -> None:
+        if task.cancelled():
+            return
+        exc = task.exception()
+        if exc is not None:
+            logger.warning(f"LLM health check failed (will retry on requests): {exc}")
+
+    app.state.llm_health_task = asyncio.create_task(_probe_llm_health())
+    app.state.llm_health_task.add_done_callback(_on_llm_health_done)
 
     # Verify telemetry backends
     try:
@@ -383,6 +402,12 @@ async def lifespan(app: FastAPI):
     if app.state.background_processor:
         await app.state.background_processor.stop()
         logger.info("Background telemetry processor stopped")
+
+    # Cancel the background LLM-health probe if it is still running, before the
+    # router it uses is closed below.
+    llm_health_task = getattr(app.state, "llm_health_task", None)
+    if llm_health_task is not None and not llm_health_task.done():
+        llm_health_task.cancel()
 
     # Close ModelRouter connections
     if app.state.model_router:
