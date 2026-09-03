@@ -162,17 +162,20 @@ def _safe_next(event) -> str:
     return raw
 
 
-# Branded "waking up" page. Readiness is decided CLIENT-SIDE: two probes (an
-# <img> load and a no-cors fetch) hit APP_URL and only hand the visitor over the
-# instant the box is genuinely serving AND this browser's DNS resolves to the
-# live IP -- so we never land on a stale/dead socket. There is deliberately NO
-# server-side 302: with no Elastic IP the app's DNS changes each wake, and a
-# server bounce could send the browser to its own still-cached previous IP
-# (ERR_CONNECTION_TIMED_OUT -- the reported crash). A slow full reload re-hits
-# /launch to keep the DNS record fresh; a guaranteed-exit timer is the last
-# resort if both probes are blocked; a <noscript> meta refresh covers no-JS.
-# __APP_URL__/__TITLE__/__MSG__/__BACKSTOP__/__GEXIT__ are substituted (never an
-# f-string: the CSS/JS is full of literal braces).
+# Branded "waking up" page. Readiness is decided CLIENT-SIDE by a single probe:
+# a cross-origin <img> load of the BACKEND's /api/v1/wake-probe.png. It hands the
+# visitor over only once the backend is genuinely serving (the edge 502s /api/*
+# until then, so img.onerror keeps us waiting) AND this browser's DNS resolves to
+# the live IP -- so we never land on a static frontend that is up before the API,
+# nor on a stale/dead socket. A no-cors fetch is deliberately NOT used: it cannot
+# tell a 200 from a 502, so it would hand off early. There is also NO server-side
+# 302: with no Elastic IP the app's DNS changes each wake, and a server bounce
+# could send the browser to its own still-cached previous IP (ERR_CONNECTION_
+# TIMED_OUT -- the reported crash). A slow full reload re-hits /launch to keep the
+# DNS record fresh; a guaranteed-exit timer is the last resort if the probe is
+# blocked; a <noscript> meta refresh covers no-JS. __APP_URL__/__TITLE__/__MSG__/
+# __BACKSTOP__/__GEXIT__ are substituted (never an f-string: the CSS/JS is full of
+# literal braces).
 _HOLDING_TEMPLATE = """<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -223,17 +226,18 @@ if(!start||(Date.now()-start)>900000){start=Date.now();try{sessionStorage.setIte
 var titleEl=document.getElementById("title"),msgEl=document.getElementById("msg"),elEl=document.getElementById("elapsed");
 function elapsed(){return Math.max(0,Math.round((Date.now()-start)/1000))}
 function tick(){var s=elapsed();elEl.textContent=s+"s";
-if(s>=90){titleEl.textContent="Almost ready";msgEl.textContent="Finishing startup and health checks."}
-else if(s>=30){titleEl.textContent="Loading services";msgEl.textContent="The server is up; bringing the app online."}}
+if(s>=90){titleEl.textContent="Almost ready";msgEl.textContent="Finishing startup and running health checks."}
+else if(s>=40){titleEl.textContent="Starting services";msgEl.textContent="The machine is up; the application is still starting."}}
 tick();setInterval(tick,1000);
 var done=false;
 function go(){if(done)return;done=true;try{sessionStorage.removeItem(KEY)}catch(e){}location.replace(TARGET)}
-// Navigate ONLY once THIS browser can actually reach the app host. Both probes
-// succeed just when this client resolves the LIVE box (right cert + a listening
-// server), so we never bounce onto a stale, cached, now-dead IP.
-function probeImg(){if(done)return;var img=new Image();img.onload=go;img.onerror=function(){};img.src=APP_URL+"/favicon.ico?ts="+Date.now()}
-function probeFetch(){if(done)return;try{fetch(APP_URL+"/favicon.ico?f="+Date.now(),{mode:"no-cors",cache:"no-store"}).then(go).catch(function(){})}catch(e){}}
-function probe(){probeImg();probeFetch()}
+// Hand off ONLY once THIS browser can reach the BACKEND -- not just the frontend
+// static files, which come up ~20-30s earlier. A cross-origin <img> to the
+// backend readiness PNG needs no CORS and fires onload ONLY on a real 200: the
+// edge 502s /api/* until the backend is serving, so we never land on a login
+// whose API calls then fail, nor on a stale/cached now-dead IP. (A no-cors fetch
+// is intentionally avoided: it resolves even on a 502 and would hand off early.)
+function probe(){if(done)return;var img=new Image();img.onload=go;img.onerror=function(){};img.src=APP_URL+"/api/v1/wake-probe.png?ts="+Date.now()}
 probe();setInterval(probe,3000);
 // Guaranteed exit: once every cached DNS entry has certainly expired, navigate
 // even if the probes were blocked. GEXIT is well above the DNS TTL.
@@ -247,7 +251,7 @@ setTimeout(function(){if(!done)location.reload()},__BACKSTOP__000);
 def _holding_page(title: str, message: str, next_path: str = "") -> dict:
     html = (
         _HOLDING_TEMPLATE
-        .replace("__APP_URL__", _APP_URL)  # base host — the favicon readiness probe
+        .replace("__APP_URL__", _APP_URL)  # base host — the backend readiness probe
         .replace("__TARGET__", _APP_URL + next_path)  # where the visitor lands
         .replace("__TITLE__", title)
         .replace("__MSG__", message)

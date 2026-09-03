@@ -43,6 +43,25 @@ class TestHealthRoutes:
         assert "fast_agent" in response.checks_passed
         assert "reasoning_agent" in response.checks_passed
 
+    @pytest.mark.asyncio
+    async def test_wake_probe_returns_png(self):
+        """The public wake-readiness probe returns a real 200 PNG, uncached.
+
+        The sleep-when-idle front door's holding page loads this cross-origin
+        as an <img>; its onload fires only on a genuine 200 image, so the bytes
+        must be a valid PNG, the media type image/png and the response uncached.
+        """
+        from src.api.routes.health import wake_probe, _WAKE_PROBE_PNG
+
+        response = await wake_probe()
+
+        assert response.status_code == 200
+        assert response.media_type == "image/png"
+        assert response.headers.get("cache-control") == "no-store"
+        # A valid PNG so a strict <img> decode accepts it (signature bytes).
+        assert response.body == _WAKE_PROBE_PNG
+        assert response.body[:8] == b"\x89PNG\r\n\x1a\n"
+
 
 # Test Chat Routes
 class TestChatRoutes:

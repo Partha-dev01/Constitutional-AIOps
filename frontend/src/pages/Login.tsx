@@ -20,6 +20,21 @@ function safeNext(raw: string | null): string {
   return raw
 }
 
+/**
+ * HTTP statuses (plus 0, which lib/api.ts uses for network / timeout errors)
+ * that mean "the backend is not serving yet" rather than "bad credentials".
+ * The hosted box is stopped when idle and woken on demand: right after a wake
+ * the edge can serve this page a few seconds before the backend answers /api,
+ * so a login POST can transiently 502/503/504. Those are retried with a
+ * "server is starting" notice instead of the false "invalid password" the
+ * generic error path used to show.
+ */
+const BACKEND_WARMING_STATUSES = new Set([0, 502, 503, 504])
+
+function isBackendWarming(err: unknown): boolean {
+  return err instanceof ApiError && BACKEND_WARMING_STATUSES.has(err.status)
+}
+
 export function Login() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -35,6 +50,9 @@ export function Login() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  // True while a submit is retrying through a still-starting backend, so the
+  // button shows "Waiting for the server…" instead of "Signing in…".
+  const [warming, setWarming] = useState(false)
 
   // Pre-flip or already-signed-in: never block, go straight to the target.
   useEffect(() => {
@@ -47,15 +65,39 @@ export function Login() {
     event.preventDefault()
     if (submitting) return
     setError('')
+    setWarming(false)
     setSubmitting(true)
+    // Right after a wake the API can 502 for a few seconds while the backend
+    // finishes booting. Retry those transient failures quietly (a warming
+    // notice, not a credential error); only a real 401/400/429 stops the loop.
+    const backoffsMs = [0, 800, 1600, 2600, 4000]
     try {
-      await login(username.trim(), password)
-      navigate(next, { replace: true })
+      for (let attempt = 0; attempt < backoffsMs.length; attempt += 1) {
+        if (backoffsMs[attempt] > 0) {
+          await new Promise((resolve) => setTimeout(resolve, backoffsMs[attempt]))
+        }
+        try {
+          await login(username.trim(), password)
+          navigate(next, { replace: true })
+          return
+        } catch (err) {
+          // Keep retrying only while the backend looks like it is still starting
+          // and attempts remain; anything else (bad password, lockout) rethrows.
+          if (isBackendWarming(err) && attempt < backoffsMs.length - 1) {
+            setWarming(true)
+            continue
+          }
+          throw err
+        }
+      }
     } catch (err) {
+      setWarming(false)
       if (err instanceof ApiError && err.status === 401) {
         setError('Invalid username or password.')
       } else if (err instanceof ApiError && err.status === 429) {
         setError('Too many failed attempts. Try again in 15 minutes.')
+      } else if (isBackendWarming(err)) {
+        setError('The server is still starting up. Please try again in a moment.')
       } else {
         setError(err instanceof Error ? err.message : 'Login failed. Please try again.')
       }
@@ -145,7 +187,7 @@ export function Login() {
             {submitting ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />
-                Signing in…
+                {warming ? 'Waiting for the server…' : 'Signing in…'}
               </>
             ) : (
               <>
@@ -154,6 +196,12 @@ export function Login() {
               </>
             )}
           </button>
+
+          {submitting && warming && (
+            <p className="text-center text-xs text-muted-foreground" role="status">
+              The server was asleep and is starting up. This can take a moment.
+            </p>
+          )}
         </form>
 
         {signupEnabled && (
