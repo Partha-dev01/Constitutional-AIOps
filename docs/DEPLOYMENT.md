@@ -37,12 +37,20 @@ cp .env.example .env
 #   if your endpoint needs a bearer token.
 
 # 3. Start (self-contained — do NOT layer it on docker-compose.yml)
-docker compose -f docker/docker-compose.lite.yml up -d
+docker compose -f docker/docker-compose.lite.yml --env-file .env up -d
 
 # 4. Open the app
 #   Frontend  http://localhost:3000
 #   Backend   http://localhost:8000/docs
 ```
+
+> **`--env-file .env` is required.** Docker Compose reads the interpolation
+> `.env` from the compose file's own directory (`docker/`), not the repo root,
+> so a bare `-f docker/docker-compose.lite.yml` command does not auto-load your
+> root `.env`. Without it the bring-your-own endpoint comes through blank and
+> the backend refuses to boot (`WS_TOKEN must be set in production`, because
+> `ENVIRONMENT` then falls back to its `production` default). Verified on Docker
+> Compose v5.5.0.
 
 That is the whole thing. The app degrades gracefully without Neo4j and the
 LGTM observability stack (it falls back to an in-memory episode store and the
@@ -121,7 +129,7 @@ alone, not layered on `docker-compose.yml`.
 ### 4.1 Localhost (no TLS)
 
 ```bash
-docker compose -f docker/docker-compose.lite.yml up -d
+docker compose -f docker/docker-compose.lite.yml --env-file .env up -d
 # frontend  http://localhost:3000
 # backend   http://localhost:8000
 ```
@@ -141,7 +149,7 @@ APP_DOMAIN=aiops.example.com
 ACME_EMAIL=you@example.com
 PUBLIC_API_URL=/api/v1
 
-docker compose -f docker/docker-compose.lite.yml --profile edge up -d
+docker compose -f docker/docker-compose.lite.yml --env-file .env --profile edge up -d
 ```
 
 ### 4.3 What lite includes (and what it drops)
@@ -313,7 +321,7 @@ docker logs -f aiops-backend
 
 ```bash
 docker compose -f docker/docker-compose.lite.yml down -v   # removes volumes too
-docker compose -f docker/docker-compose.lite.yml up -d
+docker compose -f docker/docker-compose.lite.yml --env-file .env up -d
 ```
 
 ---
@@ -322,16 +330,16 @@ docker compose -f docker/docker-compose.lite.yml up -d
 
 ```bash
 # Start (lite)
-docker compose -f docker/docker-compose.lite.yml up -d
+docker compose -f docker/docker-compose.lite.yml --env-file .env up -d
 
 # Start (lite + TLS edge)
-docker compose -f docker/docker-compose.lite.yml --profile edge up -d
+docker compose -f docker/docker-compose.lite.yml --env-file .env --profile edge up -d
 
 # Stop
 docker compose -f docker/docker-compose.lite.yml down
 
 # Rebuild after code changes
-docker compose -f docker/docker-compose.lite.yml up -d --build
+docker compose -f docker/docker-compose.lite.yml --env-file .env up -d --build
 
 # Health
 curl http://localhost:8000/api/v1/health
