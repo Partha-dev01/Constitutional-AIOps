@@ -2,9 +2,9 @@
 
 > Autonomous Infrastructure Management with Constitutional AI Safety
 
-**Version**: 0.8.0 | **Status**: Production deployed (AWS lite tier) | **Last Updated**: 2026-09-01
+**Version**: 1.0.0 | **Status**: Production deployed (AWS lite tier) | **Last Updated**: 2026-09-04
 
-[![License](https://img.shields.io/badge/license-Proprietary-red.svg)]()
+[![License](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)]()
 [![TypeScript](https://img.shields.io/badge/typescript-5.0+-blue.svg)]()
 
@@ -12,12 +12,17 @@
 
 Constitutional AIOps is an autonomous infrastructure management system that combines:
 
-- **Dual-Agent LLM Architecture**: Qwen3-4B (fast) + Qwen3-14B (reasoning) running simultaneously
+- **Dual-Agent LLM Architecture**: a fast annotation agent and a reasoning agent, each pointed at any OpenAI-compatible endpoint (vLLM, Ollama, AWS Bedrock, OpenAI, ...). Both can share one endpoint for a minimal setup; the research reference config runs Qwen3-4B (fast) + Qwen3-14B (reasoning) on a single 24GB GPU.
 - **Constitutional AI Safety**: 12 principles across 3 tiers ensuring safe autonomous actions
-- **Graph-Episodic Memory**: Neo4j-based incident correlation and context retention
+- **Graph-Episodic Memory**: Neo4j-based incident correlation and context retention (optional; omitted in the lite profile)
 - **Human-in-the-Loop**: Approval workflows for uncertain actions
 
 ## Architecture
+
+The recommended deployment is the **lite** profile: the backend and frontend plus
+your own OpenAI-compatible LLM endpoint. No GPU, no bundled models, no Neo4j. The
+diagram below is the **research reference config** (both models co-resident on one
+24GB GPU), not a requirement for self-hosting.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -112,10 +117,6 @@ constitutional-aiops/
 │   ├── telemetry/           # OTEL integration
 │   ├── benchmark/           # Benchmark runner and evaluator
 │   └── api/                 # FastAPI routes
-├── benchmark/               # Benchmarking system
-│   ├── datasets/            # OpsEval + Loghub datasets
-│   ├── scripts/             # Download, prepare, run, evaluate
-│   └── results/             # Benchmark outputs
 ├── frontend/                # React dashboard
 ├── docker/                  # Docker configurations
 ├── docs/                    # Documentation
@@ -230,14 +231,14 @@ This project addresses 5 critical research gaps in AI-enhanced observability:
 | RG4 | Constitutional AI for Operations | 11 principles across 3 tiers |
 | RG5 | Comprehensive AI-Enhanced Observability | Dual-agent LGTM integration |
 
-See [Research Paper](docs/research/# IMP Current Research Documentation/Research_V5.tex) for detailed analysis.
+The research paper behind this project is maintained separately and is not part of this repository.
 
 ## Technology Stack
 
 | Component | Technology |
 |-----------|------------|
-| LLM Hosting | Jarvis Labs Ollama (A5000 24GB) |
-| LLM Runtime | Ollama with OpenAI-compatible API |
+| LLM Hosting | Bring your own (vLLM, Ollama, AWS Bedrock, OpenAI, ...) |
+| LLM Runtime | Any OpenAI-compatible endpoint |
 | Graph Memory | Neo4j 5.x |
 | Observability | Grafana, Loki, Tempo, Prometheus |
 | Backend | FastAPI (Python 3.11+) |
@@ -309,7 +310,13 @@ Constitutional AIOps is an academic engineering research project.
 
 ## License
 
-Proprietary - All rights reserved.
+Licensed under the **GNU Affero General Public License v3.0** (AGPL-3.0). See
+[LICENSE](LICENSE) for the full text.
+
+Copyright (C) 2026 Partha-dev01.
+
+Because this project is AGPL-licensed, if you run a modified version as a network
+service, you must offer its users the corresponding source of your modified version.
 
 ---
 
@@ -321,7 +328,7 @@ When starting a new session, always read:
 3. `docs/CHECKLIST.md` - Current progress
 4. `docs/ISSUES.md` - Active blockers
 
-The architecture is **FINALIZED**:
+The research reference configuration:
 - 24GB VRAM simultaneous dual-model (not hot-swap)
 - Qwen3-4B (fast) + Qwen3-14B (reasoning)
-- Jarvis Labs Ollama (primary) or AWS g6.xlarge (alternative)
+- Self-hosters instead point both agents at any OpenAI-compatible endpoint (see the lite profile)

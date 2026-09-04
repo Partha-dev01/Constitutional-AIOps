@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-09-04
+
+### Open-source release (AGPL-3.0)
+- Licensed the project under **AGPL-3.0** (`LICENSE` added; README badge and License
+  section updated from Proprietary).
+- README now leads with the lite / bring-your-own-endpoint self-host path; the GPU
+  dual-model stack is reframed as the research reference config. Removed stale
+  references (the split-out top-level `benchmark/` corpus, the decommissioned Jarvis
+  Labs hosting, a dead research-paper link).
+- Consolidated the version to **1.0.0** across every surface (`src/version.py` and its
+  re-exports, `frontend/package.json`, docs headers) after prior drift (README 0.8.0,
+  DEPLOYMENT 0.5.0, ISSUES 0.13.0, code 0.7.0).
+- Moved the maintainer-only `quickstart/` hosted-ops tooling out of the public tree.
+
 ### Security audit + hardening (front-door redesign R4)
 - Audited the security-critical paths (auth/session core, the new public signup, the
   remediation consent gate, the constitutional validator, the action-tools kill-switch,

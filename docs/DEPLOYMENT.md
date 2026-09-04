@@ -1,7 +1,7 @@
 # Constitutional AIOps - Deployment Guide
 
-> **Version**: 0.5.0
-> **Last Updated**: 2026-09-01
+> **Version**: 1.0.0
+> **Last Updated**: 2026-09-04
 > **Status**: Production deployed (AWS lite tier, TLS)
 
 ---
@@ -352,5 +352,5 @@ curl http://localhost:8000/api/v1/health
 
 ---
 
-**Last Updated**: 2026-09-01
-**Version**: 0.5.0
+**Last Updated**: 2026-09-04
+**Version**: 1.0.0

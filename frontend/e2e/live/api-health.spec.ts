@@ -33,7 +33,7 @@ test('GET /api/v1/health returns healthy with all components up', async ({ reque
   const body = await res.json()
   expect(body.status).toBe('healthy')
   // Version is sourced from src/version.py (single source of truth).
-  expect(body.version).toBe('0.7.0')
+  expect(body.version).toBe('1.0.0')
 
   const components: Array<{ name: string; healthy: boolean }> = body.components
   const byName = Object.fromEntries(components.map((c) => [c.name, c.healthy]))

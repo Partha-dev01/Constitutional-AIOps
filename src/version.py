@@ -11,4 +11,4 @@ Bump this constant only, then run ``pytest tests/test_version.py`` to confirm
 all surfaces still agree.
 """
 
-__version__ = "0.7.0"
+__version__ = "1.0.0"
