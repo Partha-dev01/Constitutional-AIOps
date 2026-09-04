@@ -1076,5 +1076,84 @@ class BenchmarkRunner:
         c = min(f + 1, len(data) - 1)
         return data[f] + (k - f) * (data[c] - data[f])
 
+    async def evaluate_endpoint(
+        self,
+        max_annotation: int = 3,
+        max_rca: int = 2,
+    ) -> dict:
+        """Quick "is my configured endpoint good enough" check for self-hosters.
+
+        Runs a handful of sample annotation + RCA cases through the SAME agents
+        the app uses (FastAnnotator + ReasoningAgent), which target whatever LLM
+        endpoint is currently configured. Unlike ``run_benchmark`` this is
+        synchronous, writes no run directory, and touches only a few cases so it
+        returns in one request. Reuses the full-benchmark scoring so the pass
+        rate is comparable to the research numbers.
+
+        Raises FileNotFoundError if the sample datasets are not present (the
+        caller maps that to a helpful 400).
+        """
+        if self.is_running:
+            raise RuntimeError("Another benchmark is already running")
+
+        self.is_running = True
+        try:
+            await self.initialize()
+            model_config = MODELS["constitutional_aiops"]
+
+            annotation_tests = self.load_dataset("annotation")[:max(0, max_annotation)]
+            rca_tests = self.load_dataset("rca")[:max(0, max_rca)]
+
+            cases: list[dict] = []
+            latencies: list[float] = []
+            ann_passed = 0
+            rca_passed = 0
+
+            for tc in annotation_tests:
+                r = await self._run_annotation_test(tc, model_config, 0.0)
+                if r.correct:
+                    ann_passed += 1
+                if r.inference_latency_ms > 0:
+                    latencies.append(r.inference_latency_ms)
+                cases.append({
+                    "test_id": r.test_id,
+                    "task_type": "annotation",
+                    "correct": r.correct,
+                    "latency_ms": round(r.inference_latency_ms, 1),
+                    "source": r.source,
+                })
+
+            for tc in rca_tests:
+                r = await self._run_rca_test(tc, model_config, 0.0)
+                if r.correct:
+                    rca_passed += 1
+                if r.inference_latency_ms > 0:
+                    latencies.append(r.inference_latency_ms)
+                cases.append({
+                    "test_id": r.test_id,
+                    "task_type": "rca",
+                    "correct": r.correct,
+                    "latency_ms": round(r.inference_latency_ms, 1),
+                    "source": r.source,
+                })
+
+            total = len(annotation_tests) + len(rca_tests)
+            passed = ann_passed + rca_passed
+            return {
+                "ok": True,
+                "model": "constitutional_aiops",
+                "cases_run": total,
+                "passed": passed,
+                "pass_rate": round(passed / total * 100, 1) if total else 0.0,
+                "annotation": {"run": len(annotation_tests), "passed": ann_passed},
+                "rca": {"run": len(rca_tests), "passed": rca_passed},
+                "avg_latency_ms": round(statistics.mean(latencies), 1) if latencies else 0.0,
+                "cases": cases,
+                "detail": f"Ran {total} sample cases against your configured endpoint.",
+            }
+        finally:
+            self.is_running = False
+            await self.close()
+
 
 __all__ = ["BenchmarkRunner", "BenchmarkConfig", "BenchmarkResult", "BenchmarkStatus", "MODELS"]
