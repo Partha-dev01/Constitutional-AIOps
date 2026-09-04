@@ -11,14 +11,31 @@ import os
 from pathlib import Path
 from typing import Any, Literal
 
-from fastapi import APIRouter, FastAPI, HTTPException, Request, status
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
+from src.auth.deps import User, coerce_user, is_synthetic, require_user
 from src.onboarding.generators import build_base_prompt
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+def _ensure_admin(user: User) -> None:
+    """403 unless the caller is an admin.
+
+    Mirrors the inline gate on the sibling settings mutation routes: the
+    pre-rollout synthetic admin (AUTH_REQUIRED off) always passes, a real
+    non-admin is refused. A system prompt is shared-instance state that steers
+    every user's agent, so a self-registered public user must not edit it.
+    """
+    user = coerce_user(user)
+    if not is_synthetic(user) and user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin privileges required",
+        )
 
 
 class SystemPrompt(BaseModel):
@@ -312,14 +329,16 @@ async def get_prompt(request: Request, prompt_name: str) -> SystemPrompt:
     "/{prompt_name}",
     response_model=SystemPrompt,
     summary="Update Prompt",
-    description="Update a system prompt",
+    description="Update a system prompt. Admin only.",
 )
 async def update_prompt(
     request: Request,
     prompt_name: str,
     body: PromptUpdate,
+    user: User = Depends(require_user),
 ) -> SystemPrompt:
-    """Update a system prompt."""
+    """Update a system prompt. Admin only."""
+    _ensure_admin(user)
     if prompt_name not in DEFAULT_PROMPTS:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -369,10 +388,13 @@ async def update_prompt(
     "/reset",
     response_model=PromptsListResponse,
     summary="Reset Prompts",
-    description="Reset all prompts to defaults",
+    description="Reset all prompts to defaults. Admin only.",
 )
-async def reset_prompts(request: Request) -> PromptsListResponse:
-    """Reset all prompts to their default values."""
+async def reset_prompts(
+    request: Request, user: User = Depends(require_user)
+) -> PromptsListResponse:
+    """Reset all prompts to their default values. Admin only."""
+    _ensure_admin(user)
     global _custom_prompts
     _custom_prompts = {}
     _save_persisted(_custom_prompts)
@@ -398,10 +420,13 @@ async def reset_prompts(request: Request) -> PromptsListResponse:
     "/{prompt_name}/reset",
     response_model=SystemPrompt,
     summary="Reset Single Prompt",
-    description="Reset a specific prompt to default",
+    description="Reset a specific prompt to default. Admin only.",
 )
-async def reset_single_prompt(request: Request, prompt_name: str) -> SystemPrompt:
-    """Reset a specific prompt to its default value."""
+async def reset_single_prompt(
+    request: Request, prompt_name: str, user: User = Depends(require_user)
+) -> SystemPrompt:
+    """Reset a specific prompt to its default value. Admin only."""
+    _ensure_admin(user)
     if prompt_name not in DEFAULT_PROMPTS:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -458,13 +483,16 @@ def _extract_prompt_text(response: Any) -> str:
         "topology entered in the onboarding wizard. ``mode=template`` (default) "
         "is deterministic + offline; ``mode=llm`` refines it with the reasoning "
         "model and falls back to the template on any failure. The draft is NOT "
-        "persisted — Apply it via PUT /prompts/reasoning_chat."
+        "persisted — Apply it via PUT /prompts/reasoning_chat. Admin only."
     ),
 )
 async def generate_base_prompt(
-    request: Request, body: GeneratePromptRequest
+    request: Request,
+    body: GeneratePromptRequest,
+    user: User = Depends(require_user),
 ) -> GeneratePromptResponse:
-    """Deterministic (or LLM-refined) base-prompt draft. Never persists."""
+    """Deterministic (or LLM-refined) base-prompt draft. Admin only. Never persists."""
+    _ensure_admin(user)
     template = build_base_prompt(body.services, body.topology)
 
     if body.mode == "llm":

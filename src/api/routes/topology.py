@@ -31,9 +31,10 @@ import logging
 from datetime import datetime
 from typing import Any, Literal, Optional
 
-from fastapi import APIRouter, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
+from src.auth.deps import User, coerce_user, is_synthetic, require_user
 from src.onboarding.generators import build_topology_from_services
 from src.persistence import store as persistence_store
 from src.topology.schema import (
@@ -53,6 +54,22 @@ from src.topology.schema import (
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+def _ensure_admin(user: User) -> None:
+    """403 unless the caller is an admin.
+
+    Mirrors the inline gate on the sibling settings mutation routes: the
+    pre-rollout synthetic admin (AUTH_REQUIRED off) always passes, a real
+    non-admin is refused. Topology is shared-instance state, so a
+    self-registered public user must not be able to rewrite the live topology.
+    """
+    user = coerce_user(user)
+    if not is_synthetic(user) and user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin privileges required",
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -336,11 +353,14 @@ async def get_topology_schema() -> TopologySchemaResponse:
     description=(
         "Validate and persist a user-edited topology schema, setting mode=custom. "
         "Rejects a malformed schema with a structured 422 (the guardrail) so a "
-        "broken schema is never persisted or made live."
+        "broken schema is never persisted or made live. Admin only."
     ),
 )
-async def put_topology_schema(body: TopologySchemaUpdate) -> TopologySchemaResponse:
-    """Validate + persist an edited schema ('Apply'). 422 on invalid input."""
+async def put_topology_schema(
+    body: TopologySchemaUpdate, user: User = Depends(require_user)
+) -> TopologySchemaResponse:
+    """Validate + persist an edited schema ('Apply'). Admin only. 422 on invalid input."""
+    _ensure_admin(user)
     try:
         schema = validate_topology_schema(body.model_dump())
     except SchemaValidationError as exc:
@@ -372,13 +392,16 @@ async def put_topology_schema(body: TopologySchemaUpdate) -> TopologySchemaRespo
         "from a natural-language prompt. The candidate is strictly validated and "
         "returned as a PREVIEW (NOT persisted). Retries once on invalid LLM "
         "output, then returns a structured 422. Never crashes, never persists "
-        "unvalidated output."
+        "unvalidated output. Admin only."
     ),
 )
 async def generate_topology_schema(
-    request: Request, body: GenerateSchemaRequest
+    request: Request,
+    body: GenerateSchemaRequest,
+    user: User = Depends(require_user),
 ) -> GenerateSchemaResponse:
-    """Generate → validate → PREVIEW. Retry once, then structured 422."""
+    """Generate → validate → PREVIEW. Admin only. Retry once, then structured 422."""
+    _ensure_admin(user)
     model_router = getattr(request.app.state, "model_router", None)
     if model_router is None:
         raise HTTPException(
@@ -436,11 +459,15 @@ async def generate_topology_schema(
     summary="Reset Topology Schema to Discovered",
     description=(
         "Revert to the auto-discovered topology (mode=discovered), dropping any "
-        "applied custom schema. The discovered topology is always restorable."
+        "applied custom schema. The discovered topology is always restorable. "
+        "Admin only."
     ),
 )
-async def reset_topology_schema() -> TopologySchemaResponse:
-    """Revert to discovered mode (the always-available fallback)."""
+async def reset_topology_schema(
+    user: User = Depends(require_user),
+) -> TopologySchemaResponse:
+    """Revert to discovered mode (the always-available fallback). Admin only."""
+    _ensure_admin(user)
     persistence_store.reset_topology_mode()
     schema = discovered_schema_from_seed()
     payload = _schema_to_payload(schema)
@@ -463,11 +490,14 @@ async def reset_topology_schema() -> TopologySchemaResponse:
         "between them. Returned as a PREVIEW (NOT persisted): review it, then "
         "Apply to make it the live topology. On a lite / bring-your-own-endpoint "
         "deployment this reflects the real small footprint instead of the full "
-        "reference stack — schema and live view stay in step."
+        "reference stack — schema and live view stay in step. Admin only."
     ),
 )
-async def sync_topology_schema_from_live(request: Request) -> GenerateSchemaResponse:
-    """Snapshot the live infrastructure into an editable candidate schema (preview)."""
+async def sync_topology_schema_from_live(
+    request: Request, user: User = Depends(require_user)
+) -> GenerateSchemaResponse:
+    """Snapshot the live infrastructure into an editable candidate schema (preview). Admin only."""
+    _ensure_admin(user)
     telemetry_collector = getattr(request.app.state, "telemetry_collector", None)
     # Local import keeps this module importable in langgraph-free CI and avoids a
     # circular import with graph_topology at module load.
@@ -587,13 +617,16 @@ def _services_description(services: list[dict[str, Any]]) -> str:
         "onboarding wizard. ``mode=template`` (default) is deterministic + offline; "
         "``mode=llm`` refines it with the reasoning model and falls back to the "
         "template on any failure. Returned as a PREVIEW (NOT persisted): review, "
-        "edit, then Apply (PUT /schema)."
+        "edit, then Apply (PUT /schema). Admin only."
     ),
 )
 async def generate_topology_from_services(
-    request: Request, body: GenerateFromServicesRequest
+    request: Request,
+    body: GenerateFromServicesRequest,
+    user: User = Depends(require_user),
 ) -> GenerateSchemaResponse:
-    """Deterministic (or LLM-refined) topology from the wizard's services list."""
+    """Deterministic (or LLM-refined) topology from the wizard's services list. Admin only."""
+    _ensure_admin(user)
     services = [s.model_dump() for s in body.services]
     if not any(str(s.get("name") or "").strip() for s in services):
         raise HTTPException(

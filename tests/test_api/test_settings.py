@@ -443,6 +443,63 @@ class TestResetSettings:
 
 
 # ---------------------------------------------------------------------------
+# Admin gating (SEC-004): destructive / probe endpoints are admin-only
+# ---------------------------------------------------------------------------
+
+class TestSettingsAdminGate:
+    """SEC-004: reset + models/test refuse a non-admin (a self-registered public
+    user). The synthetic admin (AUTH_REQUIRED off — the no-arg calls above) and a
+    real admin both pass. Mirrors the inline gate the sibling routes already have."""
+
+    @pytest.mark.asyncio
+    async def test_reset_forbidden_for_non_admin(self, tmp_settings_dir):
+        from fastapi import HTTPException
+        from src.api.routes.settings import reset_settings, _save_persisted, _load_persisted
+        from src.auth.deps import User
+
+        _save_persisted({"constitutional": {"autoThreshold": 99}})
+        with pytest.raises(HTTPException) as exc:
+            await reset_settings(User(id="u1", username="bob", role="user"))
+        assert exc.value.status_code == 403
+        # The destructive wipe never happened.
+        assert _load_persisted() != {}
+
+    @pytest.mark.asyncio
+    async def test_reset_allowed_for_real_admin(self, tmp_settings_dir):
+        from src.api.routes.settings import reset_settings, _save_persisted, _load_persisted
+        from src.auth.deps import User
+
+        _save_persisted({"constitutional": {"autoThreshold": 99}})
+        result = await reset_settings(User(id="a1", username="admin", role="admin"))
+        assert _load_persisted() == {}
+        assert result is not None
+
+    @pytest.mark.asyncio
+    async def test_models_test_forbidden_for_non_admin(self, tmp_settings_dir):
+        from fastapi import HTTPException
+        from src.api.routes.settings import test_models_config
+        from src.auth.deps import User
+
+        mock_request = MagicMock()
+        with pytest.raises(HTTPException) as exc:
+            await test_models_config(mock_request, User(id="u1", username="bob", role="user"))
+        assert exc.value.status_code == 403
+
+    @pytest.mark.asyncio
+    async def test_models_test_allowed_for_admin(self, tmp_settings_dir):
+        from src.api.routes.settings import test_models_config
+        from src.auth.deps import User
+
+        mock_request = MagicMock()
+        mock_request.app.state = MagicMock(spec=[])  # no model_router → False/False
+        result = await test_models_config(
+            mock_request, User(id="a1", username="admin", role="admin")
+        )
+        assert result.fast_agent is False
+        assert result.reasoning_agent is False
+
+
+# ---------------------------------------------------------------------------
 # Integration: router is registered in main app
 # ---------------------------------------------------------------------------
 
