@@ -15,7 +15,13 @@
 	# proxy — Caddy treats the connecting client as the real client (mirrors the
 	# full Caddyfile's XFF hardening).
 	servers {
-		trusted_proxies static private_ranges
+		# Trust private ranges (plain Caddy-only self-host) PLUS any CDN
+		# origin-facing ranges passed in CF_ORIGIN_RANGES (empty for a plain
+		# self-host). When a CDN like CloudFront fronts the app, its origin IPs
+		# MUST be trusted here or Caddy discards the CDN's X-Forwarded-For and the
+		# app sees the CDN IP as the client, collapsing the per-IP login throttle.
+		# Pair with TRUSTED_PROXY_HOPS on the backend (2 behind a CDN, else 1).
+		trusted_proxies static private_ranges {$CF_ORIGIN_RANGES}
 		client_ip_headers X-Forwarded-For
 	}
 }
@@ -34,7 +40,12 @@
 	}
 }
 
-{$APP_DOMAIN} {
+# APP_DOMAIN is the public host. ORIGIN_DOMAIN (optional, empty for a plain
+# self-host) is a 2nd hostname a CDN uses to reach this box directly, so Caddy
+# must also hold its cert for the CDN->origin TLS handshake (the CDN's origin SNI
+# is that hostname). Both names route to the same handlers below. An empty
+# ORIGIN_DOMAIN expands to nothing, leaving a valid single-domain site.
+{$APP_DOMAIN} {$ORIGIN_DOMAIN} {
 	encode zstd gzip
 
 	# Access log to stdout — aws/idle-check.sh reads this to detect external

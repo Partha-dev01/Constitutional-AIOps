@@ -103,6 +103,12 @@ services:
       # cross-origin (SPA :3000 -> API :8000) so it must be listed; the edge
       # profile is same-origin under APP_DOMAIN.
       - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000}
+      # Reverse-proxy hop count used to extract the real viewer IP from
+      # X-Forwarded-For (per-IP login throttle, audit). 1 = Caddy is the only
+      # proxy (plain self-host). Set 2 when a CDN (e.g. CloudFront) sits in front
+      # of Caddy so the app reads the viewer IP, not the CDN's. See
+      # src/api/routes/auth.py and the Caddy CF_ORIGIN_RANGES trust list.
+      - TRUSTED_PROXY_HOPS=${TRUSTED_PROXY_HOPS:-1}
       # In-app auth (OFF by default; set AUTH_REQUIRED=true + admin creds to gate).
       - AUTH_REQUIRED=${AUTH_REQUIRED:-false}
       - AUTH_ADMIN_USER=${AUTH_ADMIN_USER:-}
@@ -203,6 +209,16 @@ services:
     environment:
       - APP_DOMAIN=${APP_DOMAIN}
       - ACME_EMAIL=${ACME_EMAIL:-admin@example.com}
+      # Optional 2nd hostname Caddy should also obtain a cert for and serve, used
+      # when a CDN fronts the app on APP_DOMAIN but connects to this box on a
+      # separate stable origin hostname (e.g. CloudFront -> origin-node): the
+      # CDN's origin TLS SNI is that hostname, so Caddy needs its cert too. Empty
+      # for a plain self-host (single domain).
+      - ORIGIN_DOMAIN=${ORIGIN_DOMAIN:-}
+      # Extra trusted-proxy CIDRs appended to Caddy's trusted_proxies (space
+      # separated). Set to the CDN's origin-facing ranges when behind a CDN so
+      # Caddy trusts its X-Forwarded-For; empty for a plain self-host.
+      - CF_ORIGIN_RANGES=${CF_ORIGIN_RANGES:-}
     volumes:
       - ./configs/Caddyfile.lite:/etc/caddy/Caddyfile:ro
       - aiops-lite-caddy-data:/data          # Let's Encrypt certs persist
