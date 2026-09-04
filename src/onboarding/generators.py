@@ -192,6 +192,72 @@ def _coerce_int(value: Any) -> int | None:
     return None
 
 
+_OBSERVABILITY_KINDS = frozenset({"observability"})
+_SENSOR_KINDS = frozenset({"edge", "edge-host"})
+
+
+def _infer_default_edges(
+    nodes: list[dict[str, Any]],
+    explicit_sources: set[str],
+    existing: set[tuple[str, str]],
+    budget: int,
+) -> list[dict[str, Any]]:
+    """Synthesise a sensible topology for services with no hand-wired deps.
+
+    A services list without ``dependsOn`` would otherwise render as disconnected
+    dots, so we derive relationships from the inferred kinds/tiers:
+      * DEPENDS_ON down the tier spine (gateway -> frontend -> backend ->
+        datastore / llm), skipping the next-tier hop where a tier is empty.
+      * SHIPS_TELEMETRY from every service to each observability node (and from
+        edge sensors, which never sit in the dependency spine).
+    This only supplements: a service the operator already gave dependencies for
+    keeps exactly those. Honours the same dedupe + total-edge budget as explicit
+    edges, so a huge paste degrades gracefully.
+    """
+    out: list[dict[str, Any]] = []
+
+    def add(source: str, target: str, relationship: str) -> None:
+        if len(out) >= budget or source == target or (source, target) in existing:
+            return
+        existing.add((source, target))
+        out.append(
+            {"source": source, "target": target, "relationship": relationship, "kind": "static"}
+        )
+
+    obs_ids = [str(n["id"]) for n in nodes if n.get("kind") in _OBSERVABILITY_KINDS]
+    sensors = [n for n in nodes if n.get("kind") in _SENSOR_KINDS]
+    spine = [
+        n
+        for n in nodes
+        if n.get("kind") not in _OBSERVABILITY_KINDS and n.get("kind") not in _SENSOR_KINDS
+    ]
+
+    # Layered DEPENDS_ON along the spine, from each tier to the next deeper one.
+    by_tier: dict[int, list[str]] = {}
+    for n in spine:
+        by_tier.setdefault(int(n["tier"]), []).append(str(n["id"]))
+    tiers = sorted(by_tier)
+    for lo, hi in zip(tiers, tiers[1:]):
+        for src in by_tier[lo]:
+            if src in explicit_sources:
+                continue  # operator wired this service's deps by hand
+            for tgt in by_tier[hi]:
+                add(src, tgt, "DEPENDS_ON")
+
+    # Telemetry flows: every service reports to each observability node.
+    for obs in obs_ids:
+        for n in spine + sensors:
+            add(str(n["id"]), obs, "SHIPS_TELEMETRY")
+    # Sensors with no observability sink still connect to the app backend.
+    if not obs_ids:
+        backends = [str(n["id"]) for n in spine if n.get("kind") == "backend"]
+        for s in sensors:
+            for b in backends:
+                add(str(s["id"]), b, "SHIPS_TELEMETRY")
+
+    return out
+
+
 def build_topology_from_services(
     services: list[dict[str, Any]],
 ) -> dict[str, list[dict[str, Any]]]:
@@ -287,6 +353,15 @@ def build_topology_from_services(
                     "kind": "static",
                 }
             )
+
+    # Without hand-wired deps the graph would be disconnected dots. Synthesise a
+    # sensible layered topology so a Quick-Setup run always yields a connected,
+    # meaningful graph (explicit dependencies above are always kept as-is).
+    if len(edges) < MAX_EDGES:
+        explicit_sources = {str(e["source"]) for e in edges}
+        edges.extend(
+            _infer_default_edges(nodes, explicit_sources, seen_edges, MAX_EDGES - len(edges))
+        )
 
     return {"nodes": nodes, "edges": edges}
 
