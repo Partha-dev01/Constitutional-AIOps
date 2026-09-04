@@ -1032,6 +1032,7 @@ export function matchRoute(method: string, route: string, bodyText?: string): De
   if (route === '/settings/serving-mode') return ok(SERVING_MODE)
   if (route === '/settings/models') return ok(MODELS_CONFIG)
   if (route === '/settings/models/test') return ok({ fast_agent: true, reasoning_agent: true })
+  if (route === '/settings/notifications/test-webhook') return ok({ ok: true, detail: 'demo: webhook not actually sent' })
   if (route === '/settings/reset') return ok(SETTINGS)
   if (route.startsWith('/prompts')) return ok({ prompts: [] })
 

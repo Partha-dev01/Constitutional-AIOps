@@ -500,6 +500,132 @@ class TestSettingsAdminGate:
 
 
 # ---------------------------------------------------------------------------
+# Webhook live-test (Settings -> Notifications) + SSRF guard
+# ---------------------------------------------------------------------------
+
+class TestWebhookTest:
+    """POST /settings/notifications/test-webhook: admin-only, SSRF-guarded, and a
+    2xx from the target reports success. The synthetic admin (no user arg) passes
+    the gate the same way the sibling probes do."""
+
+    @pytest.mark.asyncio
+    async def test_forbidden_for_non_admin(self, tmp_settings_dir):
+        from fastapi import HTTPException
+        from src.api.routes.settings import test_webhook, WebhookTestRequest
+        from src.auth.deps import User
+
+        with pytest.raises(HTTPException) as exc:
+            await test_webhook(
+                WebhookTestRequest(url="https://example.com/hook"),
+                User(id="u1", username="bob", role="user"),
+            )
+        assert exc.value.status_code == 403
+
+    @pytest.mark.asyncio
+    async def test_rejects_non_http_scheme(self, tmp_settings_dir):
+        from src.api.routes.settings import test_webhook, WebhookTestRequest
+        from src.auth.deps import User
+
+        res = await test_webhook(
+            WebhookTestRequest(url="ftp://example.com/hook"),
+            User(id="a1", username="admin", role="admin"),
+        )
+        assert res.ok is False
+        assert "http" in res.detail.lower()
+
+    @pytest.mark.asyncio
+    async def test_rejects_loopback_target(self, tmp_settings_dir):
+        """SSRF guard: a URL resolving to a non-public address is refused before
+        any request is made (127.0.0.1 needs no DNS)."""
+        from src.api.routes.settings import test_webhook, WebhookTestRequest
+        from src.auth.deps import User
+
+        res = await test_webhook(
+            WebhookTestRequest(url="http://127.0.0.1:9/hook"),
+            User(id="a1", username="admin", role="admin"),
+        )
+        assert res.ok is False
+        assert "non-public" in res.detail
+
+    def test_guard_flags_metadata_endpoint(self):
+        """The cloud metadata endpoint (link-local 169.254.169.254) is blocked."""
+        from src.api.routes.settings import _webhook_target_error
+
+        assert _webhook_target_error("http://169.254.169.254/latest/meta-data") is not None
+        # A syntactically-broken URL is rejected, not crashed on.
+        assert _webhook_target_error("not a url") is not None
+
+    @pytest.mark.asyncio
+    async def test_delivers_on_2xx(self, tmp_settings_dir, monkeypatch):
+        """A public target returning 2xx reports ok=True with the status. The SSRF
+        guard and the outbound POST are both stubbed so the test makes no network
+        call and does not depend on DNS."""
+        import src.api.routes.settings as settings_mod
+        from src.api.routes.settings import test_webhook, WebhookTestRequest
+        from src.auth.deps import User
+
+        monkeypatch.setattr(settings_mod, "_webhook_target_error", lambda _url: None)
+
+        class _Resp:
+            status_code = 200
+
+        class _Client:
+            def __init__(self, *a, **k):
+                pass
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *a):
+                return False
+
+            async def post(self, _url, json=None):
+                return _Resp()
+
+        monkeypatch.setattr(settings_mod.httpx, "AsyncClient", _Client)
+
+        res = await test_webhook(
+            WebhookTestRequest(url="https://hooks.example.com/services/x"),
+            User(id="a1", username="admin", role="admin"),
+        )
+        assert res.ok is True
+        assert "HTTP 200" in res.detail
+
+    @pytest.mark.asyncio
+    async def test_non_2xx_reports_reachable_but_failed(self, tmp_settings_dir, monkeypatch):
+        import src.api.routes.settings as settings_mod
+        from src.api.routes.settings import test_webhook, WebhookTestRequest
+        from src.auth.deps import User
+
+        monkeypatch.setattr(settings_mod, "_webhook_target_error", lambda _url: None)
+
+        class _Resp:
+            status_code = 500
+
+        class _Client:
+            def __init__(self, *a, **k):
+                pass
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *a):
+                return False
+
+            async def post(self, _url, json=None):
+                return _Resp()
+
+        monkeypatch.setattr(settings_mod.httpx, "AsyncClient", _Client)
+
+        res = await test_webhook(
+            WebhookTestRequest(url="https://hooks.example.com/services/x"),
+            User(id="a1", username="admin", role="admin"),
+        )
+        assert res.ok is False
+        assert "HTTP 500" in res.detail
+
+
+# ---------------------------------------------------------------------------
 # Integration: router is registered in main app
 # ---------------------------------------------------------------------------
 
