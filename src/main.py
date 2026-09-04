@@ -43,6 +43,7 @@ from src.api.routes.metrics import router as metrics_router
 from src.api.routes.benchmark import router as benchmark_router
 from src.api.routes.settings import router as settings_router
 from src.api.routes.topology import router as topology_router
+from src.api.routes.audit import router as audit_router
 
 # Import core components
 from src.agents.model_router import ModelRouter
@@ -624,6 +625,7 @@ app.include_router(metrics_router, prefix="/api/v1/metrics", tags=["metrics"], d
 app.include_router(benchmark_router, prefix="/api/v1/benchmark", tags=["benchmark"], dependencies=_AUTHED)
 app.include_router(settings_router, prefix="/api/v1/settings", tags=["settings"], dependencies=_AUTHED)
 app.include_router(topology_router, prefix="/api/v1/topology", tags=["topology"], dependencies=_AUTHED)
+app.include_router(audit_router, prefix="/api/v1/audit", tags=["audit"], dependencies=_AUTHED)
 
 
 # WebSocket endpoint for real-time updates

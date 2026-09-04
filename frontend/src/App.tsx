@@ -35,6 +35,7 @@ const Settings = lazy(() =>
 )
 const Setup = lazy(() => import('./pages/Setup').then((m) => ({ default: m.Setup })))
 const Docs = lazy(() => import('./pages/Docs').then((m) => ({ default: m.Docs })))
+const Audit = lazy(() => import('./pages/Audit').then((m) => ({ default: m.Audit })))
 
 /** On-theme loading fallback for lazy-loaded route chunks */
 function PageFallback() {
@@ -156,6 +157,7 @@ function App() {
                       <Route path="/chat" element={<Chat />} />
                       <Route path="/metrics" element={<Metrics />} />
                       <Route path="/benchmark" element={<Benchmark />} />
+                      <Route path="/audit" element={<Audit />} />
                       <Route path="/settings" element={<Settings />} />
                       <Route path="/guide" element={<Docs />} />
                     </Routes>

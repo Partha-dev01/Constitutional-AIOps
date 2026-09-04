@@ -8,7 +8,7 @@ Provides traceability for Constitutional AI decisions and human approvals.
 import json
 import logging
 from dataclasses import dataclass, field, asdict
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import Enum
 from pathlib import Path
 from typing import Any, Optional
@@ -446,7 +446,7 @@ class AuditLogger:
                         except (json.JSONDecodeError, KeyError):
                             continue
 
-            current_date = current_date.replace(day=current_date.day + 1)
+            current_date = current_date + timedelta(days=1)
             if len(events) >= limit:
                 break
 
