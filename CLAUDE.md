@@ -41,7 +41,7 @@ cat docs/KEY_METRICS.md | head -100
 - **Serving Mode 2** (opt-in overlay): single-engine profile via `AIOPS_MODE=2` + `docker/docker-compose.mode2.yml`; swappable from Settings (host-side watcher); Mode 1 stays byte-identical when off
 - **Remediation model**: action tools NEVER execute inside the model loop — proposals queue for an Approve/Reject card in chat; Settings→Remediation picks diagnose/approve/auto (+ per-tool autonomy allowlist); everything passes the constitutional gate + audit log
 - **Local dev**: Ollama / mock endpoints (OpenAI-compatible) — local defaults unchanged
-- **Current state snapshot**: `docs/SESSION_STATE.md` · consolidated history: `docs/CHANGELOG.md` (0.13.0)
+- **Current state snapshot**: `docs/SESSION_STATE.md` · consolidated history: `docs/CHANGELOG.md` (1.0.0)
 
 ### Key Files Inventory
 | Category | Count | Location |

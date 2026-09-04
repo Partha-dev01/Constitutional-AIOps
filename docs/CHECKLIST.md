@@ -427,4 +427,4 @@ See [CLAUDE.md](../CLAUDE.md) for session management.
 ---
 
 **Last Updated**: 2026-01-29
-**Version**: 0.7.0
+**Version**: 1.0.0

@@ -1,6 +1,6 @@
 # API Reference
 
-> **Version**: 0.7.0
+> **Version**: 1.0.0
 > **Last Updated**: 2026-01-29
 > **Base URL**: `/api/v1`
 

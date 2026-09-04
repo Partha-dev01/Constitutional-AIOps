@@ -10,7 +10,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_single_source_is_canonical() -> None:
-    assert VERSION == "0.7.0"
+    assert VERSION == "1.0.0"
 
 
 def test_package_dunder_matches() -> None:

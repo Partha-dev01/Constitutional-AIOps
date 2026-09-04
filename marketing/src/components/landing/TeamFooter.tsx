@@ -78,7 +78,7 @@ export function TeamFooter() {
           </a>
 
           <p className="text-xs text-muted-foreground">
-            Constitutional AIOps · v0.7.0
+            Constitutional AIOps · v1.0.0
           </p>
         </div>
       </div>

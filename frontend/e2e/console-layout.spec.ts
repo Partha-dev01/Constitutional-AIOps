@@ -61,7 +61,7 @@ const health = {
     { name: 'neo4j', healthy: true, status: 'healthy', latency_ms: 8 },
   ],
   uptime_seconds: 86_400,
-  version: '0.7.0',
+  version: '1.0.0',
 }
 
 const chatResponse = {

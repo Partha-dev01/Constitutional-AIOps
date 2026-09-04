@@ -1,6 +1,6 @@
 # Constitutional AIOps - Issue Tracker
 
-> **Version**: 0.13.0
+> **Version**: 1.0.0
 > **Last Updated**: 2026-08-31
 > **Open Issues**: 10 (all low/medium/info, none blocking)
 > **Blockers**: 0
@@ -503,4 +503,4 @@ When adding new issues, use this format:
 ---
 
 **Last Updated**: 2026-08-31
-**Version**: 0.13.0
+**Version**: 1.0.0
