@@ -341,10 +341,16 @@ async def save_settings(
     "/reset",
     response_model=AllSettings,
     summary="Reset Settings",
-    description="Delete persisted settings file and return factory defaults.",
+    description="Delete persisted settings file and return factory defaults. Admin only.",
 )
-async def reset_settings() -> AllSettings:
-    """Wipe persisted settings and return defaults."""
+async def reset_settings(user: User = Depends(require_user)) -> AllSettings:
+    """Wipe persisted settings and return defaults. Admin only."""
+    user = coerce_user(user)
+    if not is_synthetic(user) and user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins may reset settings",
+        )
     try:
         p = _settings_path()
         if p.exists():
@@ -663,11 +669,17 @@ async def update_models_config(
     "/models/test",
     response_model=ModelsTestResult,
     summary="Test LLM Endpoints",
-    description="Probe the currently-configured fast + reasoning endpoints and report which respond. Save first to test edited values.",
+    description="Probe the currently-configured fast + reasoning endpoints and report which respond. Admin only. Save first to test edited values.",
 )
 async def test_models_config(
     request: Request, user: User = Depends(require_user)
 ) -> ModelsTestResult:
+    user = coerce_user(user)
+    if not is_synthetic(user) and user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins may test the LLM endpoints",
+        )
     router_obj = getattr(request.app.state, "model_router", None)
     if router_obj is None:
         return ModelsTestResult(fast_agent=False, reasoning_agent=False)

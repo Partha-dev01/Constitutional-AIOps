@@ -160,3 +160,73 @@ async def test_reset_clears_persisted_file(prompts_mod):
     await prompts_mod.reset_prompts(req)
     assert prompts_mod._load_persisted() == {}
     assert reasoning.get_system_prompt("chat") == CHAT_SYSTEM_PROMPT
+
+
+# ── admin gating (SEC-004): editing the shared agent prompt is admin-only ─────
+
+async def test_put_forbidden_for_non_admin(prompts_mod):
+    """A self-registered public user must not rewrite the shared agent prompt."""
+    from fastapi import HTTPException
+    from src.auth.deps import User
+
+    reasoning = ReasoningAgent()
+    req = _request_with_agents(reasoning=reasoning, fast=FastAnnotator())
+    body = prompts_mod.PromptUpdate(prompt="Injected {runtime_context} takeover prompt.")
+    with pytest.raises(HTTPException) as exc:
+        await prompts_mod.update_prompt(
+            req, "reasoning_chat", body, User(id="u1", username="bob", role="user")
+        )
+    assert exc.value.status_code == 403
+    # The shared prompt is untouched and nothing was persisted.
+    assert reasoning.get_system_prompt("chat") == CHAT_SYSTEM_PROMPT
+    assert prompts_mod._load_persisted() == {}
+
+
+async def test_put_allowed_for_real_admin(prompts_mod):
+    from src.auth.deps import User
+
+    reasoning = ReasoningAgent()
+    req = _request_with_agents(reasoning=reasoning, fast=FastAnnotator())
+    body = prompts_mod.PromptUpdate(prompt="Admin chat {runtime_context} override body.")
+    result = await prompts_mod.update_prompt(
+        req, "reasoning_chat", body, User(id="a1", username="admin", role="admin")
+    )
+    assert result.prompt == body.prompt
+    assert reasoning.get_system_prompt("chat") == body.prompt
+
+
+async def test_reset_all_forbidden_for_non_admin(prompts_mod):
+    from fastapi import HTTPException
+    from src.auth.deps import User
+
+    req = _request_with_agents(reasoning=ReasoningAgent(), fast=FastAnnotator())
+    with pytest.raises(HTTPException) as exc:
+        await prompts_mod.reset_prompts(req, User(id="u1", username="bob", role="user"))
+    assert exc.value.status_code == 403
+
+
+async def test_reset_single_forbidden_for_non_admin(prompts_mod):
+    from fastapi import HTTPException
+    from src.auth.deps import User
+
+    req = _request_with_agents(reasoning=ReasoningAgent(), fast=FastAnnotator())
+    with pytest.raises(HTTPException) as exc:
+        await prompts_mod.reset_single_prompt(
+            req, "reasoning_chat", User(id="u1", username="bob", role="user")
+        )
+    assert exc.value.status_code == 403
+
+
+async def test_generate_forbidden_for_non_admin(prompts_mod):
+    from fastapi import HTTPException
+    from src.auth.deps import User
+
+    req = _request_with_agents()
+    body = prompts_mod.GeneratePromptRequest(
+        services=[{"name": "api"}], topology={}, mode="template"
+    )
+    with pytest.raises(HTTPException) as exc:
+        await prompts_mod.generate_base_prompt(
+            req, body, User(id="u1", username="bob", role="user")
+        )
+    assert exc.value.status_code == 403

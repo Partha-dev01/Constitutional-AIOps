@@ -416,3 +416,82 @@ class TestLiveTopologyHonoursCustom:
         assert backend.health == "healthy"
         assert "up=1" in backend.health_reason
         assert caddy.health == "unknown"  # no signal
+
+
+# ── admin gating (SEC-004): topology mutations + generators are admin-only ─────
+
+class TestTopologyAdminGate:
+    """A self-registered public user (role="user") must not mutate the shared
+    topology or drive the LLM generators. Reads (GET /schema) stay open. The
+    no-arg calls in the classes above exercise the synthetic-admin pass-through."""
+
+    @pytest.mark.asyncio
+    async def test_put_forbidden_for_non_admin(self, topo_routes, store):
+        from src.auth.deps import User
+
+        body = topo_routes.TopologySchemaUpdate(**_GOOD_SCHEMA)
+        with pytest.raises(HTTPException) as exc:
+            await topo_routes.put_topology_schema(
+                body, User(id="u1", username="bob", role="user")
+            )
+        assert exc.value.status_code == 403
+        # The live topology was not touched.
+        assert store.get_topology_mode() == "discovered"
+
+    @pytest.mark.asyncio
+    async def test_put_allowed_for_real_admin(self, topo_routes, store):
+        from src.auth.deps import User
+
+        body = topo_routes.TopologySchemaUpdate(**_GOOD_SCHEMA)
+        result = await topo_routes.put_topology_schema(
+            body, User(id="a1", username="admin", role="admin")
+        )
+        assert result.mode == store.TOPOLOGY_MODE_CUSTOM
+
+    @pytest.mark.asyncio
+    async def test_reset_forbidden_for_non_admin(self, topo_routes, store):
+        from src.auth.deps import User
+
+        with pytest.raises(HTTPException) as exc:
+            await topo_routes.reset_topology_schema(
+                User(id="u1", username="bob", role="user")
+            )
+        assert exc.value.status_code == 403
+
+    @pytest.mark.asyncio
+    async def test_generate_forbidden_for_non_admin(self, topo_routes):
+        import json
+        from src.auth.deps import User
+
+        req = _request(_mock_router(json.dumps(_GOOD_SCHEMA)))
+        with pytest.raises(HTTPException) as exc:
+            await topo_routes.generate_topology_schema(
+                req,
+                topo_routes.GenerateSchemaRequest(prompt="add a cache"),
+                User(id="u1", username="bob", role="user"),
+            )
+        assert exc.value.status_code == 403
+
+    @pytest.mark.asyncio
+    async def test_generate_from_services_forbidden_for_non_admin(self, topo_routes):
+        from src.auth.deps import User
+
+        req = _request()
+        with pytest.raises(HTTPException) as exc:
+            await topo_routes.generate_topology_from_services(
+                req,
+                topo_routes.GenerateFromServicesRequest(services=[{"name": "api"}]),
+                User(id="u1", username="bob", role="user"),
+            )
+        assert exc.value.status_code == 403
+
+    @pytest.mark.asyncio
+    async def test_sync_live_forbidden_for_non_admin(self, topo_routes):
+        from src.auth.deps import User
+
+        req = _request()
+        with pytest.raises(HTTPException) as exc:
+            await topo_routes.sync_topology_schema_from_live(
+                req, User(id="u1", username="bob", role="user")
+            )
+        assert exc.value.status_code == 403
