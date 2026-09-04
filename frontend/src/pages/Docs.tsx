@@ -53,19 +53,21 @@ const TOC: { id: string; label: string }[] = [
 ]
 
 // Each screen links to its real in-app route so the docs double as navigation.
-const SCREENS: { name: string; href: string; body: string }[] = [
-  { name: 'Dashboard', href: '/', body: 'Live agent status, real service health and open incidents at a glance, plus a live per-service metrics band.' },
-  { name: 'Command Center', href: '/console', body: 'A live operations console with per-service quick actions; read-only actions prefill a scoped question, mutating ones route through the approval card.' },
-  { name: 'Chat', href: '/chat', body: 'Ask about an incident; approve or reject the agent’s proposed remediation inline.' },
-  { name: 'Incidents', href: '/incidents', body: 'Every detected incident with severity, a timeline and suggested actions.' },
-  { name: 'Telemetry', href: '/telemetry', body: 'The logs and metrics flowing in — from your observability stack, or from the local Docker socket on the lite tier.' },
-  { name: 'Metrics', href: '/metrics', body: 'Prometheus-backed metric history for the platform.' },
-  { name: 'Graph', href: '/graph', body: 'Explore the episodic-memory graph of episodes, services and root causes.' },
-  { name: 'Infrastructure', href: '/infrastructure', body: 'Real container health, plus the demo and chaos controls when enabled.' },
-  { name: 'Agents', href: '/agents', body: 'Watch the fast and reasoning agents’ inputs, outputs and the model each one runs on.' },
-  { name: 'MCP Tools', href: '/mcp', body: 'The Model Context Protocol tools the agents may call.' },
-  { name: 'Benchmark', href: '/benchmark', body: 'Run the annotation and root-cause benchmarks against your own endpoint.' },
-  { name: 'Settings', href: '/settings', body: 'Set the model endpoint and key, connect monitoring, edit or auto-generate the platform topology, and manage your account.' },
+// `shot` is a static mock-data screenshot under /public/screenshots so the tour
+// reads as a real page-by-page walkthrough.
+const SCREENS: { name: string; href: string; shot: string; body: string }[] = [
+  { name: 'Dashboard', href: '/', shot: '/screenshots/dashboard.png', body: 'Live agent status, real service health and open incidents at a glance, plus a live per-service metrics band.' },
+  { name: 'Command Center', href: '/console', shot: '/screenshots/console.png', body: 'A live operations console with per-service quick actions; read-only actions prefill a scoped question, mutating ones route through the approval card.' },
+  { name: 'Chat', href: '/chat', shot: '/screenshots/chat.png', body: 'Ask about an incident; approve or reject the agent’s proposed remediation inline.' },
+  { name: 'Incidents', href: '/incidents', shot: '/screenshots/incidents.png', body: 'Every detected incident with severity, a timeline and suggested actions.' },
+  { name: 'Telemetry', href: '/telemetry', shot: '/screenshots/telemetry.png', body: 'The logs and metrics flowing in, from your observability stack or from the local Docker socket on the lite tier.' },
+  { name: 'Metrics', href: '/metrics', shot: '/screenshots/metrics.png', body: 'Prometheus-backed metric history for the platform.' },
+  { name: 'Graph', href: '/graph', shot: '/screenshots/graph-explorer.png', body: 'Explore the episodic-memory graph of episodes, services and root causes.' },
+  { name: 'Infrastructure', href: '/infrastructure', shot: '/screenshots/infrastructure.png', body: 'Real container health, plus the demo and chaos controls when enabled.' },
+  { name: 'Agents', href: '/agents', shot: '/screenshots/agent-hub.png', body: 'Watch the fast and reasoning agents’ inputs, outputs and the model each one runs on.' },
+  { name: 'MCP Tools', href: '/mcp', shot: '/screenshots/mcp.png', body: 'The Model Context Protocol tools the agents may call.' },
+  { name: 'Benchmark', href: '/benchmark', shot: '/screenshots/benchmark.png', body: 'Run the annotation and root-cause benchmarks against your own endpoint.' },
+  { name: 'Settings', href: '/settings', shot: '/screenshots/settings.png', body: 'Set the model endpoint and key, connect monitoring, edit or auto-generate the platform topology, and manage your account.' },
 ]
 
 export function Docs() {
@@ -185,25 +187,38 @@ export function Docs() {
           </P>
 
           <H2 id="interface">The interface</H2>
-          <P>Every screen, and what it is for — select one to jump straight to it:</P>
-          <dl className="mb-4 grid max-w-3xl gap-3 sm:grid-cols-2">
+          <P>
+            A page-by-page tour of every screen. Select one to jump straight to it (screenshots
+            show the app on bundled sample data).
+          </P>
+          <div className="mb-4 max-w-3xl space-y-8">
             {SCREENS.map((s) => (
               <Link
                 key={s.name}
                 to={s.href}
-                className="group rounded-lg border border-border bg-card/50 p-4 transition-colors hover:border-primary/50 hover:bg-card"
+                className="group block overflow-hidden rounded-xl border border-border bg-card/50 transition-colors hover:border-primary/50 hover:bg-card"
               >
-                <dt className="flex items-center justify-between font-semibold text-foreground">
-                  {s.name}
-                  <ArrowRight
-                    className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary"
-                    aria-hidden="true"
-                  />
-                </dt>
-                <dd className="mt-1 text-sm leading-relaxed text-muted-foreground">{s.body}</dd>
+                <img
+                  src={s.shot}
+                  alt={`${s.name} screen`}
+                  width={1920}
+                  height={1080}
+                  loading="lazy"
+                  className="block w-full border-b border-border bg-background"
+                />
+                <div className="p-4">
+                  <div className="flex items-center justify-between font-semibold text-foreground">
+                    <span>{s.name}</span>
+                    <ArrowRight
+                      className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary"
+                      aria-hidden="true"
+                    />
+                  </div>
+                  <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{s.body}</p>
+                </div>
               </Link>
             ))}
-          </dl>
+          </div>
 
           <H2 id="api">Interactive API reference</H2>
           <P>
