@@ -10,30 +10,33 @@ interface Stat {
 }
 
 /**
- * Real numbers from docs/KEY_METRICS.md (benchmark v3.0, 431 cases, and the
- * §15 vLLM gate). Static constants — the page makes no network calls.
+ * Figures from the camera-ready paper (COMSYS 2026, 431-case benchmark under
+ * matched-substring evaluation): Table 2 (82.4% overall, 82.0% RCA), Table 6
+ * cross-system comparison (RCA beats Llama-3.3-70B by 10.8pp), and the
+ * preliminary vLLM AWQ gate in Sec 5.5 (about 1.5x). Static constants; the page
+ * makes no network calls.
  */
 const STATS: Stat[] = [
   {
-    value: 88.6,
+    value: 82.4,
     decimals: 1,
     suffix: '%',
     label: 'Overall accuracy',
-    sub: '431-case benchmark v3.0',
+    sub: '431-case benchmark, 6 sources',
   },
   {
-    value: 94.8,
+    value: 82.0,
     decimals: 1,
     suffix: '%',
     label: 'Root-cause accuracy',
-    sub: 'LEMMA-RCA · OpsEval',
+    sub: 'beats Llama-3.3-70B by 10.8pp',
   },
   {
-    value: 1.51,
-    decimals: 2,
+    value: 1.5,
+    decimals: 1,
     suffix: 'x',
-    label: 'P95 speedup on vLLM',
-    sub: 'vs Ollama baseline',
+    label: 'Faster inference on vLLM',
+    sub: 'preliminary AWQ gate',
   },
   {
     value: 12,
