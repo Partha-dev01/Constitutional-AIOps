@@ -95,13 +95,13 @@ describe('wizard store', () => {
   })
 
   it('complete marks completed at the last step index', async () => {
-    saveOnboarding.mockResolvedValue({ completed: true, skipped: false, step: 6 })
+    saveOnboarding.mockResolvedValue({ completed: true, skipped: false, step: 7 })
     useWizardStore.setState({
       status: 'ready',
       onboarding: { completed: false, skipped: false, step: 0 },
     })
     await useWizardStore.getState().complete()
-    expect(saveOnboarding).toHaveBeenCalledWith({ completed: true, skipped: false, step: 6 })
+    expect(saveOnboarding).toHaveBeenCalledWith({ completed: true, skipped: false, step: 7 })
     expect(useWizardStore.getState().onboarding?.completed).toBe(true)
   })
 })

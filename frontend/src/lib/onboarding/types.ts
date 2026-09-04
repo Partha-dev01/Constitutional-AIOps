@@ -8,7 +8,7 @@
 
 export type { OnboardingState } from '../api'
 
-/** The ordered wizard steps (bookends welcome/finish plus 5 config steps). */
+/** The ordered wizard steps (bookends welcome/finish plus 6 config steps). */
 export type WizardStepId =
   | 'welcome'
   | 'services'
@@ -16,6 +16,7 @@ export type WizardStepId =
   | 'prompt'
   | 'llm'
   | 'monitoring'
+  | 'safety'
   | 'finish'
 
 /** One service as entered in the wizard's Services step (populated in P3). */
