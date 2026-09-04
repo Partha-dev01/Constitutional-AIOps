@@ -66,6 +66,12 @@ class DatasetInfo(BaseModel):
     description: str
 
 
+class EvaluateEndpointRequest(BaseModel):
+    """Request for the self-hoster 'evaluate my configured endpoint' quick-check."""
+    max_annotation: int = 3
+    max_rca: int = 2
+
+
 # Endpoints
 
 @router.get("/models")
@@ -216,6 +222,34 @@ async def run_benchmark(
         "model": request.model_name,
         "message": "Benchmark started. Use /status to check progress.",
     }
+
+
+@router.post("/evaluate-endpoint")
+async def evaluate_endpoint(request: EvaluateEndpointRequest):
+    """Quick check: run a few sample cases against the configured LLM endpoint.
+
+    For self-hosters who want to know "is the model I pointed the app at good
+    enough for this workload" without committing to a full benchmark run. Uses
+    the same agents and scoring as the research benchmark, on a handful of cases,
+    synchronously.
+    """
+    runner = get_runner()
+
+    if runner.is_running:
+        raise HTTPException(status_code=409, detail="A benchmark is already running")
+
+    max_ann = max(1, min(request.max_annotation, 10))
+    max_rca = max(1, min(request.max_rca, 10))
+
+    try:
+        return await runner.evaluate_endpoint(max_annotation=max_ann, max_rca=max_rca)
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=400,
+            detail="No sample dataset found. Seed data/benchmark with scripts/seed_benchmark_data.py first.",
+        )
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
 
 
 @router.get("/results")

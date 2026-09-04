@@ -7,7 +7,9 @@ import {
   Loader2,
   FileJson,
   FileSpreadsheet,
-  FileCode
+  FileCode,
+  Zap,
+  Gauge,
 } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { Tabs, TabPanel } from '../components/ui/Tabs'
@@ -52,11 +54,33 @@ interface BenchmarkStatus {
   current_benchmark?: BenchmarkResult
 }
 
+interface EndpointEvalCase {
+  test_id: string
+  task_type: string
+  correct: boolean
+  latency_ms: number
+  source: string
+}
+
+interface EndpointEval {
+  ok: boolean
+  model: string
+  cases_run: number
+  passed: number
+  pass_rate: number
+  annotation: { run: number; passed: number }
+  rca: { run: number; passed: number }
+  avg_latency_ms: number
+  cases: EndpointEvalCase[]
+  detail: string
+}
+
 const BENCHMARK_TABS = [
-  { id: 'datasets', label: 'Datasets' },
-  { id: 'run',      label: 'Run'      },
-  { id: 'results',  label: 'Results'  },
-  { id: 'compare',  label: 'Compare'  },
+  { id: 'evaluate', label: 'Your setup' },
+  { id: 'datasets', label: 'Datasets'   },
+  { id: 'run',      label: 'Research run'},
+  { id: 'results',  label: 'Results'    },
+  { id: 'compare',  label: 'Compare'    },
 ] as const
 
 type BenchmarkTab = (typeof BENCHMARK_TABS)[number]['id']
@@ -71,7 +95,10 @@ export function Benchmark() {
   const [maxAnnotation, setMaxAnnotation] = useState(100)
   const [maxRca, setMaxRca] = useState(50)
   const [loading, setLoading] = useState(false)
-  const [activeTab, setActiveTab] = useState<BenchmarkTab>('datasets')
+  const [activeTab, setActiveTab] = useState<BenchmarkTab>('evaluate')
+  const [evalResult, setEvalResult] = useState<EndpointEval | null>(null)
+  const [evalLoading, setEvalLoading] = useState(false)
+  const [evalError, setEvalError] = useState<string | null>(null)
 
   // Fetch datasets
   useEffect(() => {
@@ -185,6 +212,29 @@ export function Benchmark() {
     }
   }
 
+  const handleEvaluate = async () => {
+    setEvalLoading(true)
+    setEvalError(null)
+    try {
+      const response = await fetch('/api/v1/benchmark/evaluate-endpoint', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ max_annotation: 3, max_rca: 2 }),
+      })
+      if (response.ok) {
+        setEvalResult(await response.json())
+      } else {
+        const error = await response.json().catch(() => ({}))
+        setEvalError(error.detail || 'Quick check failed')
+      }
+    } catch (err) {
+      console.error('Failed to evaluate endpoint:', err)
+      setEvalError('Could not reach the backend for the quick check')
+    } finally {
+      setEvalLoading(false)
+    }
+  }
+
   const handleExport = async (format: 'json' | 'csv' | 'latex') => {
     try {
       const response = await fetch(`/api/v1/benchmark/export?format=${format}`)
@@ -219,7 +269,7 @@ export function Benchmark() {
         <div>
           <h1 className="text-2xl font-bold">Benchmark</h1>
           <p className="text-muted-foreground">
-            Evaluate LLM performance on AIOps tasks
+            Check the model you configured, or reproduce the research paper
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -238,8 +288,131 @@ export function Benchmark() {
         onChange={(id) => setActiveTab(id as BenchmarkTab)}
         tabs={BENCHMARK_TABS}
       >
+        {/* Your setup Tab — quick check against the configured endpoint */}
+        <TabPanel id="evaluate" activeTab={activeTab} className="pt-6">
+          <div className="space-y-6">
+            <div className="p-4 rounded-lg border border-border bg-card">
+              <div className="flex items-start gap-3">
+                <Zap className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
+                <div className="space-y-1">
+                  <h3 className="font-medium">Is your model good enough?</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Runs a few sample annotation and root-cause cases through the exact agents the
+                    app uses, against the LLM endpoint you configured in Settings. Same scoring as
+                    the research benchmark, on a handful of cases, so it finishes in one go. Nothing
+                    is stored.
+                  </p>
+                </div>
+              </div>
+              <div className="mt-4">
+                <button
+                  onClick={handleEvaluate}
+                  disabled={evalLoading || status?.is_running}
+                  className={cn(
+                    'flex items-center gap-2 px-4 py-2 rounded font-medium',
+                    'bg-primary text-primary-foreground',
+                    'disabled:opacity-50 disabled:cursor-not-allowed',
+                  )}
+                >
+                  {evalLoading ? (
+                    <Loader2 className="h-4 w-4 motion-safe:animate-spin" aria-hidden="true" />
+                  ) : (
+                    <Zap className="h-4 w-4" aria-hidden="true" />
+                  )}
+                  {evalLoading ? 'Checking your endpoint…' : 'Run quick check'}
+                </button>
+                {status?.is_running && (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    A research run is in progress. Wait for it to finish before the quick check.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {evalError && (
+              <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive" role="alert">
+                {evalError}
+              </div>
+            )}
+
+            {evalResult && (
+              <div className="space-y-4">
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <div className="p-4 rounded-lg border border-border bg-card">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <CheckCircle2 className="h-4 w-4 text-primary" aria-hidden="true" /> Pass rate
+                    </div>
+                    <div className="mt-1 text-2xl font-bold">{evalResult.pass_rate.toFixed(0)}%</div>
+                    <div className="text-xs text-muted-foreground">
+                      {evalResult.passed} / {evalResult.cases_run} cases
+                    </div>
+                  </div>
+                  <div className="p-4 rounded-lg border border-border bg-card">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Gauge className="h-4 w-4 text-primary" aria-hidden="true" /> Avg latency
+                    </div>
+                    <div className="mt-1 text-2xl font-bold">{evalResult.avg_latency_ms.toFixed(0)}ms</div>
+                    <div className="text-xs text-muted-foreground">per inference</div>
+                  </div>
+                  <div className="p-4 rounded-lg border border-border bg-card">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Database className="h-4 w-4 text-primary" aria-hidden="true" /> Breakdown
+                    </div>
+                    <div className="mt-1 text-sm">
+                      Annotation {evalResult.annotation.passed}/{evalResult.annotation.run}
+                    </div>
+                    <div className="text-sm">
+                      RCA {evalResult.rca.passed}/{evalResult.rca.run}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-lg border border-border bg-card overflow-x-auto">
+                  <table className="w-full min-w-[520px] text-sm">
+                    <thead className="bg-muted">
+                      <tr>
+                        <th className="px-4 py-2 text-left font-medium">Case</th>
+                        <th className="px-4 py-2 text-left font-medium">Task</th>
+                        <th className="px-4 py-2 text-left font-medium">Source</th>
+                        <th className="px-4 py-2 text-right font-medium">Latency</th>
+                        <th className="px-4 py-2 text-right font-medium">Result</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {evalResult.cases.map((c) => (
+                        <tr key={c.test_id} className="border-t border-border">
+                          <td className="px-4 py-2 font-mono text-xs">{c.test_id}</td>
+                          <td className="px-4 py-2 capitalize">{c.task_type}</td>
+                          <td className="px-4 py-2 text-muted-foreground">{c.source || '—'}</td>
+                          <td className="px-4 py-2 text-right">{c.latency_ms.toFixed(0)}ms</td>
+                          <td className="px-4 py-2 text-right">
+                            {c.correct ? (
+                              <CheckCircle2 className="ml-auto h-4 w-4 text-green-500" aria-hidden="true" />
+                            ) : (
+                              <XCircle className="ml-auto h-4 w-4 text-red-500" aria-hidden="true" />
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  This is a small smoke check, not the full 431-case benchmark. Use the Research run
+                  tab for a complete evaluation.
+                </p>
+              </div>
+            )}
+          </div>
+        </TabPanel>
+
         {/* Datasets Tab */}
         <TabPanel id="datasets" activeTab={activeTab} className="pt-6">
+          <p className="mb-4 text-sm text-muted-foreground">
+            These are the research datasets used to reproduce the paper. To bring your own,
+            replace the files under <code className="rounded bg-muted px-1 py-0.5 text-xs">data/benchmark</code>.
+            To just check the model you configured, use the <span className="font-medium">Your setup</span> tab.
+          </p>
           <div className="grid gap-4 md:grid-cols-2">
             {datasets.map((dataset) => (
               <div key={dataset.name} className="p-4 rounded-lg border border-border bg-card">
