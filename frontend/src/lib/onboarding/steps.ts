@@ -23,6 +23,7 @@ export const WIZARD_STEPS: readonly WizardStepMeta[] = [
   { id: 'prompt', title: 'Base prompt', subtitle: 'Describe the platform', inRail: true },
   { id: 'llm', title: 'LLM endpoint', subtitle: 'Connect your model', inRail: true },
   { id: 'monitoring', title: 'Monitoring', subtitle: 'Point at your telemetry', inRail: true },
+  { id: 'safety', title: 'Safety', subtitle: 'Choose how fixes run', inRail: true },
   { id: 'finish', title: 'Finish', subtitle: 'You are ready', inRail: false },
 ] as const
 

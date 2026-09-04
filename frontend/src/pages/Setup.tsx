@@ -24,6 +24,7 @@ import {
   Save,
   Server,
   Share2,
+  ShieldCheck,
   Sparkles,
   Trash2,
   X,
@@ -37,6 +38,7 @@ import type {
   ModelsConfigUpdate,
   ModelsTestResult,
   MonitoringTestResult,
+  RemediationMode,
 } from '../lib/api'
 import { useWizardStore } from '../lib/onboarding/store'
 import { cleanServices } from '../lib/onboarding/services'
@@ -56,6 +58,7 @@ const STEP_ICON: Record<WizardStepId, typeof Rocket> = {
   prompt: MessageSquare,
   llm: Cpu,
   monitoring: Activity,
+  safety: ShieldCheck,
   finish: CheckCircle2,
 }
 
@@ -67,6 +70,7 @@ const STEP_PREVIEW: Record<WizardStepId, string> = {
   prompt: 'We draft a base system prompt describing your platform. Edit it, then save it as the assistant prompt.',
   llm: 'Point the assistant at your OpenAI-compatible model endpoint and key, and test the connection.',
   monitoring: 'Add your Loki, Prometheus and Tempo URLs (or skip), and live-test that each source is reachable.',
+  safety: 'Decide how far the assistant may go on its own. Every action still passes the constitution and the audit trail.',
   finish: '',
 }
 
@@ -878,6 +882,163 @@ function MonitoringStep() {
   )
 }
 
+/** The three remediation modes and their one-line safety copy (mirrors Settings). */
+const REMEDIATION_MODES: { mode: RemediationMode; label: string; help: string }[] = [
+  {
+    mode: 'diagnose',
+    label: 'Diagnose only',
+    help: 'The assistant investigates and explains, but never proposes or runs a fix. The safest place to start.',
+  },
+  {
+    mode: 'approve',
+    label: 'Approve to run',
+    help: 'The assistant proposes a fix in chat; nothing executes until you click Approve. Recommended default.',
+  },
+  {
+    mode: 'auto',
+    label: 'Auto-remediate',
+    help: 'Allowlisted, high-confidence fixes execute automatically once they pass the constitution; everything else still asks for approval.',
+  },
+]
+
+/** Safety step: choose the remediation mode and keep the audit trail on. */
+function SafetyStep() {
+  const [settings, setSettings] = useState<AllSettings | null>(null)
+  const [mode, setMode] = useState<RemediationMode>('approve')
+  const [auditLog, setAuditLog] = useState(true)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
+
+  useEffect(() => {
+    let alive = true
+    setLoading(true)
+    api.settings
+      .get()
+      .then((s) => {
+        if (!alive) return
+        setSettings(s)
+        setMode(s.remediation.mode)
+        setAuditLog(s.constitutional.enableAuditLog)
+      })
+      .catch((e) => {
+        if (alive) setError(e instanceof Error ? e.message : 'Failed to load safety settings')
+      })
+      .finally(() => {
+        if (alive) setLoading(false)
+      })
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  const handleSave = async () => {
+    if (!settings) return
+    setSaving(true)
+    setError(null)
+    setNotice(null)
+    try {
+      const saved = await api.settings.save({
+        ...settings,
+        constitutional: { ...settings.constitutional, enableAuditLog: auditLog },
+        remediation: { ...settings.remediation, mode },
+      })
+      setSettings(saved)
+      setNotice('Safety settings saved. You can fine-tune the allowlist later in Settings.')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not save safety settings')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <StepHeading id="safety" />
+      <p className="text-sm leading-relaxed text-muted-foreground">{STEP_PREVIEW.safety}</p>
+
+      <div className="rounded-xl border border-border bg-card/50 p-4 text-sm leading-relaxed text-muted-foreground">
+        Every proposed fix runs through the constitution first: a set of safety principles across
+        three tiers. Tier 1 rules (no unconfirmed data loss, keep replicas healthy, reversible
+        actions) are never crossed. What you pick below is only how far the assistant may act on its
+        own once a fix has already passed those checks.
+      </div>
+
+      <StepBanner error={error} notice={notice} />
+
+      {loading ? (
+        <div className="flex items-center justify-center py-10">
+          <Loader2 className="h-6 w-6 motion-safe:animate-spin text-muted-foreground" aria-hidden="true" />
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <fieldset className="space-y-3">
+            <legend className="mb-1 text-xs font-medium text-muted-foreground">Remediation mode</legend>
+            {REMEDIATION_MODES.map((m) => {
+              const on = mode === m.mode
+              return (
+                <label
+                  key={m.mode}
+                  className={[
+                    'flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors',
+                    on ? 'border-primary bg-primary/5' : 'border-border bg-card/50 hover:border-primary/40',
+                  ].join(' ')}
+                >
+                  <input
+                    type="radio"
+                    name="remediation-mode"
+                    value={m.mode}
+                    checked={on}
+                    onChange={() => setMode(m.mode)}
+                    className="mt-1 h-4 w-4"
+                  />
+                  <span>
+                    <span className="block text-sm font-medium capitalize">{m.label}</span>
+                    <span className="block text-xs text-muted-foreground">{m.help}</span>
+                  </span>
+                </label>
+              )
+            })}
+          </fieldset>
+
+          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-card/50 p-4">
+            <input
+              type="checkbox"
+              checked={auditLog}
+              onChange={(e) => setAuditLog(e.target.checked)}
+              data-testid="setup-audit-toggle"
+              className="mt-1 h-4 w-4 rounded border-border"
+            />
+            <span>
+              <span className="text-sm font-medium">Keep the audit log on</span>
+              <span className="block text-xs text-muted-foreground">
+                Record every validation, approval and action so you can review what the assistant
+                did and why. Recommended.
+              </span>
+            </span>
+          </label>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" onClick={handleSave} disabled={saving} className={WIZ_BTN_PRIMARY}>
+              {saving ? (
+                <Loader2 className="h-4 w-4 motion-safe:animate-spin" aria-hidden="true" />
+              ) : (
+                <Save className="h-4 w-4" aria-hidden="true" />
+              )}
+              Save safety settings
+            </button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            You can change the mode, the auto allowlist and the confidence threshold any time from
+            Settings &rarr; Remediation.
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function renderStep(id: WizardStepId): ReactNode {
   if (id === 'welcome') return <WelcomeStep />
   if (id === 'finish') return <FinishStep />
@@ -886,6 +1047,7 @@ function renderStep(id: WizardStepId): ReactNode {
   if (id === 'prompt') return <PromptStep />
   if (id === 'llm') return <LlmStep />
   if (id === 'monitoring') return <MonitoringStep />
+  if (id === 'safety') return <SafetyStep />
   return null // all step ids are handled above
 }
 

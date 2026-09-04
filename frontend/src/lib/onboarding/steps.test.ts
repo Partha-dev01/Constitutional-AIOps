@@ -15,10 +15,10 @@ import {
 } from './steps'
 
 describe('wizard step model', () => {
-  it('runs welcome -> finish with five config steps between', () => {
+  it('runs welcome -> finish with six config steps between', () => {
     expect(WIZARD_STEPS[0].id).toBe('welcome')
     expect(WIZARD_STEPS[WIZARD_STEPS.length - 1].id).toBe('finish')
-    expect(WIZARD_STEPS).toHaveLength(7)
+    expect(WIZARD_STEPS).toHaveLength(8)
     expect(FIRST_STEP).toBe('welcome')
     expect(LAST_STEP).toBe('finish')
   })
@@ -30,6 +30,7 @@ describe('wizard step model', () => {
       'prompt',
       'llm',
       'monitoring',
+      'safety',
     ])
   })
 
@@ -37,13 +38,13 @@ describe('wizard step model', () => {
     expect(nextStepId('finish')).toBe('finish')
     expect(prevStepId('welcome')).toBe('welcome')
     expect(nextStepId('welcome')).toBe('services')
-    expect(prevStepId('finish')).toBe('monitoring')
+    expect(prevStepId('finish')).toBe('safety')
   })
 
   it('walks the whole flow forward', () => {
     let id = FIRST_STEP
     const seen = [id]
-    for (let i = 0; i < 6; i += 1) {
+    for (let i = 0; i < 7; i += 1) {
       id = nextStepId(id)
       seen.push(id)
     }
@@ -54,6 +55,7 @@ describe('wizard step model', () => {
       'prompt',
       'llm',
       'monitoring',
+      'safety',
       'finish',
     ])
   })
@@ -68,7 +70,8 @@ describe('wizard step model', () => {
   it('maps a persisted index to a step id (clamped)', () => {
     expect(stepIdFromIndex(0)).toBe('welcome')
     expect(stepIdFromIndex(2)).toBe('topology')
-    expect(stepIdFromIndex(6)).toBe('finish')
+    expect(stepIdFromIndex(6)).toBe('safety')
+    expect(stepIdFromIndex(7)).toBe('finish')
     expect(stepIdFromIndex(99)).toBe('finish')
     expect(stepIdFromIndex(-3)).toBe('welcome')
     expect(stepIdFromIndex(Number.NaN)).toBe('welcome')
