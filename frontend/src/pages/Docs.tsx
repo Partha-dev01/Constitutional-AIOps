@@ -199,7 +199,7 @@ export function Docs() {
                 className="group block overflow-hidden rounded-xl border border-border bg-card/50 transition-colors hover:border-primary/50 hover:bg-card"
               >
                 <img
-                  src={s.shot}
+                  src={`${import.meta.env.BASE_URL.replace(/\/$/, '')}${s.shot}`}
                   alt={`${s.name} screen`}
                   width={1920}
                   height={1080}
