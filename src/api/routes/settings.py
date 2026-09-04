@@ -12,12 +12,15 @@ Endpoints:
   POST /api/v1/settings/reset     → wipe persisted file, return defaults
 """
 
+import ipaddress
 import json
 import logging
 import os
+import socket
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal, Optional
+from urllib.parse import urlparse
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -861,6 +864,114 @@ async def test_monitoring(
         else:
             result.docker = ProbeResult(ok=False, detail="socket unreachable")
     return result
+
+
+# ---------------------------------------------------------------------------
+# Webhook live-test (Settings -> Notifications)
+# ---------------------------------------------------------------------------
+#
+# Parity with the other Settings integrations (Models, Monitoring) which each
+# have a live "Test" button; the webhook field had none. This sends one sample
+# notification payload to the configured URL and reports whether it was accepted.
+# Admin only + SSRF-guarded: like the monitoring probe it makes the SERVER issue
+# an outbound request to an operator-supplied URL, so it refuses non-http(s)
+# schemes and any host that resolves to a loopback / private / link-local /
+# reserved address (blocks the cloud metadata endpoint and internal services).
+# Redirects are NOT followed (httpx AsyncClient default) so it can't be bounced
+# inward. Returns reachability + HTTP status only, never the response body.
+
+
+class WebhookTestRequest(BaseModel):
+    """A webhook URL to send a sample notification to."""
+
+    url: str = Field(..., min_length=1)
+
+
+def _webhook_target_error(url: str) -> Optional[str]:
+    """Return an error string if ``url`` is not a safe public http(s) target.
+
+    None means the target looks safe to POST to. This resolves the host and
+    rejects any address in a non-public range. (A determined attacker could
+    still DNS-rebind between this check and the connect; the admin gate is the
+    primary control and this is defense-in-depth.)
+    """
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        return "URL must start with http:// or https://"
+    host = parsed.hostname
+    if not host:
+        return "URL has no host"
+    port = parsed.port or (443 if parsed.scheme == "https" else 80)
+    try:
+        infos = socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)
+    except socket.gaierror:
+        return "host does not resolve"
+    for info in infos:
+        try:
+            ip = ipaddress.ip_address(info[4][0])
+        except ValueError:
+            continue
+        if (
+            ip.is_loopback
+            or ip.is_private
+            or ip.is_link_local
+            or ip.is_reserved
+            or ip.is_multicast
+            or ip.is_unspecified
+        ):
+            return "refusing to send to a non-public address"
+    return None
+
+
+@router.post(
+    "/notifications/test-webhook",
+    response_model=ProbeResult,
+    summary="Send Test Webhook",
+    description=(
+        "Send a sample notification payload to the supplied webhook URL and "
+        "report whether it was accepted. Admin only. The server refuses to POST "
+        "to non-public addresses. Returns reachability + HTTP status only."
+    ),
+)
+async def test_webhook(
+    body: WebhookTestRequest, user: User = Depends(require_user)
+) -> ProbeResult:
+    user = coerce_user(user)
+    if not is_synthetic(user) and user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins may send a test webhook",
+        )
+    url = body.url.strip()
+
+    # getaddrinfo blocks; run the SSRF guard off the event loop.
+    import asyncio
+
+    guard = await asyncio.to_thread(_webhook_target_error, url)
+    if guard is not None:
+        return ProbeResult(ok=False, detail=guard)
+
+    payload = {
+        "type": "test",
+        "source": "Constitutional AIOps",
+        "message": (
+            "Test notification from Constitutional AIOps. If you can see this, "
+            "your webhook is wired up correctly."
+        ),
+        "sent_by": user.username,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+    timeout = httpx.Timeout(4.0, connect=3.0)
+    try:
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            resp = await client.post(url, json=payload)
+    except httpx.RequestError as exc:
+        return ProbeResult(ok=False, detail=f"unreachable ({type(exc).__name__})")
+    except Exception as exc:  # noqa: BLE001 - a probe must never raise
+        return ProbeResult(ok=False, detail=f"error ({type(exc).__name__})")
+    if 200 <= resp.status_code < 300:
+        return ProbeResult(ok=True, detail=f"delivered (HTTP {resp.status_code})")
+    return ProbeResult(ok=False, detail=f"reached but HTTP {resp.status_code}")
 
 
 __all__ = [

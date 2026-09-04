@@ -41,6 +41,7 @@ import api, {
 } from '../lib/api'
 import { TopologySchemaEditor } from '../components/TopologySchemaEditor'
 import { AccountSettings } from '../components/AccountSettings'
+import useAuthStore from '../lib/auth'
 
 // ── re-export for tests / other imports ─────────────────────────────────────
 export type { ConstitutionalSettings, NotificationSettings, TelemetrySettings, RemediationSettings }
@@ -190,6 +191,14 @@ export function Settings() {
   const [activeTab, setActiveTab] = useState<
     'constitutional' | 'remediation' | 'notifications' | 'telemetry' | 'models' | 'prompts' | 'topology' | 'account'
   >('constitutional')
+  // Admin gate: the topology + system-prompt tabs are full editors whose backend
+  // mutations are admin-only (SEC-004), so hide them (and the webhook live-test)
+  // from non-admins. When AUTH is off (authRequired=false) every caller is the
+  // synthetic admin, so treat as admin — this keeps local dev and the demo tier
+  // unchanged.
+  const authRequired = useAuthStore((s) => s.authRequired)
+  const currentRole = useAuthStore((s) => s.user?.role)
+  const isAdmin = !authRequired || currentRole === 'admin'
   const [health, setHealth] = useState<HealthResponse | null>(null)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -200,6 +209,11 @@ export function Settings() {
     useState<ConstitutionalSettings>(DEFAULT_CONSTITUTIONAL)
   const [notifications, setNotifications] =
     useState<NotificationSettings>(DEFAULT_NOTIFICATIONS)
+  // Webhook live-test (admin only) — self-contained so it never touches the
+  // page's save cycle, same pattern as the Docker source / LLM endpoint tests.
+  const [webhookTesting, setWebhookTesting] = useState(false)
+  const [webhookTestResult, setWebhookTestResult] =
+    useState<{ ok: boolean; detail: string } | null>(null)
   const [telemetry, setTelemetry] = useState<TelemetrySettings>(DEFAULT_TELEMETRY)
   const [remediation, setRemediation] = useState<RemediationSettings>(DEFAULT_REMEDIATION)
 
@@ -375,6 +389,23 @@ export function Settings() {
     }
   }
 
+  const handleTestWebhook = async () => {
+    const url = notifications.webhookUrl.trim()
+    if (!url) return
+    setWebhookTesting(true)
+    setWebhookTestResult(null)
+    try {
+      setWebhookTestResult(await api.settings.testWebhook(url))
+    } catch (e) {
+      setWebhookTestResult({
+        ok: false,
+        detail: e instanceof Error ? e.message : 'test failed',
+      })
+    } finally {
+      setWebhookTesting(false)
+    }
+  }
+
   const tabs = [
     { id: 'constitutional', label: 'Constitutional AI', icon: Shield },
     { id: 'remediation', label: 'Remediation', icon: Wrench },
@@ -385,6 +416,10 @@ export function Settings() {
     { id: 'topology', label: 'Topology Schema', icon: Waypoints },
     { id: 'account', label: 'Account', icon: UserCog },
   ] as const
+
+  // Non-admins never see the admin-only editor tabs (they'd 403 on save anyway).
+  const adminOnlyTabs = new Set(['prompts', 'topology'])
+  const visibleTabs = tabs.filter((tab) => isAdmin || !adminOnlyTabs.has(tab.id))
 
   return (
     <div className="space-y-6">
@@ -446,7 +481,7 @@ export function Settings() {
 
       {/* ── Tab navigation ──────────────────────────────────────────────── */}
       <div className="flex flex-wrap gap-1 p-1 bg-muted rounded-lg w-fit">
-        {tabs.map((tab) => {
+        {visibleTabs.map((tab) => {
           const Icon = tab.icon
           return (
             <button
@@ -842,6 +877,43 @@ export function Settings() {
                       placeholder="https://example.com/webhook"
                       className="w-full px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
                     />
+                    {isAdmin && (
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={handleTestWebhook}
+                          disabled={webhookTesting || !notifications.webhookUrl.trim()}
+                          data-testid="webhook-test-button"
+                          className="flex items-center gap-2 px-3 py-1.5 text-sm bg-muted text-muted-foreground rounded-lg hover:bg-muted/80 disabled:opacity-50"
+                        >
+                          {webhookTesting ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Bell className="h-4 w-4" />
+                          )}
+                          Send test
+                        </button>
+                        {webhookTestResult && (
+                          <span
+                            data-testid="webhook-test-result"
+                            className={`flex items-center gap-1 text-xs ${
+                              webhookTestResult.ok ? 'text-green-600' : 'text-red-500'
+                            }`}
+                          >
+                            {webhookTestResult.ok ? (
+                              <CheckCircle className="h-3.5 w-3.5 shrink-0" />
+                            ) : (
+                              <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                            )}
+                            {webhookTestResult.detail}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Sends a sample JSON payload to this URL from the server. Public
+                      URLs only.
+                    </p>
                   </div>
                 )}
               </div>
@@ -1028,8 +1100,8 @@ export function Settings() {
           </div>
         )}
 
-        {/* ━━ System Prompts ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-        {activeTab === 'prompts' && (
+        {/* ━━ System Prompts (admin-only editor) ━━━━━━━━━━━━━━━━━━━━━━━━ */}
+        {isAdmin && activeTab === 'prompts' && (
           <div className="space-y-6">
             {/* Loud prompt feedback: errors stay until the next action. */}
             {promptError && (
@@ -1182,8 +1254,8 @@ export function Settings() {
             </div>
           </div>
         )}
-        {/* ━━ Topology Schema (editable + LLM-generated platform topology) ━━ */}
-        {activeTab === 'topology' && <TopologySchemaEditor />}
+        {/* ━━ Topology Schema (admin-only editor + LLM-generated topology) ━━ */}
+        {isAdmin && activeTab === 'topology' && <TopologySchemaEditor />}
 
         {/* ━━ Account (self password change + admin user management) ━━ */}
         {activeTab === 'account' && <AccountSettings />}

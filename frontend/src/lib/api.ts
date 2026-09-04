@@ -1381,6 +1381,14 @@ export const api = {
         body: JSON.stringify(body),
       }),
 
+    // Send a sample notification to the configured webhook (Settings ->
+    // Notifications). Admin only + SSRF-guarded on the server.
+    testWebhook: (url: string) =>
+      request<MonitoringProbeResult>('/settings/notifications/test-webhook', {
+        method: 'POST',
+        body: JSON.stringify({ url }),
+      }),
+
     // First-run onboarding wizard state (instance-global, own JSON file).
     getOnboarding: () => request<OnboardingState>('/settings/onboarding'),
     saveOnboarding: (body: OnboardingState) =>
