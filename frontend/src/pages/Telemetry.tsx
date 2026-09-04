@@ -8,6 +8,7 @@ import {
   Search,
   Container,
   Database,
+  ChevronRight,
 } from 'lucide-react'
 import api from '../lib/api'
 import type { TelemetryLogEntry, TelemetryMetricPoint } from '../lib/api'
@@ -28,6 +29,97 @@ function SourceBadge({ source }: { source: string }) {
       <Icon className="h-3 w-3" />
       {label}
     </span>
+  )
+}
+
+// ── log line beautifier ──────────────────────────────────────────────────
+// Container stdout (esp. Caddy's console format) arrives with ANSI colour codes
+// and a trailing JSON object, so a raw dump is a wall of text. Clean it up for
+// display only: strip ANSI, and for a structured line show a readable one-line
+// summary with the full JSON available on expand.
+const ANSI_RE = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, 'g')
+function stripAnsi(input: string): string {
+  return input.replace(ANSI_RE, '')
+}
+
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null
+}
+function asString(v: unknown): string {
+  return typeof v === 'string' ? v : ''
+}
+
+type ParsedLog =
+  | { kind: 'structured'; summary: string; detail: string }
+  | { kind: 'text'; summary: string }
+
+/** Turn a raw container log line into a readable summary (+ expandable JSON). */
+function parseLogMessage(raw: string): ParsedLog {
+  const clean = stripAnsi(raw).trim()
+  const brace = clean.indexOf('{')
+  if (brace !== -1) {
+    try {
+      const payload: unknown = JSON.parse(clean.slice(brace))
+      const detail = JSON.stringify(payload, null, 2)
+      // Caddy access log: {"request":{"method","uri","host",...},"status","duration"}
+      if (isRecord(payload) && isRecord(payload.request)) {
+        const req = payload.request
+        const status = typeof payload.status === 'number' ? String(payload.status) : null
+        const durMs =
+          typeof payload.duration === 'number' ? `${Math.round(payload.duration * 1000)}ms` : null
+        const host = asString(req.host)
+        const summary = [
+          asString(req.method) || '?',
+          status,
+          asString(req.uri) || null,
+          durMs,
+          host ? `· ${host}` : null,
+        ]
+          .filter(Boolean)
+          .join(' ')
+        return { kind: 'structured', summary, detail }
+      }
+      // Other structured JSON (e.g. backend structlog): prefer a message field,
+      // else the human text before the JSON, else a generic label.
+      const field = isRecord(payload)
+        ? asString(payload.msg) || asString(payload.message) || asString(payload.event)
+        : ''
+      const prefix = clean.slice(0, brace).replace(/^\S+\s+[\d:.]+\s*/, '').trim()
+      return { kind: 'structured', summary: field || prefix || 'log entry', detail }
+    } catch {
+      // Not valid JSON after the brace — fall through to cleaned plain text.
+    }
+  }
+  return { kind: 'text', summary: clean }
+}
+
+/** One log line's message cell: clean text, or a summary that expands to JSON. */
+function LogMessage({ raw }: { raw: string }) {
+  const [open, setOpen] = useState(false)
+  const parsed = parseLogMessage(raw)
+  if (parsed.kind === 'text') {
+    return <span className="flex-1 break-all">{parsed.summary}</span>
+  }
+  return (
+    <div className="flex-1 min-w-0">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="flex w-full items-center gap-1.5 text-left hover:text-foreground"
+      >
+        <ChevronRight
+          className={`h-3 w-3 shrink-0 text-muted-foreground transition-transform ${open ? 'rotate-90' : ''}`}
+          aria-hidden="true"
+        />
+        <span className="truncate">{parsed.summary}</span>
+      </button>
+      {open && (
+        <pre className="mt-2 max-h-72 overflow-auto rounded-md border border-border bg-background/80 p-3 text-xs leading-relaxed text-muted-foreground">
+          {parsed.detail}
+        </pre>
+      )}
+    </div>
   )
 }
 
@@ -166,7 +258,7 @@ export function Telemetry() {
                     {log.level}
                   </span>
                   <span className="text-muted-foreground">[{log.service}]</span>
-                  <span className="flex-1">{log.message}</span>
+                  <LogMessage raw={log.message} />
                 </div>
               ))
           ) : (
