@@ -27,7 +27,7 @@ observability stack required.
 
 ```bash
 # 1. Clone
-git clone https://github.com/Partha-dev01/Aiops_Final.git constitutional-aiops
+git clone https://github.com/Partha-dev01/Constitutional-AIOps.git constitutional-aiops
 cd constitutional-aiops
 
 # 2. Configure your LLM endpoint
@@ -187,7 +187,7 @@ The research-paper configuration runs both models locally on one 24GB GPU
 
 ```bash
 # On a GPU host (e.g. AWS g6.xlarge L4 24GB) with the NVIDIA container toolkit:
-git clone https://github.com/Partha-dev01/Aiops_Final.git constitutional-aiops
+git clone https://github.com/Partha-dev01/Constitutional-AIOps.git constitutional-aiops
 cd constitutional-aiops
 cp .env.production.example .env   # set NEO4J_PASSWORD, AUTH_*, WS_TOKEN, ...
 docker compose -f docker-compose.yml -f docker/docker-compose.gpu.yml up -d

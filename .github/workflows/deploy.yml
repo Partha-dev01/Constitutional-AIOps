@@ -52,7 +52,7 @@ concurrency:
 jobs:
   deploy:
     # Only the canonical repo's main branch ever deploys.
-    if: github.repository == 'Partha-dev01/Aiops_Final' && github.ref == 'refs/heads/main'
+    if: github.repository == 'Partha-dev01/Constitutional-AIOps' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: production
