@@ -1578,6 +1578,33 @@ async def _finalize_chat_turn(
         logger.warning("Remediation proposal step failed (ignored): %s", exc)
         proposed_action = None
 
+    # Honesty guard: the reasoning agent cannot execute actions itself; a change
+    # only ever runs through the proposal -> Approve/Reject flow. When NO action
+    # was queued or executed this turn (proposed_action is None) but the reply
+    # claims to have performed/started one ("Proceeding with the restart now"),
+    # strip that false claim and state the truth. Runs at the single shared tail,
+    # so both /chat and /chat/stream are covered (done.message.content is
+    # authoritative, same contract the refusal guard relies on). Best-effort.
+    if proposed_action is None and content:
+        try:
+            from src.api.routes.tools import _action_tools_enabled
+
+            tools_enabled = _action_tools_enabled()
+        except Exception:  # noqa: BLE001 - default to the safe (disabled) message
+            tools_enabled = False
+        try:
+            _mode = get_remediation_settings().get("mode", "diagnose")
+        except Exception:  # noqa: BLE001
+            _mode = "diagnose"
+        scrubbed, corrected = _scrub_unbacked_action_claims(
+            content, tools_enabled=tools_enabled, mode=_mode
+        )
+        if corrected:
+            logger.info("Scrubbed an unbacked action-execution claim from a chat reply")
+            content = scrubbed
+            metadata = dict(metadata or {})
+            metadata["action_claim_corrected"] = True
+
     # C1: prefer the find_similar tool's incidents (so card + dropdown agree with
     # the timeline that claims the find_similar tool); else fall back to
     # _find_related_incidents.
@@ -2697,6 +2724,105 @@ def _looks_like_refusal(text: Optional[str]) -> bool:
     if len(lowered) > 400:
         return False
     return any(marker in lowered for marker in _REFUSAL_MARKERS)
+
+
+# ---------------------------------------------------------------------------
+# Honesty guard: unbacked action-execution claims
+# ---------------------------------------------------------------------------
+# The reasoning agent has NO ability to execute operational actions — those only
+# ever run through the gated proposal -> Approve/Reject flow (or auto mode with
+# interlocks). A reply like "Proceeding with the restart of aiops-caddy now" is
+# therefore FALSE whenever no action was actually queued or executed this turn
+# (proposed_action is None). The prompt now forbids such claims; this is the
+# deterministic backstop for when the model says it anyway.
+#
+# Deliberately conservative: recommendation phrasings ("I recommend restarting…",
+# "you can restart it", "you should restart it") must NOT match — only
+# first-person doing/done/proceeding constructions and passive "has been executed"
+# completions. Every pattern stays WITHIN a sentence ([^.!?\n]) so per-sentence
+# detection equals whole-text detection. Missing a rare phrasing is preferable to
+# corrupting a genuine answer.
+_ACTION_VERB = (
+    r"(?:restart|reboot|scal|stop|start|deploy|redeploy|delet|remov|"
+    r"execut|roll(?:ing)?\s*back|kill|terminat|drain|cordon|purg)"
+)
+_ACTION_CLAIM_PATTERNS = (
+    # "proceeding with / going ahead with / went ahead and ... <action>"
+    re.compile(
+        r"\b(?:proceeding|going ahead|go ahead|went ahead|gone ahead)\b[^.!?\n]*\b"
+        + _ACTION_VERB,
+        re.IGNORECASE,
+    ),
+    # "I am / I'm / I've / I have / I will / I'll [now/just/going to] <action>…"
+    re.compile(
+        r"\bI(?:'m| am|'ve| have| will|'ll)\b"
+        r"(?:\s+(?:now|just|going to|already|gone ahead and))?\s+" + _ACTION_VERB + r"\w*",
+        re.IGNORECASE,
+    ),
+    # bare completed first person: "I restarted / I've restarted the container"
+    re.compile(
+        r"\bI(?:'ve| have)?\s+(?:just\s+)?"
+        r"(?:restarted|rebooted|scaled|stopped|started|deployed|redeployed|"
+        r"deleted|removed|executed|terminated|killed)\b",
+        re.IGNORECASE,
+    ),
+    # passive completion: "the restart has been / was / is being initiated/executed…"
+    re.compile(
+        r"\b(?:the|this)\b[^.!?\n]{0,30}?\b(?:has been|was|is being)\b"
+        r"[^.!?\n]{0,20}?\b(?:initiated|executed|performed|completed|restarted|"
+        r"scaled|stopped|started|deployed|done)\b",
+        re.IGNORECASE,
+    ),
+)
+
+
+def _contains_action_claim(text: Optional[str]) -> bool:
+    """True when text asserts the assistant itself ran/started an action."""
+    if not text:
+        return False
+    return any(p.search(text) for p in _ACTION_CLAIM_PATTERNS)
+
+
+def _honest_action_clarifier(*, tools_enabled: bool, mode: str) -> str:
+    """The truthful replacement statement for a stripped execution claim."""
+    base = (
+        "To be clear, I can't run that action myself; I can only analyze and "
+        "recommend it. Any change runs through the gated remediation flow, where "
+        "it is proposed for a human to Approve or Reject before anything happens."
+    )
+    if not tools_enabled:
+        return base + (
+            " Automated action tools are turned off on this deployment, so an "
+            "operator has to make the change directly."
+        )
+    if mode == "diagnose":
+        return base + (
+            " Remediation is set to diagnose (analysis only) under Settings > "
+            "Remediation, so no action can run until an operator raises the mode."
+        )
+    return base
+
+
+def _scrub_unbacked_action_claims(
+    content: Optional[str], *, tools_enabled: bool, mode: str
+) -> tuple[str, bool]:
+    """Strip false 'I performed the action' claims, append an honest clarifier.
+
+    Returns ``(new_content, corrected)``. Only the caller's contract matters:
+    call this ONLY when no action was actually queued/executed this turn
+    (proposed_action is None). No-ops (returns the input, False) when the reply
+    makes no execution claim.
+    """
+    if not content or not _contains_action_claim(content):
+        return content or "", False
+    kept_lines: list[str] = []
+    for line in content.split("\n"):
+        sentences = re.split(r"(?<=[.!?])\s+", line)
+        kept = [s for s in sentences if s.strip() and not _contains_action_claim(s)]
+        kept_lines.append(" ".join(kept))
+    body = re.sub(r"\n{3,}", "\n\n", "\n".join(kept_lines)).strip()
+    clarifier = _honest_action_clarifier(tools_enabled=tools_enabled, mode=mode)
+    return (f"{body}\n\n{clarifier}" if body else clarifier), True
 
 
 # Appended to the LLM context whenever tools/telemetry gathered real data this
