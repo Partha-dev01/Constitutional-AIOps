@@ -80,7 +80,35 @@ def test_build_topology_drops_unknown_and_self_deps():
     )
     schema = validate_topology_schema(raw)
     assert len(schema.nodes) == 2
-    assert schema.edges == []  # self-edge and unknown target both dropped
+    pairs = {(e.source, e.target) for e in schema.edges}
+    # The self-edge and the unknown target are both dropped ...
+    assert ("api", "api") not in pairs
+    assert all(s in {"api", "db"} and t in {"api", "db"} for s, t in pairs)
+    # ... but a sensible layered edge is still inferred so nothing is orphaned.
+    assert ("api", "db") in pairs
+
+
+def test_build_topology_infers_edges_without_explicit_deps():
+    """A services list with no dependsOn still yields a connected, sensible graph."""
+    raw = build_topology_from_services(
+        [
+            {"name": "Caddy", "role": "gateway"},
+            {"name": "Backend", "role": "backend"},
+            {"name": "Postgres", "role": "datastore"},
+            {"name": "Grafana", "role": "observability"},
+        ]
+    )
+    schema = validate_topology_schema(raw)
+    triples = {(e.source, e.target, e.relationship) for e in schema.edges}
+    # Layered dependency spine (gateway -> backend -> datastore), skipping the
+    # empty frontend tier.
+    assert ("caddy", "backend", "DEPENDS_ON") in triples
+    assert ("backend", "postgres", "DEPENDS_ON") in triples
+    # Every service reports telemetry to the observability node.
+    assert ("backend", "grafana", "SHIPS_TELEMETRY") in triples
+    # No node is left orphaned.
+    connected = {s for s, _, _ in triples} | {t for _, t, _ in triples}
+    assert connected == {"caddy", "backend", "postgres", "grafana"}
 
 
 def test_build_topology_dedupes_ids():
