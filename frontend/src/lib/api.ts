@@ -224,6 +224,32 @@ export interface AllSettings {
   remediation: RemediationSettings;
 }
 
+// ---- Audit log types ----
+export interface AuditEvent {
+  event_id: string;
+  event_type: string;
+  timestamp: string;
+  severity: string;
+  actor_type: string;
+  actor_id: string;
+  resource_type?: string | null;
+  resource_id?: string | null;
+  description: string;
+  details?: Record<string, unknown>;
+  outcome?: string;
+  error_message?: string | null;
+}
+
+export interface AuditListResponse {
+  events: AuditEvent[];
+  count: number;
+  truncated: boolean;
+}
+
+export interface AuditEventTypesResponse {
+  event_types: string[];
+}
+
 export type ServingSwapStatus = 'idle' | 'pending' | 'swapping' | 'error';
 
 /** GET/POST /settings/serving-mode — Mode 1 ⇄ Mode 2 swap channel. */
@@ -1396,6 +1422,19 @@ export const api = {
         method: 'PUT',
         body: JSON.stringify(body),
       }),
+  },
+
+  // Audit log — admin-only, read-only viewer over the JSONL trail.
+  audit: {
+    list: (params?: { limit?: number; days?: number; eventType?: string }) => {
+      const q = new URLSearchParams();
+      if (params?.limit) q.set('limit', String(params.limit));
+      if (params?.days) q.set('days', String(params.days));
+      if (params?.eventType) q.set('event_type', params.eventType);
+      const qs = q.toString();
+      return request<AuditListResponse>(`/audit/${qs ? `?${qs}` : ''}`);
+    },
+    eventTypes: () => request<AuditEventTypesResponse>('/audit/event-types'),
   },
 };
 

@@ -19,6 +19,7 @@ import {
   Network,
   GitBranch,
   BookOpen,
+  ScrollText,
 } from 'lucide-react'
 import { cn } from '../lib/utils'
 import api, { HealthResponse, isComponentHealthy } from '../lib/api'
@@ -31,7 +32,16 @@ interface LayoutProps {
   children: ReactNode
 }
 
-const navigation = [
+interface NavItem {
+  name: string
+  href: string
+  icon: typeof LayoutDashboard
+  group: string
+  /** Hidden from the sidebar for non-admin users (route also self-guards). */
+  adminOnly?: boolean
+}
+
+const navigation: NavItem[] = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard, group: 'Overview' },
   { name: 'Command Center', href: '/console', icon: LayoutPanelLeft, group: 'Operate' },
   { name: 'Incidents', href: '/incidents', icon: AlertTriangle, group: 'Operate' },
@@ -44,6 +54,7 @@ const navigation = [
   { name: 'MCP Tools', href: '/mcp', icon: Wrench, group: 'AI' },
   { name: 'Benchmark', href: '/benchmark', icon: FlaskConical, group: 'AI' },
   { name: 'Settings', href: '/settings', icon: Settings, group: 'Admin' },
+  { name: 'Audit Log', href: '/audit', icon: ScrollText, group: 'Admin', adminOnly: true },
   { name: 'Docs', href: '/guide', icon: BookOpen, group: 'Admin' },
 ]
 
@@ -56,6 +67,9 @@ export function Layout({ children }: LayoutProps) {
   const user = useAuthStore((s) => s.user)
   const authRequired = useAuthStore((s) => s.authRequired)
   const logout = useAuthStore((s) => s.logout)
+  // AUTH off (authRequired=false) => synthetic admin; otherwise gate on role.
+  const isAdmin = !authRequired || user?.role === 'admin'
+  const visibleNav = navigation.filter((item) => !item.adminOnly || isAdmin)
 
   // ≥ md (768px) → static column (full or icon-rail). < md → off-canvas drawer.
   const isDesktop = useMediaQuery('(min-width: 768px)')
@@ -206,9 +220,9 @@ export function Layout({ children }: LayoutProps) {
 
       {/* Navigation */}
       <div className="flex-1 space-y-1 overflow-y-auto p-3">
-        {navigation.map((item, idx) => {
+        {visibleNav.map((item, idx) => {
           const isActive = location.pathname === item.href
-          const showGroupLabel = !isRail && (idx === 0 || navigation[idx - 1].group !== item.group)
+          const showGroupLabel = !isRail && (idx === 0 || visibleNav[idx - 1].group !== item.group)
           return (
             <div key={item.name}>
               {showGroupLabel && (

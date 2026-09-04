@@ -956,6 +956,63 @@ function bodyMessage(bodyText?: string): string {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Audit log (admin viewer) — a short trail matching the nextcloud-host story.
+// ---------------------------------------------------------------------------
+const AUDIT_EVENTS = [
+  {
+    event_id: 'demo-aud-5', event_type: 'action.executed', timestamp: iso(3), severity: 'info',
+    actor_type: 'system', actor_id: 'executor', resource_type: 'action', resource_id: 'act-1042',
+    description: 'Action execution completed', outcome: 'success',
+  },
+  {
+    event_id: 'demo-aud-4', event_type: 'action.approved', timestamp: iso(4), severity: 'info',
+    actor_type: 'user', actor_id: 'admin', resource_type: 'action', resource_id: 'act-1042',
+    description: 'Action approved by admin', outcome: 'success',
+  },
+  {
+    event_id: 'demo-aud-3', event_type: 'constitutional.validation', timestamp: iso(4), severity: 'info',
+    actor_type: 'agent', actor_id: 'constitutional-ai', resource_type: 'action', resource_id: 'act-1042',
+    description: 'Constitutional validation: passed', outcome: 'success',
+  },
+  {
+    event_id: 'demo-aud-2', event_type: 'action.created', timestamp: iso(5), severity: 'info',
+    actor_type: 'system', actor_id: 'reasoning-agent', resource_type: 'action', resource_id: 'act-1042',
+    description: 'Action created: restart_service on nextcloud-db', outcome: 'success',
+  },
+  {
+    event_id: 'demo-aud-1', event_type: 'incident.analyzed', timestamp: iso(6), severity: 'warning',
+    actor_type: 'agent', actor_id: 'reasoning-agent', resource_type: 'incident', resource_id: 'INC-2043',
+    description: 'Root-cause analysis completed for nextcloud-host disk pressure', outcome: 'success',
+  },
+]
+
+const AUDIT_EVENT_TYPES = [
+  'incident.created', 'incident.analyzed', 'action.created', 'action.validated',
+  'action.approved', 'action.rejected', 'action.executed', 'action.failed',
+  'constitutional.validation', 'constitutional.violation', 'tool.invoked',
+]
+
+/** POST /benchmark/evaluate-endpoint — a canned "your setup" quick-check. */
+const ENDPOINT_EVAL = {
+  ok: true,
+  model: 'constitutional_aiops',
+  cases_run: 5,
+  passed: 4,
+  pass_rate: 80.0,
+  annotation: { run: 3, passed: 3 },
+  rca: { run: 2, passed: 1 },
+  avg_latency_ms: 742.0,
+  cases: [
+    { test_id: 'ann_0', task_type: 'annotation', correct: true, latency_ms: 71, source: 'HDFS' },
+    { test_id: 'ann_1', task_type: 'annotation', correct: true, latency_ms: 66, source: 'BGL' },
+    { test_id: 'ann_2', task_type: 'annotation', correct: true, latency_ms: 74, source: 'HDFS' },
+    { test_id: 'rca_0', task_type: 'rca', correct: true, latency_ms: 1840, source: 'LEMMA-RCA' },
+    { test_id: 'rca_1', task_type: 'rca', correct: false, latency_ms: 1620, source: 'OpsEval' },
+  ],
+  detail: 'demo: 5 sample cases against the demo endpoint.',
+}
+
 /**
  * Resolve a demo response for an /api/v1 request. `route` is the path with the
  * `/api/v1` prefix already stripped and no query string. Unknown routes get a
@@ -1068,12 +1125,19 @@ export function matchRoute(method: string, route: string, bodyText?: string): De
   }
   if (route.startsWith('/chat/actions/')) return ok({ action_id: 'demo', status: 'executed', success: true, error_code: null, verdict: null, result: null })
 
+  // Audit log (admin viewer)
+  if (route === '/audit/event-types') return ok({ event_types: AUDIT_EVENT_TYPES })
+  if (route === '/audit/' || route === '/audit') {
+    return ok({ events: AUDIT_EVENTS, count: AUDIT_EVENTS.length, truncated: false })
+  }
+
   // Benchmark page
   if (route === '/benchmark/datasets') return ok({ datasets: BENCH_DATASETS })
   if (route === '/benchmark/models') return ok({ models: BENCH_MODELS })
   if (route === '/benchmark/results') return ok({ results: BENCH_RESULTS })
   if (route === '/benchmark/status') return ok({ is_running: false })
   if (route === '/benchmark/run') return ok({ status: 'started', detail: 'demo: benchmark not executed' })
+  if (route === '/benchmark/evaluate-endpoint') return ok(ENDPOINT_EVAL)
   if (route === '/benchmark/export') return ok({ results: BENCH_RESULTS, content: benchLatex() })
   if (route.startsWith('/benchmark')) return ok({ datasets: [], models: {}, results: [], status: { is_running: false } })
 
