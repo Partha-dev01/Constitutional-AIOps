@@ -96,6 +96,31 @@ export function Docs() {
             </a>
           </div>
 
+          <H2 id="hosted-demo">Hosted demo and cold starts</H2>
+          <P>
+            The public demo runs on a small instance that sleeps when no one is using it, which
+            keeps the running cost near zero. Two things follow from that, and both are by design:
+          </P>
+          <ul className="mb-4 max-w-3xl list-disc space-y-2 pl-6 text-muted-foreground">
+            <li>
+              <span className="font-semibold text-foreground">Demo mode is instant.</span> It runs
+              the real interface on bundled sample data with no backend, so it never waits on
+              anything.
+            </li>
+            <li>
+              <span className="font-semibold text-foreground">The full app wakes on your first
+              visit.</span> If the box has gone to sleep, opening it starts the instance and shows a
+              short holding page while the services come up, usually under a minute. Once it is warm
+              everything responds normally until it goes idle again.
+            </li>
+          </ul>
+          <P>
+            So a slow first load after a quiet period is the wake-up, not an error. Give the holding
+            page a moment to hand off and you are in.
+            {SHOW_SELFHOST &&
+              ' A self-hosted instance you run yourself stays on, so it has no sleep step and no cold start.'}
+          </P>
+
           {SHOW_SELFHOST && (
             <>
               <H2 id="self-host">Self-host</H2>
@@ -104,6 +129,11 @@ export function Docs() {
                 environment file, point it at your model endpoint and bring the stack up with a
                 single <Code>docker compose</Code> command. See the repository README for the full
                 walkthrough and the AGPL-3.0 licence.
+              </P>
+              <P>
+                Self-hosting also settles the hosting question: the public demo sleeps to stay
+                cheap, but an instance you run is always on, with your own data and your own model
+                endpoint and no cold-start wait.
               </P>
             </>
           )}
