@@ -62,7 +62,7 @@ OpenAI-compatible LLM endpoint. No GPU, no bundled models, no Neo4j. See
 
 ```bash
 # Clone
-git clone https://github.com/Partha-dev01/Aiops_Final.git constitutional-aiops
+git clone https://github.com/Partha-dev01/Constitutional-AIOps.git constitutional-aiops
 cd constitutional-aiops
 
 # Configure your LLM endpoint (both agents may share one URL + model)
@@ -98,11 +98,14 @@ curl http://localhost:8001/health   # reasoning agent
 
 ## Deployment Options
 
-| Mode | GPU | Cost | Best For |
-|------|-----|------|----------|
-| **Local Development** | None | Free | Development with mock LLM |
-| **Hybrid (Jarvis Labs)** | Remote | $0.49/hr | Development with real LLM |
-| **AWS Full Stack** | Local | $0.35/hr | Production deployment |
+| Mode | GPU | LLM | Best for |
+|------|-----|-----|----------|
+| **Lite self-host** | None | Your own OpenAI-compatible endpoint | Most self-hosters |
+| **Local development** | None | Mock (no external calls) | Working on the code |
+| **Full GPU stack** | One 24GB GPU | Two co-resident models (research reference) | Reproducing the paper |
+
+The lite profile is what the hosted instance runs. It has no fixed running cost
+beyond a small always-on VM, since compute sleeps when idle.
 
 ## Project Structure
 
@@ -179,9 +182,16 @@ See [KEY_METRICS.md](docs/KEY_METRICS.md) for complete metrics reference.
 
 ## Benchmarking System
 
-Constitutional AIOps includes a comprehensive benchmarking system for evaluating LLM performance on AIOps tasks.
+The Benchmark page has two jobs. The **Your setup** tab runs a few sample cases
+through the exact agents the app uses, against the LLM endpoint you configured,
+so you can check whether your model is good enough before trusting it. The
+**Research run** tab reproduces the paper's evaluation.
 
-### Datasets (Real Data Only)
+### Research reference datasets
+
+The app ships a small synthetic sample so the page works out of the box. The
+research evaluation used the datasets below; bring your own by replacing the
+files under `data/benchmark/` in the same shape.
 
 | Dataset | Source | Cases | Purpose |
 |---------|--------|-------|---------|
@@ -228,7 +238,7 @@ This project addresses 5 critical research gaps in AI-enhanced observability:
 | RG1 | Automated Knowledge Extraction | Graph-episodic memory with incident correlation |
 | RG2 | Graph-Based Operational Knowledge | Neo4j semantic + episodic hybrid retrieval |
 | RG3 | Observability-Specific Tokenization | 92% compression via dedup + aggregation |
-| RG4 | Constitutional AI for Operations | 11 principles across 3 tiers |
+| RG4 | Constitutional AI for Operations | 12 principles across 3 tiers |
 | RG5 | Comprehensive AI-Enhanced Observability | Dual-agent LGTM integration |
 
 The research paper behind this project is maintained separately and is not part of this repository.

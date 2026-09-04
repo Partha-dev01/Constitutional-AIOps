@@ -12,7 +12,7 @@ const STEPS: Step[] = [
   {
     title: 'Clone the repository',
     body: 'One repo, no submodules.',
-    code: 'git clone https://github.com/Partha-dev01/Aiops_Final.git\ncd Aiops_Final',
+    code: 'git clone https://github.com/Partha-dev01/Constitutional-AIOps.git\ncd Constitutional-AIOps',
   },
   {
     title: 'Point it at your LLM',

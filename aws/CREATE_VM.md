@@ -148,7 +148,7 @@ docker run --rm --gpus all nvidia/cuda:12.2.0-base-ubuntu22.04 nvidia-smi
 # Pull this repo onto the instance
 sudo mkdir -p /opt/aiops && sudo chown ubuntu:ubuntu /opt/aiops
 cd /opt/aiops
-git clone https://github.com/Partha-dev01/Aiops_Final.git .
+git clone https://github.com/Partha-dev01/Constitutional-AIOps.git .
 git checkout main
 
 # Install the idle-check cron
