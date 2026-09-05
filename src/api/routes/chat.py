@@ -2463,9 +2463,18 @@ async def analyze(
     start_time = time.perf_counter()
     analysis_id = f"ana-{uuid.uuid4().hex[:12]}"
 
-    reasoning_agent = getattr(request.app.state, "reasoning_agent", None)
+    # Per-user LLM routing (BYOK): a regular tenant runs RCA / planning against
+    # THEIR own bring-your-own endpoint; admin / self-host uses the shared
+    # global agent, byte-identical. A regular user with no endpoint gets a clear
+    # 400 rather than silently spending the owner key (BYOK Decision #3).
+    reasoning_agent, _per_user = await resolve_reasoning_agent(request, user)
 
     if reasoning_agent is None:
+        if not is_synthetic(user) and getattr(user, "role", "user") != "admin":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No LLM endpoint configured for your account. Add one in Settings -> Models.",
+            )
         logger.error("Reasoning agent not initialized - LLM server may be unavailable")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
