@@ -36,6 +36,7 @@ from src.api.schemas.action import (
 )
 from src.auth.deps import auth_required, get_current_user
 from src.confidence import ConfidenceCalculator, ConfidenceBreakdown
+from src.notifications.store import notify
 
 logger = logging.getLogger(__name__)
 
@@ -217,10 +218,22 @@ async def create_action(
         },
     })
 
-    # Determine action status based on validation
+    # Determine action status based on validation. Each terminal decision that
+    # needs a human to notice raises an in-app notification (in-request, never
+    # blocking): auto-approved actions proceed silently, everything else surfaces
+    # in the alert center. notify() is best-effort and never raises.
+    target = action.target_service or "a service"
     if not validation.passed:
         action.status = ActionStatus.REJECTED
         logger.info(f"Action {action_id} rejected: {validation.explanation}")
+        notify(
+            type="action.blocked",
+            severity="warning",
+            title="Action blocked by the constitutional validator",
+            message=f"{action.action_type.value} on {target} was blocked: {validation.explanation}",
+            source="constitutional-ai",
+            resource_id=action_id,
+        )
     elif validation.authorization_level == AuthorizationLevel.AUTOMATIC:
         action.status = ActionStatus.APPROVED
         action.requires_approval = False
@@ -230,10 +243,28 @@ async def create_action(
         action.requires_approval = True
         action.expires_at = now + timedelta(hours=4)  # 4 hour approval window
         logger.info(f"Action {action_id} awaiting approval")
+        notify(
+            type="action.approval",
+            severity="warning",
+            title="Action awaiting approval",
+            message=f"{action.action_type.value} on {target} needs a human decision "
+            f"(confidence {composite_confidence:.0%}).",
+            source="actions",
+            resource_id=action_id,
+        )
     else:  # ALERT_ONLY
         action.status = ActionStatus.REJECTED
         action.requires_approval = False
         logger.info(f"Action {action_id} alert-only (low confidence)")
+        notify(
+            type="action.alert",
+            severity="info",
+            title="Low-confidence action flagged",
+            message=f"{action.action_type.value} on {target} was alert-only "
+            f"(confidence {composite_confidence:.0%}); no action taken.",
+            source="constitutional-ai",
+            resource_id=action_id,
+        )
 
     _actions[action_id] = action
     return action

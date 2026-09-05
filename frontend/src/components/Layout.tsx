@@ -20,6 +20,7 @@ import {
   GitBranch,
   BookOpen,
   ScrollText,
+  Bell,
 } from 'lucide-react'
 import { cn } from '../lib/utils'
 import api, { HealthResponse, isComponentHealthy } from '../lib/api'
@@ -54,6 +55,7 @@ const navigation: NavItem[] = [
   { name: 'MCP Tools', href: '/mcp', icon: Wrench, group: 'AI' },
   { name: 'Benchmark', href: '/benchmark', icon: FlaskConical, group: 'AI' },
   { name: 'Settings', href: '/settings', icon: Settings, group: 'Admin' },
+  { name: 'Notifications', href: '/notifications', icon: Bell, group: 'Admin', adminOnly: true },
   { name: 'Audit Log', href: '/audit', icon: ScrollText, group: 'Admin', adminOnly: true },
   { name: 'Docs', href: '/guide', icon: BookOpen, group: 'Admin' },
 ]

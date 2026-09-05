@@ -993,6 +993,30 @@ const AUDIT_EVENT_TYPES = [
   'constitutional.validation', 'constitutional.violation', 'tool.invoked',
 ]
 
+// ---------------------------------------------------------------------------
+// Notification inbox (admin alert center) — matches the nextcloud-host story.
+// ---------------------------------------------------------------------------
+const NOTIFICATIONS = [
+  {
+    id: 'demo-note-3', timestamp: iso(4), type: 'action.approval', severity: 'warning',
+    title: 'Action awaiting approval',
+    message: 'restart_service on nextcloud-db needs a human decision (confidence 82%).',
+    source: 'actions', resource_id: 'act-1042', read: false,
+  },
+  {
+    id: 'demo-note-2', timestamp: iso(9), type: 'action.alert', severity: 'info',
+    title: 'Low-confidence action flagged',
+    message: 'scale_up on nextcloud-host was alert-only (confidence 61%); no action taken.',
+    source: 'constitutional-ai', resource_id: 'act-1039', read: false,
+  },
+  {
+    id: 'demo-note-1', timestamp: iso(48), type: 'webhook.test', severity: 'info',
+    title: 'Test webhook delivered',
+    message: 'A test notification was accepted by hooks.example.com (HTTP 200).',
+    source: 'settings', resource_id: null, read: true,
+  },
+]
+
 /** POST /benchmark/evaluate-endpoint — a canned "your setup" quick-check. */
 const ENDPOINT_EVAL = {
   ok: true,
@@ -1129,6 +1153,22 @@ export function matchRoute(method: string, route: string, bodyText?: string): De
   if (route === '/audit/event-types') return ok({ event_types: AUDIT_EVENT_TYPES })
   if (route === '/audit/' || route === '/audit') {
     return ok({ events: AUDIT_EVENTS, count: AUDIT_EVENTS.length, truncated: false })
+  }
+
+  // Notification inbox (admin alert center) — read-only in the demo.
+  if (route === '/notifications/unread-count') {
+    return ok({ unread: NOTIFICATIONS.filter((n) => !n.read).length })
+  }
+  if (route === '/notifications/read') {
+    return ok({ updated: 0, unread: NOTIFICATIONS.filter((n) => !n.read).length })
+  }
+  if (route === '/notifications/' || route === '/notifications') {
+    if (m === 'DELETE') return ok({ cleared: 0 })
+    return ok({
+      notifications: NOTIFICATIONS,
+      count: NOTIFICATIONS.length,
+      unread: NOTIFICATIONS.filter((n) => !n.read).length,
+    })
   }
 
   // Benchmark page
