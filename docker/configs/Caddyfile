@@ -14,7 +14,7 @@
 #   everything else "/"    -> frontend:3000 (the SPA)
 #
 # Env (from .env.production via docker-compose; substituted at parse time):
-#   APP_DOMAIN            e.g. aiops.imaginaerium.in
+#   APP_DOMAIN            e.g. aiops.example.com
 #   ACME_EMAIL           Let's Encrypt contact
 #   APP_BASIC_AUTH_USER  human login username
 #   APP_BASIC_AUTH_HASH  bcrypt hash from `docker run --rm caddy:2.8-alpine \

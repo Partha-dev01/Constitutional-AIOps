@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 
 /**
  * Live deploy smoke for the Command Center cockpit (/console) on
- * https://aiops.imaginaerium.in. Inherits the logged-in storageState + Caddy
+ * https://aiops.example.com. Inherits the logged-in storageState + Caddy
  * basic-auth from playwright.config.live.ts. Proves the three panes render
  * against the REAL backend (topology, incidents, chat).
  */

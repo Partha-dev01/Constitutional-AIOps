@@ -21,7 +21,7 @@ import type { FullConfig } from '@playwright/test'
 const STORAGE_STATE_PATH = path.join('test-results', 'live', '.auth.json')
 
 export default async function globalSetup(_config: FullConfig): Promise<void> {
-  const baseURL = process.env.E2E_BASE_URL ?? 'https://aiops.imaginaerium.in'
+  const baseURL = process.env.E2E_BASE_URL ?? 'https://aiops.example.com'
 
   fs.mkdirSync(path.dirname(STORAGE_STATE_PATH), { recursive: true })
 

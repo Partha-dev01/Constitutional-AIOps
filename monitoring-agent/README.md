@@ -6,7 +6,7 @@ AIOps LGTM stack on AWS. The AIOps backend then reasons over it through its exis
 read-only `TelemetryCollector` — **no backend change is required to onboard a host.**
 
 ```
- remote host                                     AWS VM (aiops.imaginaerium.in)
+ remote host                                     AWS VM (aiops.example.com)
 ┌──────────────────────────┐                    ┌───────────────────────────────┐
 │ your Docker containers    │  logs/metrics/     │  Caddy  /ingest/* (basic_auth)│
 │        │ stdout, /metrics │  traces over TLS   │    ├─ /ingest/loki -> Loki     │
@@ -32,7 +32,7 @@ hosts stay distinguishable in Grafana and to the backend.
 ## Prerequisites
 
 - Docker + Docker Compose on the remote host.
-- Network egress to `https://aiops.imaginaerium.in` (443).
+- Network egress to `https://aiops.example.com` (443).
 - The **ingest credential**: ask the AIOps admin for the plaintext `INGEST_PASS`
   (the server stores only its bcrypt hash, see below).
 
@@ -71,7 +71,7 @@ runs with `--web.enable-remote-write-receiver` so it accepts the remote_write pu
 ## Verify end to end
 
 1. `docker compose logs alloy` shows no 401/403 on push (credential OK).
-2. In Grafana (`https://aiops.imaginaerium.in/grafana/`):
+2. In Grafana (`https://aiops.example.com/grafana/`):
    - **Loki**: `{edge="<EDGE_LABEL>"}` returns this host's container logs.
    - **Prometheus**: `up{edge="<EDGE_LABEL>"}` and `node_*` / `container_*` series.
    - **Tempo**: traces appear if your app emits OTLP to this host's `:4318`.

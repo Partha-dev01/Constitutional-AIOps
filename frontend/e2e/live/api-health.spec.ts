@@ -9,7 +9,7 @@ import { test, expect } from '@playwright/test'
  */
 
 const ENFORCED = (process.env.E2E_AUTH_ENFORCED ?? 'true') !== 'false'
-const BASE_URL = process.env.E2E_BASE_URL ?? 'https://aiops.imaginaerium.in'
+const BASE_URL = process.env.E2E_BASE_URL ?? 'https://aiops.example.com'
 
 /** Caddy-authenticated context WITHOUT the in-app session cookie. */
 function anonContextOptions() {
@@ -60,7 +60,7 @@ test('requests with the wrong password are rejected by Caddy basic-auth', async 
   // Override with a deliberately wrong password to exercise Caddy's rejection
   // path directly; a valid credential is proven by every other test here.
   const bad = await playwright.request.newContext({
-    baseURL: process.env.E2E_BASE_URL ?? 'https://aiops.imaginaerium.in',
+    baseURL: process.env.E2E_BASE_URL ?? 'https://aiops.example.com',
     httpCredentials: { username: 'admin', password: 'definitely-wrong-password' },
   })
   const res = await bad.get('/api/v1/health')

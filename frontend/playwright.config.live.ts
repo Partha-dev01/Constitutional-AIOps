@@ -2,7 +2,7 @@ import { defineConfig, devices } from '@playwright/test'
 
 /**
  * Playwright config for end-to-end tests against the LIVE AWS deployment
- * (https://aiops.imaginaerium.in) which sits behind Caddy basic-auth + TLS.
+ * (https://aiops.example.com) which sits behind Caddy basic-auth + TLS.
  *
  * Credentials are read from the environment ONLY — never hard-coded — because
  * this repository is public. Provide the Caddy basic-auth pair before running:
@@ -14,7 +14,7 @@ import { defineConfig, devices } from '@playwright/test'
  * Run headed with `npm run test:e2e:live:headed`.
  */
 
-const BASE_URL = process.env.E2E_BASE_URL ?? 'https://aiops.imaginaerium.in'
+const BASE_URL = process.env.E2E_BASE_URL ?? 'https://aiops.example.com'
 const USER = process.env.E2E_USER ?? ''
 const PASS = process.env.E2E_PASS ?? ''
 

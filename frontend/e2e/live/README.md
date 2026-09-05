@@ -1,7 +1,7 @@
 # Live e2e suite
 
 Playwright tests that run against the **live AWS deployment**
-(`https://aiops.imaginaerium.in`), which is behind Caddy basic-auth + TLS.
+(`https://aiops.example.com`), which is behind Caddy basic-auth + TLS.
 
 These are intentionally separate from any mocked/CI e2e: they hit the real
 backend, dual vLLM models, Neo4j, and Grafana through Caddy's path routing.
@@ -24,7 +24,9 @@ npm run test:e2e:live:headed   # headed
 E2E_USER=admin E2E_PASS=<app-basic-auth-pass> npm run test:e2e:live
 ```
 
-Override the target with `E2E_BASE_URL` (defaults to the production domain).
+Set `E2E_BASE_URL` to your deployment's URL. The default (`https://aiops.example.com`)
+is a placeholder, so this must be provided to hit a real site, e.g.
+`E2E_BASE_URL=https://aiops.your-domain.example`.
 
 ## What it covers
 

@@ -13,5 +13,5 @@ data_volume_id      = "vol-0123456789abcdef0"
 root_volume_size    = 100   # GiB — frozen by ignore_changes; set to actual if known
 data_volume_size    = 200   # GiB — frozen by ignore_changes; set to actual if known
 security_group_name = "aiops-vllm-sg"
-app_domain          = "aiops.imaginaerium.in"
+app_domain          = "aiops.example.com"
 manage_caddy_ports  = true

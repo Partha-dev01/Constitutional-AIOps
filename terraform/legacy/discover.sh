@@ -37,7 +37,7 @@ root_volume_id      = "$ROOT_VOL"
 # data_volume_id is the second/attached volume — confirm and set if different:
 # data_volume_id    = "vol-0123456789abcdef0"
 security_group_name = "$SG_NAME"
-app_domain          = "aiops.imaginaerium.in"
+app_domain          = "aiops.example.com"
 TFVARS
 
 echo "[discover] wrote terraform.tfvars"
