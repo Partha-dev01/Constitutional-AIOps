@@ -40,6 +40,8 @@ import type {
   MonitoringTestResult,
   RemediationMode,
 } from '../lib/api'
+import { useAuthStore } from '../lib/auth'
+import { markByokSetupSeen } from '../lib/useEndpointStatus'
 import { useWizardStore } from '../lib/onboarding/store'
 import { cleanServices } from '../lib/onboarding/services'
 import {
@@ -529,8 +531,18 @@ function ProbeChip({ ok }: { ok: boolean }) {
   )
 }
 
-/** LLM endpoint step: point the assistant at an OpenAI-compatible model + key. */
-function LlmStep() {
+/** LLM endpoint step: point the assistant at an OpenAI-compatible model + key.
+ *
+ * ``showTest`` hides the "Test connection" probe (admin-only on the hosted box:
+ * it exercises the global endpoint, so it is not offered in the per-tenant BYOK
+ * onboarding). ``onSaved`` fires with the fresh config after a successful save. */
+function LlmStep({
+  showTest = true,
+  onSaved,
+}: {
+  showTest?: boolean
+  onSaved?: (cfg: ModelsConfig) => void
+} = {}) {
   const [cfg, setCfg] = useState<ModelsConfig | null>(null)
   const [reasoningUrl, setReasoningUrl] = useState('')
   const [reasoningModel, setReasoningModel] = useState('')
@@ -590,6 +602,7 @@ function LlmStep() {
       setCfg(saved)
       setApiKey('')
       setNotice('Saved. The assistant now uses this endpoint.')
+      onSaved?.(saved)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not save the endpoint')
     } finally {
@@ -684,23 +697,27 @@ function LlmStep() {
               )}
               Save endpoint
             </button>
-            <button type="button" onClick={handleTest} disabled={testing} className={WIZ_BTN_SECONDARY}>
-              {testing ? (
-                <Loader2 className="h-4 w-4 motion-safe:animate-spin" aria-hidden="true" />
-              ) : (
-                <RefreshCw className="h-4 w-4" aria-hidden="true" />
-              )}
-              Test connection
-            </button>
+            {showTest && (
+              <button type="button" onClick={handleTest} disabled={testing} className={WIZ_BTN_SECONDARY}>
+                {testing ? (
+                  <Loader2 className="h-4 w-4 motion-safe:animate-spin" aria-hidden="true" />
+                ) : (
+                  <RefreshCw className="h-4 w-4" aria-hidden="true" />
+                )}
+                Test connection
+              </button>
+            )}
           </div>
 
-          {result && (
+          {showTest && result && (
             <div className="flex flex-wrap gap-4 rounded-lg border border-border bg-muted/30 p-3">
               <span className="flex items-center gap-2 text-sm">Reasoning <ProbeChip ok={result.reasoning_agent} /></span>
               <span className="flex items-center gap-2 text-sm">Fast <ProbeChip ok={result.fast_agent} /></span>
             </div>
           )}
-          <p className="text-xs text-muted-foreground">Test checks the currently saved endpoints — save first to test new values.</p>
+          {showTest && (
+            <p className="text-xs text-muted-foreground">Test checks the currently saved endpoints — save first to test new values.</p>
+          )}
         </div>
       )}
     </div>
@@ -1100,7 +1117,10 @@ function ProgressRail({ current }: { current: WizardStepId }) {
   )
 }
 
-export function Setup() {
+/** The full admin platform wizard (services -> topology -> prompt -> LLM ->
+ * monitoring -> safety). Its topology/prompt steps hit admin-only endpoints, so
+ * it is shown only to admins / self-host; a regular tenant gets ByokOnlySetup. */
+function AdminWizard() {
   const navigate = useNavigate()
   const status = useWizardStore((s) => s.status)
   const currentStep = useWizardStore((s) => s.currentStep)
@@ -1205,6 +1225,100 @@ export function Setup() {
       </main>
     </div>
   )
+}
+
+/** Focused BYOK onboarding for a regular (non-admin) tenant: connect an LLM
+ * endpoint, then continue. The admin platform steps (topology/prompt generation,
+ * all admin-only on the backend) are intentionally not shown to a tenant — their
+ * one required first-run step is pointing the app at their own model. */
+function ByokOnlySetup() {
+  const navigate = useNavigate()
+
+  // Spend the one-shot onboarding redirect the moment this view opens, so a
+  // "Continue to app" that returns to "/" is never bounced back here.
+  useEffect(() => {
+    markByokSetupSeen()
+  }, [])
+
+  const leaveToApp = () => navigate('/', { replace: true })
+
+  const handleSaved = (cfg: ModelsConfig) => {
+    const complete = Boolean(
+      cfg.fastAgentUrl.trim() &&
+        cfg.fastAgentModel.trim() &&
+        cfg.reasoningAgentUrl.trim() &&
+        cfg.reasoningAgentModel.trim(),
+    )
+    // A complete endpoint is all that is needed — drop straight into the app.
+    if (complete) leaveToApp()
+  }
+
+  return (
+    <div className="flex min-h-screen flex-col bg-background text-foreground">
+      <header className="flex items-center justify-between border-b border-border px-4 py-3 sm:px-6">
+        <span className="inline-flex items-center gap-2 text-sm font-semibold">
+          <Cpu className="h-4 w-4 text-primary" aria-hidden="true" />
+          Connect your model
+        </span>
+        <button
+          type="button"
+          onClick={leaveToApp}
+          className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <X className="h-4 w-4" aria-hidden="true" />
+          Skip for now
+        </button>
+      </header>
+
+      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-4 py-8 sm:px-6">
+        <div className="mb-6">
+          <h1 className="text-xl font-semibold tracking-tight">Connect your LLM endpoint</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Constitutional AIOps runs on your own OpenAI-compatible model. Point it at your
+            endpoint and key to start — chat and analysis use this, and the key is stored encrypted
+            for your account only.
+          </p>
+        </div>
+
+        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
+          <LlmStep showTest={false} onSaved={handleSaved} />
+        </div>
+
+        <div className="mt-6 flex items-center justify-end">
+          <button
+            type="button"
+            onClick={leaveToApp}
+            className="inline-flex items-center gap-1 rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+          >
+            Continue to app
+          </button>
+        </div>
+      </main>
+    </div>
+  )
+}
+
+/** Role dispatcher for /setup: a regular tenant gets the focused BYOK step; an
+ * admin / self-host gets the full platform wizard (unchanged). */
+export function Setup() {
+  const authRequired = useAuthStore((s) => s.authRequired)
+  const role = useAuthStore((s) => s.user?.role)
+  const authStatus = useAuthStore((s) => s.status)
+
+  if (authStatus !== 'ready') {
+    return (
+      <div
+        className="flex min-h-screen items-center justify-center bg-background"
+        role="status"
+        aria-label="Loading setup"
+      >
+        <Loader2 className="h-8 w-8 motion-safe:animate-spin text-muted-foreground" aria-hidden="true" />
+      </div>
+    )
+  }
+
+  const isRegularUser = authRequired && Boolean(role) && role !== 'admin'
+  return isRegularUser ? <ByokOnlySetup /> : <AdminWizard />
 }
 
 export default Setup
