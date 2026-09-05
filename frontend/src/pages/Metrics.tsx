@@ -167,6 +167,17 @@ export function Metrics() {
   // Active tab
   const [activeTab, setActiveTab] = useState<MetricsTab>('overview')
 
+  // Honest agent labels: use the actually-configured model names from the
+  // validation report (which reflects lite / bring-your-own-endpoint
+  // deployments), not hardcoded Qwen tags. Fall back to the plain agent name
+  // until the report loads, rather than showing a model that may be wrong.
+  const fastAgentModel = validationReport?.system_configuration?.fast_agent?.model
+  const reasoningAgentModel = validationReport?.system_configuration?.reasoning_agent?.model
+  const fastAgentLabel = fastAgentModel ? `Fast Agent (${fastAgentModel})` : 'Fast Agent'
+  const reasoningAgentLabel = reasoningAgentModel
+    ? `Reasoning Agent (${reasoningAgentModel})`
+    : 'Reasoning Agent'
+
   const fetchMetrics = useCallback(async () => {
     setLoading(true)
     setError(null)
@@ -384,12 +395,12 @@ export function Metrics() {
           {/* Agent Stats */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <AgentStatsCard
-              title="Fast Agent (Qwen3-4B)"
+              title={fastAgentLabel}
               stats={metrics?.fast_agent}
               color="cyan"
             />
             <AgentStatsCard
-              title="Reasoning Agent (Qwen3-14B)"
+              title={reasoningAgentLabel}
               stats={metrics?.reasoning_agent}
               color="purple"
             />
@@ -492,8 +503,8 @@ export function Metrics() {
                   onChange={(e) => setBenchmarkAgent(e.target.value as 'fast' | 'reasoning')}
                   className="w-full p-2 rounded-lg bg-muted border border-border"
                 >
-                  <option value="fast">Fast Agent (Qwen3-4B)</option>
-                  <option value="reasoning">Reasoning Agent (Qwen3-14B)</option>
+                  <option value="fast">{fastAgentLabel}</option>
+                  <option value="reasoning">{reasoningAgentLabel}</option>
                 </select>
               </div>
               <div>
@@ -697,7 +708,7 @@ export function Metrics() {
                   />
                   <ConfigCard
                     title="Chat Mode"
-                    model="Qwen3-14B"
+                    model={validationReport.system_configuration.reasoning_agent.model}
                     temperature={validationReport.system_configuration.chat_mode.temperature}
                     purpose={validationReport.system_configuration.chat_mode.purpose}
                     color="blue"
