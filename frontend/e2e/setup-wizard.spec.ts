@@ -174,6 +174,10 @@ test.describe('Setup wizard', () => {
     await expect(page.getByRole('heading', { name: 'Monitoring', exact: true })).toBeVisible()
     await page.getByRole('button', { name: 'Next', exact: true }).click()
 
+    // Safety — choose how remediation runs (added as a rail step)
+    await expect(page.getByRole('heading', { name: 'Safety', exact: true })).toBeVisible()
+    await page.getByRole('button', { name: 'Next', exact: true }).click()
+
     // Finish
     await expect(page.getByRole('heading', { name: 'Finish', exact: true })).toBeVisible()
     await page.getByRole('button', { name: 'Finish', exact: true }).click()

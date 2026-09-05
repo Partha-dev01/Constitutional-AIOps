@@ -25,6 +25,10 @@ const TOPOLOGY = JSON.parse(
 )
 
 async function interceptAllApis(page: Page) {
+  // Auth disabled so bootstrap doesn't fail safe to /login.
+  await page.route('**/auth/config**', async (route: Route) => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ auth_required: false, signup_enabled: false, captcha_provider: '', captcha_site_key: '' }) })
+  })
   await page.route('**/api/v1/graph/topology**', async (route: Route) => {
     await route.fulfill({
       status: 200,
