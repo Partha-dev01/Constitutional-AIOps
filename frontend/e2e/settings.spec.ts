@@ -84,7 +84,8 @@ const MOCK_HEALTH = {
 // ── Screenshot helper ─────────────────────────────────────────────────────────
 
 async function screenshot(page: Page, name: string) {
-  const dir = path.join(__dirname, '..', '..', 'screenshots', 'settings');
+  // process.cwd() is the frontend dir under Playwright; __dirname is undefined under ESM.
+  const dir = path.resolve(process.cwd(), '..', 'screenshots', 'settings');
   fs.mkdirSync(dir, { recursive: true });
   await page.screenshot({ path: path.join(dir, `${name}.png`), fullPage: true });
 }
@@ -94,6 +95,13 @@ async function screenshot(page: Page, name: string) {
 /** Intercept backend calls so tests work without a running backend. */
 async function mockApis(page: Page) {
   let currentSettings = { ...DEFAULT_SETTINGS };
+
+  // Auth config: report auth disabled so bootstrap never fails safe to /login.
+  // auth.ts routes to /login when /auth/config is unreachable, which would
+  // otherwise bounce every /settings navigation before the page renders.
+  await page.route('**/auth/config**', async (route) => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ auth_required: false, signup_enabled: false, captcha_provider: '', captcha_site_key: '' }) });
+  });
 
   // Health
   await page.route('**/api/v1/health', async (route) => {
@@ -140,7 +148,9 @@ async function mockApis(page: Page) {
       const prompt = MOCK_PROMPTS.prompts.find((p) => p.name === name) ?? MOCK_PROMPTS.prompts[0];
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(prompt) });
     } else {
-      await route.continue();
+      // GET (list): the '/prompts/**' glob shadows the exact-list route under
+      // Playwright LIFO, so serve the prompt list here too.
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOCK_PROMPTS) });
     }
   });
 }
@@ -381,7 +391,7 @@ test.describe('Settings Page', () => {
   test.describe('Models tab', () => {
     test.beforeEach(async ({ page }) => {
       await page.locator('button:has-text("Models")').click();
-      await expect(page.locator('h2:has-text("Model Status")')).toBeVisible();
+      await expect(page.locator('h2:has-text("LLM Endpoints")')).toBeVisible();
     });
 
     test('shows Fast Agent and Reasoning Agent cards', async ({ page }) => {
@@ -389,8 +399,8 @@ test.describe('Settings Page', () => {
       await expect(page.locator('text=Reasoning Agent').first()).toBeVisible();
     });
 
-    test('shows Architecture info panel', async ({ page }) => {
-      await expect(page.locator('text=Simultaneous Dual-Model')).toBeVisible();
+    test('shows Live Status panel', async ({ page }) => {
+      await expect(page.locator('h2:has-text("Live Status")')).toBeVisible();
     });
 
     test('shows Graph Memory panel', async ({ page }) => {
@@ -434,8 +444,8 @@ test.describe('Settings Page', () => {
         if (req.method() === 'PUT' && req.url().includes('/api/v1/prompts/')) putCalled = true;
       });
 
-      // Save
-      await page.locator('button:has-text("Save")').first().click();
+      // Save (exact match so we don't hit the page-level "Save Settings" button)
+      await page.getByRole('button', { name: 'Save', exact: true }).first().click();
 
       // Textarea should disappear
       await expect(textarea).not.toBeVisible({ timeout: 2000 });

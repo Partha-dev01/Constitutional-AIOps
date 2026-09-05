@@ -117,8 +117,9 @@ test.describe('Infrastructure page — ours-vs-client split', () => {
     // The "Platform (this stack)" section header must be visible
     await expect(page.getByText('Platform (this stack)', { exact: false })).toBeVisible()
 
-    // The platform container should appear under that section
-    await expect(page.getByText('aiops-backend')).toBeVisible()
+    // The platform container should appear under that section (heading, not the
+    // "Image: constitutional-aiops-backend" line which also contains the text).
+    await expect(page.getByRole('heading', { name: 'aiops-backend' })).toBeVisible()
   })
 
   test('shows separate group for non-aiops containers', async ({ page }) => {
@@ -129,8 +130,8 @@ test.describe('Infrastructure page — ours-vs-client split', () => {
     // The "Other local containers" section header must be visible
     await expect(page.getByText('Other local containers', { exact: false })).toBeVisible()
 
-    // The non-platform container should appear there
-    await expect(page.getByText('nextcloud')).toBeVisible()
+    // The non-platform container should appear there (heading, not the Image line).
+    await expect(page.getByRole('heading', { name: 'nextcloud' })).toBeVisible()
   })
 
   test('shows Monitored remote hosts section with up host', async ({ page }) => {

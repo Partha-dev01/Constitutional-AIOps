@@ -61,6 +61,11 @@ const MOCK_HEALTH = {
 async function mockApis(page: Page) {
   let current = JSON.parse(JSON.stringify(DEFAULT_SETTINGS))
 
+  // Auth disabled so bootstrap doesn't fail safe to /login.
+  await page.route('**/auth/config**', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ auth_required: false, signup_enabled: false, captcha_provider: '', captcha_site_key: '' }) }),
+  )
+
   await page.route('**/api/v1/health', (route) =>
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOCK_HEALTH) }),
   )

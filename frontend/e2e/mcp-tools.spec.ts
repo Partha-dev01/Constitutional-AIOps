@@ -46,6 +46,11 @@ const MOCK_LOG_RESULT = {
 
 test.describe('MCP Tools tab', () => {
   test.beforeEach(async ({ page }) => {
+    // Auth disabled so bootstrap doesn't fail safe to /login.
+    await page.route('**/auth/config**', (route) => {
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ auth_required: false, signup_enabled: false, captcha_provider: '', captcha_site_key: '' }) })
+    })
+
     // Mock the tools list endpoint
     await page.route('**/api/v1/tools/', (route) => {
       route.fulfill({
@@ -57,36 +62,30 @@ test.describe('MCP Tools tab', () => {
 
     // Mock the tool call endpoint (only for read-only tools)
     await page.route('**/api/v1/tools/call', (route) => {
-      const req = route.request()
-      req.postDataJSON().then((body: { tool_name: string }) => {
-        // Destructive tools should never reach here — but if they do, return 403
-        if (body.tool_name === 'restart_service' || body.tool_name === 'scale_service') {
-          route.fulfill({ status: 403, body: JSON.stringify({ error: 'Destructive tool blocked' }) })
-          return
-        }
-        // For query_recent_logs, return canned response
-        if (body.tool_name === 'query_recent_logs') {
-          route.fulfill({
-            status: 200,
-            contentType: 'application/json',
-            body: JSON.stringify(MOCK_LOG_RESULT),
-          })
-          return
-        }
-        route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({ success: true, data: { ok: true }, error: null, execution_time_ms: 10 }),
-        })
-      }).catch(() => route.continue())
+      // postDataJSON() is synchronous in Playwright; the old .then() chain threw.
+      const body = (route.request().postDataJSON() ?? {}) as { tool_name?: string }
+      // Destructive tools should never reach here — but if they do, return 403
+      if (body.tool_name === 'restart_service' || body.tool_name === 'scale_service') {
+        route.fulfill({ status: 403, body: JSON.stringify({ error: 'Destructive tool blocked' }) })
+        return
+      }
+      // For query_recent_logs, return canned response
+      if (body.tool_name === 'query_recent_logs') {
+        route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOCK_LOG_RESULT) })
+        return
+      }
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true, data: { ok: true }, error: null, execution_time_ms: 10 }),
+      })
     })
 
-    // Navigate to the Agents page and switch to MCP Tools tab
-    await page.goto('/agents')
-    await page.waitForLoadState('networkidle')
-    await page.click('button:has-text("MCP Tools")')
-    // Wait for the tool list to load (triggered by tab switch → fetchTools)
-    await page.waitForResponse('**/api/v1/tools/')
+    // MCP Tools is its own route now; the page fetches the tool list on mount.
+    await Promise.all([
+      page.waitForResponse('**/api/v1/tools/'),
+      page.goto('/mcp'),
+    ])
   })
 
   test('renders all 9 tools', async ({ page }) => {
@@ -103,12 +102,12 @@ test.describe('MCP Tools tab', () => {
   })
 
   test('tool count badge shows 9', async ({ page }) => {
-    await expect(page.locator('text=9 tools')).toBeVisible()
+    await expect(page.locator('text=9 tools').first()).toBeVisible()
   })
 
   test('disabled action tools show lock icon text', async ({ page }) => {
-    // The disabled tool rows should show "Requires approval" text
-    const lockText = page.locator('text=Requires approval — coming soon').first()
+    // Disabled action tools show the gated-off banner on their card.
+    const lockText = page.locator('text=Gated off').first()
     await expect(lockText).toBeVisible()
   })
 
@@ -138,24 +137,25 @@ test.describe('MCP Tools tab', () => {
     await expect(page.locator('text=2 entries')).toBeVisible()
     // Should show at least one log level badge
     await expect(page.locator('text=ERROR').first()).toBeVisible()
-    // Should show the execution time
-    await expect(page.locator('text=/42.*ms/')).toBeVisible()
+    // Should render the log message from the result
+    await expect(page.locator('text=Connection refused').first()).toBeVisible()
   })
 
   test('execution history records the call', async ({ page }) => {
     await page.click('button:has-text("query_recent_logs")')
     await expect(page.locator('text=Execute: query_recent_logs')).toBeVisible()
 
-    const serviceInput = page.locator('input').first()
+    const serviceInput = page.locator('input[placeholder*="Service name"], input[placeholder*="service"]').first()
     await serviceInput.fill('api-gateway')
 
     await page.click('button:has-text("Execute Tool")')
-    await page.waitForResponse('**/api/v1/tools/call')
 
-    // History section should appear
+    // History section should appear once the (mocked) call resolves; the
+    // visible assertions below auto-wait, so no fragile waitForResponse race.
     await expect(page.locator('text=Execution History')).toBeVisible()
     await expect(page.locator('text=query_recent_logs').nth(1)).toBeVisible()
-    await expect(page.locator('text=ok')).toBeVisible()
+    // Exact match: a loose "ok" also matches "Loki" in tool descriptions.
+    await expect(page.getByText('ok', { exact: true }).first()).toBeVisible()
   })
 
   test('restart_service is not clickable (disabled)', async ({ page }) => {

@@ -57,6 +57,10 @@ function chatResponse(proposed: ProposedMock | null) {
 }
 
 async function mockChat(page: Page, proposed: ProposedMock | null = PROPOSED) {
+  // Auth disabled so bootstrap doesn't fail safe to /login.
+  await page.route('**/auth/config**', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ auth_required: false, signup_enabled: false, captcha_provider: '', captcha_site_key: '' }) }),
+  )
   await page.route(CHAT_API, (route) =>
     route.fulfill({
       status: 200,

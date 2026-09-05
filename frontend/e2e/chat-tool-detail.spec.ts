@@ -60,6 +60,11 @@ const fastMock = async (route: import('@playwright/test').Route) => {
 
 test.describe('Chat tool-call timeline dropdown', () => {
   test.beforeEach(async ({ page }) => {
+    // Auth disabled so bootstrap doesn't fail safe to /login.
+    await page.route('**/auth/config**', async (route) => {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ auth_required: false, signup_enabled: false, captcha_provider: '', captcha_site_key: '' }) })
+    })
+
     // Intercept the chat API endpoint — note trailing slash (required contract).
     await page.route(CHAT_API, fastMock)
 
