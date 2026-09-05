@@ -100,7 +100,7 @@ export function Infrastructure() {
 
   // --- Guided edge onboarding state (NEW, frontend-only, no persisted secrets) ---
   const origin = typeof window !== 'undefined' ? window.location.origin : ''
-  const defaultHost = typeof window !== 'undefined' ? window.location.host : 'aiops.imaginaerium.in'
+  const defaultHost = typeof window !== 'undefined' ? window.location.host : 'aiops.example.com'
   const [domain, setDomain] = useState<string>(defaultHost)
   const [edgeLabel, setEdgeLabel] = useState<string>('remote-host-1')
   const [ingestUser, setIngestUser] = useState<string>('edge')

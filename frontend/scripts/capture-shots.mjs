@@ -4,7 +4,7 @@ import { chromium } from '@playwright/test'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const BASE = process.env.E2E_BASE || 'https://aiops.imaginaerium.in'
+const BASE = process.env.E2E_BASE || 'https://aiops.example.com'
 const user = process.env.E2E_USER
 const pass = process.env.E2E_PASS
 if (!user || !pass) {

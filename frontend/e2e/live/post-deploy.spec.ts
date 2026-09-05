@@ -1,7 +1,7 @@
 import { test, expect, type Page, type ConsoleMessage } from '@playwright/test'
 
 /**
- * STANDARD POST-DEPLOY GATE — live suite for https://aiops.imaginaerium.in.
+ * STANDARD POST-DEPLOY GATE — live suite for https://aiops.example.com.
  *
  * Runs through playwright.config.live.ts, so it inherits the Caddy basic-auth
  * (httpCredentials) + the in-app session cookie captured by global-setup. The

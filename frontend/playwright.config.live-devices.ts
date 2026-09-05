@@ -3,7 +3,7 @@ import liveConfig from './playwright.config.live'
 
 /**
  * Device-ratio HEADED visual sweep against the LIVE site
- * (https://aiops.imaginaerium.in). Reuses the live config's auth wiring
+ * (https://aiops.example.com). Reuses the live config's auth wiring
  * verbatim — the same `use` block (Caddy basic-auth via httpCredentials +
  * in-app session storageState), the same globalSetup login, and the same
  * E2E_* env contract. Credentials still come ONLY from the environment.

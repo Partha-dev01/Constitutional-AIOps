@@ -71,7 +71,7 @@ variable "security_group_name" {
 variable "app_domain" {
   description = "Public domain served by Caddy."
   type        = string
-  default     = "aiops.imaginaerium.in"
+  default     = "aiops.example.com"
 }
 
 variable "manage_caddy_ports" {
