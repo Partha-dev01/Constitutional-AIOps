@@ -14,6 +14,7 @@ import {
 import { cn } from '../lib/utils'
 import { Tabs, TabPanel } from '../components/ui/Tabs'
 import { useToast } from '../components/ui/toast'
+import { useAuthStore } from '../lib/auth'
 
 interface Dataset {
   name: string
@@ -87,6 +88,12 @@ type BenchmarkTab = (typeof BENCHMARK_TABS)[number]['id']
 
 export function Benchmark() {
   const { showToast } = useToast()
+  // Admin gate: starting a benchmark run or the endpoint quick-check spends the
+  // box's configured (owner) endpoint, so both are admin actions (the backend
+  // enforces 403). Non-admins still see results, datasets and models.
+  const authRequired = useAuthStore((s) => s.authRequired)
+  const role = useAuthStore((s) => s.user?.role)
+  const isAdmin = !authRequired || role === 'admin'
   const [datasets, setDatasets] = useState<Dataset[]>([])
   const [models, setModels] = useState<Record<string, Model>>({})
   const [results, setResults] = useState<BenchmarkResult[]>([])
@@ -305,22 +312,29 @@ export function Benchmark() {
                 </div>
               </div>
               <div className="mt-4">
-                <button
-                  onClick={handleEvaluate}
-                  disabled={evalLoading || status?.is_running}
-                  className={cn(
-                    'flex items-center gap-2 px-4 py-2 rounded font-medium',
-                    'bg-primary text-primary-foreground',
-                    'disabled:opacity-50 disabled:cursor-not-allowed',
-                  )}
-                >
-                  {evalLoading ? (
-                    <Loader2 className="h-4 w-4 motion-safe:animate-spin" aria-hidden="true" />
-                  ) : (
-                    <Zap className="h-4 w-4" aria-hidden="true" />
-                  )}
-                  {evalLoading ? 'Checking your endpoint…' : 'Run quick check'}
-                </button>
+                {isAdmin ? (
+                  <button
+                    onClick={handleEvaluate}
+                    disabled={evalLoading || status?.is_running}
+                    className={cn(
+                      'flex items-center gap-2 px-4 py-2 rounded font-medium',
+                      'bg-primary text-primary-foreground',
+                      'disabled:opacity-50 disabled:cursor-not-allowed',
+                    )}
+                  >
+                    {evalLoading ? (
+                      <Loader2 className="h-4 w-4 motion-safe:animate-spin" aria-hidden="true" />
+                    ) : (
+                      <Zap className="h-4 w-4" aria-hidden="true" />
+                    )}
+                    {evalLoading ? 'Checking your endpoint…' : 'Run quick check'}
+                  </button>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    The quick check runs against the box&apos;s configured endpoint, so it is an
+                    admin action.
+                  </p>
+                )}
                 {status?.is_running && (
                   <p className="mt-2 text-xs text-muted-foreground">
                     A research run is in progress. Wait for it to finish before the quick check.
@@ -514,22 +528,28 @@ export function Benchmark() {
                 </div>
               </div>
               <div className="mt-4">
-                <button
-                  onClick={handleStartBenchmark}
-                  disabled={status?.is_running || loading}
-                  className={cn(
-                    'flex items-center gap-2 px-4 py-2 rounded font-medium',
-                    'bg-primary text-primary-foreground',
-                    'disabled:opacity-50 disabled:cursor-not-allowed'
-                  )}
-                >
-                  {loading || status?.is_running ? (
-                    <Loader2 className="h-4 w-4 motion-safe:animate-spin" aria-hidden="true" />
-                  ) : (
-                    <Play className="h-4 w-4" aria-hidden="true" />
-                  )}
-                  {status?.is_running ? 'Running...' : 'Start Benchmark'}
-                </button>
+                {isAdmin ? (
+                  <button
+                    onClick={handleStartBenchmark}
+                    disabled={status?.is_running || loading}
+                    className={cn(
+                      'flex items-center gap-2 px-4 py-2 rounded font-medium',
+                      'bg-primary text-primary-foreground',
+                      'disabled:opacity-50 disabled:cursor-not-allowed'
+                    )}
+                  >
+                    {loading || status?.is_running ? (
+                      <Loader2 className="h-4 w-4 motion-safe:animate-spin" aria-hidden="true" />
+                    ) : (
+                      <Play className="h-4 w-4" aria-hidden="true" />
+                    )}
+                    {status?.is_running ? 'Running...' : 'Start Benchmark'}
+                  </button>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    Starting a research benchmark run is an admin action.
+                  </p>
+                )}
               </div>
             </div>
 

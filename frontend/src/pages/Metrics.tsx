@@ -18,6 +18,7 @@ import {
 import { cn } from '../lib/utils'
 import { Tabs, TabPanel } from '../components/ui/Tabs'
 import { useToast } from '../components/ui/toast'
+import { useAuthStore } from '../lib/auth'
 
 // Types for metrics data
 interface LatencyStats {
@@ -150,6 +151,13 @@ export function Metrics() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date())
+
+  // Admin gate: the latency benchmark + determinism test call the box's
+  // configured (owner) endpoint, so they are admin actions (backend enforces
+  // 403). Non-admins still see the recorded latency stats + config.
+  const authRequired = useAuthStore((s) => s.authRequired)
+  const role = useAuthStore((s) => s.user?.role)
+  const isAdmin = !authRequired || role === 'admin'
 
   // Benchmark state
   const [benchmarkRunning, setBenchmarkRunning] = useState(false)
@@ -519,27 +527,31 @@ export function Metrics() {
                 />
               </div>
               <div className="flex items-end">
-                <button
-                  onClick={runBenchmark}
-                  disabled={benchmarkRunning}
-                  className={cn(
-                    'w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg',
-                    'bg-primary text-primary-foreground hover:bg-primary/90',
-                    'disabled:opacity-50 disabled:cursor-not-allowed'
-                  )}
-                >
-                  {benchmarkRunning ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Running...
-                    </>
-                  ) : (
-                    <>
-                      <Play className="h-4 w-4" />
-                      Run Benchmark
-                    </>
-                  )}
-                </button>
+                {isAdmin ? (
+                  <button
+                    onClick={runBenchmark}
+                    disabled={benchmarkRunning}
+                    className={cn(
+                      'w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg',
+                      'bg-primary text-primary-foreground hover:bg-primary/90',
+                      'disabled:opacity-50 disabled:cursor-not-allowed'
+                    )}
+                  >
+                    {benchmarkRunning ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Running...
+                      </>
+                    ) : (
+                      <>
+                        <Play className="h-4 w-4" />
+                        Run Benchmark
+                      </>
+                    )}
+                  </button>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Admin only.</p>
+                )}
               </div>
             </div>
           </div>
@@ -604,27 +616,33 @@ export function Metrics() {
             <p className="text-sm text-muted-foreground mb-4">
               Tests if identical inputs produce identical outputs with temperature=0
             </p>
-            <button
-              onClick={runDeterminismTest}
-              disabled={determinismRunning}
-              className={cn(
-                'flex items-center gap-2 px-4 py-2 rounded-lg',
-                'bg-secondary text-secondary-foreground hover:bg-secondary/80',
-                'disabled:opacity-50 disabled:cursor-not-allowed'
-              )}
-            >
-              {determinismRunning ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Testing...
-                </>
-              ) : (
-                <>
-                  <TestTube className="h-4 w-4" />
-                  Run Determinism Test
-                </>
-              )}
-            </button>
+            {isAdmin ? (
+              <button
+                onClick={runDeterminismTest}
+                disabled={determinismRunning}
+                className={cn(
+                  'flex items-center gap-2 px-4 py-2 rounded-lg',
+                  'bg-secondary text-secondary-foreground hover:bg-secondary/80',
+                  'disabled:opacity-50 disabled:cursor-not-allowed'
+                )}
+              >
+                {determinismRunning ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Testing...
+                  </>
+                ) : (
+                  <>
+                    <TestTube className="h-4 w-4" />
+                    Run Determinism Test
+                  </>
+                )}
+              </button>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Running the determinism test is an admin action.
+              </p>
+            )}
 
             {determinismResult && (
               <div className="mt-4">
