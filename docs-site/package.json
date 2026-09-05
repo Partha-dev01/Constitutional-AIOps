@@ -1,0 +1,16 @@
+{
+  "name": "constitutional-aiops-docs",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Public documentation site for Constitutional AIOps (VitePress).",
+  "license": "AGPL-3.0",
+  "scripts": {
+    "docs:dev": "vitepress dev",
+    "docs:build": "vitepress build",
+    "docs:preview": "vitepress preview"
+  },
+  "devDependencies": {
+    "vitepress": "^1.6.3"
+  }
+}
