@@ -1549,6 +1549,12 @@ function ToggleSetting({
  * keeps whatever key is already stored.
  */
 function LlmEndpointsCard({ health }: { health: HealthResponse | null }) {
+  // The connection test probes the box's global endpoint (admin-only), so only
+  // admins see it; a regular tenant edits their own per-user endpoint here and
+  // validates it by using chat.
+  const authRequired = useAuthStore((s) => s.authRequired)
+  const currentRole = useAuthStore((s) => s.user?.role)
+  const isAdmin = !authRequired || currentRole === 'admin'
   const [cfg, setCfg] = useState<ModelsConfig | null>(null)
   const [fastUrl, setFastUrl] = useState('')
   const [fastModel, setFastModel] = useState('')
@@ -1778,14 +1784,16 @@ function LlmEndpointsCard({ health }: { health: HealthResponse | null }) {
               )}
               {saved ? 'Saved!' : 'Save endpoints'}
             </button>
-            <button
-              onClick={runTest}
-              disabled={testing}
-              className="flex items-center gap-2 px-4 py-2 bg-muted text-muted-foreground rounded-lg text-sm font-medium hover:bg-muted/80 disabled:opacity-50"
-            >
-              {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-              Test connection
-            </button>
+            {isAdmin && (
+              <button
+                onClick={runTest}
+                disabled={testing}
+                className="flex items-center gap-2 px-4 py-2 bg-muted text-muted-foreground rounded-lg text-sm font-medium hover:bg-muted/80 disabled:opacity-50"
+              >
+                {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                Test connection
+              </button>
+            )}
           </div>
         </div>
       </div>
