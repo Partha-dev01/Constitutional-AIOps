@@ -415,6 +415,14 @@ async def lifespan(app: FastAPI):
     if app.state.model_router:
         await app.state.model_router.close()
 
+    # Close any per-user (BYOK) model routers built for regular tenants.
+    try:
+        from src.agents.user_router import close_all as _close_user_routers
+
+        await _close_user_routers(app)
+    except Exception as e:  # noqa: BLE001
+        logger.debug("Per-user router cleanup skipped: %s", e)
+
     # Close Neo4j connection
     if app.state.neo4j_client:
         await app.state.neo4j_client.close()
