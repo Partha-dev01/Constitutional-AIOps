@@ -85,6 +85,17 @@ const MOCK_GRAPH_RESPONSE = {
 // Helper: intercept all backend API calls the Agents page makes
 // ---------------------------------------------------------------------------
 async function interceptAllApis(page: Page) {
+  // Auth config — stub auth OFF. auth.ts fails SAFE (auth required) when it
+  // cannot reach /auth/config, which would bounce /agents to /login and leave
+  // the canvas unmounted. Without this stub the suite cannot run headless.
+  await page.route('**/auth/config**', async (route: Route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ auth_required: false, signup_enabled: false, captcha_provider: '', captcha_site_key: '' }),
+    })
+  })
+
   // Graph data — main target
   await page.route('**/api/v1/graph/episodes**', async (route: Route) => {
     await route.fulfill({
@@ -130,12 +141,9 @@ async function interceptAllApis(page: Page) {
 // ---------------------------------------------------------------------------
 async function gotoGraphTab(page: Page) {
   await interceptAllApis(page)
-  await page.goto('/agents')
-  // Click the "Graph Explorer" tab
-  await page.getByRole('tab', { name: /graph explorer/i }).first().click().catch(async () => {
-    // Fallback: find any button/element with the tab label
-    await page.locator('button:has-text("Graph Explorer")').first().click()
-  })
+  // The episodic graph explorer now lives at its own /graph route; it used to
+  // be a "Graph Explorer" tab embedded on /agents. Navigate straight there.
+  await page.goto('/graph')
   // Wait for canvas
   await page.waitForSelector('canvas', { timeout: 15000 })
   // Let the force simulation warm up
@@ -170,11 +178,11 @@ test.describe('Graph Explorer – layout and interactions', () => {
   test('stats overlay shows injected node and edge counts', async ({ page }) => {
     await gotoGraphTab(page)
     // The mock gives 20 nodes (6 eps + 5 rc + 4 act + 5 svcs) and 20 edges
-    const stats = page.locator('text=/\\d+ nodes \\| \\d+ edges/')
+    const stats = page.locator('text=/\\d+ nodes shown/')
     await expect(stats).toBeVisible({ timeout: 5000 })
     const text = await stats.textContent()
     // Should show the actual counts from our mock
-    expect(text).toMatch(/\d+ nodes \| \d+ edges/)
+    expect(text).toMatch(/\d+ nodes shown · \d+ edges/)
   })
 
   test('drag a node and verify it stays pinned', async ({ page }) => {
@@ -204,7 +212,7 @@ test.describe('Graph Explorer – layout and interactions', () => {
     // so we verify visually that the canvas hasn't gone blank and the stats are
     // still showing (confirming the component didn't unmount/crash).
     await page.waitForTimeout(500)
-    const statsAfterDrag = page.locator('text=/\\d+ nodes \\| \\d+ edges/')
+    const statsAfterDrag = page.locator('text=/\\d+ nodes shown/')
     await expect(statsAfterDrag).toBeVisible()
 
     await page.screenshot({
@@ -230,7 +238,7 @@ test.describe('Graph Explorer – layout and interactions', () => {
     await expect(page.locator('canvas').first()).toBeVisible()
     // At high zoom, labels should be visible (threshold 1.5x — we're now >1.5x)
     // Just assert no crash by checking the stats are still there
-    await expect(page.locator('text=/\\d+ nodes \\| \\d+ edges/')).toBeVisible()
+    await expect(page.locator('text=/\\d+ nodes shown/')).toBeVisible()
   })
 
   test('zoom out button decreases zoom (canvas still visible)', async ({ page }) => {
@@ -245,7 +253,7 @@ test.describe('Graph Explorer – layout and interactions', () => {
     await page.waitForTimeout(400)
 
     await expect(page.locator('canvas').first()).toBeVisible()
-    await expect(page.locator('text=/\\d+ nodes \\| \\d+ edges/')).toBeVisible()
+    await expect(page.locator('text=/\\d+ nodes shown/')).toBeVisible()
   })
 
   test('mouse-wheel zoom works without crash', async ({ page }) => {
@@ -267,7 +275,7 @@ test.describe('Graph Explorer – layout and interactions', () => {
     await page.waitForTimeout(300)
 
     await expect(canvas).toBeVisible()
-    await expect(page.locator('text=/\\d+ nodes \\| \\d+ edges/')).toBeVisible()
+    await expect(page.locator('text=/\\d+ nodes shown/')).toBeVisible()
   })
 
   test('pan the canvas by dragging the background', async ({ page }) => {
@@ -289,7 +297,7 @@ test.describe('Graph Explorer – layout and interactions', () => {
 
     // Canvas and stats should still be visible after pan
     await expect(canvas).toBeVisible()
-    await expect(page.locator('text=/\\d+ nodes \\| \\d+ edges/')).toBeVisible()
+    await expect(page.locator('text=/\\d+ nodes shown/')).toBeVisible()
   })
 
   test('hover over a node region triggers highlight (no crash)', async ({ page }) => {
@@ -339,31 +347,37 @@ test.describe('Graph Explorer – layout and interactions', () => {
     await page.waitForTimeout(600)
 
     await expect(page.locator('canvas').first()).toBeVisible()
-    await expect(page.locator('text=/\\d+ nodes \\| \\d+ edges/')).toBeVisible()
+    await expect(page.locator('text=/\\d+ nodes shown/')).toBeVisible()
   })
 
   test('filter by node type and stats reflect filter', async ({ page }) => {
     await gotoGraphTab(page)
 
-    // Filter to Episodes only
+    // The overlay reads "N nodes shown · M edges"; filtering must drop N.
+    const overlay = page.locator('text=/\\d+ nodes shown/').first()
+    const readNodes = async () =>
+      parseInt((await overlay.textContent() ?? '').match(/(\d+) nodes shown/)?.[1] ?? '0')
+
+    const allNodes = await readNodes()
+
+    // Filter to Episodes only — the shown-node count must drop below the total.
     await page.selectOption('select', 'episode')
     await page.waitForTimeout(500)
+    const episodeNodes = await readNodes()
+    expect(episodeNodes).toBeLessThan(allNodes)
+    expect(episodeNodes).toBeGreaterThan(0)
 
-    const stats = page.locator('text=/\\d+ nodes.*filtered.*episode/i')
-    await expect(stats).toBeVisible({ timeout: 5000 })
-
-    // Reset to All
+    // Reset to All — count returns to the full set.
     await page.selectOption('select', 'all')
     await page.waitForTimeout(300)
-    const allStats = page.locator('text=/\\d+ nodes \\| \\d+ edges/')
-    await expect(allStats).toBeVisible()
+    expect(await readNodes()).toBe(allNodes)
   })
 
   test('uncheck Similar To edges reduces edge count', async ({ page }) => {
     await gotoGraphTab(page)
 
     // Read initial edge count from stats overlay
-    const statsEl = page.locator('text=/\\d+ nodes \\| \\d+ edges/').first()
+    const statsEl = page.locator('text=/\\d+ nodes shown/').first()
     const initialText = await statsEl.textContent() ?? ''
     const initialEdges = parseInt(initialText.match(/(\d+) edges/)?.[1] ?? '0')
 
