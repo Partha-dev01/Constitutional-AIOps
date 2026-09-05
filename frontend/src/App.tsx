@@ -9,6 +9,7 @@ import { Login } from './pages/Login'
 import { Signup } from './pages/Signup'
 import { Dashboard } from './pages/Dashboard'
 import { useAuthStore } from './lib/auth'
+import { useEndpointStatus, byokSetupSeen } from './lib/useEndpointStatus'
 import { DEMO_MODE } from './lib/demo/flag'
 
 // Heavy pages — code-split so they don't bloat the initial bundle
@@ -67,9 +68,19 @@ function RootGate() {
   const user = useAuthStore((s) => s.user)
   const authRequired = useAuthStore((s) => s.authRequired)
   const status = useAuthStore((s) => s.status)
+  const endpointStatus = useEndpointStatus()
 
   if (status !== 'ready') return null
   if (authRequired && !user) return <Navigate to="/login" replace />
+  // BYOK onboarding gate: a regular tenant with no working endpoint is sent to
+  // /setup once, to connect their own model before landing on a chat that would
+  // 400. Admin / self-host always resolve 'configured' and skip this. The redirect
+  // fires at most once per session (byokSetupSeen), so "continue anyway" from the
+  // setup view never loops back here.
+  if (endpointStatus === 'loading') return null
+  if (endpointStatus === 'missing' && !byokSetupSeen()) {
+    return <Navigate to="/setup" replace />
+  }
   return (
     <Layout>
       <Dashboard />
