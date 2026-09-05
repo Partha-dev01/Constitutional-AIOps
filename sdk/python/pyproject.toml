@@ -1,0 +1,25 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "constitutional-aiops"
+version = "0.1.0"
+description = "Official Python client for the Constitutional AIOps REST API (pre-release scaffold)."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "AGPL-3.0-or-later" }
+authors = [{ name = "Constitutional AIOps" }]
+keywords = ["aiops", "incident-response", "llm", "observability", "sdk"]
+# The hand-written scaffold uses only the standard library (urllib, json,
+# dataclasses). The generated core (openapi-python-client) will add typed models
+# and httpx as a real dependency when it lands; see ../README.md.
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/Partha-dev01/Constitutional-AIOps"
+Documentation = "https://partha-dev01.github.io/Constitutional-AIOps/"
+Source = "https://github.com/Partha-dev01/Constitutional-AIOps/tree/main/sdk/python"
+
+[tool.hatch.build.targets.wheel]
+packages = ["constitutional_aiops"]

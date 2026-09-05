@@ -66,6 +66,12 @@ export default defineConfig({
             { text: 'Benchmarking', link: '/guide/benchmarking' },
           ],
         },
+        {
+          text: 'Build',
+          items: [
+            { text: 'Developer Platform', link: '/guide/developer-platform' },
+          ],
+        },
       ],
     },
 

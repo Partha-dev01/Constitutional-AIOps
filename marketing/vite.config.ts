@@ -25,6 +25,7 @@ export default defineConfig({
       input: {
         main: path.resolve(__dirname, 'index.html'),
         docs: path.resolve(__dirname, 'docs.html'),
+        safety: path.resolve(__dirname, 'safety.html'),
       },
     },
   },
