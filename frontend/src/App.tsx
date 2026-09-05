@@ -36,6 +36,12 @@ const Settings = lazy(() =>
 const Setup = lazy(() => import('./pages/Setup').then((m) => ({ default: m.Setup })))
 const Docs = lazy(() => import('./pages/Docs').then((m) => ({ default: m.Docs })))
 const Audit = lazy(() => import('./pages/Audit').then((m) => ({ default: m.Audit })))
+const Notifications = lazy(() =>
+  import('./pages/Notifications').then((m) => ({ default: m.Notifications })),
+)
+// Public legal pages — reachable without login, code-split
+const Privacy = lazy(() => import('./pages/Privacy').then((m) => ({ default: m.Privacy })))
+const Terms = lazy(() => import('./pages/Terms').then((m) => ({ default: m.Terms })))
 
 /** On-theme loading fallback for lazy-loaded route chunks */
 function PageFallback() {
@@ -119,6 +125,23 @@ function App() {
         <Route path="/login" element={<Login />} />
         {/* Public self-service signup (hosted demo; redirects away when disabled) */}
         <Route path="/signup" element={<Signup />} />
+        {/* Public legal pages, rendered OUTSIDE the sidebar Layout */}
+        <Route
+          path="/privacy"
+          element={
+            <Suspense fallback={<PageFallback />}>
+              <Privacy />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/terms"
+          element={
+            <Suspense fallback={<PageFallback />}>
+              <Terms />
+            </Suspense>
+          }
+        />
         {/* Legacy path: redirect to the root (which sends logged-out users to login) */}
         <Route path="/welcome" element={<Navigate to="/" replace />} />
         {/* Public root: Landing (logged out, enforcement on) or Dashboard */}
@@ -158,6 +181,7 @@ function App() {
                       <Route path="/metrics" element={<Metrics />} />
                       <Route path="/benchmark" element={<Benchmark />} />
                       <Route path="/audit" element={<Audit />} />
+                      <Route path="/notifications" element={<Notifications />} />
                       <Route path="/settings" element={<Settings />} />
                       <Route path="/guide" element={<Docs />} />
                     </Routes>

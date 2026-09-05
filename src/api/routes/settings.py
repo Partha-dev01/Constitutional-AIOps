@@ -29,6 +29,7 @@ from pydantic import BaseModel, Field
 from src.agents.serving_profile import resolve_serving_profile
 from src.auth import store as user_store
 from src.auth.deps import User, coerce_user, is_synthetic, require_user
+from src.notifications.store import notify
 
 logger = logging.getLogger(__name__)
 
@@ -969,8 +970,23 @@ async def test_webhook(
         return ProbeResult(ok=False, detail=f"unreachable ({type(exc).__name__})")
     except Exception as exc:  # noqa: BLE001 - a probe must never raise
         return ProbeResult(ok=False, detail=f"error ({type(exc).__name__})")
+    host = urlparse(url).hostname or url
     if 200 <= resp.status_code < 300:
+        notify(
+            type="webhook.test",
+            severity="info",
+            title="Test webhook delivered",
+            message=f"A test notification was accepted by {host} (HTTP {resp.status_code}).",
+            source="settings",
+        )
         return ProbeResult(ok=True, detail=f"delivered (HTTP {resp.status_code})")
+    notify(
+        type="webhook.test",
+        severity="warning",
+        title="Test webhook not accepted",
+        message=f"{host} was reached but returned HTTP {resp.status_code}.",
+        source="settings",
+    )
     return ProbeResult(ok=False, detail=f"reached but HTTP {resp.status_code}")
 
 

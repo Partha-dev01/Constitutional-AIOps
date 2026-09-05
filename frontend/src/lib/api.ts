@@ -250,6 +250,25 @@ export interface AuditEventTypesResponse {
   event_types: string[];
 }
 
+// ---- Notification inbox types ----
+export interface AppNotification {
+  id: string;
+  timestamp: string;
+  type: string;
+  severity: string;
+  title: string;
+  message: string;
+  source: string;
+  resource_id?: string | null;
+  read: boolean;
+}
+
+export interface NotificationListResponse {
+  notifications: AppNotification[];
+  count: number;
+  unread: number;
+}
+
 export type ServingSwapStatus = 'idle' | 'pending' | 'swapping' | 'error';
 
 /** GET/POST /settings/serving-mode — Mode 1 ⇄ Mode 2 swap channel. */
@@ -1435,6 +1454,25 @@ export const api = {
       return request<AuditListResponse>(`/audit/${qs ? `?${qs}` : ''}`);
     },
     eventTypes: () => request<AuditEventTypesResponse>('/audit/event-types'),
+  },
+
+  // Notification inbox — admin-only alert center over the server-side store.
+  notifications: {
+    list: (params?: { limit?: number; unreadOnly?: boolean; severity?: string }) => {
+      const q = new URLSearchParams();
+      if (params?.limit) q.set('limit', String(params.limit));
+      if (params?.unreadOnly) q.set('unread_only', 'true');
+      if (params?.severity) q.set('severity', params.severity);
+      const qs = q.toString();
+      return request<NotificationListResponse>(`/notifications/${qs ? `?${qs}` : ''}`);
+    },
+    unreadCount: () => request<{ unread: number }>('/notifications/unread-count'),
+    markRead: (body: { ids?: string[]; all?: boolean }) =>
+      request<{ updated: number; unread: number }>('/notifications/read', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+    clear: () => request<{ cleared: number }>('/notifications/', { method: 'DELETE' }),
   },
 };
 
