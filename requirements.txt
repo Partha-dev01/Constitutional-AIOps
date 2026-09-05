@@ -12,6 +12,10 @@ pydantic>=2.5.0
 pydantic-settings>=2.1.0
 python-dotenv>=1.0.0
 
+# At-rest secret encryption (Fernet) for bring-your-own LLM API keys —
+# src/auth/crypto.py derives the key from AUTH_SECRET_KEY via HKDF-SHA256.
+cryptography>=42.0.0
+
 # HTTP Client
 httpx>=0.25.0
 aiohttp>=3.9.0

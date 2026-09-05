@@ -28,6 +28,7 @@ from pydantic import BaseModel, Field
 
 from src.agents.serving_profile import resolve_serving_profile
 from src.auth import store as user_store
+from src.auth.crypto import decrypt_secret, encrypt_secret
 from src.auth.deps import User, coerce_user, is_synthetic, require_user
 from src.notifications.store import notify
 
@@ -571,11 +572,18 @@ def get_models_settings() -> Optional[dict[str, Any]]:
 
     Exported so main.py can re-apply a UI-saved endpoint config to the freshly
     built ModelRouter at startup (persisted config wins over env, and survives a
-    restart). The returned dict may include the stored ``apiKey`` for
-    reconfigure() — callers MUST NOT return it to a client.
+    restart). The returned dict may include the stored ``apiKey`` (DECRYPTED to
+    the plaintext reconfigure() needs) — callers MUST NOT return it to a client.
     """
     models = _load_persisted().get("models")
-    return models if isinstance(models, dict) and models else None
+    if not (isinstance(models, dict) and models):
+        return None
+    # The key is stored encrypted at rest (enc::v1::…); hand callers the
+    # plaintext. A legacy plaintext value decrypts to itself (verbatim).
+    models = dict(models)
+    if "apiKey" in models:
+        models["apiKey"] = decrypt_secret(models.get("apiKey") or "")
+    return models
 
 
 def _models_config_response(request: Request) -> ModelsConfig:
@@ -635,10 +643,12 @@ async def update_models_config(
         )
 
     # Persist (including the key). Merge onto any existing stored block so an
-    # omitted apiKey keeps the previously stored key.
+    # omitted apiKey keeps the previously stored key. The stored key is
+    # encrypted at rest (enc::v1::…): decrypt to the plaintext the router needs,
+    # transparently upgrading a legacy plaintext value, then re-encrypt on write.
     persisted = _load_persisted()
     stored = persisted.get("models") if isinstance(persisted.get("models"), dict) else {}
-    new_key = stored.get("apiKey", "")
+    new_key = decrypt_secret(stored.get("apiKey", "") or "")
     if body.apiKey is not None:
         new_key = body.apiKey  # "" clears, any other value sets
     persisted["models"] = {
@@ -646,7 +656,8 @@ async def update_models_config(
         "fastAgentModel": body.fastAgentModel.strip(),
         "reasoningAgentUrl": body.reasoningAgentUrl.strip(),
         "reasoningAgentModel": body.reasoningAgentModel.strip(),
-        "apiKey": new_key,
+        # Write-only field, encrypted before it touches disk.
+        "apiKey": encrypt_secret(new_key),
     }
     _save_persisted(persisted)
 
