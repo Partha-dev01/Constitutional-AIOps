@@ -28,6 +28,7 @@ from pydantic import BaseModel, Field
 
 from src.agents.serving_profile import resolve_serving_profile
 from src.auth import store as user_store
+from src.auth import user_llm
 from src.auth.crypto import decrypt_secret, encrypt_secret
 from src.auth.deps import User, coerce_user, is_synthetic, require_user
 from src.notifications.store import notify
@@ -316,7 +317,12 @@ async def save_settings(
             persisted["remediation"] = data["remediation"]
             _save_persisted(persisted)
         try:
-            user_store.set_user_settings(user.id, {"notifications": data["notifications"]})
+            # MERGE into the existing row (do not replace it): the same
+            # user_settings row also holds the user's ``llm`` BYOK block, which
+            # a bare {"notifications": ...} write would wipe.
+            existing = user_store.get_user_settings(user.id) or {}
+            existing["notifications"] = data["notifications"]
+            user_store.set_user_settings(user.id, existing)
         except Exception as exc:  # noqa: BLE001
             logger.warning("Failed to save per-user settings for %s: %s", user.username, exc)
 
@@ -621,6 +627,31 @@ def _models_config_response(request: Request) -> ModelsConfig:
 async def get_models_config(
     request: Request, user: User = Depends(require_user)
 ) -> ModelsConfig:
+    user = coerce_user(user)
+    # A regular (non-admin, real DB) user sees THEIR OWN endpoint config. The
+    # global endpoint is the admin + single-tenant self-host default and is
+    # never leaked to a regular user (BYOK Decision #3).
+    if not is_synthetic(user) and user.role != "admin":
+        pub = user_llm.get_user_llm_public(user.id)
+        if pub is None:
+            # No per-user endpoint yet -> an empty (unset) config so the UI
+            # prompts them to add one, without exposing the owner endpoint.
+            return ModelsConfig(
+                fastAgentUrl="",
+                fastAgentModel="",
+                reasoningAgentUrl="",
+                reasoningAgentModel="",
+                fastApiKeySet=False,
+                reasoningApiKeySet=False,
+            )
+        return ModelsConfig(
+            fastAgentUrl=pub["fastAgentUrl"],
+            fastAgentModel=pub["fastAgentModel"],
+            reasoningAgentUrl=pub["reasoningAgentUrl"],
+            reasoningAgentModel=pub["reasoningAgentModel"],
+            fastApiKeySet=pub["apiKeySet"],
+            reasoningApiKeySet=pub["apiKeySet"],
+        )
     return _models_config_response(request)
 
 
@@ -636,10 +667,39 @@ async def update_models_config(
     user: User = Depends(require_user),
 ) -> ModelsConfig:
     user = coerce_user(user)
+    # A regular (non-admin, real DB) user configures THEIR OWN endpoint (BYOK):
+    # stored per-user + encrypted, never touching the global router. Only admins
+    # (and the synthetic self-host admin) change the shared/global endpoint.
     if not is_synthetic(user) and user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins may change the LLM endpoints",
+        key_plain = (
+            body.apiKey
+            if body.apiKey is not None
+            else user_llm.stored_api_key_plaintext(user.id)
+        )
+        user_llm.set_user_llm(
+            user.id,
+            fast_agent_url=body.fastAgentUrl,
+            fast_agent_model=body.fastAgentModel,
+            reasoning_agent_url=body.reasoningAgentUrl,
+            reasoning_agent_model=body.reasoningAgentModel,
+            api_key_plaintext=key_plain,
+        )
+        # Drop any cached per-user router so the next request rebuilds it from
+        # the new config (no-op when nothing is cached yet).
+        try:
+            from src.agents.user_router import invalidate_user
+
+            await invalidate_user(request.app, user.id)
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("per-user router invalidation skipped: %s", exc)
+        pub = user_llm.get_user_llm_public(user.id) or {}
+        return ModelsConfig(
+            fastAgentUrl=pub.get("fastAgentUrl", ""),
+            fastAgentModel=pub.get("fastAgentModel", ""),
+            reasoningAgentUrl=pub.get("reasoningAgentUrl", ""),
+            reasoningAgentModel=pub.get("reasoningAgentModel", ""),
+            fastApiKeySet=pub.get("apiKeySet", False),
+            reasoningApiKeySet=pub.get("apiKeySet", False),
         )
 
     # Persist (including the key). Merge onto any existing stored block so an

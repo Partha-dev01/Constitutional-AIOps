@@ -19,7 +19,8 @@ from typing import Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import StreamingResponse
 
-from src.auth.deps import User, coerce_user, require_user
+from src.auth.deps import User, coerce_user, is_synthetic, require_user
+from src.agents.user_router import resolve_model_router, resolve_reasoning_agent
 from src.api.routes.settings import get_remediation_settings
 from src.api.schemas.chat import (
     AnalysisRequest,
@@ -1703,10 +1704,18 @@ async def chat(
 
     conversation, conversation_id = _open_conversation_turn(chat_request, user)
 
-    # Get reasoning agent
-    reasoning_agent = getattr(request.app.state, "reasoning_agent", None)
+    # Get the reasoning agent FOR THIS USER. A regular tenant is routed to their
+    # own bring-your-own endpoint (per-user router); the admin / self-host uses
+    # the shared global agent, byte-identical to before. A regular user with no
+    # endpoint gets a clear 400 rather than spending the owner key (BYOK #3).
+    reasoning_agent, _per_user = await resolve_reasoning_agent(request, user)
 
     if reasoning_agent is None:
+        if not is_synthetic(user) and getattr(user, "role", "user") != "admin":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No LLM endpoint configured for your account. Add one in Settings -> Models.",
+            )
         logger.error("Reasoning agent not initialized - LLM server may be unavailable")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -2015,13 +2024,23 @@ async def chat_stream(
 ) -> StreamingResponse:
     user = coerce_user(user)
 
-    reasoning_agent = getattr(request.app.state, "reasoning_agent", None)
+    # Per-user routing (see the blocking endpoint): a regular tenant streams
+    # from their own endpoint, the admin / self-host from the shared router.
+    reasoning_agent, _per_user = await resolve_reasoning_agent(request, user)
     if reasoning_agent is None:
+        if not is_synthetic(user) and getattr(user, "role", "user") != "admin":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No LLM endpoint configured for your account. Add one in Settings -> Models.",
+            )
         logger.error("Reasoning agent not initialized - LLM server may be unavailable")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Reasoning agent not initialized. Check LLM server connection.",
         )
+    # The router backing the streaming path (same per-user / global choice), bound
+    # into the event_source closure below so streaming uses the caller's endpoint.
+    stream_router, _ = await resolve_model_router(request, user)
 
     # Conversation bookkeeping happens BEFORE streaming starts so ownership
     # violations still surface as a proper 404 status (impossible mid-stream).
@@ -2039,7 +2058,7 @@ async def chat_stream(
             ]
 
             serving_mode = _serving_mode(request)
-            model_router = getattr(request.app.state, "model_router", None)
+            model_router = stream_router
             stream_fn = getattr(model_router, "reasoning_completion_stream", None)
             can_stream = serving_mode == 2 and callable(stream_fn)
             yield _sse_event(
