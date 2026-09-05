@@ -10,9 +10,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, BackgroundTasks, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from pydantic import BaseModel
 
+from src.auth.deps import User, require_admin
 from src.benchmark.runner import BenchmarkRunner, BenchmarkConfig, BenchmarkResult, BenchmarkStatus, MODELS
 from src.benchmark.evaluator import BenchmarkEvaluator, EvaluationResult
 
@@ -171,9 +172,15 @@ async def get_benchmark_status():
 async def run_benchmark(
     request: BenchmarkRequest,
     background_tasks: BackgroundTasks,
+    user: User = Depends(require_admin),
 ):
     """
     Start a benchmark run.
+
+    Admin only: the full research-benchmark harness runs against the box's
+    configured (owner) endpoint, so a regular tenant must not be able to spend
+    the owner key here (BYOK). Per-tenant "evaluate my own endpoint" is a
+    future feature that would route through the caller's BYOK config.
 
     This runs in the background and returns immediately with a job ID.
     Use /status to check progress.
@@ -225,13 +232,20 @@ async def run_benchmark(
 
 
 @router.post("/evaluate-endpoint")
-async def evaluate_endpoint(request: EvaluateEndpointRequest):
+async def evaluate_endpoint(
+    request: EvaluateEndpointRequest,
+    user: User = Depends(require_admin),
+):
     """Quick check: run a few sample cases against the configured LLM endpoint.
 
     For self-hosters who want to know "is the model I pointed the app at good
     enough for this workload" without committing to a full benchmark run. Uses
     the same agents and scoring as the research benchmark, on a handful of cases,
     synchronously.
+
+    Admin only: it exercises the box's configured (owner) endpoint via the
+    shared runner, so a regular tenant must not reach it and spend the owner
+    key (BYOK).
     """
     runner = get_runner()
 

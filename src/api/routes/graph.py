@@ -22,8 +22,10 @@ from datetime import datetime, timedelta
 from typing import Any
 from uuid import uuid4
 
-from fastapi import APIRouter, Request, Query, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field, field_validator
+
+from src.auth.deps import User, require_admin
 
 logger = logging.getLogger(__name__)
 
@@ -1186,13 +1188,16 @@ class GenerateEpisodesResponse(BaseModel):
 async def generate_episodes(
     request: Request,
     gen_request: GenerateEpisodesRequest = GenerateEpisodesRequest(),
+    user: User = Depends(require_admin),
 ) -> GenerateEpisodesResponse:
     """
     Generate realistic episodes using the Reasoning Agent (Qwen3-14B).
 
     This is a DEMO data fabricator (synthetic episodes). It is gated behind
     AIOPS_ENABLE_DEMO so a production graph can never be polluted with
-    fabricated incidents by a stray POST.
+    fabricated incidents by a stray POST. Admin only on top of that: it spends
+    the box's configured (owner) endpoint, so a regular tenant must not reach it
+    (BYOK).
     """
     if not _demo_enabled():
         raise HTTPException(

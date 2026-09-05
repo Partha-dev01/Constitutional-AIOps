@@ -10,8 +10,10 @@ import logging
 from datetime import datetime
 from typing import Any, Optional
 
-from fastapi import APIRouter, HTTPException, Query, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from pydantic import BaseModel, Field
+
+from src.auth.deps import User, require_admin
 
 logger = logging.getLogger(__name__)
 
@@ -262,9 +264,13 @@ async def clear_metrics(request: Request) -> dict[str, str]:
 async def run_benchmark(
     request: Request,
     benchmark: BenchmarkRequest,
+    user: User = Depends(require_admin),
 ) -> dict[str, Any]:
     """
     Run a latency benchmark.
+
+    Admin only: probes the box's configured (owner) endpoint, so a regular
+    tenant must not spend the owner key here (BYOK).
 
     Args:
         benchmark: Benchmark configuration
@@ -357,11 +363,15 @@ async def run_benchmark(
 )
 async def validate_determinism(
     request: Request,
+    user: User = Depends(require_admin),
     iterations: int = Query(default=5, ge=2, le=10),
     prompts: Optional[list[str]] = None,
 ) -> dict[str, Any]:
     """
     Validate output determinism.
+
+    Admin only: repeatedly calls the box's configured (owner) endpoint, so a
+    regular tenant must not spend the owner key here (BYOK).
 
     With temperature=0.0 and fixed seed, same input should produce same output.
 
