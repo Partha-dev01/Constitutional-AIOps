@@ -1,0 +1,26 @@
+{
+  "name": "@constitutional-aiops/sdk",
+  "version": "0.1.0",
+  "description": "Official TypeScript client for the Constitutional AIOps REST API (pre-release scaffold).",
+  "license": "AGPL-3.0-or-later",
+  "type": "module",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": ["src"],
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": ["aiops", "incident-response", "llm", "observability", "sdk"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Partha-dev01/Constitutional-AIOps"
+  },
+  "//": "The hand-written scaffold has no runtime dependencies (global fetch). The generated core (openapi-typescript + openapi-fetch) will be added when it lands; see ../README.md.",
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "typescript": "^5.3.0"
+  }
+}

@@ -8,6 +8,7 @@ import { APP_URL, SHOW_SELFHOST } from '../../config'
 const ANCHORS = [
   { href: '/#features', label: 'Features' },
   { href: '/#architecture', label: 'Architecture' },
+  { href: '/safety.html', label: 'Safety' },
   { href: '/#live', label: 'Live demo' },
   { href: '/docs.html', label: 'Docs' },
   ...(SHOW_SELFHOST ? [{ href: '/#self-host', label: 'Self-host' }] : []),
