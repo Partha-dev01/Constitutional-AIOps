@@ -1,0 +1,4 @@
+# openapi-python-client config for the generated typed core.
+# Regenerate with sdk/python/scripts/generate.sh (or the command in README.md).
+project_name_override: constitutional-aiops-client
+package_name_override: constitutional_aiops_client

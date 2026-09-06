@@ -17,7 +17,7 @@ import {
 export interface AIOpsClientOptions {
   /** Instance origin, e.g. https://host.example.com. `/api/v1` is appended. */
   baseUrl: string
-  /** Bearer token (a personal access token once shipped, or a session token). */
+  /** Bearer token: a personal access token (aiops_pat_...) or a session token. */
   token?: string
   /** Per-request timeout in ms. */
   timeoutMs?: number

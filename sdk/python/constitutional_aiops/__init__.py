@@ -8,13 +8,18 @@ Quick start::
 
     from constitutional_aiops import AIOpsClient
 
-    client = AIOpsClient("https://your-instance.example.com", token="caiops_pat_...")
+    client = AIOpsClient("https://your-instance.example.com", token="aiops_pat_...")
 
     for incident in client.paginate("/incidents/", severity="critical"):
         print(incident["id"], incident["title"])
 
-Personal access tokens are not built yet. Until they are, run the SDK against an
-instance with ``AUTH_REQUIRED`` unset, or pass a session token you already hold.
+Create a personal access token in the app (Settings, or ``POST /api/v1/auth/tokens``)
+and pass it as ``token``; it is sent as ``Authorization: Bearer aiops_pat_...``.
+Against a single-user instance with ``AUTH_REQUIRED`` unset the token is optional.
+
+For a fully typed client over every endpoint, install the ``typed`` extra and use
+the generated core (``from constitutional_aiops_client import Client``); see
+``../README.md``.
 """
 
 from .client import AIOpsClient

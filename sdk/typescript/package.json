@@ -10,17 +10,22 @@
   },
   "files": ["src"],
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "generate": "openapi-typescript ../../openapi/openapi.json -o src/schema.d.ts",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc"
   },
   "keywords": ["aiops", "incident-response", "llm", "observability", "sdk"],
   "repository": {
     "type": "git",
     "url": "https://github.com/Partha-dev01/Constitutional-AIOps"
   },
-  "//": "The hand-written scaffold has no runtime dependencies (global fetch). The generated core (openapi-typescript + openapi-fetch) will be added when it lands; see ../README.md.",
-  "dependencies": {},
+  "//": "The hand-written AIOpsClient uses global fetch and needs no runtime dependency. The generated typed core (createTypedClient) rides on openapi-fetch (~6kb) over types emitted by openapi-typescript from ../../openapi/openapi.json; run `npm run generate` after the snapshot changes. See ../README.md.",
+  "dependencies": {
+    "openapi-fetch": "^0.17.0"
+  },
   "devDependencies": {
     "@types/node": "^20.11.0",
+    "openapi-typescript": "^7.13.0",
     "typescript": "^5.3.0"
   }
 }

@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.ruff_cache/
+.venv/
+build/
+dist/
+*.egg-info/
+
+# The repo root ignores models/ (ML-weights convention). The generated typed
+# core ships a models/ package that must be tracked; re-include its sources
+# (the directory first, then the .py files, leaving caches ignored).
+!constitutional_aiops_client/models/
+!constitutional_aiops_client/models/**/*.py
