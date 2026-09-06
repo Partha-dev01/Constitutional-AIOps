@@ -64,8 +64,13 @@ export interface UseWebSocketOptions {
 
 // Default WebSocket URL - use relative path that works with nginx proxy in Docker
 // Also handle secure WebSocket (wss) for HTTPS
-const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-const DEFAULT_WS_URL = `${protocol}//${window.location.host}/ws`
+// Guard the module-level window access so this file is importable in a non-DOM
+// context (e.g. unit tests of helpers that import EventType). Identical in the
+// browser; the fallback URL is never used server-side.
+const protocol =
+  typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+const DEFAULT_WS_URL =
+  typeof window !== 'undefined' ? `${protocol}//${window.location.host}/ws` : '/ws'
 
 // Module-level cache for the app-layer WS token. Caddy basic_auth gates /api/* but
 // cannot ride the WS upgrade handshake, so the SPA fetches this token (same-origin,
