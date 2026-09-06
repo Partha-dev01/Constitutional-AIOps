@@ -19,7 +19,7 @@ from typing import Optional
 from fastapi import HTTPException, Request, status
 from fastapi import Depends as _Depends
 
-from src.auth import store
+from src.auth import pat, store
 from src.auth.tokens import COOKIE_NAME, verify_session
 
 logger = logging.getLogger(__name__)
@@ -100,6 +100,17 @@ def get_current_user(request: Request) -> Optional[User]:
     token = _token_from_request(request)
     if not token:
         return None
+    # Personal access tokens are namespaced by prefix, so a PAT and an HMAC
+    # session token never collide. Resolve PATs against the access_tokens store
+    # (revocation = row deletion; unaffected by token_version bumps).
+    if pat.is_pat(token):
+        user_id = pat.resolve_user_id(token)
+        if user_id is None:
+            return None
+        record = store.get_by_id(user_id)
+        if record is None:
+            return None
+        return User(id=record.id, username=record.username, role=record.role)
     claims = verify_session(token)
     if claims is None:
         return None

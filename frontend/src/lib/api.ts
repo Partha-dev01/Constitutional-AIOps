@@ -748,6 +748,26 @@ export interface AdminUserList {
   items: AdminUserListItem[];
   total: number;
 }
+
+// Personal access tokens (Track 3). The `token` secret is present ONLY on the
+// create response and never again.
+export interface AccessTokenSummary {
+  id: string;
+  name: string;
+  prefix: string;
+  created_at: string;
+  last_used_at: string | null;
+  expires_at: string | null;
+}
+
+export interface AccessTokenList {
+  items: AccessTokenSummary[];
+  total: number;
+}
+
+export interface AccessTokenCreated extends AccessTokenSummary {
+  token: string;
+}
 // ---- end Auth types ----
 
 /**
@@ -1321,6 +1341,20 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ password }),
       }),
+  },
+
+  // Personal access tokens (Track 3): self-service API credentials. Each call
+  // authenticates as the signed-in user; the create response carries the secret
+  // exactly once.
+  tokens: {
+    list: () => request<AccessTokenList>('/auth/tokens'),
+    create: (payload: { name: string; expires_in_days?: number | null }) =>
+      request<AccessTokenCreated>('/auth/tokens', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
+    revoke: (id: string) =>
+      request<void>(`/auth/tokens/${encodeURIComponent(id)}`, { method: 'DELETE' }),
   },
 
   // Graph — schema-mode platform topology (FROZEN payload contract; see

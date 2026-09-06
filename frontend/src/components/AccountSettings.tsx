@@ -11,8 +11,11 @@ import {
   CheckCircle,
   AlertTriangle,
   LogOut,
+  Copy,
+  Plus,
+  Terminal,
 } from 'lucide-react'
-import api, { AdminUserListItem } from '../lib/api'
+import api, { AdminUserListItem, AccessTokenSummary } from '../lib/api'
 import { useAuthStore } from '../lib/auth'
 
 const MIN_PASSWORD_LEN = 10
@@ -46,7 +49,240 @@ export function AccountSettings() {
         <ProfileCard username={user.username} role={user.role} />
         <ChangePasswordCard username={user.username} />
       </div>
+      <AccessTokensCard />
       {isAdmin && <UserManagementCard currentUsername={user.username} />}
+    </div>
+  )
+}
+
+const EXPIRY_OPTIONS: { label: string; days: number | null }[] = [
+  { label: 'No expiry', days: null },
+  { label: '30 days', days: 30 },
+  { label: '90 days', days: 90 },
+  { label: '1 year', days: 365 },
+]
+
+function fmtDate(iso: string | null): string {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  return Number.isNaN(d.getTime()) ? '—' : d.toLocaleDateString()
+}
+
+/**
+ * Personal access tokens: self-service API credentials for the REST API and
+ * the SDK. The secret is shown once at creation and only its hash is stored,
+ * so a token can be revoked but never re-read.
+ */
+function AccessTokensCard() {
+  const [tokens, setTokens] = useState<AccessTokenSummary[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const [name, setName] = useState('')
+  const [expiryIdx, setExpiryIdx] = useState(0)
+  const [creating, setCreating] = useState(false)
+  const [freshToken, setFreshToken] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const data = await api.tokens.list()
+      setTokens(data.items)
+    } catch (err) {
+      setError(errMessage(err, 'Could not load access tokens.'))
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    void load()
+  }, [load])
+
+  const onCreate = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError(null)
+    const trimmed = name.trim()
+    if (!trimmed) {
+      setError('Give the token a name so you can recognise it later.')
+      return
+    }
+    setCreating(true)
+    try {
+      const created = await api.tokens.create({
+        name: trimmed,
+        expires_in_days: EXPIRY_OPTIONS[expiryIdx].days,
+      })
+      setFreshToken(created.token)
+      setCopied(false)
+      setName('')
+      setExpiryIdx(0)
+      await load()
+    } catch (err) {
+      setError(errMessage(err, 'Could not create token.'))
+    } finally {
+      setCreating(false)
+    }
+  }
+
+  const onCopy = async () => {
+    if (!freshToken) return
+    try {
+      await navigator.clipboard.writeText(freshToken)
+      setCopied(true)
+    } catch {
+      // Clipboard blocked (insecure context / permissions): leave the value on
+      // screen for a manual copy rather than surfacing an error.
+    }
+  }
+
+  const onRevoke = async (id: string, tokenName: string) => {
+    if (!window.confirm(`Revoke token "${tokenName}"? Anything using it stops working.`)) return
+    setError(null)
+    try {
+      await api.tokens.revoke(id)
+      await load()
+    } catch (err) {
+      setError(errMessage(err, 'Could not revoke token.'))
+    }
+  }
+
+  const field =
+    'rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring'
+
+  return (
+    <div className="rounded-lg border border-border bg-card p-6">
+      <div className="mb-1 flex items-center gap-2">
+        <Terminal className="h-5 w-5 text-primary" />
+        <h2 className="text-lg font-semibold">Access tokens</h2>
+      </div>
+      <p className="mb-4 text-sm text-muted-foreground">
+        Create a token to call the API or the SDK as yourself. Send it as{' '}
+        <code className="rounded bg-muted px-1 py-0.5 text-xs">Authorization: Bearer &lt;token&gt;</code>.
+        The secret is shown once.
+      </p>
+
+      {error && (
+        <div className="mb-3 flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-2.5 text-sm text-destructive">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+
+      {freshToken && (
+        <div className="mb-4 rounded-lg border border-green-500/30 bg-green-500/10 p-3">
+          <div className="mb-2 flex items-center gap-2 text-sm font-medium text-green-700">
+            <CheckCircle className="h-4 w-4 shrink-0" />
+            Copy your token now — it will not be shown again.
+          </div>
+          <div className="flex items-center gap-2">
+            <code className="flex-1 overflow-x-auto rounded-md border border-border bg-background px-2 py-1.5 text-xs">
+              {freshToken}
+            </code>
+            <button
+              type="button"
+              onClick={() => void onCopy()}
+              className="inline-flex items-center gap-1 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium hover:bg-muted"
+            >
+              {copied ? <CheckCircle className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}
+              {copied ? 'Copied' : 'Copy'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setFreshToken(null)}
+              className="rounded-md px-2 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      )}
+
+      <form onSubmit={onCreate} className="mb-6 flex flex-wrap items-end gap-3">
+        <div className="flex-1 min-w-[160px]">
+          <label className="mb-1 block text-xs font-medium text-muted-foreground" htmlFor="tok-name">
+            Token name
+          </label>
+          <input
+            id="tok-name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="e.g. ci-pipeline"
+            maxLength={100}
+            className={`${field} w-full`}
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground" htmlFor="tok-exp">
+            Expires
+          </label>
+          <select
+            id="tok-exp"
+            value={expiryIdx}
+            onChange={(e) => setExpiryIdx(Number(e.target.value))}
+            className={field}
+          >
+            {EXPIRY_OPTIONS.map((opt, i) => (
+              <option key={opt.label} value={i}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <button
+          type="submit"
+          disabled={creating}
+          className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+        >
+          {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+          Create token
+        </button>
+      </form>
+
+      {loading ? (
+        <div className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Loading tokens…
+        </div>
+      ) : tokens.length === 0 ? (
+        <p className="py-4 text-sm text-muted-foreground">No access tokens yet.</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-muted-foreground">
+                <th className="pb-2 pr-4 font-medium">Name</th>
+                <th className="pb-2 pr-4 font-medium">Token</th>
+                <th className="pb-2 pr-4 font-medium">Last used</th>
+                <th className="pb-2 pr-4 font-medium">Expires</th>
+                <th className="pb-2 text-right font-medium">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tokens.map((t) => (
+                <tr key={t.id} className="border-b border-border/60">
+                  <td className="py-2 pr-4 font-medium">{t.name}</td>
+                  <td className="py-2 pr-4 font-mono text-xs text-muted-foreground">{t.prefix}…</td>
+                  <td className="py-2 pr-4 text-muted-foreground">{fmtDate(t.last_used_at)}</td>
+                  <td className="py-2 pr-4 text-muted-foreground">{fmtDate(t.expires_at)}</td>
+                  <td className="py-2 text-right">
+                    <button
+                      type="button"
+                      onClick={() => onRevoke(t.id, t.name)}
+                      className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-destructive hover:bg-destructive/10"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Revoke
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   )
 }
