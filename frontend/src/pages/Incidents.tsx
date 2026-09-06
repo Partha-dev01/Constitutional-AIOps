@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { AlertTriangle, CheckCircle, Clock, Search, Plus, Eye, Play, Loader2, RefreshCw } from 'lucide-react'
 import { formatRelativeTime } from '../lib/utils'
 import api, { Incident, IncidentSeverity, IncidentStatus, Action, IncidentCreate } from '../lib/api'
@@ -36,9 +37,20 @@ export function Incidents() {
   const { showToast } = useToast()
   const [incidents, setIncidents] = useState<Incident[]>([])
   const [pendingActions, setPendingActions] = useState<Action[]>([])
-  const [searchQuery, setSearchQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState<string>('all')
-  const [severityFilter, setSeverityFilter] = useState<string>('all')
+  // Filters live in the URL query so a filtered view is shareable and
+  // bookmarkable (deep-linkable). Defaults ('' / 'all') are omitted from the URL.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const searchQuery = searchParams.get('q') ?? ''
+  const statusFilter = searchParams.get('status') ?? 'all'
+  const severityFilter = searchParams.get('severity') ?? 'all'
+
+  const updateFilter = (key: string, value: string, fallback: string) => {
+    const next = new URLSearchParams(searchParams)
+    if (!value || value === fallback) next.delete(key)
+    else next.set(key, value)
+    setSearchParams(next, { replace: true })
+  }
+
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null)
@@ -221,7 +233,7 @@ export function Incidents() {
             type="text"
             placeholder="Search incidents..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => updateFilter('q', e.target.value, '')}
             className="w-full pl-10 pr-4 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
           />
         </div>
@@ -229,7 +241,7 @@ export function Incidents() {
         <select
           id="status-filter"
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
+          onChange={(e) => updateFilter('status', e.target.value, 'all')}
           className="px-4 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
         >
           <option value="all">All Status</option>
@@ -244,7 +256,7 @@ export function Incidents() {
         <select
           id="severity-filter"
           value={severityFilter}
-          onChange={(e) => setSeverityFilter(e.target.value)}
+          onChange={(e) => updateFilter('severity', e.target.value, 'all')}
           className="px-4 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
         >
           <option value="all">All Severity</option>
