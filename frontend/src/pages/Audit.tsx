@@ -8,6 +8,7 @@
  */
 
 import { useCallback, useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Loader2, RefreshCw, ScrollText, ShieldAlert } from 'lucide-react'
 import { cn } from '../lib/utils'
 import api from '../lib/api'
@@ -72,8 +73,20 @@ export function Audit() {
 
   const [events, setEvents] = useState<AuditEvent[]>([])
   const [eventTypes, setEventTypes] = useState<string[]>([])
-  const [days, setDays] = useState(7)
-  const [eventType, setEventType] = useState('')
+  // Window and event-type filters live in the URL query so a filtered view is
+  // shareable and bookmarkable. Defaults (7 days / all events) stay out of the URL.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const parsedDays = parseInt(searchParams.get('days') ?? '7', 10)
+  const days = Number.isNaN(parsedDays) ? 7 : parsedDays
+  const eventType = searchParams.get('event') ?? ''
+
+  const updateFilter = (key: string, value: string, fallback: string) => {
+    const next = new URLSearchParams(searchParams)
+    if (!value || value === fallback) next.delete(key)
+    else next.set(key, value)
+    setSearchParams(next, { replace: true })
+  }
+
   const [truncated, setTruncated] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -165,7 +178,7 @@ export function Audit() {
           <span className="text-muted-foreground">Window</span>
           <select
             value={days}
-            onChange={(e) => setDays(parseInt(e.target.value, 10))}
+            onChange={(e) => updateFilter('days', e.target.value, '7')}
             className="rounded border border-border bg-background p-1.5 text-sm text-foreground"
           >
             {DAY_OPTIONS.map((o) => (
@@ -179,7 +192,7 @@ export function Audit() {
           <span className="text-muted-foreground">Event</span>
           <select
             value={eventType}
-            onChange={(e) => setEventType(e.target.value)}
+            onChange={(e) => updateFilter('event', e.target.value, '')}
             className="rounded border border-border bg-background p-1.5 text-sm text-foreground"
           >
             <option value="">All events</option>
