@@ -739,6 +739,71 @@
         "title": "AgentStats",
         "type": "object"
       },
+      "AlertingConfigPublic": {
+        "properties": {
+          "matrix": {
+            "$ref": "#/components/schemas/MatrixAlertingPublic",
+            "default": {
+              "accessTokenSet": false,
+              "enabled": false,
+              "homeserver": "",
+              "minSeverity": "warning",
+              "roomId": ""
+            }
+          },
+          "telegram": {
+            "$ref": "#/components/schemas/TelegramAlertingPublic",
+            "default": {
+              "chatId": "",
+              "enabled": false,
+              "minSeverity": "warning",
+              "tokenSet": false
+            }
+          }
+        },
+        "title": "AlertingConfigPublic",
+        "type": "object"
+      },
+      "AlertingConfigUpdate": {
+        "properties": {
+          "matrix": {
+            "$ref": "#/components/schemas/MatrixAlertingUpdate",
+            "default": {
+              "enabled": false,
+              "homeserver": "",
+              "minSeverity": "warning",
+              "roomId": ""
+            }
+          },
+          "telegram": {
+            "$ref": "#/components/schemas/TelegramAlertingUpdate",
+            "default": {
+              "chatId": "",
+              "enabled": false,
+              "minSeverity": "warning"
+            }
+          }
+        },
+        "title": "AlertingConfigUpdate",
+        "type": "object"
+      },
+      "AlertingTestRequest": {
+        "properties": {
+          "channel": {
+            "enum": [
+              "telegram",
+              "matrix"
+            ],
+            "title": "Channel",
+            "type": "string"
+          }
+        },
+        "required": [
+          "channel"
+        ],
+        "title": "AlertingTestRequest",
+        "type": "object"
+      },
       "AllSettings": {
         "properties": {
           "constitutional": {
@@ -3308,6 +3373,86 @@
         "title": "MarkReadRequest",
         "type": "object"
       },
+      "MatrixAlertingPublic": {
+        "properties": {
+          "accessTokenSet": {
+            "default": false,
+            "title": "Accesstokenset",
+            "type": "boolean"
+          },
+          "enabled": {
+            "default": false,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "homeserver": {
+            "default": "",
+            "title": "Homeserver",
+            "type": "string"
+          },
+          "minSeverity": {
+            "default": "warning",
+            "enum": [
+              "info",
+              "warning",
+              "error",
+              "critical"
+            ],
+            "title": "Minseverity",
+            "type": "string"
+          },
+          "roomId": {
+            "default": "",
+            "title": "Roomid",
+            "type": "string"
+          }
+        },
+        "title": "MatrixAlertingPublic",
+        "type": "object"
+      },
+      "MatrixAlertingUpdate": {
+        "properties": {
+          "accessToken": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accesstoken"
+          },
+          "enabled": {
+            "default": false,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "homeserver": {
+            "default": "",
+            "title": "Homeserver",
+            "type": "string"
+          },
+          "minSeverity": {
+            "default": "warning",
+            "enum": [
+              "info",
+              "warning",
+              "error",
+              "critical"
+            ],
+            "title": "Minseverity",
+            "type": "string"
+          },
+          "roomId": {
+            "default": "",
+            "title": "Roomid",
+            "type": "string"
+          }
+        },
+        "title": "MatrixAlertingUpdate",
+        "type": "object"
+      },
       "MetricPoint": {
         "description": "Metric data point. ``service`` / ``metric`` are populated by the Docker\nfallback source (the container name and a stable metric key like\n``cpu_percent``) so the dashboard can group a series without parsing the\nhuman ``label``; they are empty for LGTM-sourced points.",
         "properties": {
@@ -4619,6 +4764,76 @@
           "target_url"
         ],
         "title": "TargetUpdateResponse",
+        "type": "object"
+      },
+      "TelegramAlertingPublic": {
+        "properties": {
+          "chatId": {
+            "default": "",
+            "title": "Chatid",
+            "type": "string"
+          },
+          "enabled": {
+            "default": false,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "minSeverity": {
+            "default": "warning",
+            "enum": [
+              "info",
+              "warning",
+              "error",
+              "critical"
+            ],
+            "title": "Minseverity",
+            "type": "string"
+          },
+          "tokenSet": {
+            "default": false,
+            "title": "Tokenset",
+            "type": "boolean"
+          }
+        },
+        "title": "TelegramAlertingPublic",
+        "type": "object"
+      },
+      "TelegramAlertingUpdate": {
+        "properties": {
+          "botToken": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bottoken"
+          },
+          "chatId": {
+            "default": "",
+            "title": "Chatid",
+            "type": "string"
+          },
+          "enabled": {
+            "default": false,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "minSeverity": {
+            "default": "warning",
+            "enum": [
+              "info",
+              "warning",
+              "error",
+              "critical"
+            ],
+            "title": "Minseverity",
+            "type": "string"
+          }
+        },
+        "title": "TelegramAlertingUpdate",
         "type": "object"
       },
       "TelemetryHealthResponse": {
@@ -10190,6 +10405,110 @@
           }
         },
         "summary": "Test Monitoring Sources",
+        "tags": [
+          "settings"
+        ]
+      }
+    },
+    "/api/v1/settings/notifications/alerting": {
+      "get": {
+        "description": "Return the Telegram / Matrix remote-alerting config. Admin only. Secrets are never returned; each is reduced to a boolean 'set' flag.",
+        "operationId": "settings-get_alerting",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlertingConfigPublic"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Remote Alerting Settings",
+        "tags": [
+          "settings"
+        ]
+      },
+      "put": {
+        "description": "Persist the Telegram / Matrix remote-alerting config. Admin only. A token field omitted (null) leaves the stored secret untouched, empty string clears it, any value sets it. Tokens are encrypted at rest.",
+        "operationId": "settings-save_alerting",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlertingConfigUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlertingConfigPublic"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Save Remote Alerting Settings",
+        "tags": [
+          "settings"
+        ]
+      }
+    },
+    "/api/v1/settings/notifications/alerting/test": {
+      "post": {
+        "description": "Send a sample alert to the currently-saved Telegram or Matrix channel and report whether it was accepted. Admin only. Save first to test edited values. The Matrix homeserver is SSRF-guarded. Returns reachability only.",
+        "operationId": "settings-test_alerting",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlertingTestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProbeResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Send Test Alert",
         "tags": [
           "settings"
         ]

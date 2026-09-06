@@ -274,4 +274,14 @@ def notify(
         webhook.dispatch(note)
     except Exception as exc:  # noqa: BLE001 - delivery is never load-bearing
         logger.debug("webhook dispatch failed for %s: %s", type, exc)
+
+    # Fan out to any configured remote chat channels (Track 1: Telegram / Matrix).
+    # Same contract as the webhook fan-out above: lazy-imported, fire-and-forget,
+    # swallows its own errors, so an alerting problem never affects the caller.
+    try:
+        from src.alerting import dispatch as alerting_dispatch
+
+        alerting_dispatch.dispatch(note)
+    except Exception as exc:  # noqa: BLE001 - delivery is never load-bearing
+        logger.debug("alerting dispatch failed for %s: %s", type, exc)
     return note

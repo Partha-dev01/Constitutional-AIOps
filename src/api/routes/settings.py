@@ -31,6 +31,9 @@ from src.auth.crypto import decrypt_secret, encrypt_secret
 from src.auth.deps import User, coerce_user, is_synthetic, require_user
 from src.notifications.store import notify
 from src.notifications.webhook import webhook_target_error as _webhook_target_error
+from src.alerting import config as alert_config
+from src.alerting import matrix as alert_matrix
+from src.alerting import telegram as alert_telegram
 
 logger = logging.getLogger(__name__)
 
@@ -1033,6 +1036,182 @@ async def test_webhook(
         source="settings",
     )
     return ProbeResult(ok=False, detail=f"reached but HTTP {resp.status_code}")
+
+
+# ---------------------------------------------------------------------------
+# Remote alerting (Settings -> Notifications): Telegram / Matrix outbound (Track 1)
+# ---------------------------------------------------------------------------
+#
+# The chat-channel sibling of the webhook block above. Admin only, like the
+# notification inbox these alerts mirror. Secrets (bot token / access token) are
+# Fernet-encrypted at rest and returned only as boolean "set" flags, using the
+# same null-leaves / ""-clears / value-sets convention as the models BYOK key.
+# Config is stored under an ``alerting`` key: the system settings file for the
+# synthetic admin (AUTH off / self-host), the admin's own user row otherwise.
+
+_SEVERITY = Literal["info", "warning", "error", "critical"]
+
+
+class TelegramAlertingUpdate(BaseModel):
+    enabled: bool = False
+    chatId: str = ""
+    # Write-only: None leaves the stored token, "" clears it, any value sets it.
+    botToken: Optional[str] = None
+    minSeverity: _SEVERITY = "warning"
+
+
+class MatrixAlertingUpdate(BaseModel):
+    enabled: bool = False
+    homeserver: str = ""
+    roomId: str = ""
+    accessToken: Optional[str] = None
+    minSeverity: _SEVERITY = "warning"
+
+
+class AlertingConfigUpdate(BaseModel):
+    telegram: TelegramAlertingUpdate = TelegramAlertingUpdate()
+    matrix: MatrixAlertingUpdate = MatrixAlertingUpdate()
+
+
+class TelegramAlertingPublic(BaseModel):
+    enabled: bool = False
+    chatId: str = ""
+    tokenSet: bool = False
+    minSeverity: _SEVERITY = "warning"
+
+
+class MatrixAlertingPublic(BaseModel):
+    enabled: bool = False
+    homeserver: str = ""
+    roomId: str = ""
+    accessTokenSet: bool = False
+    minSeverity: _SEVERITY = "warning"
+
+
+class AlertingConfigPublic(BaseModel):
+    telegram: TelegramAlertingPublic = TelegramAlertingPublic()
+    matrix: MatrixAlertingPublic = MatrixAlertingPublic()
+
+
+class AlertingTestRequest(BaseModel):
+    channel: Literal["telegram", "matrix"]
+
+
+def _require_alerting_admin(user: User, action: str) -> None:
+    if not is_synthetic(user) and user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Only admins may {action}",
+        )
+
+
+def _load_alerting_stored(user: User) -> dict[str, Any]:
+    """The user's effective stored ``alerting`` dict (tokens stay encrypted here).
+
+    System settings file for the synthetic admin (AUTH off / self-host); the
+    admin's own ``user_settings`` row otherwise.
+    """
+    if is_synthetic(user):
+        cfg = _load_persisted().get("alerting")
+        return cfg if isinstance(cfg, dict) else {}
+    per_user = user_store.get_user_settings(user.id) or {}
+    cfg = per_user.get("alerting")
+    return cfg if isinstance(cfg, dict) else {}
+
+
+def _save_alerting_stored(user: User, alerting: dict[str, Any]) -> None:
+    if is_synthetic(user):
+        persisted = _load_persisted()
+        persisted["alerting"] = alerting
+        _save_persisted(persisted)
+    else:
+        # MERGE into the row so the user's ``llm`` / ``notifications`` blocks survive.
+        existing = user_store.get_user_settings(user.id) or {}
+        existing["alerting"] = alerting
+        user_store.set_user_settings(user.id, existing)
+
+
+@router.get(
+    "/notifications/alerting",
+    response_model=AlertingConfigPublic,
+    summary="Get Remote Alerting Settings",
+    description=(
+        "Return the Telegram / Matrix remote-alerting config. Admin only. Secrets "
+        "are never returned; each is reduced to a boolean 'set' flag."
+    ),
+)
+async def get_alerting(user: User = Depends(require_user)) -> AlertingConfigPublic:
+    user = coerce_user(user)
+    _require_alerting_admin(user, "view remote alerting settings")
+    return AlertingConfigPublic(**alert_config.public_view(_load_alerting_stored(user)))
+
+
+@router.put(
+    "/notifications/alerting",
+    response_model=AlertingConfigPublic,
+    summary="Save Remote Alerting Settings",
+    description=(
+        "Persist the Telegram / Matrix remote-alerting config. Admin only. A token "
+        "field omitted (null) leaves the stored secret untouched, empty string "
+        "clears it, any value sets it. Tokens are encrypted at rest."
+    ),
+)
+async def save_alerting(
+    body: AlertingConfigUpdate, user: User = Depends(require_user)
+) -> AlertingConfigPublic:
+    user = coerce_user(user)
+    _require_alerting_admin(user, "change remote alerting settings")
+    new_alerting = alert_config.apply_update(_load_alerting_stored(user), body.model_dump())
+    _save_alerting_stored(user, new_alerting)
+    return AlertingConfigPublic(**alert_config.public_view(new_alerting))
+
+
+@router.post(
+    "/notifications/alerting/test",
+    response_model=ProbeResult,
+    summary="Send Test Alert",
+    description=(
+        "Send a sample alert to the currently-saved Telegram or Matrix channel and "
+        "report whether it was accepted. Admin only. Save first to test edited "
+        "values. The Matrix homeserver is SSRF-guarded. Returns reachability only."
+    ),
+)
+async def test_alerting(
+    body: AlertingTestRequest, user: User = Depends(require_user)
+) -> ProbeResult:
+    user = coerce_user(user)
+    _require_alerting_admin(user, "send a test alert")
+    # Blocking httpx client -> run off the event loop.
+    import asyncio
+
+    stored = _load_alerting_stored(user)
+    if body.channel == "telegram":
+        target = alert_config.telegram_target(stored.get("telegram"))
+        if target is None:
+            return ProbeResult(
+                ok=False, detail="Telegram is not enabled/configured. Save first, then test."
+            )
+        text = (
+            "<b>Constitutional AIOps</b>\n"
+            "Test alert. If you can see this, Telegram alerting is wired up correctly."
+        )
+        ok, detail = await asyncio.to_thread(
+            alert_telegram.send, target.token, target.chat_id, text
+        )
+    else:
+        target = alert_config.matrix_target(stored.get("matrix"))
+        if target is None:
+            return ProbeResult(
+                ok=False, detail="Matrix is not enabled/configured. Save first, then test."
+            )
+        text = (
+            "Constitutional AIOps test alert. If you can see this, Matrix alerting "
+            "is wired up correctly."
+        )
+        ok, detail = await asyncio.to_thread(
+            alert_matrix.send, target.homeserver, target.token, target.room_id, text
+        )
+    return ProbeResult(ok=ok, detail=("delivered" if ok else detail))
 
 
 __all__ = [
