@@ -183,6 +183,8 @@ export interface NotificationSettings {
   slackEnabled: boolean;
   webhookEnabled: boolean;
   webhookUrl: string;
+  webhookSecret: string;
+  webhookMinSeverity: 'info' | 'warning' | 'error' | 'critical';
   notifyOnCritical: boolean;
   notifyOnApproval: boolean;
   notifyOnResolution: boolean;

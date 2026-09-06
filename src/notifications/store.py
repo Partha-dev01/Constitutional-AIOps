@@ -253,7 +253,7 @@ def notify(
     down the request that triggered the alert.
     """
     try:
-        return get_notification_store().add(
+        note = get_notification_store().add(
             type=type,
             severity=severity,
             title=title,
@@ -264,3 +264,14 @@ def notify(
     except Exception as exc:  # noqa: BLE001 - notifying is never load-bearing
         logger.warning("notify() failed for %s/%s: %s", type, title, exc)
         return None
+
+    # Fan out to any configured outbound webhooks (Track 1). Lazy import keeps
+    # this foundational module import-cycle-free; dispatch is fire-and-forget and
+    # swallows its own errors, so a webhook problem never affects the caller.
+    try:
+        from src.notifications import webhook
+
+        webhook.dispatch(note)
+    except Exception as exc:  # noqa: BLE001 - delivery is never load-bearing
+        logger.debug("webhook dispatch failed for %s: %s", type, exc)
+    return note
