@@ -1,13 +1,18 @@
 import { GraduationCap, ArrowRight } from 'lucide-react'
 import { APP_URL } from '../../config'
 
-// Absolute (/#...) so they work from the docs page too; Docs is its own page.
+// Full page sitemap. Standalone content pages by their own URL; the live demo
+// stays a landing-section anchor (absolute, so it resolves from any page).
 const SECTION_LINKS = [
-  { href: '/#features', label: 'Features' },
-  { href: '/#architecture', label: 'Architecture' },
-  { href: '/#live', label: 'Live demo' },
+  { href: '/features.html', label: 'Features' },
+  { href: '/architecture.html', label: 'Architecture' },
+  { href: '/safety.html', label: 'Safety' },
+  { href: '/benchmark.html', label: 'Benchmark' },
+  { href: '/usecases.html', label: 'Use cases' },
+  { href: '/faq.html', label: 'FAQ' },
   { href: '/docs.html', label: 'Docs' },
-  { href: '/#about', label: 'About' },
+  { href: '/opensource.html', label: 'Open source' },
+  { href: '/#live', label: 'Live demo' },
 ]
 
 export function TeamFooter() {

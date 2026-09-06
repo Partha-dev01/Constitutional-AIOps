@@ -51,7 +51,10 @@ DIST_ID=<your-cdn-distribution-id>
 VITE_APP_URL=/launch npm run build
 
 # 2. Sync to the private marketing bucket (removes stale files).
-aws s3 sync dist/ "s3://$MARKETING_BUCKET/" --delete --profile <deploy-profile>
+#    --exclude "demo/*" is MANDATORY: the no-login demo lives under demo/ in the
+#    same bucket and is deployed separately, so a --delete sync without it wipes
+#    the demo.
+aws s3 sync dist/ "s3://$MARKETING_BUCKET/" --delete --exclude "demo/*" --profile <deploy-profile>
 
 # 3. Invalidate so viewers get the new build immediately (cache is optimized).
 aws cloudfront create-invalidation --distribution-id "$DIST_ID" \
