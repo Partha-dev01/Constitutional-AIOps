@@ -370,7 +370,7 @@ async def cancel_benchmark():
 
 
 @router.get("/export")
-async def export_results(format: str = Query(default="json", regex="^(json|csv|latex)$")):
+async def export_results(format: str = Query(default="json", pattern="^(json|csv|latex)$")):
     """Export benchmark results in various formats."""
     results_dir = _data_root() / "results"
 
