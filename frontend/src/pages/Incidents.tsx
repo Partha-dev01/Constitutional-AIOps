@@ -7,6 +7,7 @@ import { ActiveIncidentsPanel } from '../components/incidents/ActiveIncidentsPan
 import { Modal } from '../components/ui/Modal'
 import { useToast } from '../components/ui/toast'
 import { ExportMenu } from '../components/ui/ExportMenu'
+import { SavedViews } from '../components/SavedViews'
 import { SkeletonCards } from '../components/ui/Skeleton'
 import type { ExportColumn } from '../lib/exportTable'
 
@@ -146,6 +147,13 @@ export function Incidents() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <SavedViews
+            scope="incidents"
+            currentQuery={searchParams.toString()}
+            onApply={(query) =>
+              setSearchParams(new URLSearchParams(query), { replace: true })
+            }
+          />
           <ExportMenu
             rows={filteredIncidents}
             columns={INCIDENT_EXPORT_COLUMNS}

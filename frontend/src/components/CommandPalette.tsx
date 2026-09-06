@@ -70,7 +70,11 @@ export function CommandPalette({
   const go = (cmd: PaletteCommand | undefined) => {
     if (!cmd) return
     onClose()
-    navigate(cmd.href)
+    if (cmd.action) {
+      cmd.action()
+      return
+    }
+    if (cmd.href) navigate(cmd.href)
   }
 
   const onKeyDown = (e: React.KeyboardEvent) => {
