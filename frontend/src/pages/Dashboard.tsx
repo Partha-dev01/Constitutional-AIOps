@@ -3,13 +3,17 @@ import { Link } from 'react-router-dom'
 import { formatDistanceToNow } from 'date-fns'
 import { Activity, AlertTriangle, CheckCircle, Clock, RefreshCw, Loader2, Wifi, WifiOff, Server, Container, History } from 'lucide-react'
 import api, { DashboardStats, HealthResponse, ModelsConfig, isComponentHealthy } from '../lib/api'
+import type { Action } from '../lib/api'
 import { useWebSocket, EventType } from '../lib/websocket'
 import type { WebSocketEvent } from '../lib/websocket'
 import { describeEvent, RECENT_ACTIVITY_LIMIT } from '../lib/activity'
 import type { ActivityItem } from '../lib/activity'
+import { toTickerItems } from '../lib/approvalTicker'
+import type { TickerItem } from '../lib/approvalTicker'
 import { useContainerStats } from '../hooks/useContainerStats'
 import type { ContainerStatsState } from '../hooks/useContainerStats'
 import { Sparkline } from '../components/viz/Sparkline'
+import { ApprovalTicker } from '../components/ApprovalTicker'
 
 interface ServiceStatus {
   name: string
@@ -53,6 +57,7 @@ export function Dashboard() {
   // Live event feed for the Recent Activity widget (Track 2). Bounded, newest
   // first, built only from real WebSocket events — nothing fabricated.
   const [activity, setActivity] = useState<ActivityItem[]>([])
+  const [pending, setPending] = useState<TickerItem[]>([])
 
   // Live per-service CPU%/mem% (Docker-socket source on the lite tier). Polls on
   // its own 5s cadence and accumulates a rolling client-side window.
@@ -107,7 +112,7 @@ export function Dashboard() {
     setLoading(true)
     setError(null)
     try {
-      const [healthData, statsData, containersResponse, metricsResponse, modelsData] = await Promise.all([
+      const [healthData, statsData, containersResponse, metricsResponse, modelsData, pendingActions] = await Promise.all([
         api.health.check(),
         api.dashboard.getStats(),
         fetch('/api/v1/infrastructure/containers').then(r => r.ok ? r.json() : { containers: [] }),
@@ -116,11 +121,14 @@ export function Dashboard() {
         // Live endpoint config (same source as Settings -> Models) so the agent
         // cards show the actual model + endpoint, never hardcoded values.
         api.settings.getModels().catch(() => null),
+        // Actions awaiting a human decision, for the approval ticker (no-LLM view).
+        api.actions.getPending().then((r) => r.actions).catch((): Action[] => []),
       ])
       setHealth(healthData)
       setStats(statsData)
       setAgentMetrics(metricsResponse)
       setModelsCfg(modelsData)
+      setPending(toTickerItems(pendingActions))
       setLastRefresh(new Date())
 
       // Update services with container data (current status only — no
@@ -280,9 +288,14 @@ export function Dashboard() {
         />
       </div>
 
-      {/* Recent Activity — a live, event-triggered feed built from real
-          WebSocket events as they arrive. Empty until the system raises one. */}
-      <RecentActivity items={activity} isConnected={isConnected} />
+      {/* Two live, no-LLM widgets side by side: the approval ticker surfaces
+          actions awaiting a human decision (aging, with confidence band and tier
+          checks); Recent Activity is an event-triggered feed of real WebSocket
+          events. Both are empty until the system produces one. */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <ApprovalTicker items={pending} now={lastRefresh.getTime()} />
+        <RecentActivity items={activity} isConnected={isConnected} />
+      </div>
 
       {/* Live System Metrics — real per-service CPU%/mem% sampled from the
           Docker socket (or Prometheus), plotted as they arrive. Replaces the
