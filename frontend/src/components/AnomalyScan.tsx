@@ -8,10 +8,13 @@
  */
 
 import { useEffect, useState } from 'react'
-import { Activity, TrendingUp, TrendingDown, AlertTriangle } from 'lucide-react'
+import { Activity, TrendingUp, TrendingDown, AlertTriangle, Sparkles, Loader2 } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { api, type TelemetryMetricPoint } from '../lib/api'
 import { scanSeries, type Anomaly, type SeriesPoint } from '../lib/anomalyScan'
+import { useAiWidgets } from '../lib/useAiWidgets'
+import { AiGenerated } from './ui/AiGenerated'
+import { anomalyExplainPayload, reasonLabel, type AnomalyItem } from '../lib/insights'
 
 interface FlaggedPoint {
   key: string
@@ -47,6 +50,13 @@ export function AnomalyScan({ max = 6 }: { max?: number }) {
   const [hasMetrics, setHasMetrics] = useState(false)
   const [loading, setLoading] = useState(true)
 
+  // Opt-in LLM explain (Track 2 W3): the button appears only when the user has
+  // turned on AI insight widgets; it never fires on mount.
+  const ai = useAiWidgets()
+  const [explaining, setExplaining] = useState(false)
+  const [explanation, setExplanation] = useState<string | null>(null)
+  const [explainNote, setExplainNote] = useState<string | null>(null)
+
   useEffect(() => {
     let cancelled = false
     const run = async () => {
@@ -80,6 +90,27 @@ export function AnomalyScan({ max = 6 }: { max?: number }) {
   }, [])
 
   const shown = flagged.slice(0, max)
+
+  const onExplain = async () => {
+    setExplaining(true)
+    setExplainNote(null)
+    setExplanation(null)
+    try {
+      const items: AnomalyItem[] = flagged.map((f) => ({
+        series: f.series,
+        value: f.anomaly.value,
+        z: f.anomaly.z,
+        direction: f.anomaly.direction,
+      }))
+      const res = await api.insights.explain('anomaly', anomalyExplainPayload(items))
+      if (res.available && res.explanation) setExplanation(res.explanation)
+      else setExplainNote(reasonLabel(res.reason))
+    } catch {
+      setExplainNote(reasonLabel('error'))
+    } finally {
+      setExplaining(false)
+    }
+  }
 
   return (
     <div className="bg-card rounded-lg border border-border p-6">
@@ -146,6 +177,29 @@ export function AnomalyScan({ max = 6 }: { max?: number }) {
             )
           })}
         </ul>
+      )}
+
+      {ai.enabled && flagged.length > 0 && (
+        <div className="mt-4 border-t border-border/60 pt-3">
+          {explanation ? (
+            <AiGenerated>{explanation}</AiGenerated>
+          ) : (
+            <button
+              type="button"
+              onClick={() => void onExplain()}
+              disabled={explaining}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted disabled:opacity-50"
+            >
+              {explaining ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+              ) : (
+                <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+              )}
+              {explaining ? 'Explaining…' : 'Explain these anomalies'}
+            </button>
+          )}
+          {explainNote && <p className="mt-2 text-xs text-muted-foreground">{explainNote}</p>}
+        </div>
       )}
     </div>
   )
