@@ -739,6 +739,23 @@
         "title": "AgentStats",
         "type": "object"
       },
+      "AiWidgetsPrefs": {
+        "description": "The per-user opt-in state for the LLM insight widgets.",
+        "properties": {
+          "autoExplain": {
+            "default": false,
+            "title": "Autoexplain",
+            "type": "boolean"
+          },
+          "enabled": {
+            "default": false,
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "title": "AiWidgetsPrefs",
+        "type": "object"
+      },
       "AlertingConfigPublic": {
         "properties": {
           "matrix": {
@@ -2186,6 +2203,86 @@
           }
         },
         "title": "EvaluateEndpointRequest",
+        "type": "object"
+      },
+      "ExplainRequest": {
+        "description": "A request for a plain-language explanation of a widget's computed data.",
+        "properties": {
+          "kind": {
+            "default": "generic",
+            "title": "Kind",
+            "type": "string"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "title": "Payload",
+            "type": "object"
+          }
+        },
+        "title": "ExplainRequest",
+        "type": "object"
+      },
+      "ExplainResponse": {
+        "description": "Uniform result. ``available`` is false for every non-spend outcome.",
+        "properties": {
+          "available": {
+            "title": "Available",
+            "type": "boolean"
+          },
+          "explanation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Explanation"
+          },
+          "model_generated": {
+            "default": false,
+            "title": "Model Generated",
+            "type": "boolean"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "remaining": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remaining"
+          },
+          "tokens_used": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tokens Used"
+          }
+        },
+        "required": [
+          "available"
+        ],
+        "title": "ExplainResponse",
         "type": "object"
       },
       "GenerateEpisodesRequest": {
@@ -3911,6 +4008,53 @@
           "actions"
         ],
         "title": "PendingApprovals",
+        "type": "object"
+      },
+      "PreferencesResponse": {
+        "description": "Current opt-in state plus the fence budget snapshot for the UI.",
+        "properties": {
+          "aiWidgets": {
+            "$ref": "#/components/schemas/AiWidgetsPrefs"
+          },
+          "budget": {
+            "additionalProperties": true,
+            "title": "Budget",
+            "type": "object"
+          }
+        },
+        "required": [
+          "aiWidgets"
+        ],
+        "title": "PreferencesResponse",
+        "type": "object"
+      },
+      "PreferencesUpdate": {
+        "description": "Patch for the opt-in block. A null leaf leaves that field unchanged.",
+        "properties": {
+          "autoExplain": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Autoexplain"
+          },
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled"
+          }
+        },
+        "title": "PreferencesUpdate",
         "type": "object"
       },
       "ProbeResult": {
@@ -9507,6 +9651,110 @@
         "summary": "Get Services Status",
         "tags": [
           "infrastructure"
+        ]
+      }
+    },
+    "/api/v1/insights/explain": {
+      "post": {
+        "description": "Return a short, model-generated plain-language explanation of a widget's already-computed data. Opt-in and cost-fenced; degrades to a uniform available=false body when disabled, over budget, or without an endpoint.",
+        "operationId": "insights-explain",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExplainRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExplainResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Explain a widget's computed data",
+        "tags": [
+          "insights"
+        ]
+      }
+    },
+    "/api/v1/insights/preferences": {
+      "get": {
+        "description": "Return the per-user LLM insight-widget opt-in state and budget.",
+        "operationId": "insights-get_preferences",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreferencesResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get insight-widget preferences",
+        "tags": [
+          "insights"
+        ]
+      },
+      "put": {
+        "description": "Turn the opt-in LLM insight widgets on or off (per user).",
+        "operationId": "insights-put_preferences",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreferencesUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreferencesResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update insight-widget preferences",
+        "tags": [
+          "insights"
         ]
       }
     },
