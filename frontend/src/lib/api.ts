@@ -308,6 +308,50 @@ export interface ModelsTestResult {
   reasoning_agent: boolean;
 }
 
+export type AlertSeverity = 'info' | 'warning' | 'error' | 'critical';
+
+/**
+ * Remote chat alerting config (Track 1, outbound: Telegram / Matrix). Admin
+ * only. Secrets are never returned — each is reduced to a boolean `*Set` flag.
+ */
+export interface AlertingConfig {
+  telegram: {
+    enabled: boolean;
+    chatId: string;
+    tokenSet: boolean;
+    minSeverity: AlertSeverity;
+  };
+  matrix: {
+    enabled: boolean;
+    homeserver: string;
+    roomId: string;
+    accessTokenSet: boolean;
+    minSeverity: AlertSeverity;
+  };
+}
+
+/**
+ * PUT body. Token fields are write-only: omit to keep the stored secret, ''
+ * to clear it, any value to set it (encrypted server-side before it is stored).
+ */
+export interface AlertingConfigUpdate {
+  telegram: {
+    enabled: boolean;
+    chatId: string;
+    botToken?: string;
+    minSeverity: AlertSeverity;
+  };
+  matrix: {
+    enabled: boolean;
+    homeserver: string;
+    roomId: string;
+    accessToken?: string;
+    minSeverity: AlertSeverity;
+  };
+}
+
+export type AlertingChannel = 'telegram' | 'matrix';
+
 /** First-run onboarding wizard state (mirrors the backend OnboardingState). */
 export interface OnboardingState {
   completed: boolean;
@@ -1468,6 +1512,21 @@ export const api = {
       request<MonitoringProbeResult>('/settings/notifications/test-webhook', {
         method: 'POST',
         body: JSON.stringify({ url }),
+      }),
+
+    // Remote chat alerting (Settings -> Notifications -> Remote alerting).
+    // Admin only. Tokens are encrypted server-side and never returned (each is a
+    // boolean `*Set` flag). The Matrix homeserver is SSRF-guarded on the server.
+    getAlerting: () => request<AlertingConfig>('/settings/notifications/alerting'),
+    saveAlerting: (body: AlertingConfigUpdate) =>
+      request<AlertingConfig>('/settings/notifications/alerting', {
+        method: 'PUT',
+        body: JSON.stringify(body),
+      }),
+    testAlerting: (channel: AlertingChannel) =>
+      request<MonitoringProbeResult>('/settings/notifications/alerting/test', {
+        method: 'POST',
+        body: JSON.stringify({ channel }),
       }),
 
     // First-run onboarding wizard state (instance-global, own JSON file).

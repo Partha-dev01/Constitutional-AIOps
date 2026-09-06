@@ -38,7 +38,11 @@ import api, {
   ModelsConfig,
   ModelsConfigUpdate,
   ModelsTestResult,
+  AlertingConfig,
+  AlertSeverity,
+  AlertingChannel,
 } from '../lib/api'
+import { buildAlertingUpdate } from '../lib/alerting'
 import { TopologySchemaEditor } from '../components/TopologySchemaEditor'
 import { AccountSettings } from '../components/AccountSettings'
 import useAuthStore from '../lib/auth'
@@ -839,6 +843,7 @@ export function Settings() {
 
         {/* ━━ Notifications ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
         {activeTab === 'notifications' && (
+          <div className="space-y-6">
           <div className="grid gap-6 lg:grid-cols-2">
             <div className="bg-card rounded-lg border border-border p-6">
               <h2 className="text-lg font-semibold mb-4">Notification Channels</h2>
@@ -1002,6 +1007,8 @@ export function Settings() {
                 </p>
               </div>
             </div>
+          </div>
+          {isAdmin && <RemoteAlertingCard />}
           </div>
         )}
 
@@ -1928,6 +1935,397 @@ function EndpointStatusRow({
           {online ? <CheckCircle className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
           {online ? 'online' : 'offline'}
         </span>
+      </div>
+    </div>
+  )
+}
+
+// The severity floors shared by both alerting channels (mirrors the webhook select).
+const ALERT_SEVERITIES: { value: AlertSeverity; label: string }[] = [
+  { value: 'info', label: 'Info and above' },
+  { value: 'warning', label: 'Warning and above' },
+  { value: 'error', label: 'Error and above' },
+  { value: 'critical', label: 'Critical only' },
+]
+
+function SeveritySelect({
+  value,
+  onChange,
+  testId,
+}: {
+  value: AlertSeverity
+  onChange: (v: AlertSeverity) => void
+  testId?: string
+}) {
+  return (
+    <div>
+      <label className="block text-xs font-medium text-muted-foreground mb-1">Minimum severity</label>
+      <select
+        value={value}
+        data-testid={testId}
+        onChange={(e) => onChange(e.target.value as AlertSeverity)}
+        className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+      >
+        {ALERT_SEVERITIES.map((s) => (
+          <option key={s.value} value={s.value}>
+            {s.label}
+          </option>
+        ))}
+      </select>
+    </div>
+  )
+}
+
+/**
+ * Settings -> Notifications -> Remote alerting (Track 1, admin-only). Forwards
+ * fired alerts at or above a chosen severity to a Telegram chat and/or a Matrix
+ * room through the outbound adapters. Self-contained load/save/test state,
+ * mirroring LlmEndpointsCard. Bot tokens are write-only: blank keeps the stored
+ * secret, "Remove token" clears it, a value replaces it (encrypted server-side).
+ * The Test button probes the SAVED config, so save before testing edited values.
+ */
+function RemoteAlertingCard() {
+  const [cfg, setCfg] = useState<AlertingConfig | null>(null)
+
+  const [tgEnabled, setTgEnabled] = useState(false)
+  const [tgChatId, setTgChatId] = useState('')
+  const [tgToken, setTgToken] = useState('')
+  const [tgSeverity, setTgSeverity] = useState<AlertSeverity>('warning')
+
+  const [mxEnabled, setMxEnabled] = useState(false)
+  const [mxHomeserver, setMxHomeserver] = useState('')
+  const [mxRoomId, setMxRoomId] = useState('')
+  const [mxToken, setMxToken] = useState('')
+  const [mxSeverity, setMxSeverity] = useState<AlertSeverity>('warning')
+
+  const [loading, setLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [testing, setTesting] = useState<AlertingChannel | null>(null)
+  const [testResult, setTestResult] = useState<
+    Partial<Record<AlertingChannel, { ok: boolean; detail: string }>>
+  >({})
+
+  const applyConfig = (c: AlertingConfig) => {
+    setCfg(c)
+    setTgEnabled(c.telegram.enabled)
+    setTgChatId(c.telegram.chatId)
+    setTgSeverity(c.telegram.minSeverity)
+    setMxEnabled(c.matrix.enabled)
+    setMxHomeserver(c.matrix.homeserver)
+    setMxRoomId(c.matrix.roomId)
+    setMxSeverity(c.matrix.minSeverity)
+    // Tokens are never returned — always reset the write-only inputs to blank.
+    setTgToken('')
+    setMxToken('')
+  }
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      applyConfig(await api.settings.getAlerting())
+    } catch {
+      setError('Could not load remote alerting settings — admin only, and the backend must be running.')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  const persist = async (clear?: { telegram?: boolean; matrix?: boolean }) => {
+    setSaving(true)
+    setError(null)
+    setTestResult({})
+    try {
+      const body = buildAlertingUpdate(
+        {
+          enabled: tgEnabled,
+          chatId: tgChatId,
+          token: tgToken,
+          clearToken: Boolean(clear?.telegram),
+          minSeverity: tgSeverity,
+        },
+        {
+          enabled: mxEnabled,
+          homeserver: mxHomeserver,
+          roomId: mxRoomId,
+          token: mxToken,
+          clearToken: Boolean(clear?.matrix),
+          minSeverity: mxSeverity,
+        },
+      )
+      applyConfig(await api.settings.saveAlerting(body))
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2500)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Save failed — only an admin can change remote alerting.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const testChannel = async (channel: AlertingChannel) => {
+    setTesting(channel)
+    setTestResult((prev) => ({ ...prev, [channel]: undefined }))
+    try {
+      const r = await api.settings.testAlerting(channel)
+      setTestResult((prev) => ({ ...prev, [channel]: r }))
+    } catch (err) {
+      setTestResult((prev) => ({
+        ...prev,
+        [channel]: { ok: false, detail: err instanceof Error ? err.message : 'test failed' },
+      }))
+    } finally {
+      setTesting(null)
+    }
+  }
+
+  const tgTokenSet = Boolean(cfg?.telegram.tokenSet)
+  const mxTokenSet = Boolean(cfg?.matrix.accessTokenSet)
+  // A channel can only be enabled once it has its routing ids and a token
+  // (already stored, or entered now) — otherwise a save would arm a dead channel.
+  const tgIncomplete = tgEnabled && !(tgChatId.trim() && (tgTokenSet || tgToken.trim()))
+  const mxIncomplete =
+    mxEnabled && !(mxHomeserver.trim() && mxRoomId.trim() && (mxTokenSet || mxToken.trim()))
+
+  const inputClass =
+    'w-full px-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary'
+
+  return (
+    <div className="bg-card rounded-lg border border-border p-6" data-testid="remote-alerting-card">
+      <div className="flex items-center justify-between mb-1">
+        <h2 className="text-lg font-semibold flex items-center gap-2">
+          <Bell className="h-5 w-5 text-muted-foreground" />
+          Remote alerting
+        </h2>
+        {loading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+      </div>
+      <p className="text-sm text-muted-foreground mb-4">
+        Forward fired alerts at or above a chosen severity to a Telegram chat or a Matrix room.
+        Admin only. Bot tokens are encrypted at rest and never shown again.
+      </p>
+
+      {error && (
+        <div className="mb-4 flex items-start gap-2 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-500">
+          <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Telegram */}
+        <div className="space-y-3">
+          <ToggleSetting
+            label="Telegram"
+            description="Send alerts to a Telegram chat via a bot"
+            checked={tgEnabled}
+            testId="toggle-telegram-alerting"
+            onChange={setTgEnabled}
+          />
+          {tgEnabled && (
+            <div className="ml-6 space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Chat ID</label>
+                <input
+                  type="text"
+                  value={tgChatId}
+                  data-testid="telegram-chat-id"
+                  onChange={(e) => setTgChatId(e.target.value)}
+                  placeholder="123456789 or -1001234567890"
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className="flex items-center gap-1 text-xs font-medium text-muted-foreground mb-1">
+                  <KeyRound className="h-3 w-3" />
+                  Bot token {tgTokenSet && <span className="text-green-500">(set)</span>}
+                </label>
+                <input
+                  type="password"
+                  value={tgToken}
+                  data-testid="telegram-bot-token"
+                  onChange={(e) => setTgToken(e.target.value)}
+                  placeholder={tgTokenSet ? '•••••••• (leave blank to keep)' : 'From @BotFather'}
+                  autoComplete="off"
+                  className={inputClass}
+                />
+                {tgTokenSet && (
+                  <button
+                    type="button"
+                    onClick={() => persist({ telegram: true })}
+                    disabled={saving}
+                    className="mt-1 text-xs text-red-500 hover:underline disabled:opacity-50"
+                  >
+                    Remove token
+                  </button>
+                )}
+              </div>
+              <SeveritySelect value={tgSeverity} onChange={setTgSeverity} testId="telegram-severity" />
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => testChannel('telegram')}
+                  disabled={testing !== null}
+                  data-testid="telegram-test-button"
+                  className="flex items-center gap-2 px-3 py-1.5 text-sm bg-muted text-muted-foreground rounded-lg hover:bg-muted/80 disabled:opacity-50"
+                >
+                  {testing === 'telegram' ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Bell className="h-4 w-4" />
+                  )}
+                  Send test
+                </button>
+                {testResult.telegram && (
+                  <span
+                    data-testid="telegram-test-result"
+                    className={`flex items-center gap-1 text-xs ${
+                      testResult.telegram.ok ? 'text-green-600' : 'text-red-500'
+                    }`}
+                  >
+                    {testResult.telegram.ok ? (
+                      <CheckCircle className="h-3.5 w-3.5 shrink-0" />
+                    ) : (
+                      <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                    )}
+                    {testResult.telegram.detail}
+                  </span>
+                )}
+              </div>
+              {tgIncomplete && (
+                <p className="text-xs text-yellow-600">
+                  Add a chat ID and bot token to enable Telegram alerts.
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Matrix */}
+        <div className="space-y-3">
+          <ToggleSetting
+            label="Matrix"
+            description="Send alerts to a Matrix room via an access token"
+            checked={mxEnabled}
+            testId="toggle-matrix-alerting"
+            onChange={setMxEnabled}
+          />
+          {mxEnabled && (
+            <div className="ml-6 space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Homeserver URL</label>
+                <input
+                  type="url"
+                  value={mxHomeserver}
+                  data-testid="matrix-homeserver"
+                  onChange={(e) => setMxHomeserver(e.target.value)}
+                  placeholder="https://matrix.org"
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Room ID</label>
+                <input
+                  type="text"
+                  value={mxRoomId}
+                  data-testid="matrix-room-id"
+                  onChange={(e) => setMxRoomId(e.target.value)}
+                  placeholder="!roomid:matrix.org"
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className="flex items-center gap-1 text-xs font-medium text-muted-foreground mb-1">
+                  <KeyRound className="h-3 w-3" />
+                  Access token {mxTokenSet && <span className="text-green-500">(set)</span>}
+                </label>
+                <input
+                  type="password"
+                  value={mxToken}
+                  data-testid="matrix-access-token"
+                  onChange={(e) => setMxToken(e.target.value)}
+                  placeholder={mxTokenSet ? '•••••••• (leave blank to keep)' : 'Bot account access token'}
+                  autoComplete="off"
+                  className={inputClass}
+                />
+                {mxTokenSet && (
+                  <button
+                    type="button"
+                    onClick={() => persist({ matrix: true })}
+                    disabled={saving}
+                    className="mt-1 text-xs text-red-500 hover:underline disabled:opacity-50"
+                  >
+                    Remove token
+                  </button>
+                )}
+              </div>
+              <SeveritySelect value={mxSeverity} onChange={setMxSeverity} testId="matrix-severity" />
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => testChannel('matrix')}
+                  disabled={testing !== null}
+                  data-testid="matrix-test-button"
+                  className="flex items-center gap-2 px-3 py-1.5 text-sm bg-muted text-muted-foreground rounded-lg hover:bg-muted/80 disabled:opacity-50"
+                >
+                  {testing === 'matrix' ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Bell className="h-4 w-4" />
+                  )}
+                  Send test
+                </button>
+                {testResult.matrix && (
+                  <span
+                    data-testid="matrix-test-result"
+                    className={`flex items-center gap-1 text-xs ${
+                      testResult.matrix.ok ? 'text-green-600' : 'text-red-500'
+                    }`}
+                  >
+                    {testResult.matrix.ok ? (
+                      <CheckCircle className="h-3.5 w-3.5 shrink-0" />
+                    ) : (
+                      <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                    )}
+                    {testResult.matrix.detail}
+                  </span>
+                )}
+              </div>
+              {mxIncomplete && (
+                <p className="text-xs text-yellow-600">
+                  Add a homeserver, room ID and access token to enable Matrix alerts.
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-6 flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={() => persist()}
+          disabled={saving || tgIncomplete || mxIncomplete}
+          data-testid="save-alerting"
+          className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
+        >
+          {saving ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : saved ? (
+            <CheckCircle className="h-4 w-4" />
+          ) : (
+            <Save className="h-4 w-4" />
+          )}
+          {saved ? 'Saved!' : 'Save alerting'}
+        </button>
+        <p className="text-xs text-muted-foreground">
+          Send test uses the last saved config — save before testing edited values.
+        </p>
       </div>
     </div>
   )
