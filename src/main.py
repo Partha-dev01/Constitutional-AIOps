@@ -11,10 +11,12 @@ import asyncio
 import hmac
 import logging
 import os
+import re
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.routing import APIRoute
 
 from src.config import config
 from src.utils.logging import setup_logging
@@ -449,6 +451,24 @@ _DOCS_ENABLED = (not _IS_PRODUCTION) or os.getenv(
 # at /api/* to pressure memory. Overridable via env; defaults to 10MB.
 _MAX_API_BODY_BYTES = max(1, int(os.getenv("MAX_API_BODY_MB", "10"))) * 1024 * 1024
 
+# Readable OpenAPI operation IDs (Track 3-A). Generated SDK/client method names
+# derive from operationId; the FastAPI default (name+path+method) reads badly in a
+# client (e.g. list_incidents_api_v1_incidents__get). "<tag>-<function>" gives
+# clean, stable names the SDK generators turn into tag.function calls. Untagged
+# app-level routes (docs, favicon, health probes) keep a sanitized name+path+method
+# id so the schema always builds and every id stays unique. Function names are
+# unique within each tag (the only shared tag, "graph", has disjoint names), so no
+# duplicate ids are produced.
+def _readable_operation_id(route: APIRoute) -> str:
+    if route.tags:
+        return f"{route.tags[0]}-{route.name}"
+    operation_id = re.sub(r"\W", "_", f"{route.name}{route.path_format}")
+    methods = sorted(route.methods or [])
+    if methods:
+        operation_id = f"{operation_id}_{methods[0].lower()}"
+    return operation_id
+
+
 # Create FastAPI application
 app = FastAPI(
     title="Constitutional AIOps",
@@ -463,6 +483,7 @@ app = FastAPI(
     docs_url=None,
     redoc_url=None,
     openapi_url="/openapi.json" if _DOCS_ENABLED else None,
+    generate_unique_id_function=_readable_operation_id,
 )
 
 
