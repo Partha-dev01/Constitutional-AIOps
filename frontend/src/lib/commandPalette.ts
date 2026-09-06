@@ -22,8 +22,10 @@ export interface PaletteCommand {
   group?: string
   /** Extra search terms not shown as the title (synonyms), low weight. */
   keywords?: string[]
-  /** Router path to navigate to on select. */
-  href: string
+  /** Router path to navigate to on select. Omit when `action` is set. */
+  href?: string
+  /** Run on select instead of navigating (e.g. open a modal). Takes priority. */
+  action?: () => void
 }
 
 /**

@@ -23,6 +23,7 @@ import {
   Bell,
   Laptop,
   Search,
+  Keyboard,
 } from 'lucide-react'
 import { cn } from '../lib/utils'
 import api, { HealthResponse, isComponentHealthy } from '../lib/api'
@@ -31,6 +32,7 @@ import { useMediaQuery } from '../hooks/useMediaQuery'
 import { SetupNudge } from './SetupNudge'
 import { DEMO_MODE } from '../lib/demo/flag'
 import { CommandPalette } from './CommandPalette'
+import { ShortcutsHelp } from './ShortcutsHelp'
 import type { PaletteCommand } from '../lib/commandPalette'
 
 interface LayoutProps {
@@ -102,9 +104,10 @@ export function Layout({ children }: LayoutProps) {
   // Command palette (Cmd/Ctrl-K) — quick-nav over the same pages the user can
   // see in the sidebar. Depends only on isAdmin, so memoize on that.
   const [paletteOpen, setPaletteOpen] = useState(false)
+  const [helpOpen, setHelpOpen] = useState(false)
   const paletteCommands = useMemo<PaletteCommand[]>(
-    () =>
-      navigation
+    () => [
+      ...navigation
         .filter((item) => !item.adminOnly || isAdmin)
         .map((item) => ({
           id: item.href,
@@ -113,6 +116,14 @@ export function Layout({ children }: LayoutProps) {
           keywords: NAV_KEYWORDS[item.href],
           href: item.href,
         })),
+      {
+        id: 'shortcuts',
+        title: 'Keyboard shortcuts',
+        group: 'Help',
+        keywords: ['keys', 'hotkeys', 'help'],
+        action: () => setHelpOpen(true),
+      },
+    ],
     [isAdmin],
   )
   const shortcutLabel =
@@ -176,6 +187,26 @@ export function Layout({ children }: LayoutProps) {
         event.preventDefault()
         setPaletteOpen((prev) => !prev)
       }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
+
+  // "?" opens the keyboard-shortcuts help — but not while typing in a field.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== '?' || event.metaKey || event.ctrlKey || event.altKey) return
+      const el = document.activeElement as HTMLElement | null
+      if (
+        el &&
+        (el.tagName === 'INPUT' ||
+          el.tagName === 'TEXTAREA' ||
+          el.isContentEditable)
+      ) {
+        return
+      }
+      event.preventDefault()
+      setHelpOpen(true)
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
@@ -443,6 +474,14 @@ export function Layout({ children }: LayoutProps) {
           </button>
           <img src="/logo-mark.png" alt="" aria-hidden="true" className="h-6 w-6 shrink-0" />
           <span className="truncate text-sm font-semibold">Constitutional AIOps</span>
+          <button
+            type="button"
+            onClick={() => setHelpOpen(true)}
+            aria-label="Keyboard shortcuts"
+            className="ml-auto flex items-center justify-center rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+          >
+            <Keyboard className="h-5 w-5" aria-hidden="true" />
+          </button>
         </div>
 
         <main className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
@@ -456,6 +495,8 @@ export function Layout({ children }: LayoutProps) {
         onClose={() => setPaletteOpen(false)}
         commands={paletteCommands}
       />
+
+      <ShortcutsHelp open={helpOpen} onClose={() => setHelpOpen(false)} />
     </div>
   )
 }
