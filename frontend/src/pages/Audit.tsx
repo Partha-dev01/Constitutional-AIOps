@@ -15,6 +15,7 @@ import api from '../lib/api'
 import type { AuditEvent } from '../lib/api'
 import { useAuthStore } from '../lib/auth'
 import { ExportMenu } from '../components/ui/ExportMenu'
+import { SkeletonBars } from '../components/ui/Skeleton'
 import type { ExportColumn } from '../lib/exportTable'
 
 const DAY_OPTIONS = [
@@ -219,9 +220,7 @@ export function Audit() {
       )}
 
       {loading ? (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 className="h-8 w-8 motion-safe:animate-spin text-muted-foreground" aria-hidden="true" />
-        </div>
+        <SkeletonBars count={6} />
       ) : events.length > 0 ? (
         <div className="overflow-x-auto rounded-lg border border-border bg-card">
           <table className="w-full min-w-[820px] text-sm">

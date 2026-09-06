@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import {
   Network,
   RefreshCw,
@@ -267,7 +268,7 @@ export function Telemetry() {
               <p className="text-sm">No logs available</p>
               <p className="text-xs mt-1 text-center px-4">
                 Add a Loki endpoint or enable the local Docker socket source in{' '}
-                <a href="/settings" className="text-primary hover:underline">Settings → Telemetry</a>
+                <Link to="/settings" className="text-primary hover:underline">Settings → Telemetry</Link>
               </p>
             </div>
           )}
@@ -295,7 +296,7 @@ export function Telemetry() {
             <p className="text-sm">No metrics available</p>
             <p className="text-xs mt-1 px-4">
               Add a Prometheus endpoint or enable the local Docker socket source in{' '}
-              <a href="/settings" className="text-primary hover:underline">Settings → Telemetry</a>
+              <Link to="/settings" className="text-primary hover:underline">Settings → Telemetry</Link>
             </p>
           </div>
         )}

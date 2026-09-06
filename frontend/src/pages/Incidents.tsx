@@ -7,6 +7,7 @@ import { ActiveIncidentsPanel } from '../components/incidents/ActiveIncidentsPan
 import { Modal } from '../components/ui/Modal'
 import { useToast } from '../components/ui/toast'
 import { ExportMenu } from '../components/ui/ExportMenu'
+import { SkeletonCards } from '../components/ui/Skeleton'
 import type { ExportColumn } from '../lib/exportTable'
 
 /** Confidence (0-1) as a percent, guarding absent/NaN so the UI never shows "NaN%" (ISS-104). */
@@ -271,10 +272,7 @@ export function Incidents() {
       {/* Incidents List */}
       <div className="space-y-4">
         {loading ? (
-          <div className="flex items-center justify-center p-8">
-            <Loader2 className="h-8 w-8 motion-safe:animate-spin text-muted-foreground" aria-hidden="true" />
-            <span className="sr-only">Loading incidents…</span>
-          </div>
+          <SkeletonCards count={4} />
         ) : filteredIncidents.length === 0 ? (
           <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-8">
             <div className="flex flex-col items-center text-center">
