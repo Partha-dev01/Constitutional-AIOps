@@ -17,6 +17,10 @@ import { ApprovalTicker } from '../components/ApprovalTicker'
 import { BlastRadiusPreview } from '../components/BlastRadiusPreview'
 import { WhatChangedDiff } from '../components/WhatChangedDiff'
 import { AnomalyScan } from '../components/AnomalyScan'
+import { IncidentNarrative } from '../components/IncidentNarrative'
+import { LearnedRunbook } from '../components/LearnedRunbook'
+import { narrativeFromEvent } from '../lib/incidentNarrative'
+import type { NarrativeEntry } from '../lib/incidentNarrative'
 
 interface ServiceStatus {
   name: string
@@ -61,6 +65,9 @@ export function Dashboard() {
   // first, built only from real WebSocket events — nothing fabricated.
   const [activity, setActivity] = useState<ActivityItem[]>([])
   const [pending, setPending] = useState<TickerItem[]>([])
+  // Live incident-lifecycle stages, kept oldest-first so groupByIncident renders
+  // each incident's timeline in order and the most-recently-active one first.
+  const [narrative, setNarrative] = useState<NarrativeEntry[]>([])
 
   // Live per-service CPU%/mem% (Docker-socket source on the lite tier). Polls on
   // its own 5s cadence and accumulates a rolling client-side window.
@@ -80,6 +87,11 @@ export function Dashboard() {
     const item = describeEvent(event)
     if (item) {
       setActivity((prev) => [item, ...prev].slice(0, RECENT_ACTIVITY_LIMIT))
+    }
+    const stage = narrativeFromEvent(event)
+    if (stage) {
+      // Append (oldest-first) and keep the most recent entries.
+      setNarrative((prev) => [...prev, stage].slice(-60))
     }
     fetchData()
   }, [])
@@ -308,6 +320,14 @@ export function Dashboard() {
         <BlastRadiusPreview />
         <WhatChangedDiff />
         <AnomalyScan />
+      </div>
+
+      {/* Live incident narrative (event-triggered, fed from the WS handler above)
+          + learned runbook (ranked from real action history). Both no-LLM and
+          both empty on a quiet / fresh system. */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <IncidentNarrative items={narrative} />
+        <LearnedRunbook />
       </div>
 
       {/* Live System Metrics — real per-service CPU%/mem% sampled from the
