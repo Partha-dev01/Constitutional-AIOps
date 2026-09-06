@@ -1,4 +1,4 @@
-import { ReactNode, useState, useEffect, useCallback } from 'react'
+import { ReactNode, useState, useEffect, useCallback, useMemo } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard,
@@ -22,6 +22,7 @@ import {
   ScrollText,
   Bell,
   Laptop,
+  Search,
 } from 'lucide-react'
 import { cn } from '../lib/utils'
 import api, { HealthResponse, isComponentHealthy } from '../lib/api'
@@ -29,6 +30,8 @@ import { useAuthStore } from '../lib/auth'
 import { useMediaQuery } from '../hooks/useMediaQuery'
 import { SetupNudge } from './SetupNudge'
 import { DEMO_MODE } from '../lib/demo/flag'
+import { CommandPalette } from './CommandPalette'
+import type { PaletteCommand } from '../lib/commandPalette'
 
 interface LayoutProps {
   children: ReactNode
@@ -62,6 +65,27 @@ const navigation: NavItem[] = [
   { name: 'Docs', href: '/guide', icon: BookOpen, group: 'Admin' },
 ]
 
+// Extra search synonyms for the command palette so an intent word finds the
+// right page even when it is not part of the visible label.
+const NAV_KEYWORDS: Record<string, string[]> = {
+  '/': ['home', 'overview'],
+  '/console': ['operate', 'control', 'command center'],
+  '/incidents': ['alerts', 'issues', 'problems'],
+  '/chat': ['assistant', 'ask', 'copilot'],
+  '/local-chat': ['webllm', 'browser', 'offline', 'local model'],
+  '/telemetry': ['logs', 'traces', 'signals'],
+  '/metrics': ['charts', 'performance', 'latency'],
+  '/graph': ['topology', 'episodic', 'memory'],
+  '/infrastructure': ['services', 'hosts', 'containers'],
+  '/agents': ['models', 'llm'],
+  '/mcp': ['tools', 'model context protocol'],
+  '/benchmark': ['evaluation', 'accuracy', 'results'],
+  '/settings': ['config', 'preferences', 'account', 'byok', 'api key'],
+  '/notifications': ['alerting', 'webhook', 'telegram', 'matrix'],
+  '/audit': ['history', 'events', 'log'],
+  '/guide': ['docs', 'help', 'documentation'],
+}
+
 const SIDEBAR_COLLAPSED_KEY = 'aiops.sidebar.collapsed'
 
 export function Layout({ children }: LayoutProps) {
@@ -74,6 +98,27 @@ export function Layout({ children }: LayoutProps) {
   // AUTH off (authRequired=false) => synthetic admin; otherwise gate on role.
   const isAdmin = !authRequired || user?.role === 'admin'
   const visibleNav = navigation.filter((item) => !item.adminOnly || isAdmin)
+
+  // Command palette (Cmd/Ctrl-K) — quick-nav over the same pages the user can
+  // see in the sidebar. Depends only on isAdmin, so memoize on that.
+  const [paletteOpen, setPaletteOpen] = useState(false)
+  const paletteCommands = useMemo<PaletteCommand[]>(
+    () =>
+      navigation
+        .filter((item) => !item.adminOnly || isAdmin)
+        .map((item) => ({
+          id: item.href,
+          title: item.name,
+          group: item.group,
+          keywords: NAV_KEYWORDS[item.href],
+          href: item.href,
+        })),
+    [isAdmin],
+  )
+  const shortcutLabel =
+    typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.userAgent)
+      ? '⌘K'
+      : 'Ctrl K'
 
   // ≥ md (768px) → static column (full or icon-rail). < md → off-canvas drawer.
   const isDesktop = useMediaQuery('(min-width: 768px)')
@@ -123,6 +168,18 @@ export function Layout({ children }: LayoutProps) {
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [mobileOpen])
+
+  // Cmd/Ctrl-K toggles the command palette from anywhere in the app.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && (event.key === 'k' || event.key === 'K')) {
+        event.preventDefault()
+        setPaletteOpen((prev) => !prev)
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
 
   // Fetch health status periodically
   useEffect(() => {
@@ -224,6 +281,27 @@ export function Layout({ children }: LayoutProps) {
 
       {/* Navigation */}
       <div className="flex-1 space-y-1 overflow-y-auto p-3">
+        {/* Command palette opener (keyboard: Cmd/Ctrl-K) */}
+        <button
+          type="button"
+          onClick={() => setPaletteOpen(true)}
+          title={`Search pages (${shortcutLabel})`}
+          aria-label="Open command palette"
+          className={cn(
+            'mb-1 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground',
+            isRail && 'justify-center',
+          )}
+        >
+          <Search className="h-5 w-5 shrink-0" aria-hidden="true" />
+          {!isRail && (
+            <>
+              <span className="truncate">Search</span>
+              <kbd className="ml-auto rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                {shortcutLabel}
+              </kbd>
+            </>
+          )}
+        </button>
         {visibleNav.map((item, idx) => {
           const isActive = location.pathname === item.href
           const showGroupLabel = !isRail && (idx === 0 || visibleNav[idx - 1].group !== item.group)
@@ -372,6 +450,12 @@ export function Layout({ children }: LayoutProps) {
           {children}
         </main>
       </div>
+
+      <CommandPalette
+        open={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+        commands={paletteCommands}
+      />
     </div>
   )
 }
