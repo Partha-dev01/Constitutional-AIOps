@@ -17,13 +17,14 @@ which would require python-multipart — absent from the minimal CI install).
 import logging
 import os
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
+from src.auth import pat
 from src.auth import signup as signup_mod
 from src.auth import store
 from src.auth.deps import (
@@ -170,8 +171,29 @@ class SelfPasswordChangeRequest(BaseModel):
     new_password: str = Field(..., min_length=1, max_length=512)
 
 
+class TokenCreateRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100)
+    expires_in_days: Optional[int] = Field(None, ge=1, le=365)
+
+
+# Cap per user so a compromised/looping client cannot mint tokens without bound.
+MAX_ACCESS_TOKENS_PER_USER = 20
+
+
 def _public_user(username: str, role: str) -> dict[str, str]:
     return {"username": username, "role": role}
+
+
+def _public_token(record: store.AccessTokenRecord) -> dict[str, Any]:
+    """Serialise a token WITHOUT the secret (never leaves create-time)."""
+    return {
+        "id": record.id,
+        "name": record.name,
+        "prefix": record.prefix,
+        "created_at": record.created_at,
+        "last_used_at": record.last_used_at,
+        "expires_at": record.expires_at,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -283,6 +305,79 @@ async def change_own_password(
         )
     logger.info("User %s changed their own password", user.username)
     return {"ok": True}
+
+
+# ---------------------------------------------------------------------------
+# Personal access tokens (Track 3): self-service API credentials
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/tokens",
+    summary="List your access tokens",
+    description="Return the caller's personal access tokens (never the secret).",
+)
+async def list_tokens(user: User = Depends(require_user)) -> dict[str, Any]:
+    user = coerce_user(user)
+    if is_synthetic(user):
+        # Tokens are inert while AUTH_REQUIRED is off (require_user never checks
+        # them), so present an empty set rather than a confusing error.
+        return {"items": [], "total": 0}
+    items = store.list_access_tokens(user.id)
+    return {"items": [_public_token(t) for t in items], "total": len(items)}
+
+
+@router.post(
+    "/tokens",
+    status_code=status.HTTP_201_CREATED,
+    summary="Create an access token",
+    description="Mint a personal access token. The secret is returned ONCE and never again.",
+)
+async def create_token(
+    body: TokenCreateRequest, user: User = Depends(require_user)
+) -> dict[str, Any]:
+    user = coerce_user(user)
+    if is_synthetic(user):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Access tokens require authentication to be enabled.",
+        )
+    name = body.name.strip()
+    if not name:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Token name must not be empty",
+        )
+    if store.count_access_tokens(user.id) >= MAX_ACCESS_TOKENS_PER_USER:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Token limit reached ({MAX_ACCESS_TOKENS_PER_USER}). Revoke one first.",
+        )
+    plaintext, token_hash, prefix = pat.generate()
+    expires_at: Optional[str] = None
+    if body.expires_in_days:
+        expires_at = (
+            datetime.now(timezone.utc) + timedelta(days=body.expires_in_days)
+        ).isoformat()
+    record = store.create_access_token(user.id, name, token_hash, prefix, expires_at)
+    logger.info("User %s created access token %s (%s)", user.username, record.id, name)
+    return {**_public_token(record), "token": plaintext}
+
+
+@router.delete(
+    "/tokens/{token_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Revoke an access token",
+)
+async def revoke_token(token_id: str, user: User = Depends(require_user)) -> None:
+    user = coerce_user(user)
+    if is_synthetic(user):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+    if not store.delete_access_token(user.id, token_id):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Token not found"
+        )
+    logger.info("User %s revoked access token %s", user.username, token_id)
 
 
 @router.get(

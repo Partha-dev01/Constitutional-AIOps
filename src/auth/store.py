@@ -51,6 +51,25 @@ class UserRecord:
     email_verified: bool = False
 
 
+@dataclass(frozen=True)
+class AccessTokenRecord:
+    """A personal access token row. Only the SHA-256 of the token is stored.
+
+    The plaintext token is shown to the user exactly once at creation and never
+    persisted. ``prefix`` is a non-secret display fragment so the owner can tell
+    their tokens apart in a listing.
+    """
+
+    id: str
+    user_id: str
+    name: str
+    token_hash: str
+    prefix: str
+    created_at: str
+    last_used_at: Optional[str] = None
+    expires_at: Optional[str] = None
+
+
 def data_dir() -> Path:
     """Return the app data directory (AIOPS_DATA_DIR env or repo-local ./data)."""
     base = os.environ.get("AIOPS_DATA_DIR") or os.path.join(
@@ -106,6 +125,24 @@ def init_db() -> None:
             conn.execute(
                 "ALTER TABLE users ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 0"
             )
+        # Personal access tokens (Track 3). Only the SHA-256 hash is stored.
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS access_tokens (
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL REFERENCES users(id),
+                name TEXT NOT NULL,
+                token_hash TEXT NOT NULL UNIQUE,
+                prefix TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                last_used_at TEXT,
+                expires_at TEXT
+            )
+            """
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_access_tokens_user ON access_tokens(user_id)"
+        )
 
 
 def _row_to_record(row: sqlite3.Row) -> UserRecord:
@@ -119,6 +156,19 @@ def _row_to_record(row: sqlite3.Row) -> UserRecord:
         created_at=row["created_at"],
         email=row["email"] if "email" in keys else None,
         email_verified=bool(row["email_verified"]) if "email_verified" in keys else False,
+    )
+
+
+def _row_to_access_token(row: sqlite3.Row) -> AccessTokenRecord:
+    return AccessTokenRecord(
+        id=row["id"],
+        user_id=row["user_id"],
+        name=row["name"],
+        token_hash=row["token_hash"],
+        prefix=row["prefix"],
+        created_at=row["created_at"],
+        last_used_at=row["last_used_at"],
+        expires_at=row["expires_at"],
     )
 
 
@@ -195,6 +245,19 @@ def get_by_email(email: str) -> Optional[UserRecord]:
     return _row_to_record(row) if row else None
 
 
+def get_by_id(user_id: str) -> Optional[UserRecord]:
+    """Look up a user by primary-key id. None when absent."""
+    user_id = (user_id or "").strip()
+    if not user_id:
+        return None
+    init_db()
+    with closing(_connect()) as conn:
+        row = conn.execute(
+            "SELECT * FROM users WHERE id = ?", (user_id,)
+        ).fetchone()
+    return _row_to_record(row) if row else None
+
+
 def mark_email_verified(user_id: str) -> bool:
     """Flag a user's email as verified. Returns False when the id is unknown."""
     init_db()
@@ -220,11 +283,12 @@ def count_users() -> int:
 
 
 def delete_user(username: str) -> bool:
-    """Delete a user (and their settings row). Returns False when not found."""
+    """Delete a user (and their settings + access tokens). False when absent."""
     record = get_by_username(username)
     if record is None:
         return False
     with closing(_connect()) as conn, conn:
+        conn.execute("DELETE FROM access_tokens WHERE user_id = ?", (record.id,))
         conn.execute("DELETE FROM user_settings WHERE user_id = ?", (record.id,))
         conn.execute("DELETE FROM users WHERE id = ?", (record.id,))
     return True
@@ -304,6 +368,102 @@ def set_user_settings(user_id: str, settings: dict[str, Any]) -> None:
         )
 
 
+# ---------------------------------------------------------------------------
+# Personal access tokens (Track 3)
+# ---------------------------------------------------------------------------
+
+
+def create_access_token(
+    user_id: str,
+    name: str,
+    token_hash: str,
+    prefix: str,
+    expires_at: Optional[str] = None,
+) -> AccessTokenRecord:
+    """Persist a new access token (hash only). Raises ValueError on a hash clash."""
+    record = AccessTokenRecord(
+        id=uuid.uuid4().hex,
+        user_id=user_id,
+        name=name,
+        token_hash=token_hash,
+        prefix=prefix,
+        created_at=datetime.now(timezone.utc).isoformat(),
+        last_used_at=None,
+        expires_at=expires_at,
+    )
+    init_db()
+    try:
+        with closing(_connect()) as conn, conn:
+            conn.execute(
+                "INSERT INTO access_tokens (id, user_id, name, token_hash, prefix,"
+                " created_at, last_used_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    record.id,
+                    record.user_id,
+                    record.name,
+                    record.token_hash,
+                    record.prefix,
+                    record.created_at,
+                    record.last_used_at,
+                    record.expires_at,
+                ),
+            )
+    except sqlite3.IntegrityError as exc:  # pragma: no cover - astronomically rare
+        raise ValueError("Token hash collision; retry") from exc
+    return record
+
+
+def list_access_tokens(user_id: str) -> list[AccessTokenRecord]:
+    """Return a user's access tokens (newest first). Never includes plaintext."""
+    init_db()
+    with closing(_connect()) as conn:
+        rows = conn.execute(
+            "SELECT * FROM access_tokens WHERE user_id = ? ORDER BY created_at DESC",
+            (user_id,),
+        ).fetchall()
+    return [_row_to_access_token(r) for r in rows]
+
+
+def count_access_tokens(user_id: str) -> int:
+    init_db()
+    with closing(_connect()) as conn:
+        (count,) = conn.execute(
+            "SELECT COUNT(*) FROM access_tokens WHERE user_id = ?", (user_id,)
+        ).fetchone()
+    return int(count)
+
+
+def get_access_token_by_hash(token_hash: str) -> Optional[AccessTokenRecord]:
+    init_db()
+    with closing(_connect()) as conn:
+        row = conn.execute(
+            "SELECT * FROM access_tokens WHERE token_hash = ?", (token_hash,)
+        ).fetchone()
+    return _row_to_access_token(row) if row else None
+
+
+def touch_access_token(token_id: str, when_iso: str) -> None:
+    """Best-effort last_used_at update (swallows errors; never blocks a request)."""
+    try:
+        with closing(_connect()) as conn, conn:
+            conn.execute(
+                "UPDATE access_tokens SET last_used_at = ? WHERE id = ?",
+                (when_iso, token_id),
+            )
+    except sqlite3.Error:  # pragma: no cover - best-effort telemetry only
+        logger.debug("Could not update last_used_at for token %s", token_id)
+
+
+def delete_access_token(user_id: str, token_id: str) -> bool:
+    """Delete one of the user's own tokens. False when it is not theirs/absent."""
+    with closing(_connect()) as conn, conn:
+        cur = conn.execute(
+            "DELETE FROM access_tokens WHERE id = ? AND user_id = ?",
+            (token_id, user_id),
+        )
+    return cur.rowcount > 0
+
+
 def ensure_initial_admin() -> Optional[UserRecord]:
     """Bootstrap the first admin from env on an EMPTY users table.
 
@@ -332,21 +492,29 @@ def ensure_initial_admin() -> Optional[UserRecord]:
 
 
 __all__ = [
+    "AccessTokenRecord",
     "UserRecord",
     "VALID_ROLES",
     "authenticate",
     "bump_token_version",
+    "count_access_tokens",
     "count_users",
+    "create_access_token",
     "create_user",
     "data_dir",
+    "delete_access_token",
     "delete_user",
     "ensure_initial_admin",
+    "get_access_token_by_hash",
     "get_by_email",
+    "get_by_id",
     "get_by_username",
     "get_user_settings",
     "init_db",
+    "list_access_tokens",
     "list_users",
     "mark_email_verified",
     "set_password",
     "set_user_settings",
+    "touch_access_token",
 ]
