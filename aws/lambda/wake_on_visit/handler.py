@@ -11,6 +11,15 @@ behavior routes here. So plain visits and crawlers hitting `/` never reach this
 Lambda and never wake the box -- only a deliberate launch does. As defense in
 depth, an automated/absent User-Agent is refused here BEFORE StartInstances.
 
+A second CloudFront behavior, `/prewarm`, points at this SAME function (T4 smart
+pre-warm). The marketing page fires it in the background at most once per session
+on genuine human intent (real dwell + interaction, never on load, never from a
+bot) so the box is already booting by the time the visitor clicks launch. Pre-
+warm starts a STOPPED box and returns 202 immediately -- no holding page, no DNS
+change, no redirect; anything already running/pending is a no-op. Only a
+stopped->start transition costs anything, so a stray hit self-heals via idle-stop.
+The `/launch` behavior is unchanged by this.
+
 On each (human) /launch request:
 
   * bot / no UA        -> 403, no wake (never touches EC2).
@@ -108,7 +117,18 @@ _BOT_UA_MARKERS = (
     "java/", "okhttp", "headless", "scrapy", "httpclient",
 )
 
-_ec2 = boto3.client("ec2")
+# Created lazily on first use rather than at import, so the module imports
+# cleanly where no AWS region/credentials are configured (e.g. unit tests) and a
+# cold start pays for the client only once a request actually arrives.
+_ec2 = None
+
+
+def _get_ec2():
+    global _ec2
+    if _ec2 is None:
+        _ec2 = boto3.client("ec2")
+    return _ec2
+
 
 # Warm-context cache: the last IP we confirmed into DNS. While the execution
 # environment is reused, a matching IP means DNS is already correct, so we skip
@@ -375,10 +395,79 @@ def _handle_running(instance: dict, next_path: str = "") -> dict:
     )
 
 
+def _request_path(event) -> str:
+    """The request path for a Function URL (payload v2.0). CloudFront forwards the
+    matched behavior's path through unchanged, so /launch stays /launch and
+    /prewarm stays /prewarm. Falls back across event shapes; empty if unknown."""
+    if not isinstance(event, dict):
+        return ""
+    raw = event.get("rawPath")
+    if isinstance(raw, str) and raw:
+        return raw
+    rc = event.get("requestContext") or {}
+    http = rc.get("http") if isinstance(rc, dict) else None
+    if isinstance(http, dict) and isinstance(http.get("path"), str):
+        return http["path"]
+    return ""
+
+
+def _is_prewarm(event) -> bool:
+    """True when this hit came in on the dedicated /prewarm CloudFront behavior
+    (which points at this same function). Any path ending in /prewarm counts."""
+    return _request_path(event).rstrip("/").endswith("/prewarm")
+
+
+def _prewarm_response(status: str) -> dict:
+    """202 with a tiny JSON body. The marketing page ignores the body; the status
+    is only for logs / manual curling."""
+    return {
+        "statusCode": 202,
+        "headers": {
+            "Content-Type": "application/json; charset=utf-8",
+            "Cache-Control": "no-store",
+            "X-Robots-Tag": "noindex, nofollow",
+        },
+        "body": json.dumps({"status": status}),
+    }
+
+
+def _handle_prewarm(event) -> dict:
+    """Silent early start: if the box is STOPPED, start it and return 202
+    "warming"; otherwise a 202 no-op. Never serves a holding page, never touches
+    DNS, never redirects -- the visitor is still on the marketing page and only a
+    real /launch click owns the hand-off. Bots are refused before any EC2 call,
+    exactly like /launch, and only a stopped->start transition costs anything, so
+    a stray/spoofed hit self-heals via idle-stop. Best-effort: any error is
+    swallowed to a benign 202 so a background ping never surfaces a 5xx."""
+    if _looks_like_bot(_user_agent(event)):
+        return _refuse_bot()
+    try:
+        resp = _get_ec2().describe_instances(InstanceIds=[_INSTANCE_ID])
+        reservations = resp.get("Reservations", [])
+        instances = reservations[0]["Instances"] if reservations else []
+        if not instances:
+            return _prewarm_response("unknown")
+        state = instances[0]["State"]["Name"]
+        if state == "stopped":
+            _get_ec2().start_instances(InstanceIds=[_INSTANCE_ID])
+            return _prewarm_response("warming")
+        # running / pending / stopping / etc. -> nothing to do, no cost.
+        return _prewarm_response(state)
+    except Exception as exc:  # noqa: BLE001
+        print(f"prewarm: skipped ({exc})")
+        return _prewarm_response("unknown")
+
+
 def handler(event, context):  # noqa: ARG001 - Lambda signature
     if not _INSTANCE_ID:
         return {"statusCode": 500, "headers": {"Content-Type": "text/plain"},
                 "body": "TARGET_INSTANCE_ID not configured"}
+
+    # A /prewarm hit is a silent early-start ping on its own CloudFront behavior
+    # (same function). Handle + return before the /launch holding-page path so
+    # /launch behavior is untouched.
+    if _is_prewarm(event):
+        return _handle_prewarm(event)
 
     # Only genuine human intent wakes the box. CloudFront routes only /launch
     # here; refuse crawlers/scanners before any EC2 call so bots never wake it.
@@ -388,7 +477,7 @@ def handler(event, context):  # noqa: ARG001 - Lambda signature
     # Optional same-origin path to land on after wake (e.g. /launch?next=/docs).
     nxt = _safe_next(event)
 
-    resp = _ec2.describe_instances(InstanceIds=[_INSTANCE_ID])
+    resp = _get_ec2().describe_instances(InstanceIds=[_INSTANCE_ID])
     reservations = resp.get("Reservations", [])
     instances = reservations[0]["Instances"] if reservations else []
     if not instances:
@@ -405,7 +494,7 @@ def handler(event, context):  # noqa: ARG001 - Lambda signature
         # Only start from a fully-stopped state (can't start while "stopping").
         # A failure here becomes a holding page, never a 500 in the visitor's face.
         try:
-            _ec2.start_instances(InstanceIds=[_INSTANCE_ID])
+            _get_ec2().start_instances(InstanceIds=[_INSTANCE_ID])
         except Exception:  # noqa: BLE001
             pass
         return _holding_page("Waking the app…",
