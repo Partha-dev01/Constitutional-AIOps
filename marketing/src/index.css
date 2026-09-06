@@ -181,3 +181,21 @@ body {
     opacity: 0.6;
   }
 }
+
+/* ---------------------------------------------------------------------------
+ * Cross-page (MPA) view transitions: a subtle root cross-fade on same-origin
+ * navigation between the marketing pages (landing <-> Architecture/Features/
+ * Benchmark/Use-cases/FAQ/Open-source). Pure progressive enhancement — the
+ * at-rule is ignored where unsupported (the navigation is instant, as today),
+ * needs zero JS and zero deps, and is disabled under reduced-motion.
+ * ------------------------------------------------------------------------- */
+@view-transition {
+  navigation: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
+  }
+}
