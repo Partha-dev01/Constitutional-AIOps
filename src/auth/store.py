@@ -143,6 +143,20 @@ def init_db() -> None:
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_access_tokens_user ON access_tokens(user_id)"
         )
+        # Per-user LLM usage ledger (cost-fence-D). One row per user per UTC day;
+        # tokens/requests accumulate. Read by src/cost/fence.py to enforce a
+        # daily spend budget on autonomous surfaces (the inbound ChatOps relay).
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS llm_usage (
+                user_id TEXT NOT NULL,
+                day TEXT NOT NULL,
+                tokens INTEGER NOT NULL DEFAULT 0,
+                requests INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY (user_id, day)
+            )
+            """
+        )
 
 
 def _row_to_record(row: sqlite3.Row) -> UserRecord:
@@ -289,6 +303,7 @@ def delete_user(username: str) -> bool:
         return False
     with closing(_connect()) as conn, conn:
         conn.execute("DELETE FROM access_tokens WHERE user_id = ?", (record.id,))
+        conn.execute("DELETE FROM llm_usage WHERE user_id = ?", (record.id,))
         conn.execute("DELETE FROM user_settings WHERE user_id = ?", (record.id,))
         conn.execute("DELETE FROM users WHERE id = ?", (record.id,))
     return True
@@ -464,6 +479,62 @@ def delete_access_token(user_id: str, token_id: str) -> bool:
     return cur.rowcount > 0
 
 
+# ---------------------------------------------------------------------------
+# Per-user LLM usage ledger (cost-fence-D)
+# ---------------------------------------------------------------------------
+
+
+def _utc_day(when: Optional[datetime] = None) -> str:
+    """UTC calendar day as ``YYYY-MM-DD`` (the ledger's per-user bucket key)."""
+    return (when or datetime.now(timezone.utc)).strftime("%Y-%m-%d")
+
+
+def add_llm_usage(user_id: str, tokens: int, *, day: Optional[str] = None) -> None:
+    """Add ``tokens`` (and one request) to a user's tally for a UTC day.
+
+    Best-effort: usage accounting must never break a served request, so any DB
+    error is swallowed. A non-int/negative ``tokens`` is coerced to 0 so a bad
+    estimate cannot drive a counter backwards or corrupt the ledger.
+    """
+    try:
+        tok = int(tokens)
+    except (TypeError, ValueError):
+        tok = 0
+    if tok < 0:
+        tok = 0
+    bucket = day or _utc_day()
+    if not user_id:
+        return
+    try:
+        init_db()
+        with closing(_connect()) as conn, conn:
+            conn.execute(
+                "INSERT INTO llm_usage (user_id, day, tokens, requests)"
+                " VALUES (?, ?, ?, 1)"
+                " ON CONFLICT(user_id, day) DO UPDATE SET"
+                " tokens = tokens + excluded.tokens, requests = requests + 1",
+                (user_id, bucket, tok),
+            )
+    except sqlite3.Error:  # pragma: no cover - best-effort accounting
+        logger.debug("Could not record llm usage for user %s", user_id)
+
+
+def llm_usage_today(user_id: str, *, day: Optional[str] = None) -> tuple[int, int]:
+    """Return ``(tokens, requests)`` a user spent on a UTC day; ``(0, 0)`` when none."""
+    bucket = day or _utc_day()
+    if not user_id:
+        return (0, 0)
+    init_db()
+    with closing(_connect()) as conn:
+        row = conn.execute(
+            "SELECT tokens, requests FROM llm_usage WHERE user_id = ? AND day = ?",
+            (user_id, bucket),
+        ).fetchone()
+    if row is None:
+        return (0, 0)
+    return (int(row["tokens"]), int(row["requests"]))
+
+
 def ensure_initial_admin() -> Optional[UserRecord]:
     """Bootstrap the first admin from env on an EMPTY users table.
 
@@ -495,6 +566,7 @@ __all__ = [
     "AccessTokenRecord",
     "UserRecord",
     "VALID_ROLES",
+    "add_llm_usage",
     "authenticate",
     "bump_token_version",
     "count_access_tokens",
@@ -513,6 +585,7 @@ __all__ = [
     "init_db",
     "list_access_tokens",
     "list_users",
+    "llm_usage_today",
     "mark_email_verified",
     "set_password",
     "set_user_settings",
