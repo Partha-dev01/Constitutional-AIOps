@@ -70,6 +70,8 @@ const DEFAULT_NOTIFICATIONS: NotificationSettings = {
   slackEnabled: false,
   webhookEnabled: false,
   webhookUrl: '',
+  webhookSecret: '',
+  webhookMinSeverity: 'warning',
   notifyOnCritical: true,
   notifyOnApproval: true,
   notifyOnResolution: false,
@@ -877,6 +879,44 @@ export function Settings() {
                       placeholder="https://example.com/webhook"
                       className="w-full px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
                     />
+                    <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Minimum severity</label>
+                        <select
+                          value={notifications.webhookMinSeverity}
+                          data-testid="webhook-severity-select"
+                          onChange={(e) =>
+                            setNotifications({
+                              ...notifications,
+                              webhookMinSeverity: e.target
+                                .value as NotificationSettings['webhookMinSeverity'],
+                            })
+                          }
+                          className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                        >
+                          <option value="info">Info and above</option>
+                          <option value="warning">Warning and above</option>
+                          <option value="error">Error and above</option>
+                          <option value="critical">Critical only</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">
+                          Signing secret <span className="text-muted-foreground">(optional)</span>
+                        </label>
+                        <input
+                          type="password"
+                          value={notifications.webhookSecret}
+                          data-testid="webhook-secret-input"
+                          onChange={(e) =>
+                            setNotifications({ ...notifications, webhookSecret: e.target.value })
+                          }
+                          placeholder="Leave blank for unsigned"
+                          autoComplete="off"
+                          className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                        />
+                      </div>
+                    </div>
                     {isAdmin && (
                       <div className="mt-2 flex flex-wrap items-center gap-2">
                         <button
@@ -911,8 +951,9 @@ export function Settings() {
                       </div>
                     )}
                     <p className="mt-2 text-xs text-muted-foreground">
-                      Sends a sample JSON payload to this URL from the server. Public
-                      URLs only.
+                      Alerts at or above the chosen severity are POSTed to this URL as
+                      they fire. With a secret set, each delivery carries an{' '}
+                      <code>X-AIOPS-Signature: sha256=…</code> HMAC header. Public URLs only.
                     </p>
                   </div>
                 )}
@@ -955,7 +996,8 @@ export function Settings() {
                 <p className="font-semibold mb-1">Status</p>
                 <p>
                   Channel toggles and event preferences are persisted via{' '}
-                  <code>/api/v1/settings/</code>. Actual delivery (SMTP / Slack webhook) requires
+                  <code>/api/v1/settings/</code>. Webhook delivery is active: enabled webhooks
+                  receive alerts server-side. Email / Slack delivery still needs
                   environment-variable configuration on the server.
                 </p>
               </div>

@@ -12,11 +12,9 @@ Endpoints:
   POST /api/v1/settings/reset     → wipe persisted file, return defaults
 """
 
-import ipaddress
 import json
 import logging
 import os
-import socket
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal, Optional
@@ -32,6 +30,7 @@ from src.auth import user_llm
 from src.auth.crypto import decrypt_secret, encrypt_secret
 from src.auth.deps import User, coerce_user, is_synthetic, require_user
 from src.notifications.store import notify
+from src.notifications.webhook import webhook_target_error as _webhook_target_error
 
 logger = logging.getLogger(__name__)
 
@@ -96,6 +95,8 @@ DEFAULT_SETTINGS: dict[str, Any] = {
         "slackEnabled": False,
         "webhookEnabled": False,
         "webhookUrl": "",
+        "webhookSecret": "",
+        "webhookMinSeverity": "warning",
         "notifyOnCritical": True,
         "notifyOnApproval": True,
         "notifyOnResolution": False,
@@ -191,6 +192,11 @@ class NotificationSettingsModel(BaseModel):
     slackEnabled: bool = False
     webhookEnabled: bool = False
     webhookUrl: str = ""
+    # Optional shared secret: when set, deliveries carry an
+    # X-AIOPS-Signature: sha256=<hmac> header the recipient can verify.
+    webhookSecret: str = ""
+    # Only deliver notifications at or above this severity (info drops nothing).
+    webhookMinSeverity: Literal["info", "warning", "error", "critical"] = "warning"
     notifyOnCritical: bool = True
     notifyOnApproval: bool = True
     notifyOnResolution: bool = False
@@ -959,40 +965,8 @@ class WebhookTestRequest(BaseModel):
     url: str = Field(..., min_length=1)
 
 
-def _webhook_target_error(url: str) -> Optional[str]:
-    """Return an error string if ``url`` is not a safe public http(s) target.
-
-    None means the target looks safe to POST to. This resolves the host and
-    rejects any address in a non-public range. (A determined attacker could
-    still DNS-rebind between this check and the connect; the admin gate is the
-    primary control and this is defense-in-depth.)
-    """
-    parsed = urlparse(url)
-    if parsed.scheme not in ("http", "https"):
-        return "URL must start with http:// or https://"
-    host = parsed.hostname
-    if not host:
-        return "URL has no host"
-    port = parsed.port or (443 if parsed.scheme == "https" else 80)
-    try:
-        infos = socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)
-    except socket.gaierror:
-        return "host does not resolve"
-    for info in infos:
-        try:
-            ip = ipaddress.ip_address(info[4][0])
-        except ValueError:
-            continue
-        if (
-            ip.is_loopback
-            or ip.is_private
-            or ip.is_link_local
-            or ip.is_reserved
-            or ip.is_multicast
-            or ip.is_unspecified
-        ):
-            return "refusing to send to a non-public address"
-    return None
+# The SSRF guard is shared with the notification delivery path
+# (src.notifications.webhook), imported above as _webhook_target_error.
 
 
 @router.post(
