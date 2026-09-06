@@ -88,6 +88,23 @@ services:
       - LOKI_URL=${LOKI_URL:-}
       - PROMETHEUS_URL=${PROMETHEUS_URL:-}
       - TEMPO_URL=${TEMPO_URL:-}
+      # --- Track 1 inbound ChatOps relay (OFF unless AIOPS_RELAY_HMAC_SECRET set) ---
+      # The always-on relay Lambda forwards Telegram messages to /api/v1/relay/inbound
+      # over this shared HMAC secret; the box drains any queued-while-asleep messages
+      # at boot (scripts/relay_drain.py). RELAY_BINDINGS_TABLE lets the box mirror its
+      # opted-in bindings to DynamoDB. All empty by default so the relay endpoint stays
+      # inert (503) on a plain self-host. AWS_REGION lets boto3 in the container find
+      # the mirror table (creds come from the instance role via IMDS).
+      - AIOPS_RELAY_HMAC_SECRET=${AIOPS_RELAY_HMAC_SECRET:-}
+      - RELAY_QUEUE_URL=${RELAY_QUEUE_URL:-}
+      - RELAY_BINDINGS_TABLE=${RELAY_BINDINGS_TABLE:-}
+      - AWS_REGION=${AWS_REGION:-}
+      # --- Per-user LLM spend fence (cost-fence-D; OFF by default) ---
+      # A daily per-user token ceiling for autonomous surfaces (chiefly the relay).
+      # Empty/false = unlimited, so hosted and self-host behave identically until an
+      # operator opts in; a per-user costFence override lives in user_settings.
+      - AIOPS_COST_FENCE_ENABLED=${AIOPS_COST_FENCE_ENABLED:-}
+      - AIOPS_COST_FENCE_DAILY_TOKENS=${AIOPS_COST_FENCE_DAILY_TOKENS:-}
       # --- App ---
       - ENVIRONMENT=${ENVIRONMENT:-production}
       - DEBUG=false
