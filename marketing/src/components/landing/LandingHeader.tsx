@@ -7,8 +7,9 @@ import { APP_URL, SHOW_SELFHOST } from '../../config'
 // landing. Docs is now its own page (/docs.html), not an in-page anchor.
 const ANCHORS = [
   { href: '/#features', label: 'Features' },
-  { href: '/#architecture', label: 'Architecture' },
+  { href: '/architecture.html', label: 'Architecture' },
   { href: '/safety.html', label: 'Safety' },
+  { href: '/benchmark.html', label: 'Benchmark' },
   { href: '/#live', label: 'Live demo' },
   { href: '/docs.html', label: 'Docs' },
   ...(SHOW_SELFHOST ? [{ href: '/#self-host', label: 'Self-host' }] : []),

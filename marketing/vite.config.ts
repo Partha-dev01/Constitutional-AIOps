@@ -20,12 +20,18 @@ export default defineConfig({
     outDir: 'dist',
     sourcemap: true,
     rollupOptions: {
-      // Two static entries: the landing (index.html) and the standalone docs
-      // page (docs.html). Both emit to dist/ and upload to S3.
+      // Static entries: the landing (index.html) plus each standalone content
+      // page. All emit to dist/ and upload to S3.
       input: {
         main: path.resolve(__dirname, 'index.html'),
         docs: path.resolve(__dirname, 'docs.html'),
         safety: path.resolve(__dirname, 'safety.html'),
+        architecture: path.resolve(__dirname, 'architecture.html'),
+        features: path.resolve(__dirname, 'features.html'),
+        benchmark: path.resolve(__dirname, 'benchmark.html'),
+        usecases: path.resolve(__dirname, 'usecases.html'),
+        faq: path.resolve(__dirname, 'faq.html'),
+        opensource: path.resolve(__dirname, 'opensource.html'),
       },
     },
   },
