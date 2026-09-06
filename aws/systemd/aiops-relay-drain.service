@@ -1,0 +1,20 @@
+# aiops-relay-drain.service - boot-time SQS drain for inbound ChatOps (Track 1 T1d).
+# The relay Lambda queues messages that arrive while the box is asleep; on wake,
+# this oneshot drains them into the local backend /relay/inbound and then EXITS,
+# so the box stays free to idle-stop again. Best-effort: a failed POST leaves the
+# message on the queue (visibility timeout) for a later boot. Reads RELAY_QUEUE_URL
+# + AIOPS_RELAY_HMAC_SECRET from the box .env (EnvironmentFile). Adjust the two
+# paths to the box's deploy dir (/home/ubuntu/aiops on the lite box).
+[Unit]
+Description=Constitutional AIOps - inbound relay SQS drain (boot-time, oneshot)
+After=docker.service aiops-app.service network-online.target
+Wants=network-online.target
+ConditionPathExists=/home/ubuntu/aiops/scripts/relay_drain.py
+
+[Service]
+Type=oneshot
+EnvironmentFile=/home/ubuntu/aiops/.env
+ExecStart=/usr/bin/python3 /home/ubuntu/aiops/scripts/relay_drain.py
+
+[Install]
+WantedBy=multi-user.target
