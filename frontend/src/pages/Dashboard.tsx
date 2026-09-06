@@ -1,7 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Activity, AlertTriangle, CheckCircle, Clock, RefreshCw, Loader2, Wifi, WifiOff, Server, Container } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { formatDistanceToNow } from 'date-fns'
+import { Activity, AlertTriangle, CheckCircle, Clock, RefreshCw, Loader2, Wifi, WifiOff, Server, Container, History } from 'lucide-react'
 import api, { DashboardStats, HealthResponse, ModelsConfig, isComponentHealthy } from '../lib/api'
 import { useWebSocket, EventType } from '../lib/websocket'
+import type { WebSocketEvent } from '../lib/websocket'
+import { describeEvent, RECENT_ACTIVITY_LIMIT } from '../lib/activity'
+import type { ActivityItem } from '../lib/activity'
 import { useContainerStats } from '../hooks/useContainerStats'
 import type { ContainerStatsState } from '../hooks/useContainerStats'
 import { Sparkline } from '../components/viz/Sparkline'
@@ -45,6 +50,9 @@ export function Dashboard() {
   const [error, setError] = useState<string | null>(null)
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date())
   const [services, setServices] = useState<ServiceStatus[]>([])
+  // Live event feed for the Recent Activity widget (Track 2). Bounded, newest
+  // first, built only from real WebSocket events — nothing fabricated.
+  const [activity, setActivity] = useState<ActivityItem[]>([])
 
   // Live per-service CPU%/mem% (Docker-socket source on the lite tier). Polls on
   // its own 5s cadence and accumulates a rolling client-side window.
@@ -59,8 +67,12 @@ export function Dashboard() {
     },
   })
 
-  // Refresh data on WebSocket events
-  const refreshOnEvent = useCallback(() => {
+  // Refresh data AND prepend to the live activity feed on each event.
+  const handleEvent = useCallback((event: WebSocketEvent) => {
+    const item = describeEvent(event)
+    if (item) {
+      setActivity((prev) => [item, ...prev].slice(0, RECENT_ACTIVITY_LIMIT))
+    }
     fetchData()
   }, [])
 
@@ -74,19 +86,22 @@ export function Dashboard() {
       EventType.INCIDENT_RESOLVED,
       EventType.ACTION_CREATED,
       EventType.ACTION_APPROVED,
+      EventType.ACTION_REJECTED,
       EventType.ACTION_EXECUTED,
+      EventType.ACTION_FAILED,
       EventType.RCA_COMPLETED,
+      EventType.REMEDIATION_PLANNED,
       EventType.ALERT,
     ]
 
     eventTypes.forEach((eventType) => {
-      unsubscribers.push(subscribe(eventType, refreshOnEvent))
+      unsubscribers.push(subscribe(eventType, handleEvent))
     })
 
     return () => {
       unsubscribers.forEach((unsub) => unsub())
     }
-  }, [subscribe, refreshOnEvent])
+  }, [subscribe, handleEvent])
 
   const fetchData = async () => {
     setLoading(true)
@@ -235,12 +250,12 @@ export function Dashboard() {
                 Review and approve pending remediation actions
               </p>
             </div>
-            <a
-              href="/incidents?status=pending"
+            <Link
+              to="/incidents?status=pending"
               className="ml-auto px-4 py-2 bg-yellow-500 text-white rounded-lg text-sm font-medium hover:bg-yellow-600"
             >
               Review Actions
-            </a>
+            </Link>
           </div>
         </div>
       )}
@@ -264,6 +279,10 @@ export function Dashboard() {
           stats={agentMetrics?.reasoning_agent}
         />
       </div>
+
+      {/* Recent Activity — a live, event-triggered feed built from real
+          WebSocket events as they arrive. Empty until the system raises one. */}
+      <RecentActivity items={activity} isConnected={isConnected} />
 
       {/* Live System Metrics — real per-service CPU%/mem% sampled from the
           Docker socket (or Prometheus), plotted as they arrive. Replaces the
@@ -319,7 +338,7 @@ export function Dashboard() {
               <Server className="h-8 w-8 mx-auto mb-2 opacity-50" />
               <p className="text-sm">No services being monitored</p>
               <p className="text-xs mt-1">
-                Go to <a href="/agents" className="text-primary hover:underline">Agent Hub → Infrastructure</a> to select containers to monitor
+                Go to <Link to="/agents" className="text-primary hover:underline">Agent Hub → Infrastructure</Link> to select containers to monitor
               </p>
             </div>
           )}
@@ -412,11 +431,81 @@ function LiveMetricsBand({
               <p className="text-sm">No live metrics yet</p>
               <p className="mt-1 text-xs">
                 Enable the local Docker socket source in{' '}
-                <a href="/settings" className="text-primary hover:underline">Settings → Telemetry</a>, or connect Prometheus.
+                <Link to="/settings" className="text-primary hover:underline">Settings → Telemetry</Link>, or connect Prometheus.
               </p>
             </>
           )}
         </div>
+      )}
+    </div>
+  )
+}
+
+/** Relative "3 minutes ago" label, guarding against an unparseable timestamp. */
+function relativeTime(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  return formatDistanceToNow(d, { addSuffix: true })
+}
+
+/**
+ * Event-triggered activity feed. Renders the bounded list the Dashboard builds
+ * from live WebSocket events. Purely presentational — an empty feed is the
+ * honest state on a quiet system.
+ */
+function RecentActivity({ items, isConnected }: { items: ActivityItem[]; isConnected: boolean }) {
+  const dot: Record<ActivityItem['severity'], string> = {
+    info: 'bg-blue-500',
+    success: 'bg-green-500',
+    warning: 'bg-yellow-500',
+    error: 'bg-red-500',
+  }
+  return (
+    <div className="bg-card rounded-lg border border-border p-6">
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="text-lg font-semibold flex items-center gap-2">
+          <History className="h-5 w-5" />
+          Recent Activity
+        </h2>
+        {isConnected && items.length > 0 && (
+          <span className="text-xs text-green-500 flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+            Live
+          </span>
+        )}
+      </div>
+      {items.length === 0 ? (
+        <div className="py-8 text-center text-muted-foreground">
+          <History className="h-8 w-8 mx-auto mb-2 opacity-50" />
+          <p className="text-sm">No recent activity</p>
+          <p className="text-xs mt-1">
+            Events appear here in real time as the system raises incidents, actions, and analyses.
+          </p>
+        </div>
+      ) : (
+        <ul className="space-y-2">
+          {items.map((item) => (
+            <li
+              key={item.id}
+              className="flex items-center gap-3 rounded-lg border border-border/60 bg-muted/30 px-3 py-2"
+            >
+              <span className={`h-2 w-2 shrink-0 rounded-full ${dot[item.severity]}`} />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium">{item.label}</p>
+                {item.detail && (
+                  <p className="truncate text-xs text-muted-foreground">{item.detail}</p>
+                )}
+              </div>
+              <time
+                className="shrink-0 text-xs text-muted-foreground"
+                dateTime={item.at}
+                title={new Date(item.at).toLocaleString()}
+              >
+                {relativeTime(item.at)}
+              </time>
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   )
