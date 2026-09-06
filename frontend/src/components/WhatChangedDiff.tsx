@@ -15,9 +15,13 @@ import {
   PlusCircle,
   MinusCircle,
   ArrowRight,
+  Sparkles,
 } from 'lucide-react'
 import { api } from '../lib/api'
 import { diffSnapshots, type Snapshot, type SnapshotDiff } from '../lib/whatChanged'
+import { useAiWidgets } from '../lib/useAiWidgets'
+import { AiGenerated } from './ui/AiGenerated'
+import { reasonLabel } from '../lib/insights'
 
 type Phase = 'loading' | 'baseline' | 'diffed' | 'error'
 
@@ -59,6 +63,12 @@ export function WhatChangedDiff() {
   const [diff, setDiff] = useState<SnapshotDiff | null>(null)
   const [busy, setBusy] = useState(false)
 
+  // Opt-in LLM explain (Track 2 W3): on-demand only, never on mount.
+  const ai = useAiWidgets()
+  const [explaining, setExplaining] = useState(false)
+  const [explanation, setExplanation] = useState<string | null>(null)
+  const [explainNote, setExplainNote] = useState<string | null>(null)
+
   useEffect(() => {
     let alive = true
     void captureSnapshot().then((snap) => {
@@ -83,6 +93,9 @@ export function WhatChangedDiff() {
       setDiff(diffSnapshots(prev, next))
       baseline.current = next
       setPhase('diffed')
+      // A fresh diff invalidates any prior explanation.
+      setExplanation(null)
+      setExplainNote(null)
     } else if (!baseline.current) {
       // First capture never succeeded — surface the honest error state.
       setPhase('error')
@@ -92,6 +105,31 @@ export function WhatChangedDiff() {
   }
 
   const count = diff ? diffCount(diff) : 0
+
+  const onExplain = async () => {
+    if (!diff) return
+    setExplaining(true)
+    setExplainNote(null)
+    setExplanation(null)
+    try {
+      const payload = {
+        newIncidents: diff.addedIncidents.map((i) => label(i.id, i.title)).slice(0, 8),
+        clearedIncidents: diff.removedIncidents.map((i) => label(i.id, i.title)).slice(0, 8),
+        statusChanges: diff.statusChanges
+          .map((c) => `${label(c.id, c.title)}: ${c.from} -> ${c.to}`)
+          .slice(0, 8),
+        servicesAdded: diff.addedServices.slice(0, 10),
+        servicesRemoved: diff.removedServices.slice(0, 10),
+      }
+      const res = await api.insights.explain('diff', payload)
+      if (res.available && res.explanation) setExplanation(res.explanation)
+      else setExplainNote(reasonLabel(res.reason))
+    } catch {
+      setExplainNote(reasonLabel('error'))
+    } finally {
+      setExplaining(false)
+    }
+  }
 
   return (
     <div className="bg-card rounded-lg border border-border p-6">
@@ -160,6 +198,29 @@ export function WhatChangedDiff() {
           />
           <DiffGroup title="Services added" tone="added" items={diff.addedServices} />
           <DiffGroup title="Services removed" tone="removed" items={diff.removedServices} />
+        </div>
+      )}
+
+      {ai.enabled && diff && diff.changed && (
+        <div className="mt-4 border-t border-border/60 pt-3">
+          {explanation ? (
+            <AiGenerated>{explanation}</AiGenerated>
+          ) : (
+            <button
+              type="button"
+              onClick={() => void onExplain()}
+              disabled={explaining}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted disabled:opacity-50"
+            >
+              {explaining ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+              ) : (
+                <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+              )}
+              {explaining ? 'Explaining…' : 'Explain what changed'}
+            </button>
+          )}
+          {explainNote && <p className="mt-2 text-xs text-muted-foreground">{explainNote}</p>}
         </div>
       )}
     </div>
