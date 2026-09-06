@@ -14,6 +14,9 @@ import { useContainerStats } from '../hooks/useContainerStats'
 import type { ContainerStatsState } from '../hooks/useContainerStats'
 import { Sparkline } from '../components/viz/Sparkline'
 import { ApprovalTicker } from '../components/ApprovalTicker'
+import { BlastRadiusPreview } from '../components/BlastRadiusPreview'
+import { WhatChangedDiff } from '../components/WhatChangedDiff'
+import { AnomalyScan } from '../components/AnomalyScan'
 
 interface ServiceStatus {
   name: string
@@ -295,6 +298,16 @@ export function Dashboard() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <ApprovalTicker items={pending} now={lastRefresh.getTime()} />
         <RecentActivity items={activity} isConnected={isConnected} />
+      </div>
+
+      {/* No-LLM insight widgets (Track 2): client-side views over live data —
+          downstream blast radius, a what-changed diff, and a z-score anomaly
+          scan. Each fetches its own data and degrades to an honest empty state
+          on a fresh / empty instance. */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <BlastRadiusPreview />
+        <WhatChangedDiff />
+        <AnomalyScan />
       </div>
 
       {/* Live System Metrics — real per-service CPU%/mem% sampled from the
