@@ -54,6 +54,8 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import Any
 
+from src.tools.registry import TOOLS
+
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -114,137 +116,19 @@ class ToolSpec:
         return [str(r) for r in req] if isinstance(req, list) else []
 
 
-# The 9 tools, schemas copied to match tools.py's ToolInfo declarations exactly.
-_TOOL_SPECS: tuple[ToolSpec, ...] = (
+# The 9 tools are declared ONCE in ``src/tools/registry.py``. The agent catalogue
+# projects each registry entry into a ToolSpec: the agent-facing wording
+# (``agent_description``, which for action tools carries the "queues for human
+# approval" guidance), the lean executor-honored parameter schema, and the action
+# flag. Adding or editing a tool happens in the registry, never here.
+_TOOL_SPECS: tuple[ToolSpec, ...] = tuple(
     ToolSpec(
-        name="find_similar",
-        description="Find similar past incidents from Neo4j episodic memory (top-k similar incidents).",
-        parameters={
-            "type": "object",
-            "properties": {
-                "title": {"type": "string", "description": "Incident title / search text"},
-                "category": {"type": "string", "description": "Incident category"},
-                "affected_services": {"type": "array", "items": {"type": "string"}},
-                "limit": {"type": "integer", "default": 5},
-            },
-            "required": ["title"],
-        },
-    ),
-    ToolSpec(
-        name="get_dependencies",
-        description="Get a service's upstream/downstream dependency graph from Neo4j for impact analysis.",
-        parameters={
-            "type": "object",
-            "properties": {
-                "service_name": {"type": "string", "description": "Service to analyze"},
-                "depth": {"type": "integer", "default": 2, "description": "Traversal depth"},
-            },
-            "required": ["service_name"],
-        },
-    ),
-    ToolSpec(
-        name="analyze_logs",
-        description="Analyze logs from Loki for a service: counts, top error patterns, samples.",
-        parameters={
-            "type": "object",
-            "properties": {
-                "service_name": {"type": "string", "description": "Service to analyze"},
-                "time_range_minutes": {"type": "integer", "default": 30},
-                "log_level": {"type": "string", "enum": ["all", "error", "warn", "info"], "default": "error"},
-            },
-            "required": ["service_name"],
-        },
-    ),
-    ToolSpec(
-        name="analyze_time_series_anomaly",
-        description="Z-score statistical anomaly detection over a service's Prometheus metrics.",
-        parameters={
-            "type": "object",
-            "properties": {
-                "service_name": {"type": "string", "description": "Service to analyze"},
-                "metric_name": {"type": "string", "description": "Specific PromQL metric (optional)"},
-                "time_range_minutes": {"type": "integer", "default": 60},
-            },
-            "required": ["service_name"],
-        },
-    ),
-    ToolSpec(
-        name="query_recent_logs",
-        description="Query recent raw log entries from Loki for a service within a time window.",
-        parameters={
-            "type": "object",
-            "properties": {
-                "service": {"type": "string", "description": "Service name (use 'all' for all)"},
-                "time_range_minutes": {"type": "integer", "default": 15},
-                "limit": {"type": "integer", "default": 50},
-                "query": {"type": "string", "description": "Optional LogQL query override"},
-            },
-            "required": ["service"],
-        },
-    ),
-    ToolSpec(
-        name="query_metric",
-        description="Query Prometheus metrics for a service over a time range.",
-        parameters={
-            "type": "object",
-            "properties": {
-                "service": {"type": "string", "description": "Service name"},
-                "time_range_minutes": {"type": "integer", "default": 30},
-                "metrics": {"type": "array", "items": {"type": "string"}, "description": "Optional PromQL queries"},
-            },
-            "required": ["service"],
-        },
-    ),
-    ToolSpec(
-        name="list_containers",
-        description="List Docker containers and their status (running / stopped / health).",
-        parameters={
-            "type": "object",
-            "properties": {
-                "all_containers": {"type": "boolean", "default": False, "description": "Include stopped containers"},
-                "name_filter": {"type": "string", "description": "Optional substring filter on container name"},
-            },
-            "required": [],
-        },
-    ),
-    ToolSpec(
-        name="restart_service",
-        description=(
-            "Restart a whitelisted Docker container. ACTION tool — gated by "
-            "AIOPS_ENABLE_ACTION_TOOLS and the constitutional validator. Calling "
-            "it QUEUES the restart for human approval (it does not run "
-            "immediately); tell the user to approve or reject the proposed action."
-        ),
-        parameters={
-            "type": "object",
-            "properties": {
-                "service_name": {"type": "string", "description": "Service to restart (whitelisted, default nextcloud)"},
-                "graceful": {"type": "boolean", "default": True},
-                "reason": {"type": "string", "description": "Reason for restart (audited)"},
-            },
-            "required": ["service_name", "reason"],
-        },
-        is_action=True,
-    ),
-    ToolSpec(
-        name="scale_service",
-        description=(
-            "Scale a whitelisted Docker Compose service (replicas clamped 0-5). "
-            "ACTION tool — gated by AIOPS_ENABLE_ACTION_TOOLS and the validator. "
-            "Calling it QUEUES the scaling for human approval (it does not run "
-            "immediately); tell the user to approve or reject the proposed action."
-        ),
-        parameters={
-            "type": "object",
-            "properties": {
-                "service_name": {"type": "string", "description": "Service to scale (whitelisted, default nextcloud)"},
-                "target_replicas": {"type": "integer", "minimum": 0, "maximum": 5},
-                "reason": {"type": "string", "description": "Reason for scaling (audited)"},
-            },
-            "required": ["service_name", "target_replicas", "reason"],
-        },
-        is_action=True,
-    ),
+        name=meta.name,
+        description=meta.agent_description,
+        parameters=meta.parameters,
+        is_action=meta.is_action,
+    )
+    for meta in TOOLS
 )
 
 TOOL_SPECS_BY_NAME: dict[str, ToolSpec] = {spec.name: spec for spec in _TOOL_SPECS}
