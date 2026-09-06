@@ -6,10 +6,11 @@
 # this is backed by a `noai, noimageai` <meta> tag and an enforced X-Robots-Tag
 # response header at the edge (see marketing/index.html + CloudFront/Caddy).
 
-# --- Ordinary crawlers: allowed, except the box-wake trigger ---
+# --- Ordinary crawlers: allowed, except the box-wake triggers ---
 User-agent: *
 Allow: /
 Disallow: /launch
+Disallow: /prewarm
 
 # --- AI training / dataset / scraper crawlers: fully disallowed ---
 # AI bots look for a rule naming their own token before falling back to `*`, so
