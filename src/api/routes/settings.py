@@ -1058,6 +1058,9 @@ class TelegramAlertingUpdate(BaseModel):
     # Write-only: None leaves the stored token, "" clears it, any value sets it.
     botToken: Optional[str] = None
     minSeverity: _SEVERITY = "warning"
+    # Inbound ChatOps (T1d). routingId + webhookSecret are generated server-side
+    # when this is first enabled, so the client only sends the toggle.
+    inboundEnabled: bool = False
 
 
 class MatrixAlertingUpdate(BaseModel):
@@ -1078,6 +1081,9 @@ class TelegramAlertingPublic(BaseModel):
     chatId: str = ""
     tokenSet: bool = False
     minSeverity: _SEVERITY = "warning"
+    inboundEnabled: bool = False
+    routingId: str = ""
+    webhookSecretSet: bool = False
 
 
 class MatrixAlertingPublic(BaseModel):
@@ -1163,6 +1169,16 @@ async def save_alerting(
     _require_alerting_admin(user, "change remote alerting settings")
     new_alerting = alert_config.apply_update(_load_alerting_stored(user), body.model_dump())
     _save_alerting_stored(user, new_alerting)
+    # Push the inbound-relay binding mirror to DynamoDB so the off-box Lambda can
+    # authenticate + resolve without waking the box. Best-effort and a no-op until
+    # the relay is provisioned (RELAY_BINDINGS_TABLE set), so it never affects the
+    # response on a normal box.
+    try:
+        from src.alerting import relay_mirror
+
+        relay_mirror.sync()
+    except Exception as exc:  # noqa: BLE001 - the mirror must never break a save
+        logger.debug("relay mirror sync skipped: %s", exc)
     return AlertingConfigPublic(**alert_config.public_view(new_alerting))
 
 

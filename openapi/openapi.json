@@ -756,8 +756,11 @@
             "default": {
               "chatId": "",
               "enabled": false,
+              "inboundEnabled": false,
               "minSeverity": "warning",
-              "tokenSet": false
+              "routingId": "",
+              "tokenSet": false,
+              "webhookSecretSet": false
             }
           }
         },
@@ -780,6 +783,7 @@
             "default": {
               "chatId": "",
               "enabled": false,
+              "inboundEnabled": false,
               "minSeverity": "warning"
             }
           }
@@ -4778,6 +4782,11 @@
             "title": "Enabled",
             "type": "boolean"
           },
+          "inboundEnabled": {
+            "default": false,
+            "title": "Inboundenabled",
+            "type": "boolean"
+          },
           "minSeverity": {
             "default": "warning",
             "enum": [
@@ -4789,9 +4798,19 @@
             "title": "Minseverity",
             "type": "string"
           },
+          "routingId": {
+            "default": "",
+            "title": "Routingid",
+            "type": "string"
+          },
           "tokenSet": {
             "default": false,
             "title": "Tokenset",
+            "type": "boolean"
+          },
+          "webhookSecretSet": {
+            "default": false,
+            "title": "Webhooksecretset",
             "type": "boolean"
           }
         },
@@ -4819,6 +4838,11 @@
           "enabled": {
             "default": false,
             "title": "Enabled",
+            "type": "boolean"
+          },
+          "inboundEnabled": {
+            "default": false,
+            "title": "Inboundenabled",
             "type": "boolean"
           },
           "minSeverity": {
@@ -10219,6 +10243,25 @@
         "summary": "Reset Single Prompt",
         "tags": [
           "prompts"
+        ]
+      }
+    },
+    "/api/v1/relay/inbound": {
+      "post": {
+        "operationId": "relay-relay_inbound",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Relay Inbound",
+        "tags": [
+          "relay"
         ]
       }
     },

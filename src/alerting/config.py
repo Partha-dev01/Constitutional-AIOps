@@ -21,6 +21,8 @@ null-leaves / ``""``-clears / value-sets convention the models BYOK key uses.
 from __future__ import annotations
 
 import logging
+import secrets
+import uuid
 from typing import Any, Iterable, NamedTuple, Optional
 
 from src.auth import store as user_store
@@ -166,6 +168,11 @@ def public_view(alerting: Any) -> dict[str, Any]:
             "chatId": str(tg.get("chatId") or ""),
             "tokenSet": bool((tg.get("botToken") or "").strip()),
             "minSeverity": _norm_sev(tg.get("minSeverity")),
+            # Inbound ChatOps (T1d): routingId is non-secret (it is the opaque
+            # webhook path the UI shows); webhookSecret stays a boolean flag.
+            "inboundEnabled": bool(tg.get("inboundEnabled")),
+            "routingId": str(tg.get("routingId") or ""),
+            "webhookSecretSet": bool((tg.get("webhookSecret") or "").strip()),
         },
         "matrix": {
             "enabled": bool(mx.get("enabled")),
@@ -182,6 +189,29 @@ def _apply_secret(stored: dict[str, Any], key: str, incoming: Optional[str]) -> 
     if incoming is None:
         return str(stored.get(key) or "")  # leave the previously stored ciphertext
     return encrypt_secret(incoming)  # "" -> "" (cleared); any value -> enc::v1::…
+
+
+def _telegram_inbound_fields(tg_old: dict[str, Any], inbound_enabled: bool) -> dict[str, Any]:
+    """Resolve the inbound-ChatOps fields for the telegram block.
+
+    ``routingId`` (opaque webhook path) and ``webhookSecret`` (the value Telegram
+    echoes as ``X-Telegram-Bot-Api-Secret-Token``) are generated server-side the
+    first time inbound is enabled and then kept stable, so toggling inbound off
+    and on reuses the same webhook URL. They persist even while inbound is off, so
+    an admin can flip it back without re-registering the Telegram webhook.
+    """
+    routing_id = str(tg_old.get("routingId") or "").strip()
+    webhook_secret = str(tg_old.get("webhookSecret") or "")  # stored (encrypted)
+    if inbound_enabled:
+        if not routing_id:
+            routing_id = uuid.uuid4().hex
+        if not webhook_secret:
+            webhook_secret = encrypt_secret(secrets.token_urlsafe(24))
+    return {
+        "inboundEnabled": bool(inbound_enabled),
+        "routingId": routing_id,
+        "webhookSecret": webhook_secret,
+    }
 
 
 def apply_update(existing: Any, incoming: dict[str, Any]) -> dict[str, Any]:
@@ -202,6 +232,7 @@ def apply_update(existing: Any, incoming: dict[str, Any]) -> dict[str, Any]:
             "chatId": str(tg_in.get("chatId") or "").strip(),
             "botToken": _apply_secret(tg_old, "botToken", tg_in.get("botToken")),
             "minSeverity": _norm_sev(tg_in.get("minSeverity")),
+            **_telegram_inbound_fields(tg_old, bool(tg_in.get("inboundEnabled"))),
         },
         "matrix": {
             "enabled": bool(mx_in.get("enabled")),
