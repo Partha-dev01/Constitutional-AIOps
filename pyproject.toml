@@ -50,6 +50,15 @@ dependencies = [
     # Its absence from pyproject means CI cannot fully validate the app's
     # request-parsing capabilities. Moved from requirements.txt (P0 #6 fix).
     "python-multipart>=0.0.6",
+    # cryptography backs src/auth/crypto.py at-rest Fernet encryption of the
+    # bring-your-own LLM API key. It lived only in requirements.txt, which
+    # `pip install -e ".[dev]"` (used by CI) does not read, so CI ran the
+    # plaintext PASSTHROUGH while production (which ships requirements.txt)
+    # encrypted. That divergence let a crypto-off-only test regression reach CI
+    # unseen. Declaring it here makes CI exercise the real encryption path.
+    # Kept in requirements.txt too, same as numpy/langgraph above (prod/Docker
+    # installs from there); this is the CI/pip install surface.
+    "cryptography>=42.0.0",
 ]
 
 [project.optional-dependencies]
