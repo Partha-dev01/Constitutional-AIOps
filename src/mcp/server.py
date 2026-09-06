@@ -13,6 +13,8 @@ from datetime import datetime
 from typing import Any, Callable, Optional
 from enum import Enum
 
+from src.tools.registry import TOOLS
+
 logger = logging.getLogger(__name__)
 
 # Action-class tools (restart/scale) are gated off unless this env var is set.
@@ -94,320 +96,34 @@ class MCPActionServer:
         logger.info(f"MCPActionServer initialized with {len(self._tools)} tools")
 
     def _register_tools(self):
-        """Register all available tools."""
+        """Register all available tools from the shared registry.
 
-        # 1. Find Similar Incidents
-        self._tools["find_similar"] = ToolDefinition(
-            name="find_similar",
-            description="Find similar incidents from episodic memory based on symptoms, affected services, and error patterns",
-            category=ToolCategory.QUERY,
-            parameters={
-                "type": "object",
-                "properties": {
-                    "incident_id": {
-                        "type": "string",
-                        "description": "Current incident ID to find similar incidents for"
-                    },
-                    "title": {
-                        "type": "string",
-                        "description": "Incident title or description"
-                    },
-                    "category": {
-                        "type": "string",
-                        "enum": ["performance", "error", "availability", "resource", "security", "configuration"],
-                        "description": "Incident category"
-                    },
-                    "affected_services": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "List of affected service names"
-                    },
-                    "limit": {
-                        "type": "integer",
-                        "default": 5,
-                        "minimum": 1,
-                        "maximum": 20,
-                        "description": "Maximum number of similar incidents to return"
-                    }
-                },
-                "required": ["title"]
-            },
-            requires_approval=False,
-            risk_level="low",
-            handler=self._find_similar
-        )
-
-        # 2. Get Dependencies
-        self._tools["get_dependencies"] = ToolDefinition(
-            name="get_dependencies",
-            description="Get service dependency graph showing upstream and downstream services",
-            category=ToolCategory.QUERY,
-            parameters={
-                "type": "object",
-                "properties": {
-                    "service_name": {
-                        "type": "string",
-                        "description": "Name of the service to get dependencies for"
-                    },
-                    "direction": {
-                        "type": "string",
-                        "enum": ["upstream", "downstream", "both"],
-                        "default": "both",
-                        "description": "Direction of dependencies to retrieve"
-                    },
-                    "depth": {
-                        "type": "integer",
-                        "default": 2,
-                        "minimum": 1,
-                        "maximum": 5,
-                        "description": "Depth of dependency traversal"
-                    }
-                },
-                "required": ["service_name"]
-            },
-            requires_approval=False,
-            risk_level="low",
-            handler=self._get_dependencies
-        )
-
-        # 3. Restart Service
-        self._tools["restart_service"] = ToolDefinition(
-            name="restart_service",
-            description="Restart a whitelisted service container. Gated by AIOPS_ENABLE_ACTION_TOOLS; every call is validated against the constitutional principles first.",
-            category=ToolCategory.ACTION,
-            parameters={
-                "type": "object",
-                "properties": {
-                    "service_name": {
-                        "type": "string",
-                        "description": "Name of the service to restart — must be on the action container whitelist (default: nextcloud)"
-                    },
-                    "instance_id": {
-                        "type": "string",
-                        "description": "Specific instance ID (optional, restarts all if not provided)"
-                    },
-                    "graceful": {
-                        "type": "boolean",
-                        "default": True,
-                        "description": "Whether to perform graceful restart"
-                    },
-                    "timeout_seconds": {
-                        "type": "integer",
-                        "default": 60,
-                        "minimum": 1,
-                        "maximum": 600,
-                        "description": "Timeout for restart operation in seconds"
-                    },
-                    "reason": {
-                        "type": "string",
-                        "description": "Reason for restart (recorded in the audit trail)"
-                    }
-                },
-                "required": ["service_name", "reason"]
-            },
-            requires_approval=True,
-            risk_level="medium",
-            handler=self._restart_service
-        )
-
-        # 4. Scale Service
-        self._tools["scale_service"] = ToolDefinition(
-            name="scale_service",
-            description="Scale service replicas up or down (replica count clamped to 0-5). Gated by AIOPS_ENABLE_ACTION_TOOLS; every call is validated against the constitutional principles first.",
-            category=ToolCategory.ACTION,
-            parameters={
-                "type": "object",
-                "properties": {
-                    "service_name": {
-                        "type": "string",
-                        "description": "Name of the service to scale — must be on the action container whitelist (default: nextcloud)"
-                    },
-                    "target_replicas": {
-                        "type": "integer",
-                        "minimum": 0,
-                        "maximum": 5,
-                        "description": "Target number of replicas (clamped to 0-5 by the executor)"
-                    },
-                    "current_replicas": {
-                        "type": "integer",
-                        "minimum": 0,
-                        "description": "Current number of replicas (for validation)"
-                    },
-                    "reason": {
-                        "type": "string",
-                        "description": "Reason for scaling (recorded in the audit trail)"
-                    }
-                },
-                "required": ["service_name", "target_replicas", "reason"]
-            },
-            requires_approval=True,
-            risk_level="medium",
-            handler=self._scale_service
-        )
-
-        # 5. Analyze Logs
-        self._tools["analyze_logs"] = ToolDefinition(
-            name="analyze_logs",
-            description="Analyze logs for a service to identify patterns, anomalies, and error clusters",
-            category=ToolCategory.ANALYSIS,
-            parameters={
-                "type": "object",
-                "properties": {
-                    "service_name": {
-                        "type": "string",
-                        "description": "Name of the service to analyze logs for"
-                    },
-                    "time_range_minutes": {
-                        "type": "integer",
-                        "default": 30,
-                        "minimum": 1,
-                        "maximum": 1440,
-                        "description": "Time range in minutes to analyze"
-                    },
-                    "log_level": {
-                        "type": "string",
-                        "enum": ["all", "error", "warn", "info"],
-                        "default": "error",
-                        "description": "Minimum log level to analyze"
-                    },
-                    "include_patterns": {
-                        "type": "boolean",
-                        "default": True,
-                        "description": "Whether to include pattern analysis"
-                    }
-                },
-                "required": ["service_name"]
-            },
-            requires_approval=False,
-            risk_level="low",
-            handler=self._analyze_logs
-        )
-
-        # 6. Query Recent Logs — wraps TelemetryCollector.query_logs
-        self._tools["query_recent_logs"] = ToolDefinition(
-            name="query_recent_logs",
-            description="Query recent log entries from Loki for a service within a time window",
-            category=ToolCategory.QUERY,
-            parameters={
-                "type": "object",
-                "properties": {
-                    "service": {
-                        "type": "string",
-                        "description": "Service name to query logs for (use 'all' for all services)"
-                    },
-                    "time_range_minutes": {
-                        "type": "integer",
-                        "default": 15,
-                        "minimum": 1,
-                        "maximum": 1440,
-                        "description": "How many minutes back to query"
-                    },
-                    "limit": {
-                        "type": "integer",
-                        "default": 50,
-                        "minimum": 1,
-                        "maximum": 500,
-                        "description": "Maximum number of log entries to return"
-                    },
-                    "query": {
-                        "type": "string",
-                        "description": "Optional LogQL query override (e.g. '{job=\"containerlogs\"} |= \"error\"')"
-                    }
-                },
-                "required": ["service"]
-            },
-            requires_approval=False,
-            risk_level="low",
-            handler=self._query_recent_logs
-        )
-
-        # 7. Query Metric — wraps TelemetryCollector.query_metrics
-        self._tools["query_metric"] = ToolDefinition(
-            name="query_metric",
-            description="Query Prometheus metrics for a service over a time range",
-            category=ToolCategory.QUERY,
-            parameters={
-                "type": "object",
-                "properties": {
-                    "service": {
-                        "type": "string",
-                        "description": "Service name to query metrics for"
-                    },
-                    "time_range_minutes": {
-                        "type": "integer",
-                        "default": 30,
-                        "minimum": 1,
-                        "maximum": 1440,
-                        "description": "Time range in minutes to query"
-                    },
-                    "metrics": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "Optional list of specific PromQL metric names/queries to fetch (defaults to summary metrics)"
-                    }
-                },
-                "required": ["service"]
-            },
-            requires_approval=False,
-            risk_level="low",
-            handler=self._query_metric
-        )
-
-        # 8. List Containers — read-only Docker container list
-        self._tools["list_containers"] = ToolDefinition(
-            name="list_containers",
-            description="List Docker containers and their status (running, stopped, health)",
-            category=ToolCategory.QUERY,
-            parameters={
-                "type": "object",
-                "properties": {
-                    "all_containers": {
-                        "type": "boolean",
-                        "default": False,
-                        "description": "Include stopped containers (default: running only)"
-                    },
-                    "name_filter": {
-                        "type": "string",
-                        "description": "Optional substring filter on container name"
-                    }
-                },
-                "required": []
-            },
-            requires_approval=False,
-            risk_level="low",
-            handler=self._list_containers
-        )
-
-        # 9. Analyze Time Series Anomaly — statistical Z-score analysis
-        self._tools["analyze_time_series_anomaly"] = ToolDefinition(
-            name="analyze_time_series_anomaly",
-            description="Statistical Z-score anomaly detection on Prometheus metric time series for a service",
-            category=ToolCategory.ANALYSIS,
-            parameters={
-                "type": "object",
-                "properties": {
-                    "service_name": {
-                        "type": "string",
-                        "description": "Service to analyze metrics for"
-                    },
-                    "metric_name": {
-                        "type": "string",
-                        "description": "Specific PromQL metric name to analyze (optional; defaults to all summary metrics)"
-                    },
-                    "time_range_minutes": {
-                        "type": "integer",
-                        "default": 60,
-                        "minimum": 1,
-                        "maximum": 1440,
-                        "description": "Time range in minutes for the analysis window"
-                    }
-                },
-                "required": ["service_name"]
-            },
-            requires_approval=False,
-            risk_level="low",
-            handler=self._analyze_time_series_anomaly
-        )
+        The tool catalogue (names, descriptions, JSON-schemas, gating metadata)
+        lives in ``src/tools/registry.py``. Here each registry entry is bound to
+        its local async handler; adding or editing a tool happens in the registry,
+        not in this file.
+        """
+        handlers: dict[str, Callable] = {
+            "find_similar": self._find_similar,
+            "get_dependencies": self._get_dependencies,
+            "restart_service": self._restart_service,
+            "scale_service": self._scale_service,
+            "analyze_logs": self._analyze_logs,
+            "query_recent_logs": self._query_recent_logs,
+            "query_metric": self._query_metric,
+            "list_containers": self._list_containers,
+            "analyze_time_series_anomaly": self._analyze_time_series_anomaly,
+        }
+        for meta in TOOLS:
+            self._tools[meta.name] = ToolDefinition(
+                name=meta.name,
+                description=meta.description,
+                category=ToolCategory(meta.category),
+                parameters=meta.parameters,
+                requires_approval=meta.requires_approval,
+                risk_level=meta.risk_level,
+                handler=handlers[meta.name],
+            )
 
     def _tool_enabled(self, tool: ToolDefinition) -> bool:
         """Whether the tool is currently callable: read-only tools always are;

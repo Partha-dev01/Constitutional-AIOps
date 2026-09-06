@@ -24,6 +24,7 @@ from typing import Any, Optional
 from fastapi import APIRouter, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
+from src.tools.registry import ACTION_TOOL_NAMES, TOOLS, TOOLS_BY_NAME
 from src.utils.audit import get_audit_logger
 
 logger = logging.getLogger(__name__)
@@ -34,8 +35,9 @@ router = APIRouter()
 # Action-tool gating constants (restart_service / scale_service)
 # ---------------------------------------------------------------------------
 
-# The two tools that mutate real containers. Everything else is read-only.
-ACTION_TOOLS: tuple[str, ...] = ("restart_service", "scale_service")
+# The tools that mutate real containers, sourced from the shared registry
+# (category == "action"). Everything else is read-only.
+ACTION_TOOLS: tuple[str, ...] = ACTION_TOOL_NAMES
 
 # Master kill-switch: action tools stay refused unless this env var is truthy.
 ACTION_TOOLS_ENV = "AIOPS_ENABLE_ACTION_TOOLS"
@@ -175,150 +177,14 @@ async def list_tools(request: Request) -> ToolListResponse:
         # Return tool list - all 5 tools from Research Paper Section 4.5
         default_tools = [
             ToolInfo(
-                name="find_similar",
-                description="Find similar incidents from Neo4j episodic memory (top-k similar past incidents)",
-                category="query",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "title": {"type": "string", "description": "Incident title to search for"},
-                        "category": {"type": "string", "description": "Incident category"},
-                        "affected_services": {"type": "array", "items": {"type": "string"}},
-                        "limit": {"type": "integer", "default": 5},
-                    },
-                    "required": ["title"],
-                },
-                requires_approval=False,
-                risk_level="low",
-            ),
-            ToolInfo(
-                name="get_dependencies",
-                description="Get service dependency graph from Neo4j for impact analysis",
-                category="query",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "service_name": {"type": "string", "description": "Service to analyze"},
-                        "depth": {"type": "integer", "default": 2, "description": "Traversal depth"},
-                    },
-                    "required": ["service_name"],
-                },
-                requires_approval=False,
-                risk_level="low",
-            ),
-            ToolInfo(
-                name="restart_service",
-                description="Restart a whitelisted Docker container (docker restart). Gated by AIOPS_ENABLE_ACTION_TOOLS and constitutional validation.",
-                category="action",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "service_name": {"type": "string", "description": "Service to restart — must be on the action container whitelist (default: nextcloud)"},
-                        "graceful": {"type": "boolean", "default": True, "description": "Whether to perform a graceful restart"},
-                        "reason": {"type": "string", "description": "Reason for restart (recorded in the audit trail)"},
-                    },
-                    "required": ["service_name", "reason"],
-                },
-                requires_approval=True,
-                risk_level="medium",
-            ),
-            ToolInfo(
-                name="scale_service",
-                description="Scale Docker Compose service replicas. Replica count is clamped to 0-5. Gated by AIOPS_ENABLE_ACTION_TOOLS and constitutional validation.",
-                category="action",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "service_name": {"type": "string", "description": "Service to scale — must be on the action container whitelist (default: nextcloud)"},
-                        "target_replicas": {"type": "integer", "minimum": 0, "maximum": 5, "description": "Target replica count (clamped to 0-5)"},
-                        "reason": {"type": "string", "description": "Reason for scaling (recorded in the audit trail)"},
-                    },
-                    "required": ["service_name", "target_replicas", "reason"],
-                },
-                requires_approval=True,
-                risk_level="medium",
-            ),
-            ToolInfo(
-                name="analyze_logs",
-                description="Analyze logs from Loki for patterns and anomalies",
-                category="analysis",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "service_name": {"type": "string", "description": "Service to analyze"},
-                        "time_range_minutes": {"type": "integer", "default": 30, "description": "Time window in minutes to analyze"},
-                        "log_level": {"type": "string", "enum": ["all", "error", "warn", "info"], "default": "error", "description": "Minimum log level to analyze"},
-                    },
-                    "required": ["service_name"],
-                },
-                requires_approval=False,
-                risk_level="low",
-            ),
-            ToolInfo(
-                name="analyze_time_series_anomaly",
-                description="Statistical analysis of metrics using Z-score for anomaly detection",
-                category="analysis",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "service_name": {"type": "string", "description": "Service to analyze"},
-                        "metric_name": {"type": "string", "description": "Specific PromQL metric name to analyze (optional; defaults to all summary metrics)"},
-                        "time_range_minutes": {"type": "integer", "default": 60, "description": "Time window in minutes for the analysis"},
-                    },
-                    "required": ["service_name"],
-                },
-                requires_approval=False,
-                risk_level="low",
-            ),
-            # Phase-2 tools
-            ToolInfo(
-                name="query_recent_logs",
-                description="Query recent log entries from Loki for a service within a time window",
-                category="query",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "service": {"type": "string", "description": "Service name (use 'all' for all services)"},
-                        "time_range_minutes": {"type": "integer", "default": 15, "description": "How many minutes back to query"},
-                        "limit": {"type": "integer", "default": 50, "description": "Maximum number of log entries to return"},
-                        "query": {"type": "string", "description": "Optional LogQL query override"},
-                    },
-                    "required": ["service"],
-                },
-                requires_approval=False,
-                risk_level="low",
-            ),
-            ToolInfo(
-                name="query_metric",
-                description="Query Prometheus metrics for a service over a time range",
-                category="query",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "service": {"type": "string", "description": "Service name"},
-                        "time_range_minutes": {"type": "integer", "default": 30, "description": "Time window in minutes to query"},
-                        "metrics": {"type": "array", "items": {"type": "string"}, "description": "Optional list of PromQL queries (defaults to summary metrics)"},
-                    },
-                    "required": ["service"],
-                },
-                requires_approval=False,
-                risk_level="low",
-            ),
-            ToolInfo(
-                name="list_containers",
-                description="List Docker containers and their status (running, stopped, health)",
-                category="query",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "all_containers": {"type": "boolean", "default": False, "description": "Include stopped containers (default: running only)"},
-                        "name_filter": {"type": "string", "description": "Optional substring filter on container name"},
-                    },
-                    "required": [],
-                },
-                requires_approval=False,
-                risk_level="low",
-            ),
+                name=meta.name,
+                description=meta.description,
+                category=meta.category,
+                parameters=meta.parameters,
+                requires_approval=meta.requires_approval,
+                risk_level=meta.risk_level,
+            )
+            for meta in TOOLS
         ]
         default_tools = [_apply_action_gating(t) for t in default_tools]
         return ToolListResponse(tools=default_tools, total=len(default_tools))
@@ -349,161 +215,22 @@ async def get_tool(request: Request, tool_name: str) -> ToolInfo:
     mcp_server = getattr(request.app.state, "mcp_server", None)
 
     if mcp_server is None:
-        # Tool definitions matching Research Paper Section 4.5
-        tool_definitions = {
-            "find_similar": ToolInfo(
-                name="find_similar",
-                description="Find similar incidents from Neo4j episodic memory (top-k similar past incidents)",
-                category="query",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "title": {"type": "string", "description": "Incident title to search for"},
-                        "category": {"type": "string", "description": "Incident category"},
-                        "affected_services": {"type": "array", "items": {"type": "string"}},
-                        "limit": {"type": "integer", "default": 5},
-                    },
-                    "required": ["title"],
-                },
-                requires_approval=False,
-                risk_level="low",
-            ),
-            "get_dependencies": ToolInfo(
-                name="get_dependencies",
-                description="Get service dependency graph from Neo4j for impact analysis",
-                category="query",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "service_name": {"type": "string", "description": "Service to analyze"},
-                        "depth": {"type": "integer", "default": 2, "description": "Traversal depth"},
-                    },
-                    "required": ["service_name"],
-                },
-                requires_approval=False,
-                risk_level="low",
-            ),
-            "restart_service": ToolInfo(
-                name="restart_service",
-                description="Restart a whitelisted Docker container (docker restart). Gated by AIOPS_ENABLE_ACTION_TOOLS and constitutional validation.",
-                category="action",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "service_name": {"type": "string", "description": "Service to restart — must be on the action container whitelist (default: nextcloud)"},
-                        "graceful": {"type": "boolean", "default": True, "description": "Whether to perform a graceful restart"},
-                        "reason": {"type": "string", "description": "Reason for restart (recorded in the audit trail)"},
-                    },
-                    "required": ["service_name", "reason"],
-                },
-                requires_approval=True,
-                risk_level="medium",
-            ),
-            "scale_service": ToolInfo(
-                name="scale_service",
-                description="Scale Docker Compose service replicas. Replica count is clamped to 0-5. Gated by AIOPS_ENABLE_ACTION_TOOLS and constitutional validation.",
-                category="action",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "service_name": {"type": "string", "description": "Service to scale — must be on the action container whitelist (default: nextcloud)"},
-                        "target_replicas": {"type": "integer", "minimum": 0, "maximum": 5, "description": "Target replica count (clamped to 0-5)"},
-                        "reason": {"type": "string", "description": "Reason for scaling (recorded in the audit trail)"},
-                    },
-                    "required": ["service_name", "target_replicas", "reason"],
-                },
-                requires_approval=True,
-                risk_level="medium",
-            ),
-            "analyze_logs": ToolInfo(
-                name="analyze_logs",
-                description="Analyze logs from Loki for patterns and anomalies",
-                category="analysis",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "service_name": {"type": "string", "description": "Service to analyze"},
-                        "time_range_minutes": {"type": "integer", "default": 30},
-                        "log_level": {"type": "string", "enum": ["all", "error", "warn", "info"]},
-                    },
-                    "required": ["service_name"],
-                },
-                requires_approval=False,
-                risk_level="low",
-            ),
-            "analyze_time_series_anomaly": ToolInfo(
-                name="analyze_time_series_anomaly",
-                description="Statistical analysis of metrics using Z-score for anomaly detection",
-                category="analysis",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "service_name": {"type": "string", "description": "Service to analyze"},
-                        "metric_name": {"type": "string", "description": "Specific metric (optional)"},
-                        "time_range_minutes": {"type": "integer", "default": 60},
-                    },
-                    "required": ["service_name"],
-                },
-                requires_approval=False,
-                risk_level="low",
-            ),
-            # Phase-2 tools
-            "query_recent_logs": ToolInfo(
-                name="query_recent_logs",
-                description="Query recent log entries from Loki for a service within a time window",
-                category="query",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "service": {"type": "string", "description": "Service name (use 'all' for all)"},
-                        "time_range_minutes": {"type": "integer", "default": 15},
-                        "limit": {"type": "integer", "default": 50},
-                        "query": {"type": "string", "description": "Optional LogQL query override"},
-                    },
-                    "required": ["service"],
-                },
-                requires_approval=False,
-                risk_level="low",
-            ),
-            "query_metric": ToolInfo(
-                name="query_metric",
-                description="Query Prometheus metrics for a service over a time range",
-                category="query",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "service": {"type": "string", "description": "Service name"},
-                        "time_range_minutes": {"type": "integer", "default": 30},
-                        "metrics": {"type": "array", "items": {"type": "string"}, "description": "Optional PromQL queries"},
-                    },
-                    "required": ["service"],
-                },
-                requires_approval=False,
-                risk_level="low",
-            ),
-            "list_containers": ToolInfo(
-                name="list_containers",
-                description="List Docker containers and their status (running, stopped, health)",
-                category="query",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "all_containers": {"type": "boolean", "default": False, "description": "Include stopped containers"},
-                        "name_filter": {"type": "string", "description": "Optional substring filter on container name"},
-                    },
-                    "required": [],
-                },
-                requires_approval=False,
-                risk_level="low",
-            ),
-        }
-
-        if tool_name not in tool_definitions:
+        tool_meta = TOOLS_BY_NAME.get(tool_name)
+        if tool_meta is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Tool '{tool_name}' not found",
             )
-        return _apply_action_gating(tool_definitions[tool_name])
+        return _apply_action_gating(
+            ToolInfo(
+                name=tool_meta.name,
+                description=tool_meta.description,
+                category=tool_meta.category,
+                parameters=tool_meta.parameters,
+                requires_approval=tool_meta.requires_approval,
+                risk_level=tool_meta.risk_level,
+            )
+        )
 
     tool = mcp_server.get_tool(tool_name)
     if not tool:
