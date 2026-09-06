@@ -1073,12 +1073,61 @@ async function streamChat(
 
 // API Client
 
+// LLM insight widgets (Track 2 W3). The opt-in block + cost-fenced explain
+// surface backing the dashboard "explain this" buttons (src/api/routes/insights.py).
+export interface AiWidgetsPrefs {
+  enabled: boolean;
+  autoExplain: boolean;
+}
+
+export interface InsightBudget {
+  enabled: boolean;
+  dailyTokenLimit: number;
+  usedToday: number;
+  requestsToday: number;
+  remaining: number | null;
+}
+
+export interface InsightPreferences {
+  aiWidgets: AiWidgetsPrefs;
+  budget: InsightBudget;
+}
+
+export interface InsightPreferencesUpdate {
+  enabled?: boolean;
+  autoExplain?: boolean;
+}
+
+export interface ExplainResult {
+  available: boolean;
+  explanation: string | null;
+  model_generated: boolean;
+  reason: string | null;
+  tokens_used: number | null;
+  remaining: number | null;
+}
+
 export const api = {
   // Health
   health: {
     check: () => request<HealthResponse>('/health'),
     ready: () => request<{ ready: boolean }>('/health/ready'),
     live: () => request<{ alive: boolean }>('/health/live'),
+  },
+
+  // LLM insight widgets (Track 2 W3): opt-in, cost-fenced, degrade-graceful.
+  insights: {
+    getPreferences: () => request<InsightPreferences>('/insights/preferences'),
+    savePreferences: (body: InsightPreferencesUpdate) =>
+      request<InsightPreferences>('/insights/preferences', {
+        method: 'PUT',
+        body: JSON.stringify(body),
+      }),
+    explain: (kind: string, payload: Record<string, unknown>) =>
+      request<ExplainResult>('/insights/explain', {
+        method: 'POST',
+        body: JSON.stringify({ kind, payload }),
+      }),
   },
 
   // Chat

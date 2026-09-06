@@ -14,8 +14,9 @@ import {
   Copy,
   Plus,
   Terminal,
+  Sparkles,
 } from 'lucide-react'
-import api, { AdminUserListItem, AccessTokenSummary } from '../lib/api'
+import api, { AdminUserListItem, AccessTokenSummary, InsightPreferences } from '../lib/api'
 import { useAuthStore } from '../lib/auth'
 
 const MIN_PASSWORD_LEN = 10
@@ -35,22 +36,124 @@ export function AccountSettings() {
   const authRequired = useAuthStore((s) => s.authRequired)
   const isAdmin = user?.role === 'admin'
 
-  if (!authRequired || !user) {
-    return (
-      <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
-        Account management is available when in-app authentication is enabled.
-      </div>
-    )
-  }
-
   return (
     <div className="space-y-6">
-      <div className="grid gap-6 lg:grid-cols-2">
-        <ProfileCard username={user.username} role={user.role} />
-        <ChangePasswordCard username={user.username} />
+      {/* Per-user AI insight opt-in. Shown even when auth is off, since the
+          synthetic self-host admin is exactly who toggles it. */}
+      <AiInsightsCard />
+      {!authRequired || !user ? (
+        <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
+          Account management is available when in-app authentication is enabled.
+        </div>
+      ) : (
+        <>
+          <div className="grid gap-6 lg:grid-cols-2">
+            <ProfileCard username={user.username} role={user.role} />
+            <ChangePasswordCard username={user.username} />
+          </div>
+          <AccessTokensCard />
+          {isAdmin && <UserManagementCard currentUsername={user.username} />}
+        </>
+      )}
+    </div>
+  )
+}
+
+/**
+ * AI insight widgets opt-in. The dashboard insight widgets stay no-LLM by
+ * default; turning this on adds an on-demand "Explain" button that runs the
+ * user's own endpoint and counts against their daily budget.
+ */
+function AiInsightsCard() {
+  const [prefs, setPrefs] = useState<InsightPreferences | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      setPrefs(await api.insights.getPreferences())
+    } catch (err) {
+      setError(errMessage(err, 'Could not load insight preferences.'))
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    void load()
+  }, [load])
+
+  const toggle = async (next: boolean) => {
+    setSaving(true)
+    setError(null)
+    try {
+      setPrefs(await api.insights.savePreferences({ enabled: next }))
+    } catch (err) {
+      setError(errMessage(err, 'Could not save preference.'))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const enabled = prefs?.aiWidgets.enabled ?? false
+  const budget = prefs?.budget
+
+  return (
+    <div className="rounded-lg border border-border bg-card p-6">
+      <div className="mb-1 flex items-center gap-2">
+        <Sparkles className="h-5 w-5 text-primary" />
+        <h2 className="text-lg font-semibold">AI insight widgets</h2>
       </div>
-      <AccessTokensCard />
-      {isAdmin && <UserManagementCard currentUsername={user.username} />}
+      <p className="mb-4 text-sm text-muted-foreground">
+        Adds an optional Explain button to dashboard widgets. It runs your configured LLM
+        endpoint on demand, never on load, and counts against your daily token budget.
+        Explanations are model-generated hypotheses, not measured telemetry.
+      </p>
+
+      {error && (
+        <div className="mb-3 flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-2.5 text-sm text-destructive">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Loading…
+        </div>
+      ) : (
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium">Enable AI explanations</p>
+            {budget && budget.enabled && budget.remaining != null && (
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {budget.remaining} of {budget.dailyTokenLimit} daily tokens remaining.
+              </p>
+            )}
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={enabled}
+            aria-label="Enable AI explanations"
+            disabled={saving}
+            onClick={() => void toggle(!enabled)}
+            className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${
+              enabled ? 'bg-primary' : 'bg-muted'
+            }`}
+          >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-background transition-transform ${
+                enabled ? 'translate-x-6' : 'translate-x-1'
+              }`}
+            />
+          </button>
+        </div>
+      )}
     </div>
   )
 }
