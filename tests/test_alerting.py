@@ -255,14 +255,22 @@ class TestConfig:
         assert alert_config.telegram_target(stored["telegram"]) is None
 
     def test_public_view_redacts_tokens(self, secret_env):
+        # Use a distinctive multi-char secret so the "never exposed" assertions
+        # hold whether or not at-rest encryption is active. The public view omits
+        # the token entirely (only a boolean flag), so neither the raw plaintext
+        # nor its stored form may appear. A single-char value like "s" spuriously
+        # matches redacted key names (accessTokenSet, minSeverity) in the
+        # crypto-off passthrough path CI runs in when 'cryptography' is absent.
+        raw = "TG-raw-secret-never-leak-9f3a2b"
         stored = alert_config.apply_update(
-            {}, {"telegram": {"enabled": True, "chatId": "42", "botToken": "s"},
+            {}, {"telegram": {"enabled": True, "chatId": "42", "botToken": raw},
                  "matrix": {"enabled": False, "accessToken": None}}
         )
         pub = alert_config.public_view(stored)
         assert pub["telegram"]["tokenSet"] is True
         # The raw/encrypted secret is never exposed -- only the boolean flag.
         assert "botToken" not in pub["telegram"]
+        assert raw not in str(pub)
         assert stored["telegram"]["botToken"] not in str(pub)
         assert pub["telegram"]["chatId"] == "42"
         assert pub["matrix"]["accessTokenSet"] is False
