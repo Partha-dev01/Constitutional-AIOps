@@ -11,10 +11,15 @@ requires-python = ">=3.10"
 license = { text = "AGPL-3.0-or-later" }
 authors = [{ name = "Constitutional AIOps" }]
 keywords = ["aiops", "incident-response", "llm", "observability", "sdk"]
-# The hand-written scaffold uses only the standard library (urllib, json,
-# dataclasses). The generated core (openapi-python-client) will add typed models
-# and httpx as a real dependency when it lands; see ../README.md.
+# The hand-written AIOpsClient uses only the standard library (urllib, json).
+# The generated typed core (constitutional_aiops_client) is optional and pulls in
+# httpx + attrs; install it with the `typed` extra. See ../README.md.
 dependencies = []
+
+[project.optional-dependencies]
+# The generated typed core (openapi-python-client output) rides on httpx + attrs.
+# `pip install constitutional-aiops[typed]`. The hand-written client needs none of it.
+typed = ["httpx>=0.23.0,<0.29.0", "attrs>=22.2.0"]
 
 [project.urls]
 Homepage = "https://github.com/Partha-dev01/Constitutional-AIOps"
@@ -22,4 +27,4 @@ Documentation = "https://partha-dev01.github.io/Constitutional-AIOps/"
 Source = "https://github.com/Partha-dev01/Constitutional-AIOps/tree/main/sdk/python"
 
 [tool.hatch.build.targets.wheel]
-packages = ["constitutional_aiops"]
+packages = ["constitutional_aiops", "constitutional_aiops_client"]

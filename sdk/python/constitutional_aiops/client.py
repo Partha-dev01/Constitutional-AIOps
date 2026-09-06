@@ -37,9 +37,9 @@ class AIOpsClient:
         base_url: The instance origin, for example ``https://host.example.com``.
             ``/api/v1`` is appended automatically unless the URL already ends in
             an API path.
-        token: A bearer token (a personal access token once that feature ships,
-            or a session token today). Optional against an instance running with
-            ``AUTH_REQUIRED`` unset.
+        token: A bearer token (a personal access token, ``aiops_pat_...``, or a
+            session token you already hold). Optional against an instance running
+            with ``AUTH_REQUIRED`` unset.
         timeout: Per-request timeout in seconds.
     """
 

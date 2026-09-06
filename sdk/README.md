@@ -7,24 +7,27 @@ live here:
 - `typescript/` — the TypeScript / JavaScript client
   (`@constitutional-aiops/sdk` on npm, planned).
 
-## Status: pre-release scaffold
+## Status: pre-release, not yet published
 
-These are hand-written thin clients that talk to the app's `/api/v1` REST
-surface. They are usable today against an instance where you can reach the API,
-and they are the seed for the generated clients described in the developer-platform
-spec. Two pieces of that spec are not built yet and are called out where they
-matter:
+Each package ships two layers:
 
-1. **Generated core.** The final clients will be generated from the app's OpenAPI
-   schema (`openapi-python-client` for Python, `openapi-typescript` +
-   `openapi-fetch` for TypeScript), with this hand-written layer kept as the
-   ergonomic surface on top. Until then these packages implement a small,
-   dependency-free subset by hand.
-2. **Personal access tokens.** The clean programmatic auth path is a per-user
-   personal access token sent as `Authorization: Bearer`. That endpoint is not
-   built yet. Until it lands you can use the SDK against an instance running with
-   `AUTH_REQUIRED` unset (the default single-user / local mode), or pass a session
-   token you already hold.
+1. **Ergonomic client** (`AIOpsClient`) — a hand-written, dependency-free surface
+   over the app's `/api/v1` REST API: a pagination helper over the uniform list
+   envelope, chat streaming, and typed errors including `ConstitutionalRefusal`.
+   Stdlib `urllib` in Python, global `fetch` in TypeScript. This surface is stable.
+2. **Generated typed core** — the full API, typed from the committed OpenAPI
+   snapshot (`openapi/openapi.json`): `openapi-python-client` for Python
+   (`constitutional_aiops_client`, optional `typed` extra, rides on httpx) and
+   `openapi-typescript` + `openapi-fetch` for TypeScript (`createTypedClient`).
+   Both are committed so the packages build offline, and are regenerated from the
+   snapshot (see each package's README for the `generate` command). CI checks the
+   checked-in output against a fresh regen.
+
+**Auth.** The clean programmatic auth path is a per-user personal access token
+(`aiops_pat_...`), created in the app (Settings, or `POST /api/v1/auth/tokens`)
+and sent as `Authorization: Bearer`. It resolves to the real user even when
+`AUTH_REQUIRED` is off, so SDK calls are attributed and cost-fenced. Against a
+single-user instance with `AUTH_REQUIRED` unset a token is optional.
 
 Neither package is published yet. Publishing is gated on the repository going
 public. See the developer-platform guide in the docs site for the full plan.
