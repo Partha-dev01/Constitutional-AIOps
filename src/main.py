@@ -47,6 +47,7 @@ from src.api.routes.settings import router as settings_router
 from src.api.routes.topology import router as topology_router
 from src.api.routes.audit import router as audit_router
 from src.api.routes.notifications import router as notifications_router
+from src.api.routes.relay import router as relay_router
 
 # Import core components
 from src.agents.model_router import ModelRouter
@@ -657,6 +658,10 @@ app.include_router(settings_router, prefix="/api/v1/settings", tags=["settings"]
 app.include_router(topology_router, prefix="/api/v1/topology", tags=["topology"], dependencies=_AUTHED)
 app.include_router(audit_router, prefix="/api/v1/audit", tags=["audit"], dependencies=_AUTHED)
 app.include_router(notifications_router, prefix="/api/v1/notifications", tags=["notifications"], dependencies=_AUTHED)
+# Inbound ChatOps relay (Track 1 T1d). Mounted WITHOUT _AUTHED on purpose: the
+# off-box relay Lambda / SQS-drain reach it, never a browser, so its only auth is
+# the shared-secret HMAC checked inside the route (src/alerting/relay_hmac.py).
+app.include_router(relay_router, prefix="/api/v1/relay", tags=["relay"])
 
 
 # WebSocket endpoint for real-time updates
