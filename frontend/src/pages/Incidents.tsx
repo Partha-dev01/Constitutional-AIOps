@@ -5,10 +5,32 @@ import api, { Incident, IncidentSeverity, IncidentStatus, Action, IncidentCreate
 import { ActiveIncidentsPanel } from '../components/incidents/ActiveIncidentsPanel'
 import { Modal } from '../components/ui/Modal'
 import { useToast } from '../components/ui/toast'
+import { ExportMenu } from '../components/ui/ExportMenu'
+import type { ExportColumn } from '../lib/exportTable'
 
 /** Confidence (0-1) as a percent, guarding absent/NaN so the UI never shows "NaN%" (ISS-104). */
 const confPct = (c?: number | null): string =>
   c == null || Number.isNaN(c) ? 'n/a' : `${Math.round(c * 100)}%`
+
+// Columns for the CSV/JSON export of the currently filtered incidents. Nested
+// services and tags flatten to a readable joined string.
+const INCIDENT_EXPORT_COLUMNS: ExportColumn<Incident>[] = [
+  { key: 'id', header: 'ID', value: (i) => i.id },
+  { key: 'title', header: 'Title', value: (i) => i.title },
+  { key: 'severity', header: 'Severity', value: (i) => i.severity },
+  { key: 'status', header: 'Status', value: (i) => i.status },
+  { key: 'category', header: 'Category', value: (i) => i.category },
+  { key: 'source', header: 'Source', value: (i) => i.source },
+  {
+    key: 'affected_services',
+    header: 'Affected services',
+    value: (i) => (i.affected_services ?? []).map((s) => s.name).join('; '),
+  },
+  { key: 'tags', header: 'Tags', value: (i) => (i.tags ?? []).join('; ') },
+  { key: 'created_at', header: 'Created', value: (i) => i.created_at },
+  { key: 'updated_at', header: 'Updated', value: (i) => i.updated_at },
+  { key: 'resolved_at', header: 'Resolved', value: (i) => i.resolved_at },
+]
 
 export function Incidents() {
   const { showToast } = useToast()
@@ -111,6 +133,12 @@ export function Incidents() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <ExportMenu
+            rows={filteredIncidents}
+            columns={INCIDENT_EXPORT_COLUMNS}
+            filenameBase="incidents"
+            disabled={loading}
+          />
           <button
             onClick={fetchData}
             disabled={loading}

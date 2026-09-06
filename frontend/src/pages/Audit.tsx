@@ -13,12 +13,28 @@ import { cn } from '../lib/utils'
 import api from '../lib/api'
 import type { AuditEvent } from '../lib/api'
 import { useAuthStore } from '../lib/auth'
+import { ExportMenu } from '../components/ui/ExportMenu'
+import type { ExportColumn } from '../lib/exportTable'
 
 const DAY_OPTIONS = [
   { value: 1, label: 'Last 24 hours' },
   { value: 7, label: 'Last 7 days' },
   { value: 30, label: 'Last 30 days' },
   { value: 90, label: 'Last 90 days' },
+]
+
+// Columns for the CSV/JSON export. Mirrors the table so the download matches
+// what the admin is looking at.
+const AUDIT_EXPORT_COLUMNS: ExportColumn<AuditEvent>[] = [
+  { key: 'timestamp', header: 'Time', value: (e) => e.timestamp },
+  { key: 'event_type', header: 'Event', value: (e) => e.event_type },
+  { key: 'severity', header: 'Severity', value: (e) => e.severity },
+  { key: 'actor_id', header: 'Actor', value: (e) => e.actor_id },
+  { key: 'actor_type', header: 'Actor type', value: (e) => e.actor_type },
+  { key: 'resource_type', header: 'Resource type', value: (e) => e.resource_type },
+  { key: 'resource_id', header: 'Resource id', value: (e) => e.resource_id },
+  { key: 'outcome', header: 'Outcome', value: (e) => e.outcome },
+  { key: 'description', header: 'Description', value: (e) => e.description },
 ]
 
 const SEVERITY_STYLE: Record<string, string> = {
@@ -120,19 +136,27 @@ export function Audit() {
             Every validation, approval and action the system recorded. Read-only.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => void fetchEvents()}
-          disabled={loading}
-          className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-1.5 text-sm font-medium transition-colors hover:bg-muted disabled:opacity-50"
-        >
-          {loading ? (
-            <Loader2 className="h-4 w-4 motion-safe:animate-spin" aria-hidden="true" />
-          ) : (
-            <RefreshCw className="h-4 w-4" aria-hidden="true" />
-          )}
-          Refresh
-        </button>
+        <div className="flex items-center gap-2">
+          <ExportMenu
+            rows={events}
+            columns={AUDIT_EXPORT_COLUMNS}
+            filenameBase="audit_log"
+            disabled={loading}
+          />
+          <button
+            type="button"
+            onClick={() => void fetchEvents()}
+            disabled={loading}
+            className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-1.5 text-sm font-medium transition-colors hover:bg-muted disabled:opacity-50"
+          >
+            {loading ? (
+              <Loader2 className="h-4 w-4 motion-safe:animate-spin" aria-hidden="true" />
+            ) : (
+              <RefreshCw className="h-4 w-4" aria-hidden="true" />
+            )}
+            Refresh
+          </button>
+        </div>
       </div>
 
       {/* Controls */}
