@@ -27,6 +27,9 @@ const Incidents = lazy(() =>
   import('./pages/Incidents').then((m) => ({ default: m.Incidents })),
 )
 const Chat = lazy(() => import('./pages/Chat').then((m) => ({ default: m.Chat })))
+const LocalChat = lazy(() =>
+  import('./pages/LocalChat').then((m) => ({ default: m.LocalChat })),
+)
 const Metrics = lazy(() => import('./pages/Metrics').then((m) => ({ default: m.Metrics })))
 const Benchmark = lazy(() =>
   import('./pages/Benchmark').then((m) => ({ default: m.Benchmark })),
@@ -189,6 +192,7 @@ function App() {
                       <Route path="/infrastructure" element={<Infrastructure />} />
                       <Route path="/incidents" element={<Incidents />} />
                       <Route path="/chat" element={<Chat />} />
+                      <Route path="/local-chat" element={<LocalChat />} />
                       <Route path="/metrics" element={<Metrics />} />
                       <Route path="/benchmark" element={<Benchmark />} />
                       <Route path="/audit" element={<Audit />} />

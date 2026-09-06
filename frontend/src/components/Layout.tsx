@@ -21,6 +21,7 @@ import {
   BookOpen,
   ScrollText,
   Bell,
+  Laptop,
 } from 'lucide-react'
 import { cn } from '../lib/utils'
 import api, { HealthResponse, isComponentHealthy } from '../lib/api'
@@ -47,6 +48,7 @@ const navigation: NavItem[] = [
   { name: 'Command Center', href: '/console', icon: LayoutPanelLeft, group: 'Operate' },
   { name: 'Incidents', href: '/incidents', icon: AlertTriangle, group: 'Operate' },
   { name: 'Chat', href: '/chat', icon: MessageSquare, group: 'Operate' },
+  { name: 'Local Model', href: '/local-chat', icon: Laptop, group: 'AI' },
   { name: 'Telemetry', href: '/telemetry', icon: Network, group: 'Observe' },
   { name: 'Metrics', href: '/metrics', icon: BarChart3, group: 'Observe' },
   { name: 'Graph', href: '/graph', icon: GitBranch, group: 'Observe' },

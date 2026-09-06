@@ -1284,6 +1284,18 @@ function ByokOnlySetup() {
           <LlmStep showTest={false} onSaved={handleSaved} />
         </div>
 
+        <p className="mt-4 text-center text-sm text-muted-foreground">
+          No endpoint yet?{' '}
+          <button
+            type="button"
+            onClick={() => navigate('/local-chat')}
+            className="font-medium text-primary underline-offset-2 hover:underline"
+          >
+            Try a small model that runs in your browser
+          </button>
+          .
+        </p>
+
         <div className="mt-6 flex items-center justify-end">
           <button
             type="button"
