@@ -3,14 +3,18 @@ name: deploy
 # Continuous deployment to the live lite box.
 #
 # Safety contract (see docs + the mega-plan 5d CD section):
-#   - Runs ONLY on push to main of the canonical repo (never forks, never
-#     pull_request / pull_request_target).
-#   - Manual trigger (workflow_dispatch) is the human gate: only a maintainer
-#     can start a deploy. The 'production' environment holds the role ARN as a
-#     secret; required-reviewer approval turns on automatically once the repo
-#     is public (or on a plan that supports environment protection on private
-#     repos), at which point the commented push-to-main trigger can be
-#     re-enabled for hands-off CD.
+#   - Runs ONLY for the canonical repo (never forks, never pull_request /
+#     pull_request_target), from a v* release tag or a manual dispatch of main.
+#   - Automated CD triggers on a pushed v* tag: shipping is coupled to cutting a
+#     release, and creating+pushing that tag IS the per-action deploy go-ahead,
+#     so hands-off tag CD stays inside the "no deploy without an explicit
+#     go-ahead" rule with no GitHub reviewer gate required.
+#   - workflow_dispatch stays as a manual override for out-of-band deploys of
+#     the current main.
+#   - Hands-off deploy on EVERY push to main is intentionally still off: it needs
+#     the 'production' environment to enforce required-reviewer approval, which
+#     GitHub only offers here once the repo is public. Re-enable that trigger at
+#     the public flip (see the on: block below), once the reviewer gate is set.
 #   - Auth is OIDC only (no long-lived AWS keys in GitHub): the job assumes a
 #     dedicated, least-privilege IAM role whose trust is scoped to this repo's
 #     main ref.
@@ -29,9 +33,15 @@ name: deploy
 # into this file (they come from vars/secrets), preserving the Phase-5b scrub.
 
 on:
+  # Automated CD: pushing a release tag ships that exact commit to production.
+  push:
+    tags:
+      - 'v*'
+  # Manual override — deploy the current main on demand.
   workflow_dispatch:
-  # Re-enable hands-off CD once the 'production' environment can enforce the
-  # required-reviewer approval gate (repo public, or a plan that supports it):
+  # Hands-off CD on every push to main stays OFF until the 'production'
+  # environment can enforce a required-reviewer approval gate (repo public, or a
+  # plan that supports environment protection on private repos). Re-enable then:
   # push:
   #   branches: [main]
   #   paths:
@@ -51,8 +61,8 @@ concurrency:
 
 jobs:
   deploy:
-    # Only the canonical repo's main branch ever deploys.
-    if: github.repository == 'Partha-dev01/Constitutional-AIOps' && github.ref == 'refs/heads/main'
+    # Canonical repo only; deploy on a v* release tag, or on a manual dispatch of main.
+    if: github.repository == 'Partha-dev01/Constitutional-AIOps' && (startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'))
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: production
