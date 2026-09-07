@@ -83,7 +83,7 @@ async function getWsToken(): Promise<string> {
   if (wsTokenCache !== undefined) {
     return wsTokenCache
   }
-  let token = ''
+  let token: string
   try {
     const res = await fetch('/api/v1/ws/token')
     const data = await res.json()

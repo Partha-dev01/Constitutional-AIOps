@@ -8,7 +8,7 @@ describe('cn', () => {
   })
 
   it('drops falsy values', () => {
-    expect(cn('x', false && 'y', undefined, 'z')).toBe('x z')
+    expect(cn('x', false, undefined, 'z')).toBe('x z')
   })
 
   it('merges conflicting tailwind classes (last wins)', () => {
