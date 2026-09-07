@@ -96,6 +96,96 @@ export function Docs() {
             </a>
           </div>
 
+          <H2 id="interface">Inside the app</H2>
+          <P>
+            The sidebar groups every screen by what you are doing. Here is the whole interface at a
+            glance. The in-app guide covers each screen in depth once you sign in.
+          </P>
+
+          <H3>Overview</H3>
+          <ul className="mb-4 max-w-3xl list-disc space-y-2 pl-6 text-muted-foreground">
+            <li>
+              <span className="font-semibold text-foreground">Dashboard.</span> Live system health,
+              open incidents, and recent telemetry in one place, with the agents' status up front.
+            </li>
+          </ul>
+
+          <H3>Operate</H3>
+          <ul className="mb-4 max-w-3xl list-disc space-y-2 pl-6 text-muted-foreground">
+            <li>
+              <span className="font-semibold text-foreground">Command Center.</span> The cockpit:
+              chat, the service topology, and live metrics side by side on a single pane.
+            </li>
+            <li>
+              <span className="font-semibold text-foreground">Incidents.</span> Triage what is
+              firing, read the root-cause analysis, and act on the suggested remediation.
+            </li>
+            <li>
+              <span className="font-semibold text-foreground">Chat.</span> Ask the reasoning agent
+              anything. Any action it proposes queues for your approval before it runs.
+            </li>
+          </ul>
+
+          <H3>Observe</H3>
+          <ul className="mb-4 max-w-3xl list-disc space-y-2 pl-6 text-muted-foreground">
+            <li>
+              <span className="font-semibold text-foreground">Telemetry.</span> Logs, metrics, and
+              traces as they stream in, correlated across the stack.
+            </li>
+            <li>
+              <span className="font-semibold text-foreground">Metrics.</span> Latency, throughput,
+              and resource charts for every service.
+            </li>
+            <li>
+              <span className="font-semibold text-foreground">Graph.</span> The episodic-memory graph
+              explorer: past incidents and how they relate.
+            </li>
+            <li>
+              <span className="font-semibold text-foreground">Infrastructure.</span> The services,
+              hosts, and containers under management.
+            </li>
+          </ul>
+
+          <H3>AI</H3>
+          <ul className="mb-4 max-w-3xl list-disc space-y-2 pl-6 text-muted-foreground">
+            <li>
+              <span className="font-semibold text-foreground">Local Model.</span> A private chat that
+              runs a model in your browser, with no backend call.
+            </li>
+            <li>
+              <span className="font-semibold text-foreground">Agents.</span> The fast and reasoning
+              agents, their models, and whether each is online.
+            </li>
+            <li>
+              <span className="font-semibold text-foreground">MCP Tools.</span> The catalog of tools
+              the agents can call, each gated by the constitution.
+            </li>
+            <li>
+              <span className="font-semibold text-foreground">Benchmark.</span> The evaluation
+              harness and the accuracy results behind the numbers on the home page.
+            </li>
+          </ul>
+
+          <H3>Admin</H3>
+          <ul className="mb-4 max-w-3xl list-disc space-y-2 pl-6 text-muted-foreground">
+            <li>
+              <span className="font-semibold text-foreground">Settings.</span> Point the app at your
+              model endpoints, bring your own API keys, and choose how much autonomy remediation gets.
+            </li>
+            <li>
+              <span className="font-semibold text-foreground">Notifications.</span> Wire up alerting
+              over Telegram, Matrix, or a webhook, and run ChatOps from your chat app.
+            </li>
+            <li>
+              <span className="font-semibold text-foreground">Audit Log.</span> Every action and
+              every gate decision, recorded and searchable.
+            </li>
+            <li>
+              <span className="font-semibold text-foreground">Docs.</span> The full page-by-page guide
+              and the interactive API reference, in the app.
+            </li>
+          </ul>
+
           <H2 id="hosted-demo">Hosted demo and cold starts</H2>
           <P>
             The public demo runs on a small instance that sleeps when no one is using it, which

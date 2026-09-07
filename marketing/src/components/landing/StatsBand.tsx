@@ -65,7 +65,7 @@ export function StatsBand() {
     <section className="border-b border-border bg-card/30">
       <div className="mx-auto max-w-6xl px-6 py-14 sm:py-16">
         <p className="mb-10 text-center font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
-          Measured, not marketed — from the peer-reviewed benchmark
+          From the COMSYS 2026 benchmark · 431 cases · 6 sources
         </p>
         <div
           ref={ref}

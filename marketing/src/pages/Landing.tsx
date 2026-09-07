@@ -3,6 +3,7 @@ import { HeroSection } from '../components/landing/HeroSection'
 import { StatsBand } from '../components/landing/StatsBand'
 import { FeatureGrid } from '../components/landing/FeatureGrid'
 import { ArchitectureBand } from '../components/landing/ArchitectureBand'
+import { ConstitutionSection } from '../components/landing/ConstitutionSection'
 import { ProofSection } from '../components/landing/ProofSection'
 import { SelfHostSection } from '../components/landing/SelfHostSection'
 import { TeamFooter } from '../components/landing/TeamFooter'
@@ -15,8 +16,8 @@ import { SHOW_SELFHOST } from '../config'
  *
  * The fixed LandingHeader overlays the hero (which carries its own top
  * padding), so no page-level offset is needed. Anchor targets: #features,
- * #architecture, #live, (#self-host when enabled), #about. Docs are a separate
- * page (/docs.html), not an in-page section.
+ * #architecture, #constitution, #live, (#self-host when enabled), #about. Docs
+ * are a separate page (/docs.html), not an in-page section.
  */
 export function Landing() {
   return (
@@ -28,6 +29,7 @@ export function Landing() {
       <StatsBand />
       <FeatureGrid />
       <ArchitectureBand />
+      <ConstitutionSection />
       <ProofSection />
       {SHOW_SELFHOST && <SelfHostSection />}
       <TeamFooter />
