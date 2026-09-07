@@ -303,6 +303,12 @@ export function Dashboard() {
         />
       </div>
 
+      {/* Live System Metrics — real per-service CPU%/mem% sampled from the
+          Docker socket (or Prometheus), plotted as they arrive. Replaces the
+          old static "Remediation Performance" tiles. Only real sampled points
+          are drawn; a first sample shows a single dot, never fabricated history. */}
+      <LiveMetricsBand stats={liveStats} successRate={stats?.actions.success_rate ?? null} />
+
       {/* Two live, no-LLM widgets side by side: the approval ticker surfaces
           actions awaiting a human decision (aging, with confidence band and tier
           checks); Recent Activity is an event-triggered feed of real WebSocket
@@ -329,12 +335,6 @@ export function Dashboard() {
         <IncidentNarrative items={narrative} />
         <LearnedRunbook />
       </div>
-
-      {/* Live System Metrics — real per-service CPU%/mem% sampled from the
-          Docker socket (or Prometheus), plotted as they arrive. Replaces the
-          old static "Remediation Performance" tiles. Only real sampled points
-          are drawn; a first sample shows a single dot, never fabricated history. */}
-      <LiveMetricsBand stats={liveStats} successRate={stats?.actions.success_rate ?? null} />
 
       {/* Service Availability - Moved to bottom */}
       <div className="bg-card rounded-lg border border-border p-6">
