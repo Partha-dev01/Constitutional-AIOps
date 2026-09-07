@@ -27,12 +27,20 @@ Telegram echoes as ``X-Telegram-Bot-Api-Secret-Token``).
 from __future__ import annotations
 
 import logging
+import os
 from typing import Any, Iterable, NamedTuple, Optional
 
 from src.auth import store as user_store
 from src.auth.crypto import decrypt_secret
 
 logger = logging.getLogger(__name__)
+
+# Public HTTPS base of this deployment's inbound webhook edge (the API Gateway /
+# relay front, e.g. https://<api-id>.execute-api.<region>.amazonaws.com). The box
+# ``.env`` carries it as AIOPS_RELAY_PUBLIC_URL. Empty on a plain self-host with
+# no off-box relay: webhook auto-registration is then skipped (the admin can
+# register a webhook to their own always-on endpoint out-of-band).
+_RELAY_PUBLIC_URL_ENV = "AIOPS_RELAY_PUBLIC_URL"
 
 
 class InboundBinding(NamedTuple):
@@ -149,10 +157,79 @@ def mirror_entries() -> list[dict[str, Any]]:
     return rows
 
 
+# ---------------------------------------------------------------------------
+# Webhook auto-registration (T1d): the piece that makes a valid bot token "just
+# work". Enabling inbound already generates a routingId + webhookSecret and mirrors
+# them to DynamoDB; this tells TELEGRAM to deliver to our edge at that routingId,
+# echoing the webhookSecret. Without it a correct token receives nothing.
+# ---------------------------------------------------------------------------
+
+
+def public_relay_base() -> str:
+    """The deployment's public webhook edge base URL, or "" when none is set."""
+    return (os.environ.get(_RELAY_PUBLIC_URL_ENV, "") or "").strip().rstrip("/")
+
+
+def public_webhook_url(routing_id: str) -> str:
+    """Full Telegram webhook URL for a routingId (``<base>/telegram/<routingId>``).
+
+    "" when no relay base is configured or the routingId is blank. The relay only
+    reads the LAST path segment as the routingId, so a stage prefix is irrelevant.
+    """
+    base = public_relay_base()
+    routing_id = (routing_id or "").strip()
+    if not base or not routing_id:
+        return ""
+    return f"{base}/telegram/{routing_id}"
+
+
+def sync_telegram_webhook(old_tg: Any, new_tg: Any) -> tuple[str, str]:
+    """Reconcile the bot's Telegram webhook to a just-saved telegram config.
+
+    Registers the webhook when inbound is enabled and fully configured, removes it
+    on a real on->off transition, and no-ops otherwise. Returns ``(action, detail)``
+    with ``action`` in {registered, removed, skipped, failed}. Best-effort: never
+    raises (a webhook call must never break saving alerting settings).
+    """
+    from src.alerting import telegram as telegram_adapter
+
+    new_tg = new_tg if isinstance(new_tg, dict) else {}
+    old_tg = old_tg if isinstance(old_tg, dict) else {}
+    now_on = bool(new_tg.get("inboundEnabled"))
+    was_on = bool(old_tg.get("inboundEnabled"))
+    token = decrypt_secret((new_tg.get("botToken") or "").strip())
+
+    if now_on:
+        base = public_relay_base()
+        if not base:
+            return "skipped", f"{_RELAY_PUBLIC_URL_ENV} not set"
+        routing_id = str(new_tg.get("routingId") or "").strip()
+        secret = decrypt_secret((new_tg.get("webhookSecret") or "").strip())
+        if not token or not routing_id or not secret:
+            return "skipped", "telegram inbound not fully configured"
+        ok, detail = telegram_adapter.set_webhook(
+            token,
+            f"{base}/telegram/{routing_id}",
+            secret_token=secret,
+            drop_pending_updates=True,
+        )
+        return ("registered" if ok else "failed"), detail
+
+    # Inbound now off: only actively deregister on a real on->off flip (and only
+    # while we still hold a token to call with). A never-enabled save is a no-op.
+    if was_on and token:
+        ok, detail = telegram_adapter.delete_webhook(token, drop_pending_updates=True)
+        return ("removed" if ok else "failed"), detail
+    return "skipped", "inbound disabled"
+
+
 __all__ = [
     "InboundBinding",
     "iter_configs",
     "mirror_entries",
+    "public_relay_base",
+    "public_webhook_url",
     "resolve",
     "resolve_telegram",
+    "sync_telegram_webhook",
 ]

@@ -1167,7 +1167,8 @@ async def save_alerting(
 ) -> AlertingConfigPublic:
     user = coerce_user(user)
     _require_alerting_admin(user, "change remote alerting settings")
-    new_alerting = alert_config.apply_update(_load_alerting_stored(user), body.model_dump())
+    stored_old = _load_alerting_stored(user)
+    new_alerting = alert_config.apply_update(stored_old, body.model_dump())
     _save_alerting_stored(user, new_alerting)
     # Push the inbound-relay binding mirror to DynamoDB so the off-box Lambda can
     # authenticate + resolve without waking the box. Best-effort and a no-op until
@@ -1179,6 +1180,21 @@ async def save_alerting(
         relay_mirror.sync()
     except Exception as exc:  # noqa: BLE001 - the mirror must never break a save
         logger.debug("relay mirror sync skipped: %s", exc)
+    # Register (or remove) the Telegram inbound webhook so a valid bot token starts
+    # receiving messages WITHOUT any manual setWebhook step. Best-effort and a no-op
+    # when no public relay edge is configured (AIOPS_RELAY_PUBLIC_URL unset), so a
+    # plain self-host / the test suite is never affected.
+    try:
+        from src.alerting import inbound
+
+        old_tg = stored_old.get("telegram") if isinstance(stored_old, dict) else {}
+        action, detail = inbound.sync_telegram_webhook(old_tg, new_alerting.get("telegram"))
+        if action in ("registered", "removed"):
+            logger.info("telegram inbound webhook %s", action)
+        elif action == "failed":
+            logger.warning("telegram inbound webhook registration failed: %s", detail)
+    except Exception as exc:  # noqa: BLE001 - webhook sync must never break a save
+        logger.debug("telegram webhook sync skipped: %s", exc)
     return AlertingConfigPublic(**alert_config.public_view(new_alerting))
 
 

@@ -14,9 +14,11 @@ import pytest
 
 from src.alerting import config as alert_config
 from src.alerting import dispatch as alert_dispatch
+from src.alerting import inbound as alert_inbound
 from src.alerting import matrix as alert_matrix
 from src.alerting import render
 from src.alerting import telegram as alert_telegram
+from src.auth import crypto as auth_crypto
 from src.notifications import store as note_store
 
 
@@ -366,3 +368,145 @@ class TestDispatch:
         note_store.notify(type="action.blocked", severity="error", title="t", message="m")
         assert seen.get("type") == "action.blocked" and seen.get("severity") == "error"
         note_store.set_notification_store(None)
+
+
+# ---------------------------------------------------------------------------
+# telegram webhook lifecycle (inbound ChatOps, T1d): setWebhook / deleteWebhook /
+# getWebhookInfo. Grounded in the Bot API contract (secret_token 1-256 chars from
+# A-Z a-z 0-9 _ -, echoed as X-Telegram-Bot-Api-Secret-Token; allowed_updates a
+# JSON list). Same scripted httpx fake: no real token, no network.
+# ---------------------------------------------------------------------------
+
+
+class TestTelegramWebhook:
+    def test_set_webhook_posts_url_secret_and_allowed_updates(self, monkeypatch):
+        rec = _install(monkeypatch, alert_telegram,
+                       {"post": _FakeResp(200, {"ok": True, "result": True})})
+        ok, detail = alert_telegram.set_webhook(
+            "123:abc", "https://edge.example.com/telegram/rid-1",
+            secret_token="Secret_Token-09", drop_pending_updates=True,
+        )
+        assert ok is True
+        _, url, _, body = rec[0]
+        assert url.endswith("/setWebhook") and "bot123:abc" in url  # token in path, not body
+        assert body["url"] == "https://edge.example.com/telegram/rid-1"
+        assert body["secret_token"] == "Secret_Token-09"
+        assert body["allowed_updates"] == ["message", "edited_message"]
+        assert body["drop_pending_updates"] is True
+
+    def test_set_webhook_unconfigured_makes_no_call(self, monkeypatch):
+        rec = _install(monkeypatch, alert_telegram, {"post": _FakeResp(200, {"ok": True})})
+        assert alert_telegram.set_webhook("", "https://x")[0] is False
+        assert alert_telegram.set_webhook("123:abc", "")[0] is False
+        assert rec == []  # neither built a client / made a call
+
+    def test_set_webhook_error_uses_description(self, monkeypatch):
+        _install(monkeypatch, alert_telegram,
+                 {"post": _FakeResp(400, {"ok": False,
+                                          "description": "Bad Request: HTTPS url must be provided"})})
+        ok, detail = alert_telegram.set_webhook("123:abc", "http://insecure")
+        assert ok is False and "HTTPS" in detail
+
+    def test_delete_webhook_idempotent(self, monkeypatch):
+        rec = _install(monkeypatch, alert_telegram,
+                       {"post": _FakeResp(200, {"ok": True, "result": True})})
+        ok, _ = alert_telegram.delete_webhook("123:abc", drop_pending_updates=True)
+        assert ok is True
+        _, url, _, body = rec[0]
+        assert url.endswith("/deleteWebhook") and body["drop_pending_updates"] is True
+
+    def test_webhook_info_returns_result(self, monkeypatch):
+        _install(monkeypatch, alert_telegram,
+                 {"post": _FakeResp(200, {"ok": True,
+                                          "result": {"url": "https://e/telegram/rid",
+                                                     "pending_update_count": 0}})})
+        ok, detail, info = alert_telegram.webhook_info("123:abc")
+        assert ok is True and info["url"].endswith("/telegram/rid")
+
+    def test_webhook_info_no_token_short_circuits(self):
+        ok, detail, info = alert_telegram.webhook_info("   ")
+        assert ok is False and info == {}
+
+
+# ---------------------------------------------------------------------------
+# inbound webhook auto-registration: the piece that makes a valid bot token "just
+# work" - enabling inbound must register the webhook at <relay-base>/telegram/<rid>
+# with the SAME secret the relay mirror stores, or every Telegram delivery 401s.
+# ---------------------------------------------------------------------------
+
+
+class TestInboundWebhookSync:
+    def test_public_webhook_url(self, monkeypatch):
+        monkeypatch.setenv("AIOPS_RELAY_PUBLIC_URL", "https://api-gw.example.com/")
+        assert alert_inbound.public_webhook_url("rid-9") == (
+            "https://api-gw.example.com/telegram/rid-9"
+        )
+        monkeypatch.delenv("AIOPS_RELAY_PUBLIC_URL", raising=False)
+        assert alert_inbound.public_webhook_url("rid-9") == ""
+
+    def _enabled(self, monkeypatch):
+        return alert_config.apply_update(
+            {},
+            {"telegram": {"enabled": True, "chatId": "42", "botToken": "TG-secret",
+                          "inboundEnabled": True},
+             "matrix": {"enabled": False}},
+        )
+
+    def test_sync_registers_with_full_url_and_secret(self, secret_env, monkeypatch):
+        monkeypatch.setenv("AIOPS_RELAY_PUBLIC_URL", "https://api-gw.example.com")
+        tg = self._enabled(monkeypatch)["telegram"]
+        rec = _install(monkeypatch, alert_telegram,
+                       {"post": _FakeResp(200, {"ok": True, "result": True})})
+        action, detail = alert_inbound.sync_telegram_webhook({}, tg)
+        assert action == "registered"
+        _, url, _, body = rec[-1]
+        assert url.endswith("/setWebhook")
+        assert body["url"] == f"https://api-gw.example.com/telegram/{tg['routingId']}"
+        assert body["secret_token"] == auth_crypto.decrypt_secret(tg["webhookSecret"])
+        assert body["drop_pending_updates"] is True
+
+    def test_sync_skipped_without_relay_base(self, secret_env, monkeypatch):
+        monkeypatch.delenv("AIOPS_RELAY_PUBLIC_URL", raising=False)
+        tg = self._enabled(monkeypatch)["telegram"]
+        rec = _install(monkeypatch, alert_telegram, {"post": _FakeResp(200, {"ok": True})})
+        action, _ = alert_inbound.sync_telegram_webhook({}, tg)
+        assert action == "skipped" and rec == []  # no Telegram call without an edge
+
+    def test_sync_removes_on_disable_transition(self, secret_env, monkeypatch):
+        monkeypatch.setenv("AIOPS_RELAY_PUBLIC_URL", "https://api-gw.example.com")
+        on = self._enabled(monkeypatch)
+        off = alert_config.apply_update(
+            on, {"telegram": {"enabled": True, "chatId": "42", "botToken": None,
+                              "inboundEnabled": False},
+                 "matrix": {"enabled": False}},
+        )
+        rec = _install(monkeypatch, alert_telegram,
+                       {"post": _FakeResp(200, {"ok": True, "result": True})})
+        action, _ = alert_inbound.sync_telegram_webhook(on["telegram"], off["telegram"])
+        assert action == "removed" and rec[-1][1].endswith("/deleteWebhook")
+
+    def test_sync_noop_when_never_enabled(self, secret_env, monkeypatch):
+        monkeypatch.setenv("AIOPS_RELAY_PUBLIC_URL", "https://api-gw.example.com")
+        off = alert_config.apply_update(
+            {}, {"telegram": {"enabled": True, "chatId": "1", "botToken": "tok",
+                              "inboundEnabled": False},
+                 "matrix": {"enabled": False}},
+        )
+        rec = _install(monkeypatch, alert_telegram, {"post": _FakeResp(200, {"ok": True})})
+        action, _ = alert_inbound.sync_telegram_webhook({}, off["telegram"])
+        assert action == "skipped" and rec == []
+
+    def test_registered_secret_matches_relay_mirror(self, secret_env, monkeypatch):
+        # The end-to-end invariant: the secret_token registered with Telegram must
+        # equal the webhookSecret the Lambda reads from the DynamoDB mirror, or every
+        # delivery is rejected 401. Both derive from the one stored (encrypted) value.
+        monkeypatch.setenv("AIOPS_RELAY_PUBLIC_URL", "https://api-gw.example.com")
+        monkeypatch.delenv("AUTH_REQUIRED", raising=False)  # system-config path only
+        stored = self._enabled(monkeypatch)
+        monkeypatch.setattr(alert_inbound, "_system_alerting", lambda: stored)
+        rec = _install(monkeypatch, alert_telegram,
+                       {"post": _FakeResp(200, {"ok": True, "result": True})})
+        alert_inbound.sync_telegram_webhook({}, stored["telegram"])
+        sent_secret = rec[-1][3]["secret_token"]
+        mirror = alert_inbound.mirror_entries()
+        assert mirror and mirror[0]["webhookSecret"] == sent_secret

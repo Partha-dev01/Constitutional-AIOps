@@ -95,9 +95,14 @@ services:
       # opted-in bindings to DynamoDB. All empty by default so the relay endpoint stays
       # inert (503) on a plain self-host. AWS_REGION lets boto3 in the container find
       # the mirror table (creds come from the instance role via IMDS).
+      # AIOPS_RELAY_PUBLIC_URL is the public webhook edge (the API Gateway front);
+      # the box uses it to auto-register the Telegram webhook when inbound is enabled,
+      # so a valid bot token works with no manual setWebhook. Empty = registration is
+      # skipped (a self-host with no relay registers a webhook out-of-band).
       - AIOPS_RELAY_HMAC_SECRET=${AIOPS_RELAY_HMAC_SECRET:-}
       - RELAY_QUEUE_URL=${RELAY_QUEUE_URL:-}
       - RELAY_BINDINGS_TABLE=${RELAY_BINDINGS_TABLE:-}
+      - AIOPS_RELAY_PUBLIC_URL=${AIOPS_RELAY_PUBLIC_URL:-}
       - AWS_REGION=${AWS_REGION:-}
       # --- Per-user LLM spend fence (cost-fence-D; OFF by default) ---
       # A daily per-user token ceiling for autonomous surfaces (chiefly the relay).

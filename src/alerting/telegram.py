@@ -94,4 +94,83 @@ def send(token: str, chat_id: str, text: str, *, html: bool = True) -> tuple[boo
     return ok, detail
 
 
-__all__ = ["verify", "send"]
+# ---------------------------------------------------------------------------
+# Webhook lifecycle (inbound ChatOps, T1d): register the bot with Telegram so it
+# delivers each message to our off-box relay edge. Without this a valid bot token
+# still receives NOTHING - Telegram must be told the URL. Registration is what
+# makes "any user's proper token just works" true, so it runs automatically when
+# an admin enables inbound (src/alerting/inbound.sync_telegram_webhook).
+# ---------------------------------------------------------------------------
+
+# Only the update types the relay actually handles (see aws/lambda/relay
+# _extract_message + src/api/routes/relay). Keeping this narrow means Telegram
+# never wakes the box for reactions/joins/channel posts the relay would drop.
+_DEFAULT_ALLOWED_UPDATES = ["message", "edited_message"]
+
+
+def set_webhook(
+    token: str,
+    url: str,
+    *,
+    secret_token: str = "",
+    allowed_updates: list[str] | None = None,
+    drop_pending_updates: bool = False,
+) -> tuple[bool, str]:
+    """Point the bot's webhook at ``url`` (Bot API ``setWebhook``). Returns ``(ok, detail)``.
+
+    ``url`` must be HTTPS on a Telegram-supported port (443/80/88/8443). When
+    ``secret_token`` is set Telegram echoes it back in every delivery as the
+    ``X-Telegram-Bot-Api-Secret-Token`` header, which the off-box relay checks
+    before it will act (or wake the box). The secret_token alphabet Telegram
+    accepts (``A-Z a-z 0-9 _ -``, 1-256 chars) is exactly what
+    ``secrets.token_urlsafe`` produces, so our stored webhookSecret is passed
+    through verbatim. Best-effort; never raises; never echoes the token.
+    """
+    token = (token or "").strip()
+    url = (url or "").strip()
+    if not token or not url:
+        return False, "telegram webhook not configured"
+    payload: dict[str, Any] = {
+        "url": url,
+        "allowed_updates": allowed_updates or _DEFAULT_ALLOWED_UPDATES,
+    }
+    if secret_token:
+        payload["secret_token"] = secret_token
+    if drop_pending_updates:
+        payload["drop_pending_updates"] = True
+    ok, detail, _ = _post(token, "setWebhook", payload)
+    return ok, detail
+
+
+def delete_webhook(token: str, *, drop_pending_updates: bool = False) -> tuple[bool, str]:
+    """Remove the bot's webhook (Bot API ``deleteWebhook``). Returns ``(ok, detail)``.
+
+    Idempotent: Telegram returns ``ok: true`` even when no webhook was set, so
+    calling this on an on->off inbound toggle is always safe.
+    """
+    token = (token or "").strip()
+    if not token:
+        return False, "no bot token"
+    payload: dict[str, Any] = {}
+    if drop_pending_updates:
+        payload["drop_pending_updates"] = True
+    ok, detail, _ = _post(token, "deleteWebhook", payload)
+    return ok, detail
+
+
+def webhook_info(token: str) -> tuple[bool, str, dict[str, Any]]:
+    """Current webhook status (Bot API ``getWebhookInfo``). Returns ``(ok, detail, result)``.
+
+    ``result`` carries Telegram's WebhookInfo (``url``, ``pending_update_count``,
+    ``last_error_message`` ...) so a caller can confirm registration or surface a
+    delivery error. ``{}`` on any failure.
+    """
+    token = (token or "").strip()
+    if not token:
+        return False, "no bot token", {}
+    ok, detail, data = _post(token, "getWebhookInfo", {})
+    result = data.get("result")
+    return ok, detail, result if isinstance(result, dict) else {}
+
+
+__all__ = ["verify", "send", "set_webhook", "delete_webhook", "webhook_info"]
