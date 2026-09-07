@@ -786,6 +786,14 @@ def _action_tool_gate(request: Request, tool_call: "ToolCallRequest") -> ActionG
         derived_context["active_incident"] = True
     derived_context.setdefault("action_scope", caller_context.get("action_scope", "single"))
 
+    # Non-container action tools (target_kind != "container") carry their own
+    # risk profile from the registry; feed it to the validator so its principles
+    # evaluate against real inputs rather than defaults. (Container tools keep
+    # their existing context exactly.)
+    if target_kind != "container" and meta is not None:
+        derived_context.setdefault("risk_level", meta.risk_level)
+        derived_context.setdefault("reversible", meta.reversible)
+
     context: dict[str, Any] = {
         "service": params.get("service_name"),
         "parameters": params,
@@ -830,6 +838,23 @@ def _action_tool_gate(request: Request, tool_call: "ToolCallRequest") -> ActionG
             error_code="approval_required",
             verdict=verdict,
         )
+    if target_kind != "container":
+        # Fail-closed target policy (Phase 3): a non-container action is NEVER
+        # auto-executed by the gate, even on an AUTOMATIC verdict. Automatic
+        # remediation is trusted only for the whitelisted container tools today;
+        # any other target always needs a human until a vetted per-tool
+        # automation policy exists. Destructive/approval verdicts already
+        # returned above, so this only downgrades an otherwise-automatic call.
+        return ActionGateDecision(
+            allowed=False,
+            error=(
+                f"Non-container action '{tool_call.tool_name}' (target_kind={target_kind}) "
+                "requires human approval: automatic execution of non-container targets is "
+                "not permitted by default."
+            ),
+            error_code="approval_required",
+            verdict=verdict,
+        )
     return ActionGateDecision(allowed=True, verdict=verdict)
 
 
@@ -861,11 +886,10 @@ async def _run_action_tool(
 
     # Execute via the action-tool executor map (was a restart/scale if/else). The
     # gate has already authorized the call; an action tool with no registered
-    # executor returns a clean error instead of dispatching to the wrong one.
-    executor = {
-        "restart_service": _execute_restart_service,
-        "scale_service": _execute_scale_service,
-    }.get(tool_call.tool_name)
+    # executor returns a clean error instead of dispatching to the wrong one. The
+    # map is module-level so the Phase-3 plugin loader can register a plugin
+    # action tool's executor into the SAME table (it still had to pass the gate).
+    executor = _ACTION_EXECUTORS.get(tool_call.tool_name)
     if executor is None:
         response = ToolCallResponse(
             success=False,
@@ -1431,6 +1455,18 @@ _TOOL_HANDLERS: dict[str, _ToolHandler] = {
 }
 
 
+# Action-tool executors, keyed by tool name: (params, start_time) ->
+# ToolCallResponse. ``_run_action_tool`` looks these up AFTER the constitutional
+# gate authorizes a call. Module-level + mutable so the Phase-3 plugin loader can
+# register a plugin action tool's executor into the SAME table (a plugin action
+# tool still has to pass the gate + validator to reach its executor).
+_ActionExecutor = Callable[[dict, float], Awaitable[ToolCallResponse]]
+_ACTION_EXECUTORS: dict[str, _ActionExecutor] = {
+    "restart_service": _execute_restart_service,
+    "scale_service": _execute_scale_service,
+}
+
+
 def _resolve_handler(tool_name: str) -> Optional[_ToolHandler]:
     """Map a tool name to its dispatch handler.
 
@@ -1439,10 +1475,82 @@ def _resolve_handler(tool_name: str) -> Optional[_ToolHandler]:
     ``_TOOL_HANDLERS`` — fail-safe, so a mutating tool can never dispatch to a
     non-gated path. Read/analysis tools resolve from the table. An unrecognized
     tool returns None (the caller reports "not found" / "Unknown tool")."""
+    _ensure_plugins_loaded()
     meta = TOOLS_BY_NAME.get(tool_name)
     if (meta is not None and meta.is_action) or tool_name in ACTION_TOOLS:
         return _handle_action
     return _TOOL_HANDLERS.get(tool_name)
+
+
+# ---------------------------------------------------------------------------
+# Optional tool plugins (Track 3-F Phase 3) — DEFAULT OFF, fail-closed.
+#
+# When AIOPS_ENABLE_PLUGINS is truthy, entry-point-discovered plugin tools are
+# wired into the SAME registries the built-ins use: the shared ToolMeta
+# catalogue (so listing + the gate + the validator all see them), the read
+# dispatch table, and the action-executor map. A plugin action tool therefore
+# has NO path to execution except restart/scale's path: _handle_action ->
+# _run_action_tool -> _action_tool_gate -> the constitutional validator. With
+# the env unset (production / GPU default) none of this runs and the tool
+# surface is byte-identical to a build without the plugin code.
+# ---------------------------------------------------------------------------
+
+_PLUGINS_LOADED = False
+
+
+def register_plugin_tools() -> int:
+    """Discover enabled plugin tools and wire them into the live registries.
+
+    Returns the number of tools registered. Fail-closed at every step: a plugin
+    may not shadow a built-in tool name, an action plugin without an executor is
+    skipped, a read plugin without a handler is skipped, and any discovery error
+    is logged and swallowed. Safe to call more than once (idempotent per name).
+    """
+    from src.tools.plugins import discover_plugins
+
+    registered = 0
+    for pt in discover_plugins():
+        name = pt.meta.name
+        if name in TOOLS_BY_NAME:
+            logger.warning("Plugin tool %r shadows a built-in and was skipped", name)
+            continue
+        if pt.meta.is_action:
+            if not callable(pt.executor):
+                logger.warning("Plugin action tool %r has no executor and was skipped", name)
+                continue
+            _ACTION_EXECUTORS[name] = pt.executor
+            # No _TOOL_HANDLERS entry: action tools resolve to the gated
+            # _handle_action by category (see _resolve_handler).
+        else:
+            if not callable(pt.handler):
+                logger.warning("Plugin tool %r has no handler and was skipped", name)
+                continue
+            _TOOL_HANDLERS[name] = pt.handler
+        TOOLS_BY_NAME[name] = pt.meta
+        registered += 1
+        logger.info("Registered plugin tool %r (category=%s)", name, pt.meta.category)
+    return registered
+
+
+def _ensure_plugins_loaded() -> None:
+    """Load plugins at most once, only when AIOPS_ENABLE_PLUGINS is set.
+
+    Sets the loaded flag BEFORE attempting a load so a failing discovery cannot
+    make every dispatch retry it. When the env is unset this is a one-line early
+    return on the first call and a no-op forever after — the production default."""
+    global _PLUGINS_LOADED
+    if _PLUGINS_LOADED:
+        return
+    _PLUGINS_LOADED = True
+    from src.tools.plugins import plugins_enabled
+
+    if not plugins_enabled():
+        return
+    try:
+        count = register_plugin_tools()
+        logger.info("Plugin loading enabled: %d tool(s) registered", count)
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.warning("Plugin loading failed (continuing without plugins): %s", exc)
 
 
 async def execute_tool_call(
