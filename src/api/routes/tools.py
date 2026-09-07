@@ -17,6 +17,7 @@ import os
 import re
 import time
 from collections import Counter
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any, Optional
@@ -272,75 +273,21 @@ async def call_tool(
     """
     start_time = time.time()
 
-    # Get system components
-    episode_store = getattr(request.app.state, "episode_store", None)
-    neo4j_client = getattr(request.app.state, "neo4j_client", None)
-    telemetry_collector = getattr(request.app.state, "telemetry_collector", None)
-
     try:
-        # ==================== find_similar ====================
-        if tool_call.tool_name == "find_similar":
-            return await _execute_find_similar(
-                episode_store, tool_call.parameters, start_time
-            )
-
-        # ==================== get_dependencies ====================
-        elif tool_call.tool_name == "get_dependencies":
-            return await _execute_get_dependencies(
-                neo4j_client, tool_call.parameters, start_time
-            )
-
-        # ==================== analyze_logs ====================
-        elif tool_call.tool_name == "analyze_logs":
-            return await _execute_analyze_logs(
-                telemetry_collector, tool_call.parameters, start_time
-            )
-
-        # ==================== analyze_time_series_anomaly ====================
-        elif tool_call.tool_name == "analyze_time_series_anomaly":
-            return await _execute_analyze_time_series(
-                telemetry_collector, tool_call.parameters, start_time
-            )
-
-        # ==================== restart_service / scale_service ====================
-        # Action-class tools mutate real containers (docker restart / compose
-        # --scale on the host socket). They MUST pass the constitutional gate —
-        # the REST path used to execute them directly, bypassing the validator
-        # entirely despite requires_approval=True on their metadata.
-        elif tool_call.tool_name in ACTION_TOOLS:
-            return await _run_action_tool(request, tool_call, start_time)
-
-        # ==================== query_recent_logs ====================
-        elif tool_call.tool_name == "query_recent_logs":
-            return await _execute_query_recent_logs(
-                telemetry_collector, tool_call.parameters, start_time
-            )
-
-        # ==================== query_metric ====================
-        elif tool_call.tool_name == "query_metric":
-            return await _execute_query_metric(
-                telemetry_collector, tool_call.parameters, start_time
-            )
-
-        # ==================== list_containers ====================
-        elif tool_call.tool_name == "list_containers":
-            return await _execute_list_containers(
-                tool_call.parameters, start_time
-            )
-
-        # ==================== analyze_time_series_anomaly ====================
-        elif tool_call.tool_name == "analyze_time_series_anomaly":
-            return await _execute_analyze_time_series(
-                telemetry_collector, tool_call.parameters, start_time
-            )
-
-        else:
+        handler = _resolve_handler(tool_call.tool_name)
+        if handler is None:
             return ToolCallResponse(
                 success=False,
                 data=None,
                 error=f"Tool '{tool_call.tool_name}' not found",
                 execution_time_ms=(time.time() - start_time) * 1000,
             )
+        ctx = _ToolExecContext(
+            request=request,
+            tool_name=tool_call.tool_name,
+            caller_context=tool_call.context,
+        )
+        return await handler(ctx, tool_call.parameters, start_time)
 
     except Exception as e:
         logger.error(f"Tool execution error: {e}")
@@ -1383,6 +1330,121 @@ async def _execute_list_containers(
         )
 
 
+# ---------------------------------------------------------------------------
+# Table-driven tool dispatch (Track 3-F Phase 2)
+#
+# Both entrypoints — the REST ``call_tool`` and the programmatic
+# ``execute_tool_call`` (chat.py / incidents.py / actions.py) — used to carry
+# their own hand-maintained if/elif ladder mapping a tool name to an executor.
+# Two ladders drift (the REST one even grew a duplicate, unreachable
+# analyze_time_series_anomaly branch). This single table is the one dispatch
+# map: a tool name resolves to a uniform handler
+# ``(ctx, params, start_time) -> ToolCallResponse`` that pulls whatever
+# app.state component its executor needs from ``ctx``.
+#
+# Action tools (category == "action" in the shared registry) always resolve to
+# ``_handle_action`` so they route through ``_run_action_tool`` -> the
+# constitutional gate; a mutating tool can never reach a non-gated dispatch
+# path. This is the extension point the Phase-3 plugin loader hooks into: a
+# plugin registers a ToolMeta (so the gate sees it) plus, for a read/analysis
+# plugin, a handler in ``_TOOL_HANDLERS``.
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class _ToolExecContext:
+    """What a tool handler may need to run one call: the request (for lazy
+    access to app.state components) and the caller-supplied validation context
+    that action tools forward to the constitutional gate."""
+
+    request: Any
+    tool_name: str
+    caller_context: Optional[dict[str, Any]] = None
+
+    @property
+    def episode_store(self) -> Any:
+        return getattr(self.request.app.state, "episode_store", None)
+
+    @property
+    def neo4j_client(self) -> Any:
+        return getattr(self.request.app.state, "neo4j_client", None)
+
+    @property
+    def telemetry_collector(self) -> Any:
+        return getattr(self.request.app.state, "telemetry_collector", None)
+
+
+_ToolHandler = Callable[["_ToolExecContext", dict[str, Any], float], Awaitable[ToolCallResponse]]
+
+
+async def _handle_find_similar(ctx: _ToolExecContext, params: dict, start_time: float) -> ToolCallResponse:
+    return await _execute_find_similar(ctx.episode_store, params, start_time)
+
+
+async def _handle_get_dependencies(ctx: _ToolExecContext, params: dict, start_time: float) -> ToolCallResponse:
+    return await _execute_get_dependencies(ctx.neo4j_client, params, start_time)
+
+
+async def _handle_analyze_logs(ctx: _ToolExecContext, params: dict, start_time: float) -> ToolCallResponse:
+    return await _execute_analyze_logs(ctx.telemetry_collector, params, start_time)
+
+
+async def _handle_analyze_time_series(ctx: _ToolExecContext, params: dict, start_time: float) -> ToolCallResponse:
+    return await _execute_analyze_time_series(ctx.telemetry_collector, params, start_time)
+
+
+async def _handle_query_recent_logs(ctx: _ToolExecContext, params: dict, start_time: float) -> ToolCallResponse:
+    return await _execute_query_recent_logs(ctx.telemetry_collector, params, start_time)
+
+
+async def _handle_query_metric(ctx: _ToolExecContext, params: dict, start_time: float) -> ToolCallResponse:
+    return await _execute_query_metric(ctx.telemetry_collector, params, start_time)
+
+
+async def _handle_list_containers(ctx: _ToolExecContext, params: dict, start_time: float) -> ToolCallResponse:
+    return await _execute_list_containers(params, start_time)
+
+
+async def _handle_action(ctx: _ToolExecContext, params: dict, start_time: float) -> ToolCallResponse:
+    """Route an action tool through the constitutional gate + audit pipeline
+    (``_run_action_tool``). Reconstructs a ``ToolCallRequest`` so the gate reads
+    the same tool_name / parameters / caller-context it always has."""
+    return await _run_action_tool(
+        ctx.request,
+        ToolCallRequest(tool_name=ctx.tool_name, parameters=params, context=ctx.caller_context),
+        start_time,
+    )
+
+
+# Read/analysis tools map by name. Action tools are resolved by category in
+# ``_resolve_handler`` (deliberately NOT listed here) so every action tool —
+# including a future plugin one — is forced onto the gated ``_handle_action``
+# path rather than depending on someone remembering to add it here.
+_TOOL_HANDLERS: dict[str, _ToolHandler] = {
+    "find_similar": _handle_find_similar,
+    "get_dependencies": _handle_get_dependencies,
+    "analyze_logs": _handle_analyze_logs,
+    "analyze_time_series_anomaly": _handle_analyze_time_series,
+    "query_recent_logs": _handle_query_recent_logs,
+    "query_metric": _handle_query_metric,
+    "list_containers": _handle_list_containers,
+}
+
+
+def _resolve_handler(tool_name: str) -> Optional[_ToolHandler]:
+    """Map a tool name to its dispatch handler.
+
+    Action-class tools (per the shared registry, or the ACTION_TOOLS set) ALWAYS
+    resolve to the gated ``_handle_action`` even if absent from
+    ``_TOOL_HANDLERS`` — fail-safe, so a mutating tool can never dispatch to a
+    non-gated path. Read/analysis tools resolve from the table. An unrecognized
+    tool returns None (the caller reports "not found" / "Unknown tool")."""
+    meta = TOOLS_BY_NAME.get(tool_name)
+    if (meta is not None and meta.is_action) or tool_name in ACTION_TOOLS:
+        return _handle_action
+    return _TOOL_HANDLERS.get(tool_name)
+
+
 async def execute_tool_call(
     request: Any,
     tool_name: str,
@@ -1405,37 +1467,16 @@ async def execute_tool_call(
     """
     start_time = time.time()
 
-    # Get system components from request
-    episode_store = getattr(request.app.state, "episode_store", None)
-    neo4j_client = getattr(request.app.state, "neo4j_client", None)
-    telemetry_collector = getattr(request.app.state, "telemetry_collector", None)
-
     try:
-        if tool_name == "find_similar":
-            result = await _execute_find_similar(episode_store, parameters, start_time)
-        elif tool_name == "get_dependencies":
-            result = await _execute_get_dependencies(neo4j_client, parameters, start_time)
-        elif tool_name == "analyze_logs":
-            result = await _execute_analyze_logs(telemetry_collector, parameters, start_time)
-        elif tool_name == "analyze_time_series_anomaly":
-            result = await _execute_analyze_time_series(telemetry_collector, parameters, start_time)
-        elif tool_name in ACTION_TOOLS:
-            # The programmatic path used to dispatch restart/scale straight to
-            # the executors, bypassing the constitutional gate entirely. Route
-            # it through the same gate + audit pipeline as the REST endpoint.
-            result = await _run_action_tool(
-                request,
-                ToolCallRequest(tool_name=tool_name, parameters=parameters, context=context),
-                start_time,
-            )
-        elif tool_name == "query_recent_logs":
-            result = await _execute_query_recent_logs(telemetry_collector, parameters, start_time)
-        elif tool_name == "query_metric":
-            result = await _execute_query_metric(telemetry_collector, parameters, start_time)
-        elif tool_name == "list_containers":
-            result = await _execute_list_containers(parameters, start_time)
-        else:
+        # Same dispatch table as the REST call_tool endpoint. Action tools
+        # (restart/scale) route through _handle_action -> _run_action_tool ->
+        # the constitutional gate + audit pipeline, exactly as before; the
+        # programmatic path used to hand-maintain its own copy of this ladder.
+        handler = _resolve_handler(tool_name)
+        if handler is None:
             return {"success": False, "error": f"Unknown tool: {tool_name}"}
+        ctx = _ToolExecContext(request=request, tool_name=tool_name, caller_context=context)
+        result = await handler(ctx, parameters, start_time)
 
         # Convert ToolCallResponse to dict. Carry metadata through so callers
         # (chat.py) can surface the constitutional verdict in metadata.constitutional.
