@@ -71,7 +71,7 @@ export function SelfHostSection() {
             {STEPS.map((step, i) => (
               <li
                 key={step.title}
-                className="rounded-xl border border-border bg-card/60 p-5"
+                className="rounded-xl border border-border bg-card/60 p-5 transition-colors hover:border-primary/40"
               >
                 <div className="flex items-start gap-4">
                   <span className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/15 text-sm font-semibold text-primary">

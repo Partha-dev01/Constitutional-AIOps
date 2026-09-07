@@ -40,7 +40,7 @@ export function TeamFooter() {
 
           {/* Section links */}
           <div>
-            <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+            <h3 className="mb-4 font-mono text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
               Explore
             </h3>
             <ul className="space-y-2">
@@ -82,8 +82,8 @@ export function TeamFooter() {
             />
           </a>
 
-          <p className="text-xs text-muted-foreground">
-            Constitutional AIOps · v1.0.0
+          <p className="font-mono text-xs text-muted-foreground">
+            Constitutional AIOps · v1.0.0 · Peer-reviewed at COMSYS 2026
           </p>
         </div>
       </div>

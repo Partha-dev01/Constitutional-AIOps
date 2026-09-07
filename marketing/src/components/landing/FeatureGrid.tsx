@@ -1,6 +1,7 @@
 import { Cpu, ShieldCheck, Network, Activity, Satellite, UserCheck } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useReveal } from '../../hooks/useReveal'
+import { SectionKicker } from './SectionKicker'
 
 interface Feature {
   icon: LucideIcon
@@ -48,6 +49,7 @@ export function FeatureGrid() {
     <section id="features" className="border-b border-border py-20 sm:py-28">
       <div className="mx-auto max-w-6xl px-6">
         <div className="mx-auto mb-14 max-w-2xl text-center">
+          <SectionKicker>Subsystems</SectionKicker>
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
             Core subsystems
           </h2>
@@ -68,9 +70,14 @@ export function FeatureGrid() {
               >
                 {/* Reveal lives on the wrapper: reveal-up's fill-forwards
                     transform would otherwise override child transitions. */}
-                <div className="group h-full rounded-lg border border-border bg-card p-6">
-                  <div className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary/20">
-                    <Icon className="h-6 w-6" aria-hidden="true" />
+                <div className="group h-full rounded-lg border border-border bg-card p-6 transition-all hover:-translate-y-0.5 hover:border-primary/40">
+                  <div className="mb-4 flex items-center justify-between">
+                    <span className="inline-flex h-11 w-11 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary/20">
+                      <Icon className="h-6 w-6" aria-hidden="true" />
+                    </span>
+                    <span className="font-mono text-xs tracking-widest text-muted-foreground/60">
+                      {String(i + 1).padStart(2, '0')}
+                    </span>
                   </div>
                   <h3 className="mb-2 text-lg font-semibold">{feature.title}</h3>
                   <p className="text-sm leading-relaxed text-muted-foreground">

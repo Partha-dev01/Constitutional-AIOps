@@ -1,9 +1,11 @@
 import { Check } from 'lucide-react'
 import { useReveal } from '../../hooks/useReveal'
 import { ShotFrame } from './ShotFrame'
+import { SectionKicker } from './SectionKicker'
 
 interface ProofRow {
   shot: string
+  kicker: string
   alt: string
   title: string
   blurb: string
@@ -13,6 +15,7 @@ interface ProofRow {
 const ROWS: ProofRow[] = [
   {
     shot: 'chat',
+    kicker: 'Reasoning chat',
     alt: 'Reasoning-agent chat with streaming tool-call timeline',
     title: 'Ask the reasoning agent anything',
     blurb:
@@ -25,6 +28,7 @@ const ROWS: ProofRow[] = [
   },
   {
     shot: 'graph-explorer',
+    kicker: 'Episodic memory',
     alt: 'Episodic graph explorer visualizing incident knowledge in Neo4j',
     title: 'Explore the episodic memory graph',
     blurb:
@@ -37,6 +41,7 @@ const ROWS: ProofRow[] = [
   },
   {
     shot: 'metrics',
+    kicker: 'Live metrics',
     alt: 'Metrics view with agent latency and system performance panels',
     title: 'Monitor agent performance',
     blurb:
@@ -49,6 +54,7 @@ const ROWS: ProofRow[] = [
   },
   {
     shot: 'agent-hub',
+    kicker: 'Agent hub',
     alt: 'Agent hub showing both LLM agents with health and controls',
     title: 'Command both agents from one hub',
     blurb:
@@ -71,6 +77,7 @@ export function ProofSection() {
     <section id="live" className="border-b border-border py-20 sm:py-28">
       <div className="mx-auto max-w-6xl px-6">
         <div className="mx-auto mb-16 max-w-2xl text-center">
+          <SectionKicker>Live platform</SectionKicker>
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
             See it running
           </h2>
@@ -81,7 +88,7 @@ export function ProofSection() {
 
         <div className="flex flex-col gap-20 sm:gap-24">
           {ROWS.map((row, i) => (
-            <ProofRowItem key={row.shot} row={row} reversed={i % 2 === 1} />
+            <ProofRowItem key={row.shot} row={row} index={i} reversed={i % 2 === 1} />
           ))}
         </div>
       </div>
@@ -89,7 +96,7 @@ export function ProofSection() {
   )
 }
 
-function ProofRowItem({ row, reversed }: { row: ProofRow; reversed: boolean }) {
+function ProofRowItem({ row, index, reversed }: { row: ProofRow; index: number; reversed: boolean }) {
   const { ref, visible } = useReveal<HTMLDivElement>()
 
   return (
@@ -100,6 +107,9 @@ function ProofRowItem({ row, reversed }: { row: ProofRow; reversed: boolean }) {
       }`}
     >
       <div className="w-full lg:w-5/12">
+        <p className="mb-3 font-mono text-xs uppercase tracking-widest text-primary/70">
+          {String(index + 1).padStart(2, '0')} · {row.kicker}
+        </p>
         <h3 className="text-2xl font-bold tracking-tight sm:text-3xl">{row.title}</h3>
         <p className="mt-4 leading-relaxed text-muted-foreground">{row.blurb}</p>
         <ul className="mt-6 space-y-3">
