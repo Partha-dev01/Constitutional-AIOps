@@ -34,6 +34,29 @@ export function anomalyExplainPayload(
   return { count: items.length, top }
 }
 
+/** The blast-radius widget's computed downstream view, labels not raw ids. */
+export interface BlastRadiusInput {
+  service: string
+  total: number
+  levels: string[][]
+}
+
+/**
+ * Build a bounded payload for `kind: "blast_radius"` from the computed hop
+ * levels. Caps each hop to `maxPerHop` services and drops emptied hops so a wide
+ * fan-out cannot drive a huge prompt (the server also truncates).
+ */
+export function blastRadiusExplainPayload(
+  input: BlastRadiusInput,
+  maxPerHop = 12,
+): { service: string; total: number; hops: { hop: number; services: string[] }[] } {
+  const cap = Math.max(0, maxPerHop)
+  const hops = input.levels
+    .map((services, i) => ({ hop: i + 1, services: services.slice(0, cap) }))
+    .filter((h) => h.services.length > 0)
+  return { service: input.service, total: input.total, hops }
+}
+
 /**
  * Map an explain `reason` (available=false) to a short user-facing message.
  * Keeps the widget on its computed view and tells the user what to do next.
@@ -55,4 +78,4 @@ export function reasonLabel(reason: string | null | undefined): string {
   }
 }
 
-export default { anomalyExplainPayload, reasonLabel }
+export default { anomalyExplainPayload, blastRadiusExplainPayload, reasonLabel }
