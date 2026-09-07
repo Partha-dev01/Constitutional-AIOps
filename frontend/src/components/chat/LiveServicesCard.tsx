@@ -48,6 +48,7 @@ export function LiveServicesCard({ nodes, onPick, dense = false }: LiveServicesC
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         {nodes.slice(0, MAX_CARDS).map((n) => {
           const s = seriesFor(n.label)
+          const hasLive = !!(s && s.cpu.length > 0)
           return (
             <button
               key={n.id}
@@ -57,19 +58,35 @@ export function LiveServicesCard({ nodes, onPick, dense = false }: LiveServicesC
               className="group rounded-lg border border-border/60 bg-background/60 p-2 text-left transition-colors hover:border-primary/40 hover:bg-primary/5"
             >
               <div className="flex items-center justify-between gap-1">
-                <span className="truncate text-xs font-medium" title={n.label}>{n.label}</span>
-                <span className="shrink-0 text-[10px] text-muted-foreground">
-                  {s?.latestCpu != null ? `${s.latestCpu.toFixed(0)}%` : n.kind}
+                <span className="flex min-w-0 items-center gap-1.5">
+                  <span
+                    className={`h-1.5 w-1.5 shrink-0 rounded-full ${hasLive ? 'bg-green-500' : 'bg-muted-foreground/40'}`}
+                    aria-hidden="true"
+                  />
+                  <span className="truncate text-xs font-medium" title={n.label}>{n.label}</span>
+                </span>
+                <span className="shrink-0 rounded bg-muted/60 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide text-muted-foreground">
+                  {n.kind}
                 </span>
               </div>
-              <div className="mt-1 h-[20px] text-primary">
-                {s && s.cpu.length > 0 ? (
-                  <Sparkline values={s.cpu} min={0} height={20} area={false} ariaLabel={`${n.label} CPU trend`} />
-                ) : null}
+              <div className="mt-1.5 flex h-[20px] items-center text-primary">
+                {hasLive ? (
+                  <Sparkline values={s!.cpu} min={0} height={20} area={false} ariaLabel={`${n.label} CPU trend`} />
+                ) : (
+                  <span
+                    className="h-px w-full bg-gradient-to-r from-border via-border/60 to-transparent"
+                    aria-hidden="true"
+                  />
+                )}
               </div>
-              <span className="mt-0.5 block text-[10px] text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">
-                Diagnose →
-              </span>
+              <div className="mt-1 flex items-center justify-between text-[10px]">
+                <span className="text-muted-foreground/70">
+                  {hasLive ? `${s!.latestCpu?.toFixed(0) ?? '—'}% CPU` : 'No live metrics'}
+                </span>
+                <span className="font-medium text-primary/70 opacity-70 transition-opacity group-hover:opacity-100">
+                  Diagnose →
+                </span>
+              </div>
             </button>
           )
         })}
