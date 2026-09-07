@@ -3,6 +3,7 @@ import {
   anomalyExplainPayload,
   blastRadiusExplainPayload,
   incidentNarrativeExplainPayload,
+  learnedRunbookExplainPayload,
   reasonLabel,
   type AnomalyItem,
 } from './insights'
@@ -99,6 +100,35 @@ describe('incidentNarrativeExplainPayload', () => {
 
   it('is empty-safe', () => {
     expect(incidentNarrativeExplainPayload([])).toEqual({ incidents: [] })
+  })
+})
+
+describe('learnedRunbookExplainPayload', () => {
+  const row = (over = {}) => ({
+    key: 'restart_service',
+    successRate: 0.923,
+    succeeded: 12,
+    used: 13,
+    ...over,
+  })
+
+  it('rounds the rate and carries the counts', () => {
+    const payload = learnedRunbookExplainPayload([row()])
+    expect(payload.runbook[0]).toEqual({
+      action: 'restart_service',
+      successRate: 0.92,
+      succeeded: 12,
+      used: 13,
+    })
+  })
+
+  it('caps to the strongest max rows', () => {
+    const rows = Array.from({ length: 10 }, (_, i) => row({ key: `a${i}` }))
+    expect(learnedRunbookExplainPayload(rows, 6).runbook).toHaveLength(6)
+  })
+
+  it('is empty-safe', () => {
+    expect(learnedRunbookExplainPayload([])).toEqual({ runbook: [] })
   })
 })
 
