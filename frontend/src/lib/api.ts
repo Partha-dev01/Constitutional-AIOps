@@ -320,6 +320,12 @@ export interface AlertingConfig {
     chatId: string;
     tokenSet: boolean;
     minSeverity: AlertSeverity;
+    /** Inbound ChatOps (T1d): whether the bot may receive and reply to messages. */
+    inboundEnabled: boolean;
+    /** Opaque webhook path segment, generated server-side when inbound is first enabled. */
+    routingId: string;
+    /** Whether the inbound webhook secret is set (the value stays server-side). */
+    webhookSecretSet: boolean;
   };
   matrix: {
     enabled: boolean;
@@ -340,6 +346,12 @@ export interface AlertingConfigUpdate {
     chatId: string;
     botToken?: string;
     minSeverity: AlertSeverity;
+    /**
+     * Inbound ChatOps toggle. Always sent: the backend defaults it to false, so
+     * omitting it on a normal save would silently disable a previously enabled
+     * inbound binding and deregister its webhook.
+     */
+    inboundEnabled: boolean;
   };
   matrix: {
     enabled: boolean;
