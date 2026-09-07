@@ -62,10 +62,18 @@ class ToolMeta:
     # the tool name, so an undeclared action tool is still verb-checked rather
     # than silently treated as harmless. ``target_kind`` selects how the gate
     # resolves/whitelists the action target: "container" keeps the docker-container
-    # whitelist that restart/scale use; a future non-container action tool declares
-    # its own kind (see project-gate-generalization-spec Phase 3).
+    # whitelist that restart/scale use; a non-container action tool declares its
+    # own kind (e.g. "cloud_resource", "database"), which skips the container
+    # whitelist and takes the non-container target policy in the gate (feeds
+    # ``risk_level``/``reversible`` to the validator and NEVER auto-executes —
+    # always human-approval; see project-gate-generalization-spec Phase 3).
+    # ``reversible`` is the fail-safe default for that policy: an action declared
+    # irreversible (reversible=False) is the higher-risk case, so the DEFAULT is
+    # True only because the built-in container tools genuinely are reversible; a
+    # plugin action tool should set it honestly.
     action_type: str = ""
     target_kind: str = "container"
+    reversible: bool = True
 
     @property
     def is_action(self) -> bool:
