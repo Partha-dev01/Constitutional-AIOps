@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   anomalyExplainPayload,
   blastRadiusExplainPayload,
+  incidentNarrativeExplainPayload,
   reasonLabel,
   type AnomalyItem,
 } from './insights'
@@ -69,6 +70,35 @@ describe('blastRadiusExplainPayload', () => {
     expect(
       blastRadiusExplainPayload({ service: 'api', total: 0, levels: [] }),
     ).toEqual({ service: 'api', total: 0, hops: [] })
+  })
+})
+
+describe('incidentNarrativeExplainPayload', () => {
+  const group = (id: string, stages: string[]) => ({
+    incidentId: id,
+    stages: stages.map((stage) => ({ stage })),
+  })
+
+  it('sends ordered stage keys per incident', () => {
+    const payload = incidentNarrativeExplainPayload([
+      group('inc-1', ['detected', 'root cause', 'resolved']),
+    ])
+    expect(payload).toEqual({
+      incidents: [{ id: 'inc-1', stages: ['detected', 'root cause', 'resolved'] }],
+    })
+  })
+
+  it('caps incidents and stages', () => {
+    const groups = Array.from({ length: 5 }, (_, i) =>
+      group(`inc-${i}`, Array.from({ length: 20 }, (_, j) => `s${j}`)),
+    )
+    const payload = incidentNarrativeExplainPayload(groups, 2, 3)
+    expect(payload.incidents).toHaveLength(2)
+    expect(payload.incidents[0].stages).toHaveLength(3)
+  })
+
+  it('is empty-safe', () => {
+    expect(incidentNarrativeExplainPayload([])).toEqual({ incidents: [] })
   })
 })
 

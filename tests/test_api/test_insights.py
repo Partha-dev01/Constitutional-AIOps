@@ -64,8 +64,14 @@ class _FakeRouter:
         self.calls: list[dict] = []
 
     async def fast_completion(self, prompt, max_tokens=None, system_prompt=None, **kwargs):
+        return self._record("fast", prompt, max_tokens, system_prompt)
+
+    async def reasoning_completion(self, prompt, max_tokens=None, system_prompt=None, **kwargs):
+        return self._record("reasoning", prompt, max_tokens, system_prompt)
+
+    def _record(self, tier, prompt, max_tokens, system_prompt) -> dict:
         self.calls.append(
-            {"prompt": prompt, "max_tokens": max_tokens, "system_prompt": system_prompt}
+            {"tier": tier, "prompt": prompt, "max_tokens": max_tokens, "system_prompt": system_prompt}
         )
         result: dict = {"choices": [{"message": {"content": self._content}}]}
         if self._usage is not None:
@@ -164,6 +170,32 @@ class TestSuccess:
         tokens, requests = store.llm_usage_today(db_env.id)
         assert tokens == resp.tokens_used
         assert requests == 1
+
+    @pytest.mark.asyncio
+    async def test_reasoning_tier_routes_to_reasoning_completion(self, db_env, monkeypatch):
+        _enable_widgets(db_env.id)
+        fake = _FakeRouter(content="Approve the restart; it is the least invasive step.")
+        _patch_router(monkeypatch, (fake, True))
+        user = User(id=db_env.id, username="tenant-insight", role="user")
+        resp = await explain(
+            _request(),
+            ExplainRequest(kind="next_best_action", tier="reasoning", payload={"incidents": []}),
+            user=user,
+        )
+        assert resp.available is True
+        # The reasoning tier was used, with its larger bound.
+        assert fake.calls[0]["tier"] == "reasoning"
+        assert fake.calls[0]["max_tokens"] == insights._MAX_TOKENS_REASONING
+
+    @pytest.mark.asyncio
+    async def test_default_tier_is_fast(self, db_env, monkeypatch):
+        _enable_widgets(db_env.id)
+        fake = _FakeRouter()
+        _patch_router(monkeypatch, (fake, True))
+        user = User(id=db_env.id, username="tenant-insight", role="user")
+        await explain(_request(), ExplainRequest(payload={"x": 1}), user=user)
+        assert fake.calls[0]["tier"] == "fast"
+        assert fake.calls[0]["max_tokens"] == insights._MAX_TOKENS
 
     @pytest.mark.asyncio
     async def test_empty_content_degrades_but_still_records(self, db_env, monkeypatch):

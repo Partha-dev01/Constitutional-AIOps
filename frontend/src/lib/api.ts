@@ -1123,10 +1123,14 @@ export const api = {
         method: 'PUT',
         body: JSON.stringify(body),
       }),
-    explain: (kind: string, payload: Record<string, unknown>) =>
+    explain: (
+      kind: string,
+      payload: Record<string, unknown>,
+      tier: 'fast' | 'reasoning' = 'fast',
+    ) =>
       request<ExplainResult>('/insights/explain', {
         method: 'POST',
-        body: JSON.stringify({ kind, payload }),
+        body: JSON.stringify({ kind, payload, tier }),
       }),
   },
 

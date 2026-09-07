@@ -9,8 +9,9 @@ of the computed numbers.
 
 Design (every guard fail-closed so the hosted/GPU stack stays byte-identical):
 
-  * ``POST /api/v1/insights/explain`` runs the FAST tier via the caller's OWN
-    router (BYOK per-user routing, same resolver the relay uses). It is:
+  * ``POST /api/v1/insights/explain`` runs the FAST tier (or the heavier
+    reasoning tier when a widget asks for it) via the caller's OWN router (BYOK
+    per-user routing, same resolver the relay uses). It is:
       - opt-in: a user must turn ``ui.aiWidgets.enabled`` on first. Off -> no LLM
         call at all, a 200 with ``available=false, reason="ai_widgets_disabled"``.
       - cost-fenced: cost-fence-D (``src.cost.fence``) bounds daily spend. Over
@@ -64,6 +65,9 @@ _WIDGETS_KEY = "aiWidgets"
 # The fast tier writes a short plain-language hypothesis. Keep it small: this is a
 # caption on top of an already-rendered widget, not a chat answer.
 _MAX_TOKENS = 220
+# A widget may opt into the heavier reasoning tier (e.g. next-best-action), which
+# gets a little more room. Still a caption, and still cost-fenced.
+_MAX_TOKENS_REASONING = 340
 _MAX_PAYLOAD_CHARS = 2000
 
 # What a client may ask us to explain. An unknown kind falls back to "generic"
@@ -87,6 +91,12 @@ _KIND_INSTRUCTIONS: dict[str, str] = {
     "blast_radius": (
         "The dependency edges below describe a service and its neighbours. In 2 to 4 "
         "sentences, describe the likely blast radius if this service degrades."
+    ),
+    "next_best_action": (
+        "The incident timeline below lists the lifecycle stages of one or more "
+        "incidents. In 2 to 4 sentences, name the single most useful next action "
+        "for the on-call engineer and why. Prefer the least invasive step and do "
+        "not invent stages that are not listed."
     ),
     "generic": (
         "In 2 to 4 sentences, give a plain-language explanation of the data below "
@@ -127,6 +137,9 @@ class ExplainRequest(BaseModel):
     """A request for a plain-language explanation of a widget's computed data."""
 
     kind: str = "generic"
+    # "fast" (default) or "reasoning". A widget opts into the reasoning tier only
+    # when the extra quality is worth the extra (still-fenced) spend.
+    tier: str = "fast"
     payload: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -310,10 +323,17 @@ async def explain(
 
     prompt = _build_prompt(body.kind, body.payload if isinstance(body.payload, dict) else {})
 
+    # A widget may ask for the heavier reasoning tier; anything else runs fast.
+    # Both go through the caller's OWN router and both are cost-fenced, so the
+    # tier only trades a little more spend for a better answer.
+    reasoning = body.tier == "reasoning"
+    completion = router_obj.reasoning_completion if reasoning else router_obj.fast_completion
+    max_tokens = _MAX_TOKENS_REASONING if reasoning else _MAX_TOKENS
+
     try:
-        result = await router_obj.fast_completion(
+        result = await completion(
             prompt,
-            max_tokens=_MAX_TOKENS,
+            max_tokens=max_tokens,
             system_prompt=_SYSTEM_PROMPT,
         )
     except Exception as exc:  # noqa: BLE001 - a widget explain must never 500
