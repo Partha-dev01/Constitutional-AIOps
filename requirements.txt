@@ -57,7 +57,7 @@ docker>=7.2.0
 # NOTE: torch with CUDA support requires separate install:
 #   pip install torch --index-url https://download.pytorch.org/whl/cu118
 # For NVIDIA GTX 1650, use CUDA 11.8 or higher
-torch>=2.0.0
+torch>=2.14.0
 sentence-transformers>=2.2.0
 
 # Benchmark Evaluation (BERTScore for semantic similarity)
