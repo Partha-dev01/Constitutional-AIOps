@@ -3,12 +3,19 @@
  * downstream of a chosen one, so an operator can gauge the blast radius before
  * touching it (Track 2 widget). Read-only and no-LLM: a client-side BFS over the
  * live topology schema. Nothing is called, queued, or executed here.
+ *
+ * The opt-in "Explain" overlay (Track 2 W3) layers a plain-language hypothesis
+ * on top of the computed hops. It fires only on click, never on mount, and only
+ * when the user has turned AI insight widgets on.
  */
 
 import { useEffect, useMemo, useState } from 'react'
-import { Waypoints, Network } from 'lucide-react'
+import { Waypoints, Network, Sparkles, Loader2 } from 'lucide-react'
 import { api, type TopologySchemaNode, type TopologySchemaEdge } from '../lib/api'
 import { computeBlastRadius } from '../lib/blastRadius'
+import { useAiWidgets } from '../lib/useAiWidgets'
+import { AiGenerated } from './ui/AiGenerated'
+import { blastRadiusExplainPayload, reasonLabel } from '../lib/insights'
 
 const MAX_DEPTH = 2
 
@@ -16,6 +23,12 @@ export function BlastRadiusPreview() {
   const [nodes, setNodes] = useState<TopologySchemaNode[]>([])
   const [edges, setEdges] = useState<TopologySchemaEdge[]>([])
   const [focus, setFocus] = useState<string>('')
+
+  // Opt-in LLM explain (Track 2 W3): on-demand only, never on mount.
+  const ai = useAiWidgets()
+  const [explaining, setExplaining] = useState(false)
+  const [explanation, setExplanation] = useState<string | null>(null)
+  const [explainNote, setExplainNote] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -49,6 +62,32 @@ export function BlastRadiusPreview() {
   )
 
   const hasGraph = nodes.length > 0 && edges.length > 0
+
+  // A different focus service is a different question, so drop any prior answer.
+  useEffect(() => {
+    setExplanation(null)
+    setExplainNote(null)
+  }, [focus])
+
+  const onExplain = async () => {
+    setExplaining(true)
+    setExplainNote(null)
+    setExplanation(null)
+    try {
+      const payload = blastRadiusExplainPayload({
+        service: labelOf(focus),
+        total,
+        levels: levels.map((ids) => ids.map((id) => labelOf(id))),
+      })
+      const res = await api.insights.explain('blast_radius', payload)
+      if (res.available && res.explanation) setExplanation(res.explanation)
+      else setExplainNote(reasonLabel(res.reason))
+    } catch {
+      setExplainNote(reasonLabel('error'))
+    } finally {
+      setExplaining(false)
+    }
+  }
 
   return (
     <div className="bg-card rounded-lg border border-border p-6">
@@ -128,6 +167,31 @@ export function BlastRadiusPreview() {
           )}
         </div>
       )}
+
+      {ai.enabled && hasGraph && total > 0 && (
+        <div className="mt-4 border-t border-border/60 pt-3">
+          {explanation ? (
+            <AiGenerated>{explanation}</AiGenerated>
+          ) : (
+            <button
+              type="button"
+              onClick={() => void onExplain()}
+              disabled={explaining}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted disabled:opacity-50"
+            >
+              {explaining ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+              ) : (
+                <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+              )}
+              {explaining ? 'Explaining…' : 'Explain the blast radius'}
+            </button>
+          )}
+          {explainNote && <p className="mt-2 text-xs text-muted-foreground">{explainNote}</p>}
+        </div>
+      )}
     </div>
   )
 }
+
+export default BlastRadiusPreview

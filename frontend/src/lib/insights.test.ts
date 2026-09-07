@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { anomalyExplainPayload, reasonLabel, type AnomalyItem } from './insights'
+import {
+  anomalyExplainPayload,
+  blastRadiusExplainPayload,
+  reasonLabel,
+  type AnomalyItem,
+} from './insights'
 
 const item = (over: Partial<AnomalyItem> = {}): AnomalyItem => ({
   series: 'api · cpu',
@@ -32,6 +37,38 @@ describe('anomalyExplainPayload', () => {
     const payload = anomalyExplainPayload([item(), item()], 0)
     expect(payload.count).toBe(2)
     expect(payload.top).toHaveLength(0)
+  })
+})
+
+describe('blastRadiusExplainPayload', () => {
+  it('numbers hops from 1 and keeps the total', () => {
+    const payload = blastRadiusExplainPayload({
+      service: 'api',
+      total: 3,
+      levels: [['web', 'worker'], ['db']],
+    })
+    expect(payload.service).toBe('api')
+    expect(payload.total).toBe(3)
+    expect(payload.hops).toEqual([
+      { hop: 1, services: ['web', 'worker'] },
+      { hop: 2, services: ['db'] },
+    ])
+  })
+
+  it('caps each hop and drops emptied hops', () => {
+    const wide = Array.from({ length: 20 }, (_, i) => `s${i}`)
+    const payload = blastRadiusExplainPayload(
+      { service: 'api', total: 20, levels: [wide, []] },
+      5,
+    )
+    expect(payload.hops).toHaveLength(1)
+    expect(payload.hops[0].services).toHaveLength(5)
+  })
+
+  it('is empty-safe', () => {
+    expect(
+      blastRadiusExplainPayload({ service: 'api', total: 0, levels: [] }),
+    ).toEqual({ service: 'api', total: 0, hops: [] })
   })
 })
 
