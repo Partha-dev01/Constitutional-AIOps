@@ -5,9 +5,11 @@ import {
   incidentNarrativeExplainPayload,
   learnedRunbookExplainPayload,
   graphCopilotExplainPayload,
+  incidentExplainPayload,
   reasonLabel,
   type AnomalyItem,
   type GraphCopilotInput,
+  type IncidentExplainInput,
 } from './insights'
 
 const item = (over: Partial<AnomalyItem> = {}): AnomalyItem => ({
@@ -184,6 +186,75 @@ describe('graphCopilotExplainPayload', () => {
     const out = graphCopilotExplainPayload(many, 6, 5)
     expect(out.topRootCauses).toHaveLength(6)
     expect(out.recentIncidents).toHaveLength(5)
+  })
+})
+
+describe('incidentExplainPayload', () => {
+  const base = (over: Partial<IncidentExplainInput> = {}): IncidentExplainInput => ({
+    title: 'API 5xx spike',
+    severity: 'critical',
+    status: 'analyzing',
+    category: 'application',
+    description: 'Error rate climbed after the 14:00 deploy.',
+    services: ['api', 'gateway'],
+    rootCause: 'connection pool exhausted',
+    rootCauseConfidence: 0.876,
+    causalChain: ['deploy', 'pool exhausted', '5xx'],
+    remediationSteps: ['roll back deploy', 'raise pool size'],
+    ...over,
+  })
+
+  it('carries the core fields and rounds the confidence', () => {
+    const out = incidentExplainPayload(base())
+    expect(out.title).toBe('API 5xx spike')
+    expect(out.severity).toBe('critical')
+    expect(out.status).toBe('analyzing')
+    expect(out.services).toEqual(['api', 'gateway'])
+    expect(out.causalChain).toEqual(['deploy', 'pool exhausted', '5xx'])
+    expect(out.remediationSteps).toEqual(['roll back deploy', 'raise pool size'])
+    expect(out.category).toBe('application')
+    expect(out.rootCause).toBe('connection pool exhausted')
+    expect(out.rootCauseConfidence).toBe(0.88)
+  })
+
+  it('omits the optional fields when they are absent or blank', () => {
+    const out = incidentExplainPayload(
+      base({ category: '  ', description: null, rootCause: '', rootCauseConfidence: null }),
+    )
+    expect('category' in out).toBe(false)
+    expect('description' in out).toBe(false)
+    expect('rootCause' in out).toBe(false)
+    expect('rootCauseConfidence' in out).toBe(false)
+    // core lists still present
+    expect(out.services).toEqual(['api', 'gateway'])
+  })
+
+  it('caps the lists and trims a long description', () => {
+    const long = 'x'.repeat(600)
+    const out = incidentExplainPayload(
+      base({
+        services: Array.from({ length: 20 }, (_, i) => `s${i}`),
+        causalChain: Array.from({ length: 20 }, (_, i) => `c${i}`),
+        remediationSteps: Array.from({ length: 20 }, (_, i) => `r${i}`),
+        description: long,
+      }),
+      { maxServices: 8, maxChain: 8, maxSteps: 8, maxDescriptionChars: 400 },
+    )
+    expect(out.services).toHaveLength(8)
+    expect(out.causalChain).toHaveLength(8)
+    expect(out.remediationSteps).toHaveLength(8)
+    expect(out.description).toHaveLength(401) // 400 chars + the ellipsis
+    expect(out.description?.endsWith('…')).toBe(true)
+  })
+
+  it('is empty-safe when the lists are missing', () => {
+    const out = incidentExplainPayload({
+      title: 't',
+      severity: 'low',
+      status: 'resolved',
+      services: [],
+    })
+    expect(out).toEqual({ title: 't', severity: 'low', status: 'resolved', services: [], causalChain: [], remediationSteps: [] })
   })
 })
 

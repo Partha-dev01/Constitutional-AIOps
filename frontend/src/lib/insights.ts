@@ -162,6 +162,80 @@ export function graphCopilotExplainPayload(
   return { stats: input.stats, topRootCauses, topActions, topServices, recentIncidents }
 }
 
+/** The single-incident fields the RCA copilot summarises (lean, source-agnostic). */
+export interface IncidentExplainInput {
+  title: string
+  severity: string
+  status: string
+  category?: string | null
+  description?: string | null
+  services: string[]
+  rootCause?: string | null
+  rootCauseConfidence?: number | null
+  causalChain?: string[]
+  remediationSteps?: string[]
+}
+
+/**
+ * The bounded payload sent for `kind: "incident"` (reasoning tier). A `type`
+ * (not an `interface`) so it stays assignable to the explain endpoint's
+ * `Record<string, unknown>` payload param.
+ */
+export type IncidentExplainPayload = {
+  title: string
+  severity: string
+  status: string
+  services: string[]
+  causalChain: string[]
+  remediationSteps: string[]
+  category?: string
+  description?: string
+  rootCause?: string
+  rootCauseConfidence?: number
+}
+
+/**
+ * Build a bounded payload for `kind: "incident"` from one incident's computed
+ * fields. Core scalars and the service / causal-chain / step lists are always
+ * present (each list capped); the optional category, description, root cause and
+ * its rounded confidence are included only when set. The description is trimmed
+ * to a bounded length so a long write-up cannot drive a huge prompt (the server
+ * also truncates the whole body).
+ */
+export function incidentExplainPayload(
+  input: IncidentExplainInput,
+  {
+    maxServices = 8,
+    maxChain = 8,
+    maxSteps = 8,
+    maxDescriptionChars = 400,
+  }: { maxServices?: number; maxChain?: number; maxSteps?: number; maxDescriptionChars?: number } = {},
+): IncidentExplainPayload {
+  const clamp = (xs: string[] | undefined, n: number) => (xs ?? []).slice(0, Math.max(0, n))
+  const out: IncidentExplainPayload = {
+    title: input.title,
+    severity: input.severity,
+    status: input.status,
+    services: clamp(input.services, maxServices),
+    causalChain: clamp(input.causalChain, maxChain),
+    remediationSteps: clamp(input.remediationSteps, maxSteps),
+  }
+  const category = (input.category ?? '').trim()
+  if (category) out.category = category
+  const description = (input.description ?? '').trim()
+  if (description) {
+    const cap = Math.max(0, maxDescriptionChars)
+    out.description = description.length > cap ? description.slice(0, cap) + '…' : description
+  }
+  const rootCause = (input.rootCause ?? '').trim()
+  if (rootCause) out.rootCause = rootCause
+  const conf = input.rootCauseConfidence
+  if (typeof conf === 'number' && !Number.isNaN(conf)) {
+    out.rootCauseConfidence = Number(conf.toFixed(2))
+  }
+  return out
+}
+
 /**
  * Map an explain `reason` (available=false) to a short user-facing message.
  * Keeps the widget on its computed view and tells the user what to do next.
@@ -189,5 +263,6 @@ export default {
   incidentNarrativeExplainPayload,
   learnedRunbookExplainPayload,
   graphCopilotExplainPayload,
+  incidentExplainPayload,
   reasonLabel,
 }

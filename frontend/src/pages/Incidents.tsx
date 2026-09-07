@@ -4,6 +4,7 @@ import { AlertTriangle, CheckCircle, Clock, Search, Plus, Eye, Play, Loader2, Re
 import { formatRelativeTime } from '../lib/utils'
 import api, { Incident, IncidentSeverity, IncidentStatus, Action, IncidentCreate } from '../lib/api'
 import { ActiveIncidentsPanel } from '../components/incidents/ActiveIncidentsPanel'
+import { IncidentCopilot } from '../components/incidents/IncidentCopilot'
 import { Modal } from '../components/ui/Modal'
 import { useToast } from '../components/ui/toast'
 import { ExportMenu } from '../components/ui/ExportMenu'
@@ -533,6 +534,9 @@ function IncidentDetailContent({ incident }: { incident: Incident }) {
           </div>
         </div>
       )}
+
+      {/* Opt-in reasoning-tier read of this incident (only when AI widgets are on). */}
+      <IncidentCopilot incident={incident} />
     </div>
   )
 }

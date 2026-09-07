@@ -113,6 +113,14 @@ _KIND_INSTRUCTIONS: dict[str, str] = {
         "actually worked, and where to focus. Do not invent nodes or numbers that "
         "are not in the summary."
     ),
+    "incident": (
+        "The record below is a single incident: its title, severity, status, "
+        "affected services, any computed root-cause analysis with a causal chain, "
+        "and any planned remediation steps. In 3 to 4 sentences, give the on-call "
+        "engineer a plain-language read of what most likely happened and the single "
+        "most useful next step. Ground every claim in the fields shown and do not "
+        "invent services, causes or steps that are not listed."
+    ),
     "generic": (
         "In 2 to 4 sentences, give a plain-language explanation of the data below "
         "for an on-call engineer. Do not speculate beyond what the data shows."
