@@ -7,10 +7,13 @@
  */
 
 import { useEffect, useState } from 'react'
-import { BookOpen, TrendingUp, CheckCircle } from 'lucide-react'
+import { BookOpen, TrendingUp, CheckCircle, Sparkles, Loader2 } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { api } from '../lib/api'
 import { rankRunbook, type RunbookEntry } from '../lib/learnedRunbook'
+import { useAiWidgets } from '../lib/useAiWidgets'
+import { AiGenerated } from './ui/AiGenerated'
+import { learnedRunbookExplainPayload, reasonLabel } from '../lib/insights'
 
 /** Humanize an action_type key (restart_service -> "Restart service"). */
 function humanize(key: string): string {
@@ -29,6 +32,27 @@ function rateStyle(rate: number): string {
 export function LearnedRunbook({ max = 6 }: { max?: number }) {
   const [entries, setEntries] = useState<RunbookEntry[]>([])
   const [loading, setLoading] = useState(true)
+
+  // Opt-in LLM explain (Track 2 W3): on-demand only, never on mount.
+  const ai = useAiWidgets()
+  const [explaining, setExplaining] = useState(false)
+  const [explanation, setExplanation] = useState<string | null>(null)
+  const [explainNote, setExplainNote] = useState<string | null>(null)
+
+  const onExplain = async () => {
+    setExplaining(true)
+    setExplainNote(null)
+    setExplanation(null)
+    try {
+      const res = await api.insights.explain('runbook', learnedRunbookExplainPayload(entries))
+      if (res.available && res.explanation) setExplanation(res.explanation)
+      else setExplainNote(reasonLabel(res.reason))
+    } catch {
+      setExplainNote(reasonLabel('error'))
+    } finally {
+      setExplaining(false)
+    }
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -119,6 +143,29 @@ export function LearnedRunbook({ max = 6 }: { max?: number }) {
             </li>
           ))}
         </ul>
+      )}
+
+      {ai.enabled && entries.length > 0 && (
+        <div className="mt-4 border-t border-border/60 pt-3">
+          {explanation ? (
+            <AiGenerated>{explanation}</AiGenerated>
+          ) : (
+            <button
+              type="button"
+              onClick={() => void onExplain()}
+              disabled={explaining}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted disabled:opacity-50"
+            >
+              {explaining ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+              ) : (
+                <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+              )}
+              {explaining ? 'Explaining…' : 'Explain this runbook'}
+            </button>
+          )}
+          {explainNote && <p className="mt-2 text-xs text-muted-foreground">{explainNote}</p>}
+        </div>
       )}
     </div>
   )

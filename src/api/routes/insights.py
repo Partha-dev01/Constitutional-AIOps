@@ -98,6 +98,12 @@ _KIND_INSTRUCTIONS: dict[str, str] = {
         "for the on-call engineer and why. Prefer the least invasive step and do "
         "not invent stages that are not listed."
     ),
+    "runbook": (
+        "The remediation actions below are ranked by past success rate and how "
+        "often each ran. In 2 to 4 sentences, say which action is the most "
+        "reliable starting point for a similar incident and flag any low-sample "
+        "or low-success entries to treat with caution."
+    ),
     "generic": (
         "In 2 to 4 sentences, give a plain-language explanation of the data below "
         "for an on-call engineer. Do not speculate beyond what the data shows."

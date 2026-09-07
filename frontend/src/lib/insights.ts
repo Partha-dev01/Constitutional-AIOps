@@ -74,6 +74,32 @@ export function incidentNarrativeExplainPayload(
   return { incidents }
 }
 
+/** One ranked runbook row, the shape the LearnedRunbook widget already holds. */
+export interface RunbookEntryLite {
+  key: string
+  successRate: number
+  succeeded: number
+  used: number
+}
+
+/**
+ * Build a bounded payload for `kind: "runbook"` from the ranked runbook rows.
+ * Rounds the rate to two places and caps to the strongest `max` rows so a long
+ * history cannot drive a huge prompt (the server also truncates).
+ */
+export function learnedRunbookExplainPayload(
+  entries: RunbookEntryLite[],
+  max = 6,
+): { runbook: { action: string; successRate: number; succeeded: number; used: number }[] } {
+  const runbook = entries.slice(0, Math.max(0, max)).map((e) => ({
+    action: e.key,
+    successRate: Number(e.successRate.toFixed(2)),
+    succeeded: e.succeeded,
+    used: e.used,
+  }))
+  return { runbook }
+}
+
 /**
  * Map an explain `reason` (available=false) to a short user-facing message.
  * Keeps the widget on its computed view and tells the user what to do next.
@@ -99,5 +125,6 @@ export default {
   anomalyExplainPayload,
   blastRadiusExplainPayload,
   incidentNarrativeExplainPayload,
+  learnedRunbookExplainPayload,
   reasonLabel,
 }
