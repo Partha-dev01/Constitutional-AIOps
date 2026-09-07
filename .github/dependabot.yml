@@ -1,6 +1,7 @@
 version: 2
 updates:
-  # Python / pip — covers pyproject.toml [project] dependencies + [project.optional-dependencies]
+  # Python / pip — covers pyproject.toml [project] dependencies +
+  # [project.optional-dependencies] and the root requirements*.txt.
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
@@ -10,6 +11,15 @@ updates:
     labels:
       - "dependencies"
       - "python"
+    # Batch the routine minor/patch churn into ONE PR; keep majors as
+    # individual PRs so breaking upgrades still get their own review.
+    groups:
+      python-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
 
   # Node / npm — covers frontend/package.json (React, Playwright, Vitest, etc.)
   - package-ecosystem: "npm"
@@ -21,8 +31,16 @@ updates:
     labels:
       - "dependencies"
       - "javascript"
+    groups:
+      npm-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
 
-  # GitHub Actions — covers .github/workflows/*.yml action pins (@v4 etc.)
+  # GitHub Actions — covers .github/workflows/*.yml action pins (@v4 etc.).
+  # Action bumps are low-risk and easy to review together, so batch them all.
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
@@ -32,3 +50,7 @@ updates:
     labels:
       - "dependencies"
       - "github-actions"
+    groups:
+      github-actions-all:
+        patterns:
+          - "*"
