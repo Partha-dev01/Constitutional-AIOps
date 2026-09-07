@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { EpisodicGraphExplorer } from '../components/EpisodicGraphExplorer'
+import { GraphCopilot } from '../components/GraphCopilot'
+import type { GraphCopilotInput } from '../lib/insights'
 import { Loader2, RefreshCw } from 'lucide-react'
 
 /**
@@ -205,6 +207,43 @@ function transformGraphData(data: GraphData): { nodes: GraphNode[]; links: Graph
   return { nodes, links }
 }
 
+/** Lean camelCase summary the opt-in graph copilot reasons over. */
+function toCopilotInput(data: GraphData): GraphCopilotInput {
+  return {
+    stats: {
+      episodes: data.stats?.total_episodes ?? 0,
+      rootCauses: data.stats?.total_root_causes ?? 0,
+      actions: data.stats?.total_actions ?? 0,
+      services: data.stats?.total_services ?? 0,
+      entities: data.stats?.total_entities ?? 0,
+      edges: data.stats?.total_edges ?? 0,
+      critical: data.stats?.critical_episodes ?? 0,
+      resolved: data.stats?.resolved_episodes ?? 0,
+    },
+    rootCauses: (data.root_causes ?? []).map((r) => ({
+      name: r.name,
+      frequency: r.frequency ?? 0,
+      successRate: r.success_rate ?? 0,
+    })),
+    actions: (data.actions ?? []).map((a) => ({
+      name: a.name,
+      usedCount: a.used_count ?? 0,
+      successRate: a.success_rate ?? 0,
+    })),
+    services: (data.services ?? []).map((s) => ({
+      name: s.name,
+      incidentCount: s.incident_count ?? 0,
+      status: s.status,
+    })),
+    episodes: (data.episodes ?? []).map((e) => ({
+      title: e.title,
+      category: e.category,
+      severity: e.severity,
+      status: e.status,
+    })),
+  }
+}
+
 export function Graph() {
   const [refreshKey, setRefreshKey] = useState(0)
 
@@ -271,6 +310,7 @@ export function Graph() {
           Refresh
         </button>
       </div>
+      {data && <GraphCopilot input={toCopilotInput(data)} />}
       <div className="relative min-h-0 flex-1 overflow-hidden rounded-xl border border-border bg-card">
         <EpisodicGraphExplorer
           nodes={graphData.nodes}

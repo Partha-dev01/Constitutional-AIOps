@@ -188,6 +188,24 @@ class TestSuccess:
         assert fake.calls[0]["max_tokens"] == insights._MAX_TOKENS_REASONING
 
     @pytest.mark.asyncio
+    async def test_graph_copilot_uses_reasoning_tier(self, db_env, monkeypatch):
+        _enable_widgets(db_env.id)
+        fake = _FakeRouter(content="Cache-tier restarts dominate and have worked; watch the db.")
+        _patch_router(monkeypatch, (fake, True))
+        user = User(id=db_env.id, username="tenant-insight", role="user")
+        resp = await explain(
+            _request(),
+            ExplainRequest(
+                kind="graph_copilot", tier="reasoning",
+                payload={"stats": {"episodes": 3}, "topRootCauses": []},
+            ),
+            user=user,
+        )
+        assert resp.available is True
+        assert fake.calls[0]["tier"] == "reasoning"
+        assert fake.calls[0]["max_tokens"] == insights._MAX_TOKENS_REASONING
+
+    @pytest.mark.asyncio
     async def test_default_tier_is_fast(self, db_env, monkeypatch):
         _enable_widgets(db_env.id)
         fake = _FakeRouter()
@@ -260,6 +278,11 @@ class TestPromptBuilder:
     def test_known_kind_uses_its_instruction(self):
         prompt = _build_prompt("anomaly", {"a": 1})
         assert _KIND_INSTRUCTIONS["anomaly"][:20] in prompt
+        assert "Data:" in prompt
+
+    def test_graph_copilot_kind_uses_its_instruction(self):
+        prompt = _build_prompt("graph_copilot", {"stats": {"episodes": 2}})
+        assert _KIND_INSTRUCTIONS["graph_copilot"][:20] in prompt
         assert "Data:" in prompt
 
     def test_unknown_kind_falls_back_to_generic(self):
