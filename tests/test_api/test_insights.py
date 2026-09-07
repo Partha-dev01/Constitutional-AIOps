@@ -285,6 +285,11 @@ class TestPromptBuilder:
         assert _KIND_INSTRUCTIONS["graph_copilot"][:20] in prompt
         assert "Data:" in prompt
 
+    def test_incident_kind_uses_its_instruction(self):
+        prompt = _build_prompt("incident", {"title": "API 5xx", "severity": "critical"})
+        assert _KIND_INSTRUCTIONS["incident"][:20] in prompt
+        assert "Data:" in prompt
+
     def test_unknown_kind_falls_back_to_generic(self):
         prompt = _build_prompt("does-not-exist", {"a": 1})
         assert _KIND_INSTRUCTIONS["generic"][:20] in prompt
