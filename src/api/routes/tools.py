@@ -791,17 +791,31 @@ def _action_tool_gate(request: Request, tool_call: "ToolCallRequest") -> ActionG
             error_code="validator_unavailable",
         )
 
-    container = _resolve_action_container(params.get("service_name"))
-    if container is None:
-        return ActionGateDecision(
-            allowed=False,
-            error=(
-                f"Service '{params.get('service_name')}' is not on the action-tool container "
-                f"whitelist ({', '.join(sorted(_allowed_action_containers()))}). Extend it via "
-                f"{ACTION_CONTAINER_WHITELIST_ENV} if this is intentional."
-            ),
-            error_code="container_not_whitelisted",
-        )
+    # Gate metadata comes from the shared registry, so the gate is no longer
+    # hardwired to restart/scale. ``target_kind`` selects the target policy and
+    # ``effective_action_type`` (below) is the verb the validator keys off. An
+    # unknown tool (meta is None) falls back to the strictest path: container
+    # whitelist + its own name as the action verb (fail-closed).
+    meta = TOOLS_BY_NAME.get(tool_call.tool_name)
+    target_kind = meta.target_kind if meta is not None else "container"
+
+    # Container-kind action tools (restart/scale today, plus any unknown tool)
+    # must resolve to a whitelisted container BEFORE the validator runs. A future
+    # non-container action tool (target_kind != "container") skips this whitelist;
+    # it is still gated by the constitutional validator below.
+    container = None
+    if target_kind == "container":
+        container = _resolve_action_container(params.get("service_name"))
+        if container is None:
+            return ActionGateDecision(
+                allowed=False,
+                error=(
+                    f"Service '{params.get('service_name')}' is not on the action-tool container "
+                    f"whitelist ({', '.join(sorted(_allowed_action_containers()))}). Extend it via "
+                    f"{ACTION_CONTAINER_WHITELIST_ENV} if this is intentional."
+                ),
+                error_code="container_not_whitelisted",
+            )
 
     try:
         confidence = float(params.get("confidence", 0.5))
@@ -843,7 +857,7 @@ def _action_tool_gate(request: Request, tool_call: "ToolCallRequest") -> ActionG
             f"{tool_call.tool_name} via POST /api/v1/tools/call "
             f"on service '{params.get('service_name')}'"
         ),
-        action_type="restart" if tool_call.tool_name == "restart_service" else "scale",
+        action_type=meta.effective_action_type if meta is not None else tool_call.tool_name,
         confidence=confidence,
         context=context,
     )
@@ -898,10 +912,23 @@ async def _run_action_tool(
             metadata=metadata,
         )
 
-    if tool_call.tool_name == "restart_service":
-        response = await _execute_restart_service(params, start_time)
+    # Execute via the action-tool executor map (was a restart/scale if/else). The
+    # gate has already authorized the call; an action tool with no registered
+    # executor returns a clean error instead of dispatching to the wrong one.
+    executor = {
+        "restart_service": _execute_restart_service,
+        "scale_service": _execute_scale_service,
+    }.get(tool_call.tool_name)
+    if executor is None:
+        response = ToolCallResponse(
+            success=False,
+            data=None,
+            error=f"No executor registered for action tool '{tool_call.tool_name}'",
+            error_code="no_executor",
+            execution_time_ms=(time.time() - start_time) * 1000,
+        )
     else:
-        response = await _execute_scale_service(params, start_time)
+        response = await executor(params, start_time)
 
     # The verdict is part of the payload on success AND failure.
     if decision.verdict is not None:

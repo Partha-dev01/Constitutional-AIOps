@@ -56,10 +56,29 @@ class ToolMeta:
     parameters: dict[str, Any]
     requires_approval: bool = False
     risk_level: str = "low"  # low | medium | high
+    # Constitutional gate metadata (read only for action tools). ``action_type``
+    # is the VERB the ConstitutionalValidator keys its principles off (P1.1 data
+    # loss, P1.4 security, P1.2/P1.3 incident/cascade). Left "" it falls back to
+    # the tool name, so an undeclared action tool is still verb-checked rather
+    # than silently treated as harmless. ``target_kind`` selects how the gate
+    # resolves/whitelists the action target: "container" keeps the docker-container
+    # whitelist that restart/scale use; a future non-container action tool declares
+    # its own kind (see project-gate-generalization-spec Phase 3).
+    action_type: str = ""
+    target_kind: str = "container"
 
     @property
     def is_action(self) -> bool:
         return self.category == "action"
+
+    @property
+    def effective_action_type(self) -> str:
+        """The verb the constitutional gate hands the validator.
+
+        Explicit ``action_type`` when declared, else the tool name (so an action
+        tool that forgets to declare one is still matched against the destructive
+        keyword lists rather than sailing through)."""
+        return self.action_type or self.name
 
     @property
     def required(self) -> list[str]:
@@ -212,6 +231,8 @@ TOOLS: tuple[ToolMeta, ...] = (
         },
         requires_approval=True,
         risk_level="medium",
+        action_type="restart",
+        target_kind="container",
     ),
     ToolMeta(
         name="scale_service",
@@ -234,6 +255,8 @@ TOOLS: tuple[ToolMeta, ...] = (
         },
         requires_approval=True,
         risk_level="medium",
+        action_type="scale",
+        target_kind="container",
     ),
 )
 

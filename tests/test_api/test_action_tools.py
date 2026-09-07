@@ -606,3 +606,144 @@ class TestOtherDispatchPaths:
         )
         assert result.success is False
         assert result.metadata.get("error_code") == "action_tools_disabled"
+
+
+# ---------------------------------------------------------------------------
+# Gate generalization (Phase 1) — the constitutional gate is driven by registry
+# metadata (action_type + target_kind), not hardwired to restart/scale. See
+# project-gate-generalization-spec.
+# ---------------------------------------------------------------------------
+
+def _synthetic_action_meta(name, action_type, target_kind="container"):
+    from src.tools.registry import ToolMeta
+
+    return ToolMeta(
+        name=name,
+        category="action",
+        description="",
+        agent_description="",
+        parameters={},
+        requires_approval=True,
+        risk_level="high",
+        action_type=action_type,
+        target_kind=target_kind,
+    )
+
+
+class TestGateGeneralization:
+    def _capturing_validator_request(self):
+        captured = {}
+        validator = MagicMock()
+        validator.validate.side_effect = lambda **kw: captured.update(kw) or _report()
+        request = MagicMock()
+        request.app.state = MagicMock(spec=["validator"])
+        request.app.state.validator = validator
+        return request, captured
+
+    def test_registry_effective_action_type_and_target(self):
+        from src.tools.registry import TOOLS_BY_NAME, ToolMeta
+
+        # The two real action tools declare their verb explicitly.
+        assert TOOLS_BY_NAME["restart_service"].effective_action_type == "restart"
+        assert TOOLS_BY_NAME["scale_service"].effective_action_type == "scale"
+        assert TOOLS_BY_NAME["restart_service"].target_kind == "container"
+        # An action tool that forgets to declare a verb falls back to its NAME
+        # (fail-safe: a destructive name is still matched, never silently benign).
+        m = ToolMeta(name="wipe_all", category="action", description="",
+                     agent_description="", parameters={})
+        assert m.effective_action_type == "wipe_all"
+        assert m.target_kind == "container"
+
+    @pytest.mark.asyncio
+    async def test_action_type_comes_from_registry_not_tool_name(self, monkeypatch, fake_run):
+        # A synthetic action tool whose NAME differs from its declared verb proves
+        # the gate hands the validator the metadata verb, not a name-based ternary.
+        from src.api.routes import tools as tools_mod
+
+        monkeypatch.setenv("AIOPS_ENABLE_ACTION_TOOLS", "true")
+        monkeypatch.delenv("AIOPS_ACTION_CONTAINER_WHITELIST", raising=False)
+        monkeypatch.setitem(
+            tools_mod.TOOLS_BY_NAME, "cycle_service",
+            _synthetic_action_meta("cycle_service", action_type="restart"),
+        )
+        request, captured = self._capturing_validator_request()
+        tool_call = tools_mod.ToolCallRequest(
+            tool_name="cycle_service",
+            parameters={"service_name": "nextcloud", "reason": "t", "confidence": 0.9},
+        )
+        tools_mod._action_tool_gate(request, tool_call)
+        assert captured["action_type"] == "restart"
+
+    @pytest.mark.asyncio
+    async def test_container_kind_tool_still_whitelist_gated_before_validator(
+        self, monkeypatch, fake_run,
+    ):
+        # A generalized container-kind tool keeps the pre-validator whitelist refusal.
+        from src.api.routes import tools as tools_mod
+
+        monkeypatch.setenv("AIOPS_ENABLE_ACTION_TOOLS", "true")
+        monkeypatch.delenv("AIOPS_ACTION_CONTAINER_WHITELIST", raising=False)
+        monkeypatch.setitem(
+            tools_mod.TOOLS_BY_NAME, "cycle_service",
+            _synthetic_action_meta("cycle_service", action_type="restart"),
+        )
+        request = _request_with_validator(_report())
+        decision = tools_mod._action_tool_gate(
+            request,
+            tools_mod.ToolCallRequest(
+                tool_name="cycle_service", parameters={"service_name": "etcd", "reason": "t"},
+            ),
+        )
+        assert decision.allowed is False
+        assert decision.error_code == "container_not_whitelisted"
+        request.app.state.validator.validate.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_destructive_noncontainer_verb_blocked_at_tier1_by_real_validator(
+        self, monkeypatch,
+    ):
+        # THE generalization payoff: a NON-container action tool with a destructive
+        # verb reaches the REAL validator (no container whitelist gate) and is
+        # Tier-1 BLOCKED by P1.1, instead of being refused for lacking a container.
+        from src.api.routes import tools as tools_mod
+        from src.constitutional.validator import ConstitutionalValidator
+
+        monkeypatch.setenv("AIOPS_ENABLE_ACTION_TOOLS", "true")
+        monkeypatch.setitem(
+            tools_mod.TOOLS_BY_NAME, "delete_snapshot",
+            _synthetic_action_meta("delete_snapshot", action_type="delete_snapshot",
+                                    target_kind="none"),
+        )
+        request = MagicMock()
+        request.app.state = MagicMock(spec=["validator"])
+        request.app.state.validator = ConstitutionalValidator()
+        decision = tools_mod._action_tool_gate(
+            request,
+            # High confidence would be AUTOMATIC — the Tier-1 data-loss block must
+            # win anyway (Tier-1 is never overridable).
+            tools_mod.ToolCallRequest(
+                tool_name="delete_snapshot", parameters={"reason": "t", "confidence": 0.99},
+            ),
+        )
+        assert decision.allowed is False
+        assert decision.error_code == "validation_blocked"
+        assert decision.verdict is not None
+        assert decision.verdict["principles"]["tier1_safety_passed"] is False
+
+    @pytest.mark.asyncio
+    async def test_unknown_action_tool_falls_back_to_container_gate(self, monkeypatch, fake_run):
+        # An action tool NOT in the registry (meta is None) must take the strict
+        # container path and be refused without a whitelisted container.
+        from src.api.routes import tools as tools_mod
+
+        monkeypatch.setenv("AIOPS_ENABLE_ACTION_TOOLS", "true")
+        monkeypatch.delenv("AIOPS_ACTION_CONTAINER_WHITELIST", raising=False)
+        request = _request_with_validator(_report())
+        decision = tools_mod._action_tool_gate(
+            request,
+            tools_mod.ToolCallRequest(
+                tool_name="ghost_tool", parameters={"service_name": "etcd", "reason": "t"},
+            ),
+        )
+        assert decision.allowed is False
+        assert decision.error_code == "container_not_whitelisted"
