@@ -58,6 +58,23 @@ export function blastRadiusExplainPayload(
 }
 
 /**
+ * Build a bounded payload for `kind: "next_best_action"` from the incident
+ * narrative groups. Sends each incident's ordered stage keys (the sequence is
+ * what a next-best-action read needs), capped in both dimensions.
+ */
+export function incidentNarrativeExplainPayload(
+  groups: { incidentId: string; stages: { stage: string }[] }[],
+  maxIncidents = 3,
+  maxStages = 12,
+): { incidents: { id: string; stages: string[] }[] } {
+  const incidents = groups.slice(0, Math.max(0, maxIncidents)).map((g) => ({
+    id: g.incidentId,
+    stages: g.stages.slice(0, Math.max(0, maxStages)).map((s) => s.stage),
+  }))
+  return { incidents }
+}
+
+/**
  * Map an explain `reason` (available=false) to a short user-facing message.
  * Keeps the widget on its computed view and tells the user what to do next.
  */
@@ -78,4 +95,9 @@ export function reasonLabel(reason: string | null | undefined): string {
   }
 }
 
-export default { anomalyExplainPayload, blastRadiusExplainPayload, reasonLabel }
+export default {
+  anomalyExplainPayload,
+  blastRadiusExplainPayload,
+  incidentNarrativeExplainPayload,
+  reasonLabel,
+}

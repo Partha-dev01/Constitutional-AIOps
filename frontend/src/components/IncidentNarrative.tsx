@@ -5,11 +5,21 @@
  * view over the NarrativeEntry list the parent builds from WebSocket events.
  * It opens no socket and fetches nothing itself, matching the ApprovalTicker /
  * Recent Activity presentational idiom.
+ *
+ * The opt-in "Next best action" overlay (Track 2 W3) is the one reasoning-tier
+ * widget: it asks the caller's own reasoning model for the least-invasive next
+ * step given the timeline. On-demand only, never on mount, and only when the
+ * user has turned AI insight widgets on.
  */
 
-import { GitBranch } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { GitBranch, Sparkles, Loader2 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { groupByIncident, type NarrativeEntry } from '../lib/incidentNarrative'
+import { useAiWidgets } from '../lib/useAiWidgets'
+import { AiGenerated } from './ui/AiGenerated'
+import { incidentNarrativeExplainPayload, reasonLabel } from '../lib/insights'
+import { api } from '../lib/api'
 
 const DOT: Record<NarrativeEntry['severity'], string> = {
   info: 'bg-blue-500',
@@ -26,7 +36,38 @@ function relativeTime(iso: string): string {
 }
 
 export function IncidentNarrative({ items }: { items: NarrativeEntry[] }) {
-  const groups = groupByIncident(items)
+  const groups = useMemo(() => groupByIncident(items), [items])
+
+  // Opt-in reasoning-tier explain (Track 2 W3): on-demand only, never on mount.
+  const ai = useAiWidgets()
+  const [explaining, setExplaining] = useState(false)
+  const [explanation, setExplanation] = useState<string | null>(null)
+  const [explainNote, setExplainNote] = useState<string | null>(null)
+
+  // A newly-active incident is a new question, so drop any prior answer when the
+  // most-recently-active incident changes.
+  const topId = groups[0]?.incidentId ?? ''
+  useEffect(() => {
+    setExplanation(null)
+    setExplainNote(null)
+  }, [topId])
+
+  const onExplain = async () => {
+    setExplaining(true)
+    setExplainNote(null)
+    setExplanation(null)
+    try {
+      const payload = incidentNarrativeExplainPayload(groups)
+      const res = await api.insights.explain('next_best_action', payload, 'reasoning')
+      if (res.available && res.explanation) setExplanation(res.explanation)
+      else setExplainNote(reasonLabel(res.reason))
+    } catch {
+      setExplainNote(reasonLabel('error'))
+    } finally {
+      setExplaining(false)
+    }
+  }
+
   return (
     <div className="bg-card rounded-lg border border-border p-6">
       <div className="mb-4 flex items-center justify-between">
@@ -77,6 +118,29 @@ export function IncidentNarrative({ items }: { items: NarrativeEntry[] }) {
             </li>
           ))}
         </ul>
+      )}
+
+      {ai.enabled && groups.length > 0 && (
+        <div className="mt-4 border-t border-border/60 pt-3">
+          {explanation ? (
+            <AiGenerated>{explanation}</AiGenerated>
+          ) : (
+            <button
+              type="button"
+              onClick={() => void onExplain()}
+              disabled={explaining}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted disabled:opacity-50"
+            >
+              {explaining ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+              ) : (
+                <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+              )}
+              {explaining ? 'Thinking…' : 'Suggest next best action'}
+            </button>
+          )}
+          {explainNote && <p className="mt-2 text-xs text-muted-foreground">{explainNote}</p>}
+        </div>
       )}
     </div>
   )

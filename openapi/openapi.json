@@ -2217,6 +2217,11 @@
             "additionalProperties": true,
             "title": "Payload",
             "type": "object"
+          },
+          "tier": {
+            "default": "fast",
+            "title": "Tier",
+            "type": "string"
           }
         },
         "title": "ExplainRequest",
