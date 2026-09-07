@@ -23,6 +23,18 @@ const RECENTS_KEY = 'aiops.chat.recentPrompts'
 const MAX_RECENTS = 5
 const MAX_PROMPTS = 6
 
+/**
+ * A recent query is worth resurfacing as a chip only if it reads like a real
+ * question, not a one-word reply (`yes`, `ok`, `no`) that leaked into the ring.
+ * Requires a little length and more than one word, which filters trivial turns
+ * without touching genuine questions. Applied on read, write, and selection so
+ * junk already sitting in localStorage is dropped the next time chips render.
+ */
+export function isSubstantivePrompt(prompt: string): boolean {
+  const trimmed = prompt.trim()
+  return trimmed.length >= 10 && /\s/.test(trimmed)
+}
+
 /** Read the recent-query ring from localStorage. Never throws. */
 export function getRecentPrompts(): string[] {
   try {
@@ -30,7 +42,10 @@ export function getRecentPrompts(): string[] {
     if (!raw) return []
     const parsed: unknown = JSON.parse(raw)
     if (!Array.isArray(parsed)) return []
-    return parsed.filter((p): p is string => typeof p === 'string').slice(0, MAX_RECENTS)
+    return parsed
+      .filter((p): p is string => typeof p === 'string')
+      .filter(isSubstantivePrompt)
+      .slice(0, MAX_RECENTS)
   } catch {
     return []
   }
@@ -42,7 +57,7 @@ export function getRecentPrompts(): string[] {
  */
 export function pushRecentPrompt(query: string): string[] {
   const trimmed = query.trim()
-  if (!trimmed) return getRecentPrompts()
+  if (!isSubstantivePrompt(trimmed)) return getRecentPrompts()
   const existing = getRecentPrompts().filter(
     (p) => p.toLowerCase() !== trimmed.toLowerCase(),
   )
@@ -65,7 +80,9 @@ export function selectPrompts(
 ): string[] {
   const seen = new Set<string>()
   const out: string[] = []
-  for (const prompt of [...recent, ...defaults]) {
+  // Filter recents (defaults are curated and always substantive) so a trivial
+  // recent never leaks through even when a caller passes a raw list.
+  for (const prompt of [...recent.filter(isSubstantivePrompt), ...defaults]) {
     const key = prompt.trim().toLowerCase()
     if (!key || seen.has(key)) continue
     seen.add(key)
