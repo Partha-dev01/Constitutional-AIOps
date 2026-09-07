@@ -22,28 +22,23 @@ updates:
           - "patch"
     ignore:
       # requirements*.txt is installed ONLY by the box Docker image build, not by
-      # CI (ci-backend installs pyproject via `pip install -e .[dev]`), so these
-      # major bumps cannot be validated without a full image rebuild + runtime
-      # test. Held until that is done deliberately; minor/patch floors still flow.
+      # CI (ci-backend installs pyproject via `pip install -e .[dev]`), so bumps to
+      # these packages cannot be validated by any automated gate here. They are
+      # updated deliberately during a box image rebuild + runtime test, not via
+      # auto-PRs, so they are ignored entirely. Routine CI-relevant pip deps
+      # (fastapi, pydantic, httpx, neo4j, etc.) still flow via the grouped
+      # minor/patch PR above.
       - dependency-name: "torch"
-        update-types: ["version-update:semver-major"]
       - dependency-name: "sentence-transformers"
-        update-types: ["version-update:semver-major"]
       - dependency-name: "datasets"
-        update-types: ["version-update:semver-major"]
       - dependency-name: "huggingface-hub"
-        update-types: ["version-update:semver-major"]
       - dependency-name: "websockets"
-        update-types: ["version-update:semver-major"]
       - dependency-name: "opentelemetry-instrumentation-fastapi"
-        update-types: ["version-update:semver-major"]
       # Dev-only tools (requirements-dev.txt; not shipped, not CI-installed).
       - dependency-name: "ipython"
-        update-types: ["version-update:semver-major"]
       - dependency-name: "rich"
-        update-types: ["version-update:semver-major"]
       - dependency-name: "watchfiles"
-        update-types: ["version-update:semver-major"]
+      - dependency-name: "pytest-mock"
 
   # Node / npm — covers frontend/package.json (React, Playwright, Vitest, etc.)
   - package-ecosystem: "npm"
