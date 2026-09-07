@@ -747,3 +747,103 @@ class TestGateGeneralization:
         )
         assert decision.allowed is False
         assert decision.error_code == "container_not_whitelisted"
+
+
+class TestDispatchTable:
+    """Track 3-F Phase 2 — one table-driven dispatch map replaces the two
+    hand-maintained if/elif ladders (REST call_tool + programmatic
+    execute_tool_call). Every tool resolves to a uniform handler; action tools
+    are resolved by CATEGORY onto the gated path, never by table membership."""
+
+    def test_every_registry_tool_resolves_to_a_handler(self):
+        from src.api.routes import tools as tools_mod
+        from src.tools.registry import TOOLS_BY_NAME
+
+        for name, meta in TOOLS_BY_NAME.items():
+            handler = tools_mod._resolve_handler(name)
+            assert handler is not None, f"{name} is unroutable"
+            if meta.is_action:
+                assert handler is tools_mod._handle_action
+
+    def test_read_tools_map_to_their_own_handlers(self):
+        from src.api.routes import tools as tools_mod
+
+        assert tools_mod._resolve_handler("find_similar") is tools_mod._handle_find_similar
+        assert tools_mod._resolve_handler("get_dependencies") is tools_mod._handle_get_dependencies
+        assert tools_mod._resolve_handler("list_containers") is tools_mod._handle_list_containers
+
+    def test_unknown_tool_resolves_to_none(self):
+        from src.api.routes import tools as tools_mod
+
+        assert tools_mod._resolve_handler("does_not_exist") is None
+
+    def test_action_tool_not_in_table_still_routes_to_gated_handler(self, monkeypatch):
+        # Fail-safe: a mutating tool nobody added to _TOOL_HANDLERS is still forced
+        # onto the gated _handle_action path purely by its registry category.
+        from src.api.routes import tools as tools_mod
+
+        monkeypatch.setitem(
+            tools_mod.TOOLS_BY_NAME, "cycle_service",
+            _synthetic_action_meta("cycle_service", action_type="restart"),
+        )
+        assert "cycle_service" not in tools_mod._TOOL_HANDLERS
+        assert tools_mod._resolve_handler("cycle_service") is tools_mod._handle_action
+
+    @pytest.mark.asyncio
+    async def test_call_tool_dispatches_read_tool_through_the_table(self, monkeypatch):
+        # Proves the REST endpoint uses the table: swap the find_similar handler
+        # for a sentinel and confirm call_tool invokes it with a context carrying
+        # the request, tool name, and caller context.
+        from src.api.routes import tools as tools_mod
+
+        seen = {}
+
+        async def _sentinel(ctx, params, start_time):
+            seen["tool_name"] = ctx.tool_name
+            seen["params"] = params
+            seen["caller_context"] = ctx.caller_context
+            return tools_mod.ToolCallResponse(success=True, data={"ok": 1}, execution_time_ms=0.0)
+
+        monkeypatch.setitem(tools_mod._TOOL_HANDLERS, "find_similar", _sentinel)
+        resp = await tools_mod.call_tool(
+            MagicMock(),
+            tools_mod.ToolCallRequest(
+                tool_name="find_similar", parameters={"title": "x"}, context={"source": "unit"},
+            ),
+        )
+        assert resp.success is True and resp.data == {"ok": 1}
+        assert seen == {
+            "tool_name": "find_similar",
+            "params": {"title": "x"},
+            "caller_context": {"source": "unit"},
+        }
+
+    @pytest.mark.asyncio
+    async def test_call_tool_unknown_tool_reports_not_found(self):
+        from src.api.routes import tools as tools_mod
+
+        resp = await tools_mod.call_tool(
+            MagicMock(),
+            tools_mod.ToolCallRequest(tool_name="does_not_exist", parameters={}),
+        )
+        assert resp.success is False
+        assert resp.error == "Tool 'does_not_exist' not found"
+
+    @pytest.mark.asyncio
+    async def test_execute_tool_call_unknown_tool_reports_unknown(self):
+        from src.api.routes import tools as tools_mod
+
+        out = await tools_mod.execute_tool_call(MagicMock(), "does_not_exist", {})
+        assert out == {"success": False, "error": "Unknown tool: does_not_exist"}
+
+    def test_exec_context_reads_app_state_components_lazily(self):
+        from src.api.routes import tools as tools_mod
+
+        request = MagicMock()
+        request.app.state.telemetry_collector = "TC"
+        request.app.state.episode_store = "ES"
+        request.app.state.neo4j_client = "NEO"
+        ctx = tools_mod._ToolExecContext(request=request, tool_name="analyze_logs")
+        assert ctx.telemetry_collector == "TC"
+        assert ctx.episode_store == "ES"
+        assert ctx.neo4j_client == "NEO"
