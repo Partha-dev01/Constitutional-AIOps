@@ -28,6 +28,8 @@ export interface TelegramForm {
   token: string
   clearToken: boolean
   minSeverity: AlertSeverity
+  /** Inbound ChatOps (T1d): allow the bot to receive and reply to messages. */
+  inboundEnabled: boolean
 }
 
 export interface MatrixForm {
@@ -42,7 +44,8 @@ export interface MatrixForm {
 /**
  * Build the AlertingConfigUpdate PUT body from the card's form state. Routing
  * ids are trimmed and always sent; token fields are omitted unless set/cleared
- * so a save never wipes a stored secret the admin did not touch.
+ * so a save never wipes a stored secret the admin did not touch. The inbound
+ * toggle is always sent so a normal save cannot silently disable it.
  */
 export function buildAlertingUpdate(tg: TelegramForm, mx: MatrixForm): AlertingConfigUpdate {
   const botToken = resolveSecretField(tg.token, tg.clearToken)
@@ -52,6 +55,7 @@ export function buildAlertingUpdate(tg: TelegramForm, mx: MatrixForm): AlertingC
       enabled: tg.enabled,
       chatId: tg.chatId.trim(),
       minSeverity: tg.minSeverity,
+      inboundEnabled: tg.inboundEnabled,
       ...(botToken !== undefined ? { botToken } : {}),
     },
     matrix: {

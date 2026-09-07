@@ -1991,6 +1991,7 @@ function RemoteAlertingCard() {
   const [tgChatId, setTgChatId] = useState('')
   const [tgToken, setTgToken] = useState('')
   const [tgSeverity, setTgSeverity] = useState<AlertSeverity>('warning')
+  const [tgInbound, setTgInbound] = useState(false)
 
   const [mxEnabled, setMxEnabled] = useState(false)
   const [mxHomeserver, setMxHomeserver] = useState('')
@@ -2012,6 +2013,7 @@ function RemoteAlertingCard() {
     setTgEnabled(c.telegram.enabled)
     setTgChatId(c.telegram.chatId)
     setTgSeverity(c.telegram.minSeverity)
+    setTgInbound(c.telegram.inboundEnabled)
     setMxEnabled(c.matrix.enabled)
     setMxHomeserver(c.matrix.homeserver)
     setMxRoomId(c.matrix.roomId)
@@ -2049,6 +2051,7 @@ function RemoteAlertingCard() {
           token: tgToken,
           clearToken: Boolean(clear?.telegram),
           minSeverity: tgSeverity,
+          inboundEnabled: tgInbound,
         },
         {
           enabled: mxEnabled,
@@ -2090,6 +2093,11 @@ function RemoteAlertingCard() {
   // A channel can only be enabled once it has its routing ids and a token
   // (already stored, or entered now) — otherwise a save would arm a dead channel.
   const tgIncomplete = tgEnabled && !(tgChatId.trim() && (tgTokenSet || tgToken.trim()))
+  // Inbound ChatOps needs a bot token to receive + reply. Left as a soft hint
+  // (not a save-block): with no token the webhook sync simply no-ops server-side.
+  const tgInboundNeedsToken = tgInbound && !(tgTokenSet || tgToken.trim())
+  const tgRoutingId = cfg?.telegram.routingId ?? ''
+  const tgWebhookSecretSet = Boolean(cfg?.telegram.webhookSecretSet)
   const mxIncomplete =
     mxEnabled && !(mxHomeserver.trim() && mxRoomId.trim() && (mxTokenSet || mxToken.trim()))
 
@@ -2166,6 +2174,35 @@ function RemoteAlertingCard() {
                 )}
               </div>
               <SeveritySelect value={tgSeverity} onChange={setTgSeverity} testId="telegram-severity" />
+              <div className="border-t border-border pt-3">
+                <ToggleSetting
+                  label="Inbound ChatOps"
+                  description="Let people message the bot to query the system; replies go to this chat"
+                  checked={tgInbound}
+                  testId="toggle-telegram-inbound"
+                  onChange={setTgInbound}
+                />
+                {tgInboundNeedsToken && (
+                  <p className="mt-2 text-xs text-yellow-600">
+                    Inbound needs a bot token to receive and reply to messages.
+                  </p>
+                )}
+                {tgInbound && tgRoutingId && (
+                  <div
+                    className="mt-2 space-y-1 rounded-lg border border-border bg-muted/40 p-3 text-xs"
+                    data-testid="telegram-inbound-webhook"
+                  >
+                    <p className="font-medium text-foreground">Webhook</p>
+                    <p className="break-all text-muted-foreground">
+                      Path: <code className="text-foreground">/telegram/{tgRoutingId}</code>
+                    </p>
+                    <p className="text-muted-foreground">
+                      Registered automatically at the relay edge once the server has a public relay
+                      URL. Secret {tgWebhookSecretSet ? 'set' : 'not set'}.
+                    </p>
+                  </div>
+                )}
+              </div>
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"

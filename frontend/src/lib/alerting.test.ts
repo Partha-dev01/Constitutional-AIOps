@@ -7,6 +7,7 @@ const tg = (over: Partial<TelegramForm> = {}): TelegramForm => ({
   token: '',
   clearToken: false,
   minSeverity: 'warning',
+  inboundEnabled: false,
   ...over,
 })
 
@@ -42,7 +43,12 @@ describe('buildAlertingUpdate', () => {
       tg({ enabled: true, chatId: '  123  ', minSeverity: 'error' }),
       mx({ enabled: true, homeserver: ' https://m.example.org ', roomId: ' !r:example.org ' }),
     )
-    expect(body.telegram).toEqual({ enabled: true, chatId: '123', minSeverity: 'error' })
+    expect(body.telegram).toEqual({
+      enabled: true,
+      chatId: '123',
+      minSeverity: 'error',
+      inboundEnabled: false,
+    })
     expect('botToken' in body.telegram).toBe(false)
     expect(body.matrix).toEqual({
       enabled: true,
@@ -63,5 +69,10 @@ describe('buildAlertingUpdate', () => {
     const body = buildAlertingUpdate(tg({ clearToken: true }), mx({ token: 'ignored', clearToken: true }))
     expect(body.telegram.botToken).toBe('')
     expect(body.matrix.accessToken).toBe('')
+  })
+
+  it('always sends the inbound toggle so a normal save cannot silently disable it', () => {
+    expect(buildAlertingUpdate(tg({ inboundEnabled: true }), mx()).telegram.inboundEnabled).toBe(true)
+    expect(buildAlertingUpdate(tg({ inboundEnabled: false }), mx()).telegram.inboundEnabled).toBe(false)
   })
 })
