@@ -100,6 +100,68 @@ export function learnedRunbookExplainPayload(
   return { runbook }
 }
 
+/** The episodic-graph pieces the copilot summarises, camelCase + lean. */
+export interface GraphCopilotInput {
+  stats: {
+    episodes: number
+    rootCauses: number
+    actions: number
+    services: number
+    entities: number
+    edges: number
+    critical: number
+    resolved: number
+  }
+  rootCauses: { name: string; frequency: number; successRate: number }[]
+  actions: { name: string; usedCount: number; successRate: number }[]
+  services: { name: string; incidentCount: number; status?: string }[]
+  episodes: { title: string; category: string; severity: string; status: string }[]
+}
+
+/**
+ * Build a bounded payload for `kind: "graph_copilot"` (reasoning tier). Sends
+ * the overall counts plus the strongest few root causes / actions / services and
+ * the incidents worth attention (unresolved and higher-severity first), each
+ * capped so a large graph cannot drive a huge prompt (the server also truncates).
+ */
+export function graphCopilotExplainPayload(
+  input: GraphCopilotInput,
+  maxItems = 6,
+  maxEpisodes = 5,
+): {
+  stats: GraphCopilotInput['stats']
+  topRootCauses: { name: string; frequency: number; successRate: number }[]
+  topActions: { action: string; usedCount: number; successRate: number }[]
+  topServices: { service: string; incidents: number; status?: string }[]
+  recentIncidents: { title: string; category: string; severity: string; status: string }[]
+} {
+  const cap = Math.max(0, maxItems)
+  const topRootCauses = [...input.rootCauses]
+    .sort((a, b) => b.frequency - a.frequency)
+    .slice(0, cap)
+    .map((r) => ({ name: r.name, frequency: r.frequency, successRate: Number(r.successRate.toFixed(2)) }))
+  const topActions = [...input.actions]
+    .sort((a, b) => b.usedCount - a.usedCount)
+    .slice(0, cap)
+    .map((a) => ({ action: a.name, usedCount: a.usedCount, successRate: Number(a.successRate.toFixed(2)) }))
+  const topServices = [...input.services]
+    .sort((a, b) => b.incidentCount - a.incidentCount)
+    .slice(0, cap)
+    .map((s) => ({ service: s.name, incidents: s.incidentCount, status: s.status }))
+  // "Where to focus": unresolved first, then higher severity.
+  const sevRank: Record<string, number> = { critical: 3, high: 2, warning: 1 }
+  const recentIncidents = [...input.episodes]
+    .sort((a, b) => {
+      const ua = a.status !== 'resolved' ? 1 : 0
+      const ub = b.status !== 'resolved' ? 1 : 0
+      if (ua !== ub) return ub - ua
+      return (sevRank[b.severity] ?? 0) - (sevRank[a.severity] ?? 0)
+    })
+    .slice(0, Math.max(0, maxEpisodes))
+    .map((e) => ({ title: e.title, category: e.category, severity: e.severity, status: e.status }))
+  return { stats: input.stats, topRootCauses, topActions, topServices, recentIncidents }
+}
+
 /**
  * Map an explain `reason` (available=false) to a short user-facing message.
  * Keeps the widget on its computed view and tells the user what to do next.
@@ -126,5 +188,6 @@ export default {
   blastRadiusExplainPayload,
   incidentNarrativeExplainPayload,
   learnedRunbookExplainPayload,
+  graphCopilotExplainPayload,
   reasonLabel,
 }

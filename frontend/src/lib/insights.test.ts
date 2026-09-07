@@ -4,8 +4,10 @@ import {
   blastRadiusExplainPayload,
   incidentNarrativeExplainPayload,
   learnedRunbookExplainPayload,
+  graphCopilotExplainPayload,
   reasonLabel,
   type AnomalyItem,
+  type GraphCopilotInput,
 } from './insights'
 
 const item = (over: Partial<AnomalyItem> = {}): AnomalyItem => ({
@@ -129,6 +131,59 @@ describe('learnedRunbookExplainPayload', () => {
 
   it('is empty-safe', () => {
     expect(learnedRunbookExplainPayload([])).toEqual({ runbook: [] })
+  })
+})
+
+describe('graphCopilotExplainPayload', () => {
+  const base = (): GraphCopilotInput => ({
+    stats: {
+      episodes: 12, rootCauses: 4, actions: 5, services: 6,
+      entities: 8, edges: 30, critical: 2, resolved: 9,
+    },
+    rootCauses: [
+      { name: 'oom', frequency: 3, successRate: 0.5 },
+      { name: 'disk-full', frequency: 9, successRate: 0.888 },
+    ],
+    actions: [
+      { name: 'restart', usedCount: 2, successRate: 0.75 },
+      { name: 'scale-up', usedCount: 8, successRate: 0.9 },
+    ],
+    services: [
+      { name: 'api', incidentCount: 1, status: 'healthy' },
+      { name: 'db', incidentCount: 7, status: 'critical' },
+    ],
+    episodes: [
+      { title: 'old', category: 'perf', severity: 'warning', status: 'resolved' },
+      { title: 'live', category: 'perf', severity: 'critical', status: 'analyzing' },
+    ],
+  })
+
+  it('sorts root causes / actions / services by their strength', () => {
+    const out = graphCopilotExplainPayload(base())
+    expect(out.topRootCauses[0].name).toBe('disk-full') // higher frequency first
+    expect(out.topActions[0].action).toBe('scale-up') // higher usedCount first
+    expect(out.topServices[0].service).toBe('db') // more incidents first
+    expect(out.stats.episodes).toBe(12)
+  })
+
+  it('rounds success rates to two places', () => {
+    const out = graphCopilotExplainPayload(base())
+    expect(out.topRootCauses[0].successRate).toBe(0.89)
+  })
+
+  it('orders incidents unresolved-first then by severity', () => {
+    const out = graphCopilotExplainPayload(base())
+    expect(out.recentIncidents[0].title).toBe('live') // unresolved beats resolved
+    expect(out.recentIncidents[0].status).toBe('analyzing')
+  })
+
+  it('caps each list', () => {
+    const many = base()
+    many.rootCauses = Array.from({ length: 10 }, (_, i) => ({ name: `r${i}`, frequency: i, successRate: 0.5 }))
+    many.episodes = Array.from({ length: 10 }, (_, i) => ({ title: `e${i}`, category: 'c', severity: 'warning', status: 'resolved' }))
+    const out = graphCopilotExplainPayload(many, 6, 5)
+    expect(out.topRootCauses).toHaveLength(6)
+    expect(out.recentIncidents).toHaveLength(5)
   })
 })
 

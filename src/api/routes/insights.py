@@ -104,6 +104,15 @@ _KIND_INSTRUCTIONS: dict[str, str] = {
         "reliable starting point for a similar incident and flag any low-sample "
         "or low-success entries to treat with caution."
     ),
+    "graph_copilot": (
+        "The summary below describes an episodic incident-memory graph: overall "
+        "counts, the most frequent root causes, the most-used remediation actions "
+        "with their success rates, the services with the most incidents, and a few "
+        "recent incidents. In 3 to 4 sentences, tell the on-call engineer what this "
+        "memory suggests: the dominant failure themes, which remediations have "
+        "actually worked, and where to focus. Do not invent nodes or numbers that "
+        "are not in the summary."
+    ),
     "generic": (
         "In 2 to 4 sentences, give a plain-language explanation of the data below "
         "for an on-call engineer. Do not speculate beyond what the data shows."
