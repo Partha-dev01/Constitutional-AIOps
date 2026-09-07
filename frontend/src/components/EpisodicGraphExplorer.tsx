@@ -800,16 +800,20 @@ export function EpisodicGraphExplorer({
       </div>
 
       {/* Stats Overlay — shifts left of the details drawer (right-14 + w-72) when a
-          node is selected so the drawer never covers it. */}
+          node is selected so the drawer never covers it. Hidden below `sm`: on a
+          narrow canvas the bottom-left legend and this bottom-right overlay collide
+          (the legend has no room to stay clear of it), so both bottom overlays drop
+          out on phones and return from the `sm` breakpoint up where there is room. */}
       <div
-        className={`absolute bottom-3 ${selectedNode ? 'right-[22.5rem]' : 'right-3'} text-xs text-slate-400 bg-slate-900/80 px-3 py-1.5 rounded-md border border-slate-700`}
+        className={`absolute bottom-3 ${selectedNode ? 'right-[22.5rem]' : 'right-3'} hidden sm:block text-xs text-slate-400 bg-slate-900/80 px-3 py-1.5 rounded-md border border-slate-700`}
       >
         {displayNodes.length} nodes shown · {filteredLinks.length} edges
         {filterType !== 'all' && ` (filtered: ${filterType})`}
       </div>
 
-      {/* Legend */}
-      <div className="absolute bottom-3 left-3 flex flex-wrap gap-2.5 text-xs bg-slate-900/80 px-3 py-2 rounded-md border border-slate-700">
+      {/* Legend — hidden below `sm` (see the stats overlay above): on a narrow
+          canvas it would overrun the container and collide with the stats overlay. */}
+      <div className="absolute bottom-3 left-3 hidden sm:flex flex-wrap gap-2.5 text-xs bg-slate-900/80 px-3 py-2 rounded-md border border-slate-700">
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded-full bg-purple-500" />
           <span className="text-slate-400">Episode</span>
