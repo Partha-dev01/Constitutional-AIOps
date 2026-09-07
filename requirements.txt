@@ -34,7 +34,7 @@ opentelemetry-instrumentation-fastapi>=0.42b0
 loguru>=0.7.3
 
 # Async
-asyncio>=3.4.3
+asyncio>=4.0.0
 aiofiles>=23.2.1
 
 # Utilities
