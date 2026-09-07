@@ -20,6 +20,30 @@ updates:
         update-types:
           - "minor"
           - "patch"
+    ignore:
+      # requirements*.txt is installed ONLY by the box Docker image build, not by
+      # CI (ci-backend installs pyproject via `pip install -e .[dev]`), so these
+      # major bumps cannot be validated without a full image rebuild + runtime
+      # test. Held until that is done deliberately; minor/patch floors still flow.
+      - dependency-name: "torch"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "sentence-transformers"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "datasets"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "huggingface-hub"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "websockets"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "opentelemetry-instrumentation-fastapi"
+        update-types: ["version-update:semver-major"]
+      # Dev-only tools (requirements-dev.txt; not shipped, not CI-installed).
+      - dependency-name: "ipython"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "rich"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "watchfiles"
+        update-types: ["version-update:semver-major"]
 
   # Node / npm — covers frontend/package.json (React, Playwright, Vitest, etc.)
   - package-ecosystem: "npm"
@@ -38,6 +62,26 @@ updates:
         update-types:
           - "minor"
           - "patch"
+    ignore:
+      # TypeScript 6.1+/7 breaks typescript-eslint 8 (its peer caps typescript
+      # <6.1); revisit when typescript-eslint ships TS7 support.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      # vitest 5 requires vite >=6.4 and @vitejs/plugin-react 6 requires vite ^8
+      # (rolldown-vite); both deferred with a deliberate vite major bump.
+      - dependency-name: "vitest"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@vitejs/plugin-react"
+        update-types: ["version-update:semver-major"]
+      # React 19 is a runtime migration handled as its own task.
+      - dependency-name: "react"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react-dom"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/react"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/react-dom"
+        update-types: ["version-update:semver-major"]
 
   # GitHub Actions — covers .github/workflows/*.yml action pins (@v4 etc.).
   # Action bumps are low-risk and easy to review together, so batch them all.

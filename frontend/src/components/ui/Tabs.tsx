@@ -48,7 +48,7 @@ export function Tabs({
 
   const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     const currentIdx = tabs.findIndex((t) => t.id === value)
-    let next = currentIdx
+    let next: number
 
     switch (e.key) {
       case 'ArrowLeft':
