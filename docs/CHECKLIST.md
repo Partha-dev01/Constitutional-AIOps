@@ -1,10 +1,18 @@
 # Constitutional AIOps - Development Checklist
 
-> **Version**: 0.11.1
-> **Last Updated**: 2026-05-13 (session 4)
-> **Status**: Phase 4.2 complete (88.6%), BERTScore done, Neo4j populated, Llama SOTA complete. Instance STOPPED. Pending: DeepSeek V3.2, ablation (8 configs), graph experiments, stats, paper.
+> **Version**: 1.0.0
+> **Last Updated**: 2026-09-07
+> **Status**: v1.0.0 shipped. Research paper published (COMSYS 2026 camera-ready). Production live on two tiers (GPU + lite). See [SESSION_STATE.md](SESSION_STATE.md) for the current snapshot.
 > **Architecture**: Simultaneous Dual-Model (Qwen3-4B + Qwen3-14B on 24GB VRAM)
-> **Deployment**: AWS g6.xlarge L4 24GB (Stack A Ollama Q4_K_M)
+> **Runtime**: vLLM AWQ-marlin (production) / Ollama (local dev); BYO endpoint supported
+
+---
+
+## Current status (2026-09-07)
+
+The project has shipped v1.0.0 and the research paper is published (COMSYS 2026 camera-ready). Final metrics live in [KEY_METRICS.md](KEY_METRICS.md), which supersedes any older 88.6% / 90.7% figures recorded below. Current gates: backend pytest 1089 passed / 25 skipped (coverage 65.14%), OpenAPI 127 paths, app vitest 210, marketing vitest 10, Playwright e2e gated in CI.
+
+Everything below this section is a historical development log kept for continuity. The 2026-05 benchmark-completion plan (DeepSeek baseline, 8-config ablation, graph experiments, statistics, paper update) is DONE; the paper shipped with the strict matched-substring evaluator and the camera-ready results.
 
 ---
 
@@ -393,10 +401,10 @@ Created `src/validation/constants.py` with:
 
 | Item | Priority | Status |
 |------|----------|--------|
-| User Authentication | Low | Not Started |
-| Production SSL Setup | Low | Not Started |
-| Performance Benchmarks | Medium | Pending |
-| CI/CD Pipeline | Low | Not Started |
+| User Authentication | - | ✅ Shipped (session login, `AUTH_REQUIRED`, public signup + Turnstile) |
+| Production TLS | - | ✅ Shipped (Caddy + Let's Encrypt) |
+| Performance Benchmarks | Medium | Partial (ENH-003, `scripts/bench_mode.py`) |
+| CI/CD Pipeline | - | ✅ Shipped (GitHub Actions CI; manual-gated CD) |
 
 ---
 
@@ -426,5 +434,5 @@ See [CLAUDE.md](../CLAUDE.md) for session management.
 
 ---
 
-**Last Updated**: 2026-01-29
+**Last Updated**: 2026-09-07
 **Version**: 1.0.0

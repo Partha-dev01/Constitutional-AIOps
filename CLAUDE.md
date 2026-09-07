@@ -1,9 +1,9 @@
 # CLAUDE.md - Constitutional AIOps Development Instructions
 
-> **Version**: 5.1
-> **Last Updated**: 2026-07-11
-> **Architecture**: Simultaneous Dual-Model (24GB VRAM) — Mode 1 default; single-engine Mode 2 overlay available
-> **Status**: PRODUCTION deployed (AWS, gated, TLS); chat-driven consent-gated remediation live; Mode 2 phases 0-1 validated
+> **Version**: 5.2
+> **Last Updated**: 2026-09-07
+> **Architecture**: Simultaneous Dual-Model (24GB VRAM); Mode 1 default, single-engine Mode 2 overlay available
+> **Status**: PRODUCTION (two tiers: AWS L4 GPU + lite CPU/Bedrock); gated + TLS; multi-tenant BYOK, public signup, ChatOps alerting, consent-gated remediation all live
 
 ---
 
@@ -37,6 +37,7 @@ cat docs/KEY_METRICS.md | head -100
 
 ### System Status
 - **Implementation**: core complete + production-hardened; chat-driven consent-gated remediation SHIPPED (2026-07)
+- **SaaS surface (2026-09)**: multi-tenant BYOK + cost fencing, public signup (Turnstile), ChatOps alerting (Telegram/Matrix + inbound Telegram relay), opt-in reasoning-tier insight widgets + copilots, a Python SDK + fail-closed plugin loader, and a separate always-on marketing site; a lite tier targets an external (Bedrock) endpoint behind a wake-on-visit Lambda
 - **Production runtime**: AWS g6.xlarge L4 24GB with **vLLM AWQ-marlin** dual engines (Mode 1), behind a Caddy/Let's-Encrypt domain; the app's own session login is the gate (`AUTH_REQUIRED=true`; Caddy basic-auth only on `/grafana`); VM frozen/thawed on demand for cost
 - **Serving Mode 2** (opt-in overlay): single-engine profile via `AIOPS_MODE=2` + `docker/docker-compose.mode2.yml`; swappable from Settings (host-side watcher); Mode 1 stays byte-identical when off
 - **Remediation model**: action tools NEVER execute inside the model loop — proposals queue for an Approve/Reject card in chat; Settings→Remediation picks diagnose/approve/auto (+ per-tool autonomy allowlist); everything passes the constitutional gate + audit log
@@ -46,10 +47,10 @@ cat docs/KEY_METRICS.md | head -100
 ### Key Files Inventory
 | Category | Count | Location |
 |----------|-------|----------|
-| Backend Python | ~83 files | `src/` |
-| Frontend TS/TSX | ~83 files | `frontend/src/` |
-| API routers | 17 registered | FastAPI routes (`src/main.py`) |
-| Documentation | 20 files | `docs/` |
+| Backend Python | 113 files | `src/` |
+| Frontend TS/TSX | 144 files | `frontend/src/` |
+| API routers | 21 registered | FastAPI routes (`src/main.py`) |
+| Documentation | 18 files | `docs/` |
 
 ### Observability Stack
 | Component | Version | Retention |
@@ -79,7 +80,7 @@ Production runtime is vLLM AWQ-marlin (served-model-name in parens); local dev m
 - **Human-in-the-loop workflows** for uncertain actions
 
 **Target**: Self-hosted B.Tech final year project with research paper
-**Hardware**: Jarvis Labs A5000 24GB (primary) / AWS g6.xlarge L4 24GB (alternative)
+**Hardware**: AWS g6.xlarge L4 24GB (primary, vLLM) / Jarvis Labs A5000 24GB (v1 dev, decommissioned 2026-05)
 **License**: Academic/Research
 
 ---
@@ -266,11 +267,11 @@ constitutional-aiops/
 ├── README.md                    # Quick Start (entry point)
 ├── CLAUDE.md                    # THIS FILE - Read first every session
 ├── docs/
-│   ├── INDEX.md                 # Master documentation index (93+ files)
-│   ├── KEY_METRICS.md           # ⭐ Exportable metrics for paper
-│   ├── BACKEND.md               # ⭐ Python backend reference (43 files)
-│   ├── API.md                   # ⭐ REST API reference (50+ endpoints)
-│   ├── FRONTEND.md              # ⭐ React frontend reference (23 files)
+│   ├── INDEX.md                 # Master documentation index
+│   ├── KEY_METRICS.md           # ⭐ Camera-ready metrics (COMSYS 2026 final)
+│   ├── BACKEND.md               # ⭐ Python backend reference (113 files, 21 routers)
+│   ├── API.md                   # ⭐ REST API reference (openapi.json: 127 paths)
+│   ├── FRONTEND.md              # ⭐ React frontend reference (144 files)
 │   ├── ARCHITECTURE.md          # System architecture
 │   ├── DEPLOYMENT.md            # Deployment overview
 │   ├── CHECKLIST.md             # Development checklist
@@ -452,4 +453,4 @@ reasoning_response = await router.reasoning_completion(prompt)
 
 ---
 
-**End of CLAUDE.md** | Version 5.1 | 2026-07-11
+**End of CLAUDE.md** | Version 5.2 | 2026-09-07

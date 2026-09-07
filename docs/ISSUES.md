@@ -1,8 +1,8 @@
 # Constitutional AIOps - Issue Tracker
 
 > **Version**: 1.0.0
-> **Last Updated**: 2026-08-31
-> **Open Issues**: 10 (all low/medium/info, none blocking)
+> **Last Updated**: 2026-09-07
+> **Open Issues**: 6 (all low/medium/info, none blocking)
 > **Blockers**: 0
 
 ---
@@ -25,14 +25,10 @@ None currently.
 |----|-------|----------|-------|
 | ISS-101 | Mode 1 chat turns feel slow on long answers (30-60s for ~700+ generated tokens; no streaming) | Medium | 2026-07-11: agentic-loop token cap + chat-priority background-RCA deferral shipped, cutting typical turns from ~31-38s to ~10-17s. Engine decode itself is still at baseline (~26 tok/s on L4); full cure remains Mode 2 streaming (SSE UI wiring, engine pin upgrade, prefix caching). |
 | ISS-102 | Local `scale_service` shells out to `docker compose` — unavailable inside the prod backend container | Low | Restart path fixed via Docker SDK (0.12.0); compose-based scaling needs the compose project context, so local scaling stays a dev-only path. Remote demo host unaffected. |
-| ISS-103 | `Metrics.tsx` dereferences `validation_report.system_configuration.*` behind a truthiness check only — a partial 200 would crash the route to the ErrorBoundary | Medium-Low | ✅ RESOLVED (s85, 2026-08-31): Validation tab now gates on the nested shape (`system_configuration`/`accuracy_metrics`/`latency_metrics`/`validation_status`), not just a truthy object — a partial 200 falls back to the loading state instead of crashing. |
-| ISS-104 | `Incidents.tsx` unguarded `Math.round(confidence*100)` renders "NaN%" if a confidence field is ever absent | Medium-Low | ✅ RESOLVED (s85, 2026-08-31): confidence rendered via a `confPct()` guard (returns `n/a` for absent/NaN) across all 4 call sites in `Incidents.tsx`. |
 | ISS-105 | Mobile/tablet polish batch (Console stacked-canvas fit, clipped panels, icon orphans, incidents search collapse, /graph legend overlap on small widths) | Low | Desktop/laptop production-clean; list from the 2026-07 QA tour. 2026-09-07: `/graph` legend + node/edge stats overlays now hidden below `sm` in `EpisodicGraphExplorer` so they can no longer collide on a narrow canvas. Re-checked the rest against the current redesign: the incidents filter row already reflows (`flex gap-4 flex-wrap`, search `flex-1 max-w-md`) and the Console cockpit stacks cleanly on mobile/tablet (covered by the `console-layout` viewport e2e, 9/9). Remaining: `clipped panels`/`icon orphans` need a specific repro on the current UI. |
 | ISS-107 | Local `vitest` broken on Windows dev machines (env issue) | Low | CI-frontend on Linux is the source of truth; do not block on local vitest. |
 | ISS-108 | Agent-initiated action proposals are latent in production Mode 1 (agentic tool loop off by default; the live consent path is fallback detection) | Info | The agentic tool loop is deliberately enabled in the production environment by operator choice (2026-07-11), trading some added per-turn latency for native tool-calling ahead of Mode 2 phase 5; the fallback-detection consent path remains the safety net when the loop is off. |
-| ISS-109 | Infra fingerprint in the public tree: cloud instance ID appears in terraform/aws docs and an old CHANGELOG entry; static IP + domain in the DNS setup doc | Low | Not exploitable without cloud credentials (auth + SGs are the boundary), but scrub to placeholders in a dedicated pass; git history would still hold old values. |
-| ISS-110 | Chat timestamps render UTC as local time: backend sends naive-UTC ISO strings (no `Z`/offset), so `new Date()` in the frontend parses them as local — fresh conversations show "5h ago" (for IST) and message times are offset | Low | ✅ RESOLVED (s85, 2026-08-31): `ChatPane` parses API timestamps via a `toDate()` helper that appends `Z` when no timezone marker is present, so naive-UTC strings render correctly (both the fresh-turn and conversation-reload paths). |
-| ISS-111 | Conversation titles/previews echo the ASSISTANT's answer text instead of the user's first message, making the sidebar hard to scan | Low | ✅ RESOLVED (s85, 2026-08-31): `list_conversations` derives the sidebar preview from the first USER message (clamped to 100 chars) via a `_conversation_preview()` helper, falling back to the first message of any role, then `None` for an empty conversation. |
+| ISS-109 | Infra fingerprint in the public tree: cloud instance ID appears in terraform/aws docs and an old CHANGELOG entry; static IP + domain in the DNS setup doc | Low | 2026-09-07: audited the whole tracked tree. Every current-infra identifier is ALREADY a placeholder (instance `i-0123456789abcdef0`, volume `vol-0123456789abcdef0`, SG `sg-0123456789abcdef0`, EIP `203.0.113.10`, account `123456789012` / terraform `000000000000`); no real EIP, account id, bucket, CloudFront/API-Gateway id, or domain is present. Normalized the last concrete example (a decommissioned Jarvis Labs notebook subdomain) to `[id]`. Working-tree scrub DONE; the only residual is git history, covered by the public-flip history handling. Not exploitable without cloud credentials (auth + SGs are the boundary). |
 
 ### Optional Enhancements (Not Blocking)
 
@@ -45,6 +41,17 @@ None currently.
 ---
 
 ## ✅ Resolved Issues
+
+### 2026-08-31 (s85 - UI render-robustness fixes)
+
+Four frontend fixes hardening render paths against partial or malformed API payloads.
+
+| ID | Issue | Resolution |
+|----|-------|------------|
+| ISS-103 | `Metrics.tsx` dereferenced `validation_report.system_configuration.*` behind a truthiness check only, so a partial 200 crashed the route to the ErrorBoundary | Validation tab now gates on the nested shape (`system_configuration` / `accuracy_metrics` / `latency_metrics` / `validation_status`), not just a truthy object; a partial 200 falls back to the loading state instead of crashing |
+| ISS-104 | `Incidents.tsx` unguarded `Math.round(confidence*100)` rendered "NaN%" if a confidence field was ever absent | Confidence rendered via a `confPct()` guard (returns `n/a` for absent/NaN) across all 4 call sites |
+| ISS-110 | Chat timestamps rendered naive-UTC ISO strings as local time, so fresh conversations showed a large offset (e.g. "5h ago" for IST) | `ChatPane` parses API timestamps via a `toDate()` helper that appends `Z` when no timezone marker is present, so naive-UTC strings render correctly on both the fresh-turn and reload paths |
+| ISS-111 | Conversation titles/previews echoed the assistant's answer text instead of the user's first message | `list_conversations` derives the sidebar preview from the first user message (clamped to 100 chars) via a `_conversation_preview()` helper, falling back to the first message of any role |
 
 ### 2026-08-31 (Phase 5c redesign R4 - security audit + hardening)
 
@@ -471,7 +478,8 @@ curl http://localhost:8000/api/v1/telemetry/processor/status
 | Codebase Fixed | 9 |
 | Documentation Fixed | 6 |
 | Phase 5c Deployment / Front Door Fixed | 9 |
-| Total Resolved | 63+ |
+| UI Render-Robustness Fixed | 4 |
+| Total Resolved | 67+ |
 
 ---
 
@@ -503,5 +511,5 @@ When adding new issues, use this format:
 
 ---
 
-**Last Updated**: 2026-08-31
+**Last Updated**: 2026-09-07
 **Version**: 1.0.0

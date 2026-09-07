@@ -1,8 +1,10 @@
 # API Reference
 
 > **Version**: 1.0.0
-> **Last Updated**: 2026-01-29
+> **Last Updated**: 2026-09-07
 > **Base URL**: `/api/v1`
+
+> **Authoritative contract**: the generated [openapi/openapi.json](../openapi/openapi.json) (127 paths, refreshed via `scripts/dump_openapi.py`), or the live `/docs`. This hand-written reference covers the core routers; consult the OpenAPI snapshot for the complete current surface, including the `insights`, `relay`, `notifications`, `audit`, `settings`, `topology`, and `auth` endpoints plus PAT / webhook / BYOK / local-chat added since this doc was first written.
 
 ---
 
@@ -10,22 +12,30 @@
 
 The Constitutional AIOps API provides REST endpoints for:
 - System health monitoring
-- Incident management with RCA
+- Incident management with RCA and consent-gated remediation
 - Action validation and approval workflows
-- Interactive chat with Reasoning Agent
+- Interactive chat with the Reasoning Agent (plus in-browser WebLLM local chat)
 - Telemetry queries (LGTM stack)
 - Graph memory exploration
 - Infrastructure monitoring
-- LLM benchmarking and evaluation (NEW v0.7.0)
+- LLM benchmarking and evaluation
+- Reasoning-tier insight widgets (opt-in, cost-fenced)
+- ChatOps alerting: outbound Telegram / Matrix and inbound Telegram relay
+- Auth and multi-tenancy: session login, per-user BYOK keys, personal access tokens, outbound webhooks
+- In-app notifications and an action audit log
 
 ---
 
 ## Authentication
 
-Currently no authentication required (development mode). Production should add:
-- API key authentication
-- JWT tokens for user sessions
-- RBAC for action approvals
+Authentication is enforced in production. The app's own **session login is the gate** (`AUTH_REQUIRED=true`): non-public routers require a valid session, sessions are verified with constant-time HMAC plus a server-side `token_version` freshness check, and role is read from the database rather than the token. Additional access paths:
+
+- **Personal access tokens (PATs)** for programmatic API use
+- **Role-gating** on admin-only and instance-wide mutation routes (see ISSUES SEC-004)
+- **Per-user BYOK** API keys (Fernet-encrypted at rest) for tenant LLM calls
+- A **machine credential** on the `/ingest/*` telemetry gateway, and Caddy basic-auth on `/grafana`
+
+In local dev or self-host with `AUTH_REQUIRED` off, requests run as a synthetic admin, so the developer experience is unchanged. Public routes (health, login, signup, and the `/demo` tier) do not require a session.
 
 ---
 
@@ -1265,7 +1275,7 @@ Export results in specified format.
 
 For `format=json`: Returns JSON object
 For `format=csv`: Returns CSV text
-For `format=latex`: Returns LaTeX table:
+For `format=latex`: Returns a LaTeX table. The rows below are illustrative sample output showing the format, not the system's measured results (see [KEY_METRICS.md](KEY_METRICS.md) for those):
 
 ```latex
 \begin{table}[h]

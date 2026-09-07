@@ -1,161 +1,126 @@
 # KEY_METRICS.md - Constitutional AIOps Performance Metrics
 
-> **Version**: 3.0
-> **Last Updated**: 2026-05-13
-> **Status**: Benchmark v3.0 Phase 4.2 complete (431 cases, Stack A Ollama Q4_K_M, AWS L4)
+> **Version**: 4.0
+> **Last Updated**: 2026-09-07
+> **Status**: COMSYS 2026 camera-ready final (matched-substring evaluator, 431-case benchmark, 357 scored)
+> **Source of truth**: the camera-ready paper *Constitutional AIOps: A Dual-Agent Architecture with Deterministic Inference and Graph-Episodic Memory* (COMSYS 2026). These figures supersede every earlier v1 / v3.0 number in this repo.
 
 ---
 
-## ⭐ Table 0: Phase 4.2 Final Results (v3.0 — 431 cases, 2026-05-13)
+## Why these numbers differ from older docs
 
-> Stack A: Ollama 0.23.2, qwen3:4b-instruct + qwen3:14b Q4_K_M, AWS g6.xlarge L4 24GB
-> BERTScore: roberta-large | Cosine: sentence-transformers/all-MiniLM-L6-v2
+The published results use a strict matched-substring evaluator. An answer counts as correct only when one of the dataset's acceptable surface forms appears verbatim in the output after case-insensitive whitespace normalization. This replaced the v1 3.0-point overlap rubric, which over-credited partial-overlap answers. The lower headline is an evaluator change, not a system regression.
 
-| Metric | Value | BERTScore F1 | Cosine Sim | Notes |
-|--------|-------|-------------|------------|-------|
-| **Overall Accuracy** | **88.6%** (382/431) | **0.7975** | **0.2756** | True final after remine fix |
-| **Annotation Accuracy** | **82.6%** (180/218) | 0.8220 | 0.2041 | HDFS/BGL/Apache/OpenSSH |
-| **RCA Accuracy** | **94.8%** (202/213) | 0.7726 | 0.3512 | LEMMA/OpsEval/remine |
-| v1 baseline (150 cases) | 90.7% (136/150) | — | — | Within run-to-run variance |
+Any older figure of 90.7% overall accuracy or a "negligible constitutional overhead" of -0.7% is retired. Both came from the old rubric and must not be reused.
 
-### Per-Source Breakdown (v3.0)
-
-| Source | Task | N | Accuracy | BERTScore F1 | Cosine Sim |
-|--------|------|---|----------|-------------|------------|
-| LEMMA-RCA cloud | RCA | 80 | **100%** | 0.7842 | 0.4469 |
-| Apache (Loghub) | Annotation | 40 | **100%** | 0.8110 | 0.1365 |
-| OpsEval-remine Wired Network | RCA | 32 | **100%** | 0.7923 | 0.3745 |
-| OpsEval Mobile / Log / remine-Mobile | RCA | 16 | **100%** | 0.7796 | 0.3586 |
-| HDFS (Loghub) | Annotation | 100 | **94%** | 0.8292 | 0.2115 |
-| OpsEval Wired Network | RCA | 79 | **89%** | 0.7552 | 0.2666 |
-| BGL (Loghub) | Annotation | 38 | **68%** | 0.8203 | 0.2430 |
-| OpsEval 5G | RCA | 6 | **67%** | 0.7825 | 0.2520 |
-| OpenSSH (Loghub) | Annotation | 40 | **50%** | 0.8163 | 0.2163 |
-
-### OpenSSH 50% — Not a Bug
-
-All 20 failures are false positives: model flags isolated `auth failed` / `POSSIBLE BREAK-IN ATTEMPT` events as anomalous; Loghub labels only coordinated brute-force as anomaly. 0 false negatives — model catches every real attack. Report in paper Table 4 as precision/recall tradeoff.
-
-### Gate §15 Results (Stack A vs Stack B, 15+15 = 30 cases each)
-
-| Stack | Accuracy | Lat avg | P95 |
-|-------|----------|---------|-----|
-| Stack A (Ollama Q4_K_M) | 93.3% | 22.43s | 65.96s |
-| Stack B (vLLM AWQ awq_marlin) | 100.0% | 17.38s | 43.71s |
-
-- Gate 1 (accuracy delta < 2pp): CONDITIONAL PASS (delta is OpsEval knowledge-Qs, excluded from main)
-- Gate 2 (P95 speedup ≥ 1.5×): PASS — 65.96s / 43.71s = **1.51×**
+Benchmark: 431 curated cases across six sources, expanded from the v1 150-case set. Accuracy is scored on 357 evaluable cases (218 annotation + 139 RCA). 74 cases (41 Chinese-language + 33 OpsEval-remined MCQ-format) are excluded uniformly across every system for evaluator fairness. Hardware: AWS g6.xlarge L4 24GB for the 431-case revision and the SOTA baselines (via AWS Bedrock); the v1 150-case run used Jarvis Labs A5000 24GB. Runtime Ollama Q4_K_M (qwen3-4b-instruct + qwen3-14b). Statistics: 95% BCa bootstrap intervals from 10,000 resamples (seed=42); pairwise ablation via McNemar exact two-sided binomial test paired by `case_id`.
 
 ---
 
-## Table 1: Accuracy Results (Benchmark v2.0 — archived)
+## Table 1: Overall benchmark results (matched-substring, 431-case / 357 scored)
+
+| Task | Agent | N | Accuracy | 95% BCa CI | BERT-F1 / Cosine / Term |
+|------|-------|---|----------|------------|-------------------------|
+| Annotation | Qwen3-4B | 218 | **82.6%** (180/218) | [77.1, 87.2] | 0.822 / 0.24 / 0.19 |
+| RCA | Qwen3-14B | 139 | **82.0%** (114/139) | [74.8, 87.8] | 0.795 / 0.41 / 0.78 |
+| **Overall** | **Hybrid** | **357** | **82.4%** (294/357) | **[78.2, 86.0]** | 0.812 / 0.33 / 0.53 |
+
+BERTScore F1 uses roberta-large; the overall 0.812 sits at 0.81 ± 0.01 across all configurations.
 
 ---
 
-## Table 1: Accuracy Results (Benchmark v2.0)
+## Table 2: Per-source accuracy (matched-substring, post-D-1)
 
-| Metric | Value | Sample Size | Target | Status |
-|--------|-------|-------------|--------|--------|
-| **Annotation Accuracy** | **89.0%** (89/100) | 100 | 87-92% | IN TARGET |
-| **RCA Accuracy** | **94.0%** (47/50) | 50 | 85-90% | EXCEEDS TARGET |
-| **Overall Accuracy** | **90.7%** (136/150) | 150 | - | Excellent |
-| Error Rate | 9.3% (14/150) | 150 | - | - |
+| Source | Task | N | Evaluable | Accuracy | Dominant failure |
+|--------|------|---|-----------|----------|------------------|
+| Loghub HDFS | Annotation | 100 | 100 | **94.0%** | edge-case false positives |
+| Loghub Apache | Annotation | 40 | 40 | **100.0%** | none |
+| Loghub BGL | Annotation | 38 | 38 | 68.4% | benign RAS read as alarm |
+| Loghub OpenSSH | Annotation | 40 | 40 | 50.0% | all 20 false positives, zero false negatives |
+| OpsEval (all RCA subsets) | RCA | 100 | 59 | 66.1% | telecom-domain limit; 41 Chinese excluded |
+| LEMMA-RCA | RCA | 80 | 80 | **93.8%** | cloud microservice edge cases |
 
----
-
-## Table 2: Semantic Similarity Metrics
-
-| Metric | Annotation | RCA | Overall |
-|--------|-----------|-----|---------|
-| **BERTScore F1** | 0.516 | 0.341 | **0.458** |
-| **Cosine Similarity** | 0.265 | 0.387 | **0.305** |
-| **Term Overlap** | 0.178 | 0.733 | **0.411** |
+OpenSSH 50% is a conservative bias, not a defect. Every failure is a false positive where the model flags isolated auth-failure events, with zero false negatives on coordinated brute-force. That bias is desirable for production triage.
 
 ---
 
-## Table 3: Latency Performance (localhost, RTT: 1.95ms)
+## Table 3: Latency and resource utilization (AWS L4 24GB, RTT-compensated)
 
-| Agent | P50 (ms) | P95 (ms) | Avg (ms) | Min (ms) | Max (ms) |
-|-------|----------|----------|----------|----------|----------|
-| Annotation (qwen3:4b-instruct) | 1,872 | 2,284 | 1,853 | 1,112 | 2,360 |
-| RCA (qwen3:14b) | 14,075 | 22,718 | 14,767 | 7,560 | 36,073 |
-| **Overall (hybrid)** | **2,100** | **17,374** | **6,158** | - | - |
-| Overall P99 | - | - | 25,547 | - | - |
+| Component | VRAM | P50 (s) | P95 (s) | Avg (s) | Range (s) |
+|-----------|------|---------|---------|---------|-----------|
+| Fast Agent (4B, annotation) | ~4 GB | 2.99 | 3.87 | 3.07 | 2.05 to 21.74 |
+| Reasoning Agent (14B, RCA + qa_mcq) | ~11 GB | 29.83 | 62.20 | 32.50 | 11.55 to 84.50 |
+| **End-to-end** | **~15 GB** | 4.15 | 48.57 | 17.62 | 2.05 to 84.50 |
 
----
-
-## Table 4: Per-Source Breakdown
-
-| Task | Source | N | Accuracy | BERT-F1 | Cos Sim |
-|------|--------|---|----------|---------|---------|
-| Annotation | Loghub HDFS | 72 | **95.8%** | 0.521 | 0.282 |
-| Annotation | Loghub BGL | 28 | 71.4% | 0.503 | 0.223 |
-| RCA | LEMMA-RCA Cloud | 28 | **100.0%** | 0.353 | 0.480 |
-| RCA | OpsEval 5G Comms | 2 | **100.0%** | 0.302 | 0.282 |
-| RCA | OpsEval Mobile Comms | 4 | **100.0%** | 0.353 | 0.334 |
-| RCA | OpsEval Wired Network | 16 | 81.2% | 0.323 | 0.249 |
+Both models load simultaneously at ~15GB total (63% of 24GB), which removes hot-swap latency entirely. Network RTT 1.10ms is subtracted. Preliminary vLLM AWQ (awq_marlin) gate tests showed ~1.5x speedup on a 30-case smoke.
 
 ---
 
-## Table 5: Ablation Study (7 Configurations, 150 tests each = 1,050 total)
+## Table 4: Ablation, architecture / orchestration variants vs Full Hybrid (357 paired)
 
-| Configuration | Ann Acc | RCA Acc | Overall | BERT-F1 | Term Ov. | Avg Latency | Delta |
-|--------------|---------|---------|---------|---------|----------|-------------|-------|
-| **Full System (4B+14B hybrid)** | **89.0%** | **98.0%** | **92.0%** | **0.459** | 0.433 | **5,917ms** | **baseline** |
-| Single 4B (both tasks) | 89.0% | 94.0% | 90.7% | 0.457 | 0.401 | 6,033ms | -1.3% |
-| Single 14B (both tasks) | 89.0% | 88.0% | 88.7% | 0.458 | 0.427 | 5,988ms | -3.3% |
-| No Structured Output | 89.0% | 96.0% | 91.3% | 0.457 | 0.383 | 6,157ms | -0.7% |
-| **No System Prompt** | **45.0%** | **92.0%** | **60.7%** | **0.389** | 0.780 | **11,018ms** | **-31.3%** |
-| With Graph Context (RAG) | 89.0% | 90.0% | 89.3% | 0.454 | 0.335 | 6,430ms | -2.7% |
-| No Constitutional AI | 89.0% | 96.0% | 91.3% | 0.457 | 0.420 | 6,110ms | -0.7% |
+| Configuration | Ann | RCA | Overall | Delta vs Full | McNemar p |
+|---------------|-----|-----|---------|---------------|-----------|
+| **Full Hybrid (4B+14B)** | **83.0%** | **85.6%** | **84.0%** | baseline | — |
+| Single-4B (both tasks) | 82.6% | 82.7% | 82.6% | -1.4pp | 0.302 |
+| Single-14B (both tasks) | 84.4% | 82.7% | 83.8% | -0.3pp | 1.000 |
+| With orchestrator | 82.6% | 83.5% | 82.9% | -1.1pp | 0.289 |
 
----
-
-## Table 6: Resource Utilization (A5000 24GB)
-
-| Component | VRAM | Notes |
-|-----------|------|-------|
-| Qwen3-4B-Instruct Q4_K_M | ~4 GB | Incl. ~1GB KV cache |
-| Qwen3-14B Q4_K_M | ~11 GB | Incl. ~1.5GB KV cache |
-| **Total** | **~15 GB** | **63% of 24GB** |
+Full Hybrid overall 84.0%, BCa CI [79.8, 87.4].
 
 ---
 
-## Table 7: Error Analysis (14/150 = 9.3%)
+## Table 5: Ablation, component removals vs Full Hybrid (357 paired)
 
-| Failure Mode | Count | Notes |
-|-------------|-------|-------|
-| BGL False Positive | 8 | Domain-specific vocabulary confusion |
-| Annotation Incorrect (HDFS) | 3 | Edge cases in log parsing |
-| RCA Incorrect (Wired Network) | 3 | OpsEval complex scenarios |
-| **Total** | **14** | Zero crashes, zero parser failures, zero timeouts |
+| Configuration | Ann | RCA | Overall | Delta overall | Key result |
+|---------------|-----|-----|---------|---------------|------------|
+| **Full Hybrid (baseline)** | 83.0% | 85.6% | **84.0%** | — | — |
+| No structured output | 82.6% | 75.5% | 79.8% | -4.2pp | RCA -10.1pp (p=0.086) |
+| **No system prompt** | **48.6%** | 81.3% | **61.3%** | **-22.7pp** | annotation -34.4pp (p=1.2e-11) |
+| With graph (RAG) | 82.6% | 82.9% | 82.9% | -1.1pp | indistinguishable (p=0.289) |
+| No constitutional gate | 89.4% | 72.7% | 82.9% | -1.1pp | overall-neutral p=0.652; RCA -12.9pp (p=5.3e-4) |
 
 ---
 
-## Key Findings
+## Table 6: Cross-system comparison (matched-substring, 357 evaluable)
 
-1. **System prompt is the most critical component (-31.3%)**: Without it, annotation drops to 45%
-2. **Hybrid outperforms single-agent**: Full 92.0% vs single-4B 90.7% vs single-14B 88.7%
-3. **Constitutional AI has negligible overhead (-0.7%)**: Safety at near-zero accuracy cost
-4. **Deterministic inference**: temperature=0, seed=hash(prompt) % 2^32 ensures reproducibility
-5. **VRAM efficient**: ~15GB total, both models simultaneously loaded
+| System | Annotation | RCA | Overall | Delta RCA vs Ours |
+|--------|-----------|-----|---------|-------------------|
+| **Constitutional AIOps (Ours)** | 82.6% | **82.0%** | **82.4%** | — |
+| Llama-3.3-70B-Instruct | 91.3% | 71.2% | 83.5% | **-10.8pp** |
+| DeepSeek-V3.2 | 90.4% | 66.9% | 81.2% | **-15.1pp** |
+
+Both frontier monoliths win annotation, where scale favors classification, but lose RCA. The hybrid wins root cause analysis by 10.8pp over Llama-3.3-70B and 15.1pp over DeepSeek-V3.2, where constitutional gating plus structured output boost correct-substring extraction. BERTScore F1: Ours 0.812, Llama-3.3-70B 0.827, DeepSeek-V3.2 0.826.
+
+---
+
+## Key findings
+
+1. **System prompt engineering is the single most critical component.** Removing it drops overall accuracy 22.7pp, driven by a 34.4pp collapse in small-model (4B) annotation while 14B RCA barely moves (-4.3pp). The old "prompt fragility" headline is a small-model task-specification cost, not a reasoning-stage vulnerability.
+2. **The dual-agent hybrid earns its keep on RCA.** It holds a small RCA edge over single-model alternatives at higher throughput, and beats both frontier monoliths (Llama-3.3-70B, DeepSeek-V3.2) on RCA by 10.8 / 15.1pp.
+3. **Constitutional gating is overall-neutral (p=0.652) but per-task asymmetric.** It costs +6.4pp on annotation while specifically protecting RCA correctness, which drops 12.9pp without the gate (p=5.3e-4). Safety at no net accuracy cost.
+4. **Deterministic inference.** T=0 with seed=hash(prompt) mod 2^32 for annotation, RCA, validation, and graph queries; interactive chat is intentionally non-deterministic (T=0.5). Run-to-run variance at T=0 is bounded to at most 6 cases overall.
+5. **VRAM efficient.** ~15GB total for both models simultaneously (63% of 24GB).
 
 ---
 
 ## Methodology
 
-### Evaluation Datasets
-- **Annotation**: 100 cases from Loghub (72 HDFS + 28 BGL)
-- **RCA**: 50 cases from OpsEval (22) + LEMMA-RCA (28)
-- **Curation**: 3-phase pipeline (quality filtering, stratified sampling seed=42, language normalization)
+### Evaluation
+Strict matched-substring binarisation: an acceptable surface form must appear verbatim after case-insensitive whitespace normalization. It is intentionally conservative and produces a defensible lower bound. The v1 3.0-point rubric is retained only for forensic parity in the supplementary material.
+
+### Datasets
+Loghub (HDFS, BGL, Apache, OpenSSH), OpsEval, and LEMMA-RCA. 431 curated cases via a four-phase pipeline: source expansion, quality filtering, two-LLM label vetting with Llama-3.3-70B and DeepSeek-V3.2 as judges, then stratified seeding (seed=42) preserving source ratios and a 50/50 normal-anomaly balance for annotation.
 
 ### Metrics
-- **Accuracy**: Rule-based scoring (max 3.0, pass >= 1.5)
-- **BERTScore F1**: Semantic similarity (microsoft/deberta-xlarge-mnli)
-- **Cosine Similarity**: all-MiniLM-L6-v2 384-dim embeddings
-- **Term Overlap**: Domain keyword overlap with stopword exclusion
-- **Latency**: Network-compensated (RTT: 1.95ms median)
+- **Accuracy**: matched-substring (max credit only on a verbatim acceptable form)
+- **BERTScore F1**: roberta-large
+- **Cosine similarity**: all-MiniLM-L6-v2, 384-dim
+- **Term overlap**: domain keyword overlap with stopword exclusion
+- **Latency**: network-compensated (RTT 1.10ms)
+
+### Statistics
+95% BCa bootstrap CIs (10,000 resamples, seed=42); McNemar exact two-sided binomial test for paired ablation; Cohen's h effect sizes.
 
 ---
 
-*Generated from benchmark v2.0 results (2026-02-10). Updated 2026-02-11.*
+*Regenerated 2026-09-07 to match the COMSYS 2026 camera-ready final results. Earlier revisions of this file recorded the v1 / v3.0 3.0-point-rubric benchmark and are superseded.*
