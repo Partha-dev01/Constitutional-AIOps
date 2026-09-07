@@ -123,8 +123,14 @@ export function ChatPane({ variant = 'page', seedContext, injectedPrompt, classN
       .getSchema()
       .then((schema) => {
         if (cancelled) return
-        topologyRef.current = schema
-        setTopology(schema)
+        // A misconfigured or unexpected /topology/schema payload (anything
+        // without a real nodes array) must never crash the cockpit — the live
+        // services card reads topology.nodes.length directly. Treat a malformed
+        // shape as "no topology" and keep the generic chips. Mirrors the guard
+        // in ServiceActionBar.
+        const doc = schema && Array.isArray(schema.nodes) ? schema : null
+        topologyRef.current = doc
+        setTopology(doc)
         rebuildPrompts()
       })
       .catch(() => {
