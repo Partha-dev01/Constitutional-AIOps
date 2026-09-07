@@ -1,4 +1,4 @@
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, BadgeCheck, Radar, ShieldCheck, Wrench } from 'lucide-react'
 import { useReveal } from '../../hooks/useReveal'
 import { ShotFrame } from './ShotFrame'
 import { APP_URL, DEMO_URL } from '../../config'
@@ -8,6 +8,12 @@ import { APP_URL, DEMO_URL } from '../../config'
  * decorative (aria-hidden); the h1 text content is exactly
  * "Constitutional AIOps" (word-stagger spans only), which the live e2e suite
  * depends on.
+ *
+ * Flagship pass: a research-authority credibility badge (one headline figure
+ * from the camera-ready benchmark — the rest live in the StatsBand below, so no
+ * stat is duplicated), a compact "detect -> constitution gate -> remediate"
+ * control-room flow strip that echoes the ArchitectureBand, then the product
+ * showcase.
  */
 export function HeroSection() {
   return (
@@ -26,6 +32,22 @@ export function HeroSection() {
       />
 
       <div className="relative mx-auto flex max-w-5xl flex-col items-center px-6 pb-20 pt-32 text-center sm:pb-24 sm:pt-40">
+        {/* Credibility badge: peer-reviewed provenance + one headline figure. */}
+        <a
+          href="/benchmark.html"
+          className="hero-enter group mb-8 inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-3.5 py-1.5 text-xs font-medium text-muted-foreground backdrop-blur transition-colors hover:border-primary/50 hover:text-foreground"
+          style={{ animationDelay: '40ms' }}
+        >
+          <BadgeCheck className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
+          Peer-reviewed at COMSYS 2026
+          <span aria-hidden="true" className="text-border">·</span>
+          <span className="font-semibold text-foreground">82.4% benchmark accuracy</span>
+          <ArrowRight
+            className="h-3 w-3 transition-transform group-hover:translate-x-0.5"
+            aria-hidden="true"
+          />
+        </a>
+
         <div className="mb-6 flex flex-col items-center justify-center gap-4 sm:flex-row">
           <img
             src="/logo-mark.png"
@@ -81,9 +103,92 @@ export function HeroSection() {
           </a>
         </div>
 
+        <HeroFlow />
+
         <HeroShowcase />
       </div>
     </section>
+  )
+}
+
+/**
+ * Control-room flow strip: detect -> constitution gate -> remediate, the core
+ * loop the product runs. A compact echo of the ArchitectureBand pipeline; the
+ * gate node carries the validator ring (already reduced-motion-killed). Static
+ * connectors, mono labels, so it adds no new animated class.
+ */
+function HeroFlow() {
+  const { ref, visible } = useReveal<HTMLDivElement>()
+  return (
+    <div
+      ref={ref}
+      className={`reveal${visible ? ' reveal-visible' : ''} mt-12 w-full max-w-3xl`}
+    >
+      <div className="flex items-stretch justify-center gap-2 sm:gap-3">
+        <FlowNode
+          icon={<Radar className="h-4 w-4" aria-hidden="true" />}
+          title="Detect"
+          detail="logs · metrics · traces"
+        />
+        <FlowConnector />
+        <FlowNode
+          icon={<ShieldCheck className="h-4 w-4" aria-hidden="true" />}
+          title="Constitution gate"
+          detail="12 principles · 3 tiers"
+          highlight
+        />
+        <FlowConnector />
+        <FlowNode
+          icon={<Wrench className="h-4 w-4" aria-hidden="true" />}
+          title="Remediate"
+          detail="safe · reversible"
+        />
+      </div>
+    </div>
+  )
+}
+
+function FlowNode({
+  icon,
+  title,
+  detail,
+  highlight = false,
+}: {
+  icon: React.ReactNode
+  title: string
+  detail: string
+  highlight?: boolean
+}) {
+  return (
+    <div
+      className={`flex flex-1 flex-col items-center gap-1.5 rounded-xl border bg-card/60 px-2 py-3 backdrop-blur sm:px-4 ${
+        highlight ? 'border-primary/40' : 'border-border'
+      }`}
+    >
+      <span className="relative inline-flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15 text-primary">
+        {highlight && (
+          <span
+            className="validator-ring absolute inset-0 rounded-lg ring-2 ring-primary/50"
+            aria-hidden="true"
+          />
+        )}
+        {icon}
+      </span>
+      <span className="text-xs font-semibold text-foreground sm:text-sm">{title}</span>
+      <span className="font-mono text-[10px] uppercase tracking-wide text-muted-foreground sm:text-[11px]">
+        {detail}
+      </span>
+    </div>
+  )
+}
+
+/** Static hairline connector between flow nodes (arrow-tipped, primary-tinted). */
+function FlowConnector() {
+  return (
+    <div className="flex items-center" aria-hidden="true">
+      <span className="h-px w-3 bg-gradient-to-r from-border to-primary/60 sm:w-6" />
+      <ArrowRight className="h-3.5 w-3.5 text-primary/70" />
+    </div>
   )
 }
 
