@@ -24,4 +24,4 @@ mkdocs-material>=9.7.7
 # Development Utilities
 ipython>=8.18.0
 rich>=13.7.0
-watchfiles>=0.21.0
+watchfiles>=0.24.0
