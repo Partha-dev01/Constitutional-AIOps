@@ -44,7 +44,7 @@ python-dateutil>=2.9.0.post0
 
 # Data Processing
 numpy>=1.26.0
-pandas>=2.1.0
+pandas>=3.0.5
 
 # Statistical analysis (bootstrap CIs + paired tests for paper Table 6, Section 5.1.1)
 # Required by src/benchmark/evaluator.py: bootstrap_ci, stratified_bootstrap_ci, mcnemar_test
