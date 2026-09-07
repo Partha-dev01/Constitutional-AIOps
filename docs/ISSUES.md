@@ -2,7 +2,7 @@
 
 > **Version**: 1.0.0
 > **Last Updated**: 2026-09-07
-> **Open Issues**: 6 (all low/medium/info, none blocking)
+> **Open Issues**: 5 (all low/medium/info, none blocking)
 > **Blockers**: 0
 
 ---
@@ -24,9 +24,7 @@ None currently.
 | ID | Issue | Priority | Notes |
 |----|-------|----------|-------|
 | ISS-101 | Mode 1 chat turns feel slow on long answers (30-60s for ~700+ generated tokens; no streaming) | Medium | 2026-07-11: agentic-loop token cap + chat-priority background-RCA deferral shipped, cutting typical turns from ~31-38s to ~10-17s. Engine decode itself is still at baseline (~26 tok/s on L4); full cure remains Mode 2 streaming (SSE UI wiring, engine pin upgrade, prefix caching). |
-| ISS-102 | Local `scale_service` shells out to `docker compose` — unavailable inside the prod backend container | Low | Restart path fixed via Docker SDK (0.12.0); compose-based scaling needs the compose project context, so local scaling stays a dev-only path. Remote demo host unaffected. |
-| ISS-105 | Mobile/tablet polish batch (Console stacked-canvas fit, clipped panels, icon orphans, incidents search collapse, /graph legend overlap on small widths) | Low | Desktop/laptop production-clean; list from the 2026-07 QA tour. 2026-09-07: `/graph` legend + node/edge stats overlays now hidden below `sm` in `EpisodicGraphExplorer` so they can no longer collide on a narrow canvas. Re-checked the rest against the current redesign: the incidents filter row already reflows (`flex gap-4 flex-wrap`, search `flex-1 max-w-md`) and the Console cockpit stacks cleanly on mobile/tablet (covered by the `console-layout` viewport e2e, 9/9). Remaining: `clipped panels`/`icon orphans` need a specific repro on the current UI. |
-| ISS-107 | Local `vitest` broken on Windows dev machines (env issue) | Low | CI-frontend on Linux is the source of truth; do not block on local vitest. |
+| ISS-102 | Local `scale_service` shells out to `docker compose` — unavailable inside the prod backend container | Low | Restart path fixed via Docker SDK (0.12.0); compose-based scaling needs the compose project context, so local scaling stays a dev-only path. Remote demo host unaffected. || ISS-107 | Local `vitest` broken on Windows dev machines (env issue) | Low | CI-frontend on Linux is the source of truth; do not block on local vitest. |
 | ISS-108 | Agent-initiated action proposals are latent in production Mode 1 (agentic tool loop off by default; the live consent path is fallback detection) | Info | The agentic tool loop is deliberately enabled in the production environment by operator choice (2026-07-11), trading some added per-turn latency for native tool-calling ahead of Mode 2 phase 5; the fallback-detection consent path remains the safety net when the loop is off. |
 | ISS-109 | Infra fingerprint in the public tree: cloud instance ID appears in terraform/aws docs and an old CHANGELOG entry; static IP + domain in the DNS setup doc | Low | 2026-09-07: audited the whole tracked tree. Every current-infra identifier is ALREADY a placeholder (instance `i-0123456789abcdef0`, volume `vol-0123456789abcdef0`, SG `sg-0123456789abcdef0`, EIP `203.0.113.10`, account `123456789012` / terraform `000000000000`); no real EIP, account id, bucket, CloudFront/API-Gateway id, or domain is present. Normalized the last concrete example (a decommissioned Jarvis Labs notebook subdomain) to `[id]`. Working-tree scrub DONE; the only residual is git history, covered by the public-flip history handling. Not exploitable without cloud credentials (auth + SGs are the boundary). |
 
@@ -41,6 +39,19 @@ None currently.
 ---
 
 ## ✅ Resolved Issues
+
+### 2026-09-07 (mobile / UI polish verify pass)
+
+ISS-105's remaining sub-items and the s86 UI queue were an audit against the
+current code, not new fixes. The Command Center and landing redesigns had
+already absorbed the July 2026 QA-tour observations. Verified at the code level:
+
+| ID | Item | Resolution |
+|----|------|------------|
+| ISS-105 | Clipped panels / icon orphans (the two sub-items left after the `/graph` overlay fix) | No repro in the current tree. Every icon-only control carries an accessible name (`aria-label` or `title`): Layout nav and toggles, ServiceActionBar, ConversationSidebar, SavedViews, SetupNudge, toast, Modal, SchemaCanvas, DetailDrawer, EpisodicGraphExplorer. The header logo renders the mark with `shrink-0` and truncates the adjacent wordmark, and panels truncate rather than clip. Closing as resolved by the redesign; reopen only with a specific live-device repro. |
+| s86 #1 | Logo clip | Gone. `components/Layout.tsx` and the auth pages render the mark at a fixed size with `shrink-0` and truncate the neighboring text. |
+| s86 #2 | Settings layout | `pages/Settings.tsx` uses `grid gap-6 lg:grid-cols-2` with flex-wrap headers and a wrapping tab bar, so it reflows to a single column on mobile and tablet. |
+| s86 #3 | Agents annotations | `pages/Agents.tsx` was rebuilt to read real configured endpoints; annotation activity rows render through the shared expandable-row pattern with no orphaned labels. |
 
 ### 2026-08-31 (s85 - UI render-robustness fixes)
 
@@ -479,7 +490,8 @@ curl http://localhost:8000/api/v1/telemetry/processor/status
 | Documentation Fixed | 6 |
 | Phase 5c Deployment / Front Door Fixed | 9 |
 | UI Render-Robustness Fixed | 4 |
-| Total Resolved | 67+ |
+| Mobile / Responsive Polish Verified | 4 |
+| Total Resolved | 71+ |
 
 ---
 
