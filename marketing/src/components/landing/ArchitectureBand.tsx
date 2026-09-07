@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useReveal } from '../../hooks/useReveal'
+import { SectionKicker } from './SectionKicker'
 
 interface Stage {
   icon: LucideIcon
@@ -34,6 +35,7 @@ export function ArchitectureBand() {
     <section id="architecture" className="border-b border-border py-20 sm:py-28">
       <div className="mx-auto max-w-6xl px-6">
         <div className="mx-auto mb-14 max-w-2xl text-center">
+          <SectionKicker>Pipeline</SectionKicker>
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
             How a signal becomes an action
           </h2>
@@ -80,6 +82,9 @@ export function ArchitectureBand() {
               return (
                 <div key={stage.title} className="flex flex-1 items-center gap-4 lg:flex-col lg:gap-3">
                   <div className="flex flex-1 flex-col items-center rounded-lg border border-border bg-card px-4 py-6 text-center transition-colors hover:border-primary/50 lg:w-full">
+                    <div className="mb-2 font-mono text-[10px] tracking-widest text-muted-foreground/60">
+                      {String(i + 1).padStart(2, '0')}
+                    </div>
                     <div className="relative mb-3 inline-flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
                       {isValidator && (
                         <span
