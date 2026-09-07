@@ -1,8 +1,8 @@
 # Constitutional AIOps - System Architecture
 
-> **Version**: 0.10.1
-> **Last Updated**: 2026-03-01
-> **Status**: Production Ready
+> **Version**: 1.0.0
+> **Last Updated**: 2026-09-07
+> **Status**: Production (two tiers: GPU + lite)
 > **Source of Truth**: [KEY_METRICS.md](KEY_METRICS.md)
 
 ---
@@ -80,6 +80,8 @@
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
+
+> **Runtime note (production).** The diagram shows the paper's dual-model architecture. In production both agents run as **vLLM AWQ-marlin** engines on an **AWS g6.xlarge L4 24GB** host (Qwen3-4B on :8000, Qwen3-14B on :8001). Jarvis Labs A5000 24GB was the v1 development host (Ollama), which is why some diagrams below still show it. A lite tier instead targets an external OpenAI-compatible endpoint (AWS Bedrock). See Section 9.
 
 ### 1.2 Design Principles
 
@@ -548,7 +550,17 @@ WS /ws - Real-time updates for incidents, actions, RCA results
 
 ## 9. Deployment Architecture
 
-### 9.1 Primary: Jarvis Labs Hybrid (Recommended)
+### 9.1 Current production topology
+
+Production runs two cost-optimised tiers; the VM is stopped when idle.
+
+- **GPU tier**: an AWS g6.xlarge L4 24GB VM runs the dual vLLM AWQ-marlin engines, fronted by Caddy with Let's Encrypt TLS on a dedicated domain. The app's session login is the gate. The box is frozen/thawed on demand, an idle-stop alarm guards against unattended burn, and all state persists on EBS across freeze/thaw.
+- **Lite tier**: a low-cost CPU box with no fixed IP, targeting an external OpenAI-compatible endpoint (AWS Bedrock). Entry is a wake-on-visit Lambda behind CloudFront that starts the box on a deliberate launch and 302s to it. The marketing site is a separate always-on static CloudFront origin, so it renders VM-independently.
+- **Multi-tenant / BYOK**: per-user API keys (Fernet at rest) with cost fencing, plus a WebLLM in-browser fallback that needs no server endpoint.
+
+The diagram below is the historical v1 development topology.
+
+### 9.2 Historical: Jarvis Labs Hybrid (v1 development host)
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -575,15 +587,15 @@ WS /ws - Real-time updates for incidents, actions, RCA results
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### 9.2 Alternative: AWS g6.xlarge
+### 9.3 Self-contained GPU box (AWS g6.xlarge)
 
 ```
 AWS g6.xlarge (L4 24GB, 4 vCPU, 16GB RAM)
-Cost: ~$0.35/hr (Spot)
-Use for: Self-contained deployment when Jarvis Labs unavailable
+Runtime: dual vLLM AWQ-marlin, on-demand (stopped when idle)
+Use for: a single self-contained GPU deployment
 ```
 
-### 9.3 Local Development (No GPU)
+### 9.4 Local Development (No GPU)
 
 ```
 docker-compose -f docker-compose.yml -f docker/docker-compose.local.yml up
@@ -613,12 +625,12 @@ docker-compose -f docker-compose.yml -f docker/docker-compose.local.yml up
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `FAST_AGENT_URL` | Jarvis Labs URL | Fast agent endpoint |
-| `REASONING_AGENT_URL` | Jarvis Labs URL | Reasoning agent endpoint |
-| `FAST_AGENT_MODEL` | `qwen3:4b` | Fast agent model name |
-| `REASONING_AGENT_MODEL` | `qwen3:14b` | Reasoning agent model |
+| `FAST_AGENT_URL` | `http://localhost:8000/v1` | Fast agent endpoint (production vLLM; BYO endpoint supported) |
+| `REASONING_AGENT_URL` | `http://localhost:8001/v1` | Reasoning agent endpoint |
+| `FAST_AGENT_MODEL` | `qwen3-4b` (prod) / `qwen3:4b` (Ollama) | Fast agent model name |
+| `REASONING_AGENT_MODEL` | `qwen3-14b` (prod) / `qwen3:14b` (Ollama) | Reasoning agent model |
 | `NEO4J_URI` | `bolt://neo4j:7687` | Neo4j connection |
-| `NEO4J_PASSWORD` | `changeme_neo4j_password` | Neo4j password |
+| `NEO4J_PASSWORD` | (required in production) | Neo4j password (no hardcoded default; set via `.env`) |
 | `CONFIDENCE_THRESHOLD_AUTO` | `0.90` | Auto-execute threshold |
 | `CONFIDENCE_THRESHOLD_APPROVAL` | `0.70` | Require approval threshold |
 
@@ -630,11 +642,11 @@ docker-compose -f docker-compose.yml -f docker/docker-compose.local.yml up
 
 See [KEY_METRICS.md](KEY_METRICS.md) for complete metrics reference.
 
-### Key Targets
-| Metric | Target |
+### Measured results and design targets
+Measured accuracy and latency live in [KEY_METRICS.md](KEY_METRICS.md) (camera-ready final): overall 82.4% accuracy, annotation 82.6%, RCA 82.0%; end-to-end latency P95 48.6s on the L4 host (4B annotation ~3s, 14B RCA ~32s). The original design targets below predate measurement and are retained only as design intent.
+
+| Metric | Design target |
 |--------|--------|
-| Fast Agent Latency | <100ms P95 |
-| Reasoning Agent Latency | 200-500ms P95 |
 | Annotation Accuracy | 87-92% |
 | RCA Accuracy | 85-90% |
 | Token Compression | 92% |
@@ -647,5 +659,5 @@ C(a) = 0.4 · C_LLM + 0.35 · C_hist + 0.25 · C_sim
 
 ---
 
-**Last Updated**: 2026-01-28
-**Version**: 0.6.1
+**Last Updated**: 2026-09-07
+**Version**: 1.0.0

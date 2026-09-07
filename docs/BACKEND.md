@@ -1,9 +1,9 @@
 # Backend Architecture
 
-> **Version**: 0.10.1
-> **Last Updated**: 2026-03-01
-> **Framework**: FastAPI (Python 3.11+)
-> **Source of Truth**: [KEY_METRICS.md](KEY_METRICS.md)
+> **Version**: 1.0.0
+> **Last Updated**: 2026-09-07
+> **Framework**: FastAPI (Python 3.11+), 113 modules, 21 routers
+> **Authoritative detail**: the live `src/` tree and [openapi/openapi.json](../openapi/openapi.json). This reference is kept at module granularity, not per-file.
 
 ---
 
@@ -16,6 +16,11 @@ The Constitutional AIOps backend is a FastAPI application providing:
 - **Graph-Episodic Memory**: Neo4j-based incident correlation
 - **Real-time Events**: WebSocket streaming for UI updates
 - **LGTM Stack Integration**: Loki, Grafana, Tempo, Prometheus
+- **Multi-tenant / BYOK**: per-user API keys (Fernet at rest), session auth, PATs, cost fencing
+- **ChatOps alerting**: outbound Telegram + Matrix, inbound Telegram relay (HMAC), webhooks
+- **Consent-gated remediation**: fail-closed action tools routed through the constitutional validator
+
+> **Modules added since v0.10.1** (see the live tree for detail): `alerting/` (Telegram/Matrix + relay), `auth/` (sessions, scrypt, Fernet crypto, PAT, BYOK store), `cost/` (per-user fencing), `notifications/`, `onboarding/`, `orchestration/` (LangGraph), `persistence/` (SQLite durable store), `remediation/` (executors), `topology/` (service schema + live sync), `validation/`, plus routers `insights`, `relay`, `audit`, `settings`, `notifications`, `graph_topology`.
 
 ---
 
@@ -31,14 +36,14 @@ The Constitutional AIOps backend is a FastAPI application providing:
 
 #### main.py Details
 - **Lifespan**: Initializes ModelRouter, agents, validator, Neo4j, telemetry, MCP server
-- **Routes**: 11 routers mounted at `/api/v1`
+- **Routes**: 21 routers mounted at `/api/v1`
 - **WebSocket**: `/ws` endpoint for real-time event streaming
 - **CORS**: Configurable origins from environment
 
 #### config.py Classes
 | Class | Purpose |
 |-------|---------|
-| `LLMConfig` | Dual-model endpoints (ports 8081, 8082), timeouts, model names |
+| `LLMConfig` | Dual-model endpoints (ports 8000, 8001), timeouts, model names |
 | `Neo4jConfig` | Graph database URI, credentials |
 | `ObservabilityConfig` | LGTM stack URLs |
 | `ConstitutionalConfig` | Confidence thresholds (0.90 auto, 0.70 approval) |
@@ -71,8 +76,8 @@ class ConfidenceLevel(Enum):
 
 #### model_router.py
 - **No Hot-Swap**: Both models always loaded (24GB VRAM)
-- **Fast Agent**: Port 8081, <100ms P95 latency, 512 max tokens
-- **Reasoning Agent**: Port 8082, 200-500ms P95 latency, 2048 max tokens
+- **Fast Agent**: Port 8000, annotation and classification, deterministic (T=0)
+- **Reasoning Agent**: Port 8001, RCA / planning / chat (chat T=0.5). Measured latency in KEY_METRICS
 - **Methods**: `fast_completion()`, `reasoning_completion()`, `health_check()`
 
 #### fast_annotator.py
@@ -335,7 +340,7 @@ class EventType(Enum):
 9. TokenCompressor() - Initialize compression
 10. MCPActionServer() - Initialize tool server
 11. WebSocketManager() - Initialize event streaming
-12. Mount 11 routers at /api/v1
+12. Mount 21 routers at /api/v1
 ```
 
 ---
@@ -388,15 +393,15 @@ main.py
 ### Environment Variables
 ```bash
 # LLM Endpoints
-FAST_AGENT_URL=http://localhost:8081/v1
-REASONING_AGENT_URL=http://localhost:8082/v1
-FAST_AGENT_MODEL=qwen3:4b
-REASONING_AGENT_MODEL=qwen3:14b
+FAST_AGENT_URL=http://localhost:8000/v1
+REASONING_AGENT_URL=http://localhost:8001/v1
+FAST_AGENT_MODEL=qwen3-4b        # production vLLM name; Ollama local uses qwen3:4b
+REASONING_AGENT_MODEL=qwen3-14b  # production vLLM name; Ollama local uses qwen3:14b
 
 # Neo4j
 NEO4J_URI=bolt://localhost:7687
 NEO4J_USER=neo4j
-NEO4J_PASSWORD=changeme_neo4j_password
+NEO4J_PASSWORD=<required-in-production>   # no hardcoded default; set via .env
 
 # Observability
 LOKI_URL=http://localhost:3100
@@ -417,12 +422,12 @@ LOG_LEVEL=INFO
 
 ---
 
-## Performance Targets (From Research_V5.tex)
+## Performance and accuracy
 
-| Metric | Target |
+Measured results are in [KEY_METRICS.md](KEY_METRICS.md) (camera-ready final): overall 82.4% accuracy, annotation 82.6%, RCA 82.0%; end-to-end latency P95 48.6s on the L4 host. The values below are the original design targets, retained as design intent only.
+
+| Metric | Design target |
 |--------|--------|
-| Fast Agent Latency | <100ms P95 |
-| Reasoning Agent Latency | 200-500ms P95 |
 | Annotation Accuracy | 87-92% |
 | RCA Accuracy | 85-90% |
 | Token Compression Rate | 92% |

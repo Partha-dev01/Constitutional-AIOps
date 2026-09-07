@@ -163,7 +163,9 @@ constitutional-aiops/
 
 ## Performance Targets
 
-| Metric | Target |
+These are the original design targets. Measured camera-ready results (overall 82.4% accuracy; end-to-end latency P95 ~49s on an L4 GPU) live in [KEY_METRICS.md](docs/KEY_METRICS.md).
+
+| Metric | Design target |
 |--------|--------|
 | Fast Agent Latency | <100ms P95 |
 | Reasoning Agent Latency | 200-500ms P95 |

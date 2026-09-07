@@ -126,7 +126,7 @@ ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAUpDdcM1oSEwI9o+dsVbA9TDiTSoc5VvWd9hRuL7wp9
 ### Important: Copy These Values
 After launch, from the dashboard:
 - **SSH Command**: For terminal access (e.g., `ssh -p 11114 root@sshn.jarvislabs.ai`)
-- **API Endpoint**: For API access (e.g., `https://62d7ad3655361.notebooks.jarvislabs.net`)
+- **API Endpoint**: For API access (e.g., `https://[id].notebooks.jarvislabs.net`)
 
 ---
 
