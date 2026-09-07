@@ -64,6 +64,21 @@ const health = {
   version: '1.0.0',
 }
 
+// Live topology schema (GET /topology/schema) — drives the service-action bar
+// and the chat's "Live services" card, so the cockpit renders fully populated.
+const topologySchema = {
+  mode: 'discovered',
+  nodes: [
+    { id: 'caddy', label: 'caddy', kind: 'gateway', tier: 0, port: 443 },
+    { id: 'backend', label: 'backend', kind: 'service', tier: 1, port: 8080 },
+    { id: 'neo4j', label: 'neo4j', kind: 'database', tier: 2, port: 7687 },
+  ],
+  edges: [
+    { source: 'caddy', target: 'backend', relationship: 'routes_to', kind: 'network' },
+    { source: 'backend', target: 'neo4j', relationship: 'depends_on', kind: 'data' },
+  ],
+}
+
 const chatResponse = {
   conversation_id: 'conv-console-demo',
   message: {
@@ -96,6 +111,7 @@ async function mockApi(page: Page) {
     if (url.includes('/auth/config')) return json({ auth_required: false })
     if (url.includes('/auth/me')) return json({}, 401)
     if (url.includes('/health')) return json(health)
+    if (url.includes('/topology/schema')) return json(topologySchema)
     if (url.includes('/graph/topology')) return json(topology)
     if (url.includes('/incidents')) return json(incidents)
     if (url.includes('/chat/conversations')) return json({ items: [], total: 0 })
@@ -143,17 +159,21 @@ test.describe('Command Center layout', () => {
     })
   }
 
-  test('Agents page no longer has an Architecture tab (it moved to Command Center)', async ({ page }) => {
+  test('Agent Hub no longer hosts the topology graph (it moved to the Command Center)', async ({ page }) => {
     await mockApi(page)
     await page.setViewportSize({ width: 1440, height: 900 })
     await page.goto('/agents')
     await expect(page.getByRole('heading', { name: 'Agent Hub' })).toBeVisible()
-    // The topology graph now lives only in /console — no Architecture tab here.
-    await expect(page.getByRole('button', { name: /^Architecture$/ })).toHaveCount(0)
-    // The other agent tabs are untouched.
-    await expect(page.getByRole('button', { name: /MCP Tools/ })).toBeVisible()
-    await expect(page.getByRole('button', { name: /Graph Explorer/ })).toBeVisible()
-    await page.screenshot({ path: join(SHOT_DIR, 'agents-no-architecture.png') })
+    // The Agent Hub is now just the two model views. The topology graph, its
+    // "Architecture" schema view and the MCP tools all moved to their own
+    // destinations (/console and /mcp), so none of those tabs live here.
+    await expect(page.getByRole('tab', { name: /^Architecture$/ })).toHaveCount(0)
+    await expect(page.getByRole('tab', { name: /Graph Explorer/ })).toHaveCount(0)
+    await expect(page.getByRole('tab', { name: /MCP Tools/ })).toHaveCount(0)
+    // The two model tabs ARE present.
+    await expect(page.getByRole('tab', { name: /Fast Agent/ })).toBeVisible()
+    await expect(page.getByRole('tab', { name: /Reasoning Agent/ })).toBeVisible()
+    await page.screenshot({ path: join(SHOT_DIR, 'agents-hub.png') })
   })
 
   test('selecting a service attaches it to the chat as context', async ({ page }) => {
