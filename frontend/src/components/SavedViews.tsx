@@ -117,13 +117,13 @@ export function SavedViews({
             onChange={(e) => setName(e.target.value)}
             placeholder="Save current as..."
             aria-label="Name for the current view"
-            className="min-w-0 flex-1 rounded border border-border bg-transparent px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-primary/40"
+            className="min-w-0 flex-1 rounded-sm border border-border bg-transparent px-2 py-1 text-sm outline-hidden focus:ring-2 focus:ring-primary/40"
           />
           <button
             type="submit"
             disabled={!name.trim()}
             aria-label="Save current view"
-            className="rounded border border-border p-1 transition-colors hover:bg-muted disabled:opacity-50"
+            className="rounded-sm border border-border p-1 transition-colors hover:bg-muted disabled:opacity-50"
           >
             <Plus className="h-4 w-4" aria-hidden="true" />
           </button>

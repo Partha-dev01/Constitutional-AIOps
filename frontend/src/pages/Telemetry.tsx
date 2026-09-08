@@ -225,7 +225,7 @@ export function Telemetry() {
               value={textFilter}
               onChange={(e) => setTextFilter(e.target.value)}
               aria-label="Filter logs by text"
-              className="w-full pl-9 pr-3 py-1.5 text-sm rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full pl-9 pr-3 py-1.5 text-sm rounded-lg border border-border bg-background focus:outline-hidden focus:ring-2 focus:ring-primary"
             />
           </div>
         </div>

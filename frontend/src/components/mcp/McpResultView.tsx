@@ -31,7 +31,7 @@ function KeyValueTable({ data }: { data: Record<string, unknown> }) {
       {entries.map(([k, v]) => (
         <div key={k} className="flex items-start gap-3 px-3 py-2">
           <span className="w-40 shrink-0 text-xs text-muted-foreground font-medium">{k}</span>
-          <span className="flex-1 break-words">
+          <span className="flex-1 wrap-break-word">
             {isObject(v) || Array.isArray(v) ? (
               <code className="text-xs font-mono">{JSON.stringify(v)}</code>
             ) : (
@@ -60,7 +60,7 @@ function FindSimilarView({ data }: { data: Record<string, unknown> }) {
             <div className="flex items-center justify-between mb-1">
               <h5 className="font-medium text-sm">{asString(inc.title) || asString(inc.incident_id) || `Incident ${i + 1}`}</h5>
               {score !== null && (
-                <span className="px-2 py-0.5 rounded text-xs bg-blue-500/10 text-blue-500">
+                <span className="px-2 py-0.5 rounded-sm text-xs bg-blue-500/10 text-blue-500">
                   {(score * 100).toFixed(0)}% similar
                 </span>
               )}
@@ -87,7 +87,7 @@ function DependenciesView({ data }: { data: Record<string, unknown> }) {
     items.length > 0 ? (
       <div className="flex flex-wrap gap-1.5">
         {items.map((s, i) => (
-          <span key={`${s}-${i}`} className="px-2 py-0.5 rounded bg-muted text-xs">{s}</span>
+          <span key={`${s}-${i}`} className="px-2 py-0.5 rounded-sm bg-muted text-xs">{s}</span>
         ))}
       </div>
     ) : (
@@ -136,8 +136,8 @@ function AnalyzeLogsView({ data }: { data: Record<string, unknown> }) {
               const e = isObject(raw) ? raw : {}
               return (
                 <div key={i} className="flex items-center justify-between gap-3 px-3 py-2">
-                  <code className="text-xs font-mono flex-1 break-words">{asString(e.pattern)}</code>
-                  <span className="px-2 py-0.5 rounded text-xs bg-red-500/10 text-red-500 shrink-0">
+                  <code className="text-xs font-mono flex-1 wrap-break-word">{asString(e.pattern)}</code>
+                  <span className="px-2 py-0.5 rounded-sm text-xs bg-red-500/10 text-red-500 shrink-0">
                     {typeof e.count === 'number' ? e.count : ''}
                   </span>
                 </div>
@@ -158,7 +158,7 @@ function QueryRecentLogsView({ data }: { data: Record<string, unknown> }) {
     <div className="space-y-3 text-sm">
       <div className="flex items-center gap-3">
         <span className="text-xs text-muted-foreground">Service: <span className="font-medium">{asString(data.service)}</span></span>
-        <span className="px-2 py-0.5 rounded text-xs bg-blue-500/10 text-blue-500">{total} entries</span>
+        <span className="px-2 py-0.5 rounded-sm text-xs bg-blue-500/10 text-blue-500">{total} entries</span>
       </div>
       {entries.length === 0 ? (
         <p className="text-xs text-muted-foreground">No log entries found in the time window.</p>
@@ -195,12 +195,12 @@ function QueryMetricView({ data }: { data: Record<string, unknown> }) {
     <div className="space-y-3 text-sm">
       <div className="flex items-center gap-3">
         <span className="text-xs text-muted-foreground">Service: <span className="font-medium">{asString(data.service)}</span></span>
-        <span className="px-2 py-0.5 rounded text-xs bg-purple-500/10 text-purple-500">{total} data points</span>
+        <span className="px-2 py-0.5 rounded-sm text-xs bg-purple-500/10 text-purple-500">{total} data points</span>
       </div>
       {names.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {names.slice(0, 8).map((n, i) => (
-            <span key={`${n}-${i}`} className="px-2 py-0.5 rounded bg-muted text-xs font-mono">{n}</span>
+            <span key={`${n}-${i}`} className="px-2 py-0.5 rounded-sm bg-muted text-xs font-mono">{n}</span>
           ))}
           {names.length > 8 && <span className="text-xs text-muted-foreground">+{names.length - 8} more</span>}
         </div>
@@ -238,7 +238,7 @@ function ListContainersView({ data }: { data: Record<string, unknown> }) {
   return (
     <div className="space-y-3 text-sm">
       <div className="flex items-center gap-3">
-        <span className="px-2 py-0.5 rounded text-xs bg-green-500/10 text-green-500">{total} containers</span>
+        <span className="px-2 py-0.5 rounded-sm text-xs bg-green-500/10 text-green-500">{total} containers</span>
         {data.include_stopped === true && (
           <span className="text-xs text-muted-foreground">including stopped</span>
         )}
@@ -256,7 +256,7 @@ function ListContainersView({ data }: { data: Record<string, unknown> }) {
               <div key={i} className="flex items-center gap-3 px-3 py-2">
                 <span className={`w-2 h-2 rounded-full shrink-0 ${running ? 'bg-green-500' : 'bg-red-400'}`} />
                 <span className="flex-1 font-mono text-xs">{asString(c.name)}</span>
-                <span className={`px-2 py-0.5 rounded text-xs shrink-0 ${running ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
+                <span className={`px-2 py-0.5 rounded-sm text-xs shrink-0 ${running ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
                   {status}
                 </span>
                 {health && health !== 'null' && (
@@ -358,7 +358,7 @@ function VerdictBlock({ verdict }: { verdict: ConstitutionalVerdict }) {
             </span>
           )}
           {typeof verdict.confidence === 'number' && (
-            <span className="px-2 py-0.5 rounded text-xs bg-muted text-muted-foreground">
+            <span className="px-2 py-0.5 rounded-sm text-xs bg-muted text-muted-foreground">
               conf {(verdict.confidence * 100).toFixed(0)}%
             </span>
           )}
@@ -372,7 +372,7 @@ function VerdictBlock({ verdict }: { verdict: ConstitutionalVerdict }) {
       {violations.length > 0 && (
         <div className="space-y-1">
           {violations.map((v, i) => (
-            <div key={i} className="rounded bg-red-500/5 border border-red-500/15 px-2.5 py-1.5 text-xs">
+            <div key={i} className="rounded-sm bg-red-500/5 border border-red-500/15 px-2.5 py-1.5 text-xs">
               <span className="font-mono font-medium text-red-500">
                 {v.principle_id ?? 'principle'}
               </span>
@@ -407,22 +407,22 @@ function ActionResultView({ data }: { data: Record<string, unknown> }) {
           <CheckCircle2 className="h-4 w-4 text-green-500" />
           {isScale ? 'Service scaled' : 'Container restarted'}
         </span>
-        <span className="px-2 py-0.5 rounded text-xs bg-green-500/10 text-green-500">
+        <span className="px-2 py-0.5 rounded-sm text-xs bg-green-500/10 text-green-500">
           {asString(data.status) || 'completed'}
         </span>
       </div>
       <div className="flex flex-wrap gap-1.5 text-xs">
-        <span className="px-2 py-0.5 rounded bg-muted font-mono">{asString(data.service)}</span>
+        <span className="px-2 py-0.5 rounded-sm bg-muted font-mono">{asString(data.service)}</span>
         {asString(data.container) && asString(data.container) !== asString(data.service) && (
-          <span className="px-2 py-0.5 rounded bg-muted font-mono">container: {asString(data.container)}</span>
+          <span className="px-2 py-0.5 rounded-sm bg-muted font-mono">container: {asString(data.container)}</span>
         )}
         {isScale && typeof data.target_replicas === 'number' && (
-          <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-500">
+          <span className="px-2 py-0.5 rounded-sm bg-blue-500/10 text-blue-500">
             replicas → {data.target_replicas}
           </span>
         )}
         {clamped && typeof data.requested_replicas === 'number' && (
-          <span className="px-2 py-0.5 rounded bg-yellow-500/10 text-yellow-600">
+          <span className="px-2 py-0.5 rounded-sm bg-yellow-500/10 text-yellow-600">
             clamped from {data.requested_replicas}
           </span>
         )}

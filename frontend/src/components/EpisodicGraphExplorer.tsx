@@ -588,7 +588,7 @@ export function EpisodicGraphExplorer({
   if (loading) {
     return (
       <div
-        className="flex items-center justify-center bg-gradient-to-br from-slate-900/50 to-slate-800/50 rounded-lg"
+        className="flex items-center justify-center bg-linear-to-br from-slate-900/50 to-slate-800/50 rounded-lg"
         style={{ height: fillParent ? '100%' : height }}
       >
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -604,7 +604,7 @@ export function EpisodicGraphExplorer({
           overflow-hidden clips the canvas. */}
       <div
         ref={canvasHostRef}
-        className="w-full bg-gradient-to-br from-slate-900/80 to-slate-800/80 rounded-lg overflow-hidden"
+        className="w-full bg-linear-to-br from-slate-900/80 to-slate-800/80 rounded-lg overflow-hidden"
         style={{ height: fillParent ? '100%' : graphHeight }}
       >
         <ForceGraph2D
@@ -727,7 +727,7 @@ export function EpisodicGraphExplorer({
           <select
             value={filterType}
             onChange={(e) => setFilterType(e.target.value)}
-            className="text-xs bg-slate-800/90 text-slate-300 border border-slate-700 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="text-xs bg-slate-800/90 text-slate-300 border border-slate-700 rounded-md px-2 py-1 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
           >
             <option value="all">All Types</option>
             <option value="episode">Episodes</option>
@@ -748,7 +748,7 @@ export function EpisodicGraphExplorer({
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search nodes…"
             aria-label="Search nodes by label"
-            className="text-xs bg-slate-800/90 text-slate-300 border border-slate-700 rounded-md px-2 py-1 w-40 focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder:text-slate-500"
+            className="text-xs bg-slate-800/90 text-slate-300 border border-slate-700 rounded-md px-2 py-1 w-40 focus:outline-hidden focus:ring-1 focus:ring-blue-500 placeholder:text-slate-500"
           />
         </div>
 
@@ -759,7 +759,7 @@ export function EpisodicGraphExplorer({
               type="checkbox"
               checked={showSimilarTo}
               onChange={(e) => setShowSimilarTo(e.target.checked)}
-              className="w-3 h-3 rounded border-slate-600 bg-slate-700 text-blue-500 focus:ring-blue-500 focus:ring-offset-0"
+              className="w-3 h-3 rounded-sm border-slate-600 bg-slate-700 text-blue-500 focus:ring-blue-500 focus:ring-offset-0"
             />
             <span>Similar To</span>
           </label>
@@ -768,7 +768,7 @@ export function EpisodicGraphExplorer({
               type="checkbox"
               checked={showEntities}
               onChange={(e) => setShowEntities(e.target.checked)}
-              className="w-3 h-3 rounded border-slate-600 bg-slate-700 text-pink-500 focus:ring-pink-500 focus:ring-offset-0"
+              className="w-3 h-3 rounded-sm border-slate-600 bg-slate-700 text-pink-500 focus:ring-pink-500 focus:ring-offset-0"
             />
             <span>Entities</span>
           </label>
@@ -805,7 +805,7 @@ export function EpisodicGraphExplorer({
           (the legend has no room to stay clear of it), so both bottom overlays drop
           out on phones and return from the `sm` breakpoint up where there is room. */}
       <div
-        className={`absolute bottom-3 ${selectedNode ? 'right-[22.5rem]' : 'right-3'} hidden sm:block text-xs text-slate-400 bg-slate-900/80 px-3 py-1.5 rounded-md border border-slate-700`}
+        className={`absolute bottom-3 ${selectedNode ? 'right-90' : 'right-3'} hidden sm:block text-xs text-slate-400 bg-slate-900/80 px-3 py-1.5 rounded-md border border-slate-700`}
       >
         {displayNodes.length} nodes shown · {filteredLinks.length} edges
         {filterType !== 'all' && ` (filtered: ${filterType})`}

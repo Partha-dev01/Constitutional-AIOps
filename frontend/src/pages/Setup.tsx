@@ -156,7 +156,7 @@ function FinishStep() {
 }
 
 const WIZ_INPUT =
-  'w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none transition-colors focus:border-primary/60'
+  'w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-hidden transition-colors focus:border-primary/60'
 const WIZ_BTN_SECONDARY =
   'inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm font-medium transition-colors hover:bg-accent disabled:opacity-50'
 const WIZ_BTN_PRIMARY =
@@ -508,7 +508,7 @@ function PromptStep() {
           onChange={(e) => setText(e.target.value)}
           rows={16}
           spellCheck={false}
-          className="w-full rounded-lg border border-border bg-background p-3 font-mono text-xs outline-none transition-colors focus:border-primary/60 resize-y"
+          className="w-full rounded-lg border border-border bg-background p-3 font-mono text-xs outline-hidden transition-colors focus:border-primary/60 resize-y"
         />
       )}
       <p className="text-xs text-muted-foreground">
@@ -853,7 +853,7 @@ function MonitoringStep() {
                 checked={dockerEnabled}
                 onChange={(e) => setDockerEnabled(e.target.checked)}
                 data-testid="setup-docker-toggle"
-                className="mt-1 h-4 w-4 rounded border-border"
+                className="mt-1 h-4 w-4 rounded-sm border-border"
               />
               <span>
                 <span className="text-sm font-medium">Local Docker socket</span>
@@ -1025,7 +1025,7 @@ function SafetyStep() {
               checked={auditLog}
               onChange={(e) => setAuditLog(e.target.checked)}
               data-testid="setup-audit-toggle"
-              className="mt-1 h-4 w-4 rounded border-border"
+              className="mt-1 h-4 w-4 rounded-sm border-border"
             />
             <span>
               <span className="text-sm font-medium">Keep the audit log on</span>
@@ -1187,7 +1187,7 @@ function AdminWizard() {
           <ProgressRail current={currentStep} />
         </div>
 
-        <div key={currentStep} className="wiz-step flex-1 rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
+        <div key={currentStep} className="wiz-step flex-1 rounded-2xl border border-border bg-card p-6 shadow-xs sm:p-8">
           {renderStep(currentStep)}
         </div>
 
@@ -1280,7 +1280,7 @@ function ByokOnlySetup() {
           </p>
         </div>
 
-        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
+        <div className="rounded-2xl border border-border bg-card p-6 shadow-xs sm:p-8">
           <LlmStep showTest={false} onSaved={handleSaved} />
         </div>
 

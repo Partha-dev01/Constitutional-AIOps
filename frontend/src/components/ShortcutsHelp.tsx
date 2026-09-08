@@ -28,7 +28,7 @@ function shortcuts(): Shortcut[] {
 
 function Kbd({ children }: { children: React.ReactNode }) {
   return (
-    <kbd className="inline-flex min-w-[1.75rem] items-center justify-center rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-xs font-medium text-foreground shadow-sm">
+    <kbd className="inline-flex min-w-7 items-center justify-center rounded-sm border border-border bg-muted px-1.5 py-0.5 font-mono text-xs font-medium text-foreground shadow-xs">
       {children}
     </kbd>
   )

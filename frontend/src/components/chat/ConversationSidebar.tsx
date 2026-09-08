@@ -38,7 +38,7 @@ export function ConversationSidebar({
   const panel = (
     <div className="flex h-full flex-col">
       {/* Header with a faint gradient hairline instead of a hard border. */}
-      <div className="relative flex items-center justify-between gap-2 p-3 after:absolute after:inset-x-3 after:bottom-0 after:h-px after:bg-gradient-to-r after:from-border after:via-border/60 after:to-transparent">
+      <div className="relative flex items-center justify-between gap-2 p-3 after:absolute after:inset-x-3 after:bottom-0 after:h-px after:bg-linear-to-r after:from-border after:via-border/60 after:to-transparent">
         <span className="flex items-center gap-2 text-sm font-semibold">
           <MessagesSquare className="h-4 w-4 text-primary" />
           Conversations
@@ -57,7 +57,7 @@ export function ConversationSidebar({
         <button
           type="button"
           onClick={onNewConversation}
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground shadow-xs transition-colors hover:bg-primary/90"
         >
           <MessageSquarePlus className="h-4 w-4" />
           New chat

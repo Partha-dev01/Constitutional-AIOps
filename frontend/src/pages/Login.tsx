@@ -108,7 +108,7 @@ export function Login() {
 
   const inputClasses =
     'w-full rounded-lg border border-border bg-background px-3 py-2 text-sm ' +
-    'text-foreground placeholder:text-muted-foreground outline-none transition-colors ' +
+    'text-foreground placeholder:text-muted-foreground outline-hidden transition-colors ' +
     'focus:border-primary focus:ring-2 focus:ring-primary/40'
 
   return (
@@ -116,7 +116,7 @@ export function Login() {
       className="flex min-h-screen items-center justify-center bg-background px-4 font-sans text-foreground"
       data-testid="login-page"
     >
-      <div className="w-full max-w-sm rounded-lg border border-border bg-card p-8 shadow-sm">
+      <div className="w-full max-w-sm rounded-lg border border-border bg-card p-8 shadow-xs">
         {/* Brand wordmark, matching components/Layout.tsx */}
         <div className="mb-6 flex items-center justify-center gap-2">
           <img src="/logo-mark.png" alt="" aria-hidden="true" className="h-10 w-10" />
@@ -182,7 +182,7 @@ export function Login() {
           <button
             type="submit"
             disabled={submitting || !username || !password}
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/60 focus:ring-offset-2 focus:ring-offset-card disabled:cursor-not-allowed disabled:opacity-60"
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus:outline-hidden focus:ring-2 focus:ring-primary/60 focus:ring-offset-2 focus:ring-offset-card disabled:cursor-not-allowed disabled:opacity-60"
           >
             {submitting ? (
               <>

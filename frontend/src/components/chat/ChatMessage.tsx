@@ -42,13 +42,13 @@ export function ChatMessage({ message, isTyping, displayedContent, insights, pro
   return (
     <div className={`group flex gap-3 ${isUser ? 'flex-row-reverse' : ''}`}>
       {isUser ? (
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-xs">
           <User className="h-4 w-4" />
         </div>
       ) : (
         /* Assistant mark: flat brand-tinted disc — no glowing-orb halo, no toy
            robot. ShieldCheck ties replies to the constitutional/governed system. */
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-primary/25 bg-primary/10 text-primary shadow-sm ring-1 ring-inset ring-white/5">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-primary/25 bg-primary/10 text-primary shadow-xs ring-1 ring-inset ring-white/5">
           <ShieldCheck className="h-[18px] w-[18px]" strokeWidth={2} />
         </div>
       )}
@@ -56,12 +56,12 @@ export function ChatMessage({ message, isTyping, displayedContent, insights, pro
         <div
           className={`rounded-2xl p-3 ${
             isUser
-              ? 'rounded-br-md bg-primary text-primary-foreground shadow-sm'
-              : 'rounded-tl-md border border-border/60 bg-card shadow-sm'
+              ? 'rounded-br-md bg-primary text-primary-foreground shadow-xs'
+              : 'rounded-tl-md border border-border/60 bg-card shadow-xs'
           }`}
         >
           <div
-            className={`text-sm prose prose-sm max-w-none break-words prose-p:leading-relaxed prose-headings:font-semibold prose-code:whitespace-pre-wrap prose-code:break-words prose-code:before:content-none prose-code:after:content-none prose-pre:overflow-x-auto prose-pre:whitespace-pre-wrap prose-pre:border prose-pre:border-border/60 prose-pre:bg-background/80 ${
+            className={`text-sm prose prose-sm max-w-none wrap-break-word prose-p:leading-relaxed prose-headings:font-semibold prose-code:whitespace-pre-wrap prose-code:wrap-break-word prose-code:before:content-none prose-code:after:content-none prose-pre:overflow-x-auto prose-pre:whitespace-pre-wrap prose-pre:border prose-pre:border-border/60 prose-pre:bg-background/80 ${
               isUser ? 'prose-invert' : 'dark:prose-invert'
             }`}
           >

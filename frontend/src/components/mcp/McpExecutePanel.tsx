@@ -184,7 +184,7 @@ export function McpExecutePanel({ tool }: McpExecutePanelProps) {
                     </p>
                   </div>
                 </div>
-                <div className="rounded bg-muted/40 px-2.5 py-1.5 text-xs font-mono break-all">
+                <div className="rounded-sm bg-muted/40 px-2.5 py-1.5 text-xs font-mono break-all">
                   {tool.name}({Object.entries(confirmParams)
                     .map(([k, v]) => `${k}=${JSON.stringify(v)}`)
                     .join(', ')})
@@ -245,7 +245,7 @@ export function McpExecutePanel({ tool }: McpExecutePanelProps) {
                   {history.map((rec) => (
                     <div
                       key={rec.id}
-                      className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded bg-muted/40 text-xs"
+                      className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-sm bg-muted/40 text-xs"
                     >
                       <span className="font-mono truncate">{rec.toolName}</span>
                       <span className="text-muted-foreground shrink-0">

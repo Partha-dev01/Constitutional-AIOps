@@ -140,7 +140,7 @@ export function TimeScrubber({
           {/* Handle: marks the end boundary of the active bucket. */}
           <div
             data-testid="scrubber-handle"
-            className="pointer-events-none absolute inset-y-0 w-0.5 rounded bg-blue-300"
+            className="pointer-events-none absolute inset-y-0 w-0.5 rounded-sm bg-blue-300"
             style={{ left: `${((effectiveActive + 1) / Math.max(1, count)) * 100}%` }}
           />
         </div>

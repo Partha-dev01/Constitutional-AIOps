@@ -17,7 +17,7 @@ export function JsonView({ raw }: { raw: string }) {
   }, [raw])
 
   return (
-    <pre className="text-xs font-mono whitespace-pre-wrap break-words overflow-x-auto max-h-[400px] overflow-y-auto p-3 bg-muted/50 rounded">
+    <pre className="text-xs font-mono whitespace-pre-wrap wrap-break-word overflow-x-auto max-h-[400px] overflow-y-auto p-3 bg-muted/50 rounded-sm">
       {pretty ?? raw.trim()}
     </pre>
   )

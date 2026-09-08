@@ -58,25 +58,25 @@ function confidenceTone(confidence: number): {
 } {
   if (confidence >= 0.9) {
     return {
-      bar: 'bg-gradient-to-r from-green-500 to-emerald-400',
+      bar: 'bg-linear-to-r from-green-500 to-emerald-400',
       text: 'text-green-600 dark:text-green-400',
       label: 'High',
-      accent: 'border-l-green-500/60 bg-green-500/[0.04]',
+      accent: 'border-l-green-500/60 bg-green-500/4',
     }
   }
   if (confidence >= 0.7) {
     return {
-      bar: 'bg-gradient-to-r from-yellow-500 to-amber-400',
+      bar: 'bg-linear-to-r from-yellow-500 to-amber-400',
       text: 'text-yellow-600 dark:text-yellow-400',
       label: 'Moderate',
-      accent: 'border-l-yellow-500/60 bg-yellow-500/[0.04]',
+      accent: 'border-l-yellow-500/60 bg-yellow-500/4',
     }
   }
   return {
-    bar: 'bg-gradient-to-r from-red-500 to-rose-400',
+    bar: 'bg-linear-to-r from-red-500 to-rose-400',
     text: 'text-red-600 dark:text-red-400',
     label: 'Low',
-    accent: 'border-l-red-500/60 bg-red-500/[0.04]',
+    accent: 'border-l-red-500/60 bg-red-500/4',
   }
 }
 
@@ -127,7 +127,7 @@ export function InsightCards({ insights, onUseAction }: InsightCardsProps) {
       )}
 
       {hasActions && (
-        <div className="rounded-lg border border-border/60 border-l-2 border-l-primary/60 bg-primary/[0.04] p-3">
+        <div className="rounded-lg border border-border/60 border-l-2 border-l-primary/60 bg-primary/4 p-3">
           <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
             <Lightbulb className="h-3.5 w-3.5" />
             Suggested actions
@@ -141,10 +141,10 @@ export function InsightCards({ insights, onUseAction }: InsightCardsProps) {
                     data-testid="suggested-action-use"
                     onClick={() => onUseAction(actionPlainText(action))}
                     aria-label={`Use suggested action: ${actionPlainText(action)}`}
-                    className="group/action -mx-1.5 flex w-[calc(100%+0.75rem)] items-start gap-2 rounded-md px-1.5 py-1 text-left text-sm text-foreground transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+                    className="group/action -mx-1.5 flex w-[calc(100%+0.75rem)] items-start gap-2 rounded-md px-1.5 py-1 text-left text-sm text-foreground transition-colors hover:bg-primary/10 focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-primary"
                   >
                     <span className="text-primary">•</span>
-                    <span className="min-w-0 flex-1 [&_strong]:font-semibold [&_code]:rounded [&_code]:bg-muted [&_code]:px-1">
+                    <span className="min-w-0 flex-1 [&_strong]:font-semibold [&_code]:rounded-sm [&_code]:bg-muted [&_code]:px-1">
                       <InlineMarkdown>{action}</InlineMarkdown>
                     </span>
                     <span className="flex shrink-0 items-center gap-1 self-center text-[11px] font-medium text-muted-foreground transition-colors group-hover/action:text-primary">
@@ -155,7 +155,7 @@ export function InsightCards({ insights, onUseAction }: InsightCardsProps) {
                 ) : (
                   <div className="flex gap-2 text-sm text-foreground">
                     <span className="text-primary">•</span>
-                    <span className="[&_strong]:font-semibold [&_code]:rounded [&_code]:bg-muted [&_code]:px-1">
+                    <span className="[&_strong]:font-semibold [&_code]:rounded-sm [&_code]:bg-muted [&_code]:px-1">
                       <InlineMarkdown>{action}</InlineMarkdown>
                     </span>
                   </div>
@@ -167,7 +167,7 @@ export function InsightCards({ insights, onUseAction }: InsightCardsProps) {
       )}
 
       {hasIncidents && (
-        <div className="rounded-lg border border-border/60 border-l-2 border-l-amber-500/60 bg-amber-500/[0.04] p-3">
+        <div className="rounded-lg border border-border/60 border-l-2 border-l-amber-500/60 bg-amber-500/4 p-3">
           <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
             <History className="h-3.5 w-3.5" />
             Related incidents

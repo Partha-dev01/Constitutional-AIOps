@@ -55,7 +55,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
     return (
       <div className="flex items-center justify-center p-6">
-        <div className="bg-card border border-border text-foreground rounded-lg p-6 max-w-lg w-full shadow-sm">
+        <div className="bg-card border border-border text-foreground rounded-lg p-6 max-w-lg w-full shadow-xs">
           <div className="flex items-start gap-3">
             <div className="p-2 rounded-lg bg-red-500/10 text-red-500 shrink-0">
               <AlertTriangle className="h-5 w-5" />
@@ -67,7 +67,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
                 the page or head back to the dashboard.
               </p>
               {this.state.error?.message && (
-                <p className="mt-3 text-xs font-mono text-muted-foreground break-words bg-muted/50 rounded p-2">
+                <p className="mt-3 text-xs font-mono text-muted-foreground wrap-break-word bg-muted/50 rounded-sm p-2">
                   {this.state.error.message}
                 </p>
               )}

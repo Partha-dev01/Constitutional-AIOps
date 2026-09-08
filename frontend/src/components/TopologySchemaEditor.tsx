@@ -452,7 +452,7 @@ export function TopologySchemaEditor({
                 placeholder="https://your-endpoint/v1"
                 aria-label="Reasoning model endpoint URL"
                 data-testid="topology-llm-url"
-                className="w-full px-3 py-2 text-sm bg-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full px-3 py-2 text-sm bg-background rounded-lg border border-border focus:outline-hidden focus:ring-2 focus:ring-primary"
               />
               <input
                 type="text"
@@ -461,7 +461,7 @@ export function TopologySchemaEditor({
                 placeholder="model name"
                 aria-label="Reasoning model name"
                 data-testid="topology-llm-model"
-                className="w-full px-3 py-2 text-sm bg-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full px-3 py-2 text-sm bg-background rounded-lg border border-border focus:outline-hidden focus:ring-2 focus:ring-primary"
               />
             </div>
             <input
@@ -472,7 +472,7 @@ export function TopologySchemaEditor({
               aria-label="LLM API key"
               autoComplete="off"
               data-testid="topology-llm-key"
-              className="mt-2 w-full px-3 py-2 text-sm bg-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary"
+              className="mt-2 w-full px-3 py-2 text-sm bg-background rounded-lg border border-border focus:outline-hidden focus:ring-2 focus:ring-primary"
             />
             <button
               type="button"
@@ -493,7 +493,7 @@ export function TopologySchemaEditor({
           rows={3}
           placeholder="e.g. Add a Redis cache between the backend and Neo4j, and put a CDN in front of the frontend."
           data-testid="topology-prompt"
-          className="w-full p-3 text-sm bg-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary resize-y"
+          className="w-full p-3 text-sm bg-background rounded-lg border border-border focus:outline-hidden focus:ring-2 focus:ring-primary resize-y"
         />
         <button
           type="button"
@@ -554,7 +554,7 @@ export function TopologySchemaEditor({
             rows={18}
             spellCheck={false}
             data-testid="topology-json"
-            className="w-full p-3 text-xs font-mono bg-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary resize-y"
+            className="w-full p-3 text-xs font-mono bg-background rounded-lg border border-border focus:outline-hidden focus:ring-2 focus:ring-primary resize-y"
           />
         )}
         <p className="text-xs text-muted-foreground mt-2 flex items-start gap-1">

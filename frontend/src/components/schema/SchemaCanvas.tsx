@@ -358,7 +358,7 @@ export function SchemaCanvas({
             aria-label="Zoom in"
             title="Zoom in"
             onClick={() => zoomAtCentre(0.8)}
-            className="rounded-md border border-slate-700 bg-slate-900/80 p-1.5 text-slate-300 backdrop-blur transition-colors hover:bg-slate-800 hover:text-white"
+            className="rounded-md border border-slate-700 bg-slate-900/80 p-1.5 text-slate-300 backdrop-blur-sm transition-colors hover:bg-slate-800 hover:text-white"
           >
             <Plus className="h-4 w-4" />
           </button>
@@ -367,7 +367,7 @@ export function SchemaCanvas({
             aria-label="Zoom out"
             title="Zoom out"
             onClick={() => zoomAtCentre(1.25)}
-            className="rounded-md border border-slate-700 bg-slate-900/80 p-1.5 text-slate-300 backdrop-blur transition-colors hover:bg-slate-800 hover:text-white"
+            className="rounded-md border border-slate-700 bg-slate-900/80 p-1.5 text-slate-300 backdrop-blur-sm transition-colors hover:bg-slate-800 hover:text-white"
           >
             <Minus className="h-4 w-4" />
           </button>
@@ -376,7 +376,7 @@ export function SchemaCanvas({
             aria-label="Fit graph to view"
             title="Fit to view"
             onClick={fitView}
-            className="rounded-md border border-slate-700 bg-slate-900/80 p-1.5 text-slate-300 backdrop-blur transition-colors hover:bg-slate-800 hover:text-white"
+            className="rounded-md border border-slate-700 bg-slate-900/80 p-1.5 text-slate-300 backdrop-blur-sm transition-colors hover:bg-slate-800 hover:text-white"
           >
             <Scan className="h-4 w-4" />
           </button>
@@ -387,7 +387,7 @@ export function SchemaCanvas({
               title={expanded ? 'Exit expanded view' : 'Expand'}
               onClick={onToggleExpand}
               data-testid="schema-expand-toggle"
-              className="rounded-md border border-slate-700 bg-slate-900/80 p-1.5 text-slate-300 backdrop-blur transition-colors hover:bg-slate-800 hover:text-white"
+              className="rounded-md border border-slate-700 bg-slate-900/80 p-1.5 text-slate-300 backdrop-blur-sm transition-colors hover:bg-slate-800 hover:text-white"
             >
               {expanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
             </button>

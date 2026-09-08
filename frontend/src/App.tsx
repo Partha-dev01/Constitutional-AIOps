@@ -102,8 +102,8 @@ function RootGate() {
 function DemoBanner() {
   const landing = (import.meta.env.VITE_LANDING_URL as string | undefined) || '/'
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-4 z-[60] flex justify-center px-4">
-      <div className="pointer-events-auto flex items-center gap-3 rounded-full border border-primary/30 bg-card/95 px-4 py-2 text-sm shadow-lg backdrop-blur">
+    <div className="pointer-events-none fixed inset-x-0 bottom-4 z-60 flex justify-center px-4">
+      <div className="pointer-events-auto flex items-center gap-3 rounded-full border border-primary/30 bg-card/95 px-4 py-2 text-sm shadow-lg backdrop-blur-sm">
         <span className="inline-flex items-center gap-1.5 font-medium">
           <span className="h-2 w-2 rounded-full bg-primary motion-safe:animate-pulse" aria-hidden="true" />
           Demo mode

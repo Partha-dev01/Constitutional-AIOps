@@ -92,11 +92,11 @@ export function AskAiPanel({ selection, onRemoveSelection, windowHours, maxHeigh
 
   return (
     <div
-      className="flex w-full shrink-0 flex-col overflow-hidden rounded-lg border border-slate-700/60 bg-gradient-to-b from-slate-900/85 to-slate-950/70 ring-1 ring-inset ring-white/5 lg:w-80"
+      className="flex w-full shrink-0 flex-col overflow-hidden rounded-lg border border-slate-700/60 bg-linear-to-b from-slate-900/85 to-slate-950/70 ring-1 ring-inset ring-white/5 lg:w-80"
       style={{ maxHeight }}
       data-testid="askai-panel"
     >
-      <div className="flex items-center justify-between border-b border-slate-800 bg-gradient-to-r from-primary/10 to-transparent px-3 py-2.5">
+      <div className="flex items-center justify-between border-b border-slate-800 bg-linear-to-r from-primary/10 to-transparent px-3 py-2.5">
         <h4 className="text-sm font-semibold text-slate-200">Ask AI</h4>
         {conversationId && (
           <button
@@ -157,16 +157,16 @@ export function AskAiPanel({ selection, onRemoveSelection, windowHours, maxHeigh
         {messages.map((m) => (
           <div
             key={m.id}
-            className={`overflow-hidden rounded-2xl px-3 py-2 text-xs leading-relaxed [overflow-wrap:anywhere] ${
+            className={`overflow-hidden rounded-2xl px-3 py-2 text-xs leading-relaxed wrap-anywhere ${
               m.role === 'user'
-                ? 'ml-6 rounded-br-md bg-primary text-primary-foreground shadow-sm'
+                ? 'ml-6 rounded-br-md bg-primary text-primary-foreground shadow-xs'
                 : m.isError
                   ? 'mr-2 rounded-tl-md border border-red-500/30 bg-red-500/10 text-red-300'
                   : 'mr-2 rounded-tl-md border border-slate-700/60 bg-slate-800/70 text-slate-300'
             }`}
           >
             {m.role === 'assistant' && !m.isError ? (
-              <div className="prose prose-invert max-w-none break-words text-xs prose-p:my-1 prose-pre:overflow-x-auto prose-pre:whitespace-pre-wrap prose-li:my-0">
+              <div className="prose prose-invert max-w-none wrap-break-word text-xs prose-p:my-1 prose-pre:overflow-x-auto prose-pre:whitespace-pre-wrap prose-li:my-0">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
               </div>
             ) : (
@@ -201,7 +201,7 @@ export function AskAiPanel({ selection, onRemoveSelection, windowHours, maxHeigh
 
       {/* Input row — a /chat-style glass composer. Kept as a div (not a <form>)
           so the schema graph keeps a single <select> and one submit surface. */}
-      <div className="composer-glow m-2.5 flex items-center gap-2 rounded-2xl border border-slate-700/60 bg-slate-900/70 p-1.5 pl-3.5 shadow-sm backdrop-blur-sm">
+      <div className="composer-glow m-2.5 flex items-center gap-2 rounded-2xl border border-slate-700/60 bg-slate-900/70 p-1.5 pl-3.5 shadow-xs backdrop-blur-xs">
         <input
           ref={inputRef}
           data-testid="askai-input"
@@ -211,7 +211,7 @@ export function AskAiPanel({ selection, onRemoveSelection, windowHours, maxHeigh
             if (e.key === 'Enter') void send(input)
           }}
           placeholder="Ask about your selection..."
-          className="h-9 min-w-0 flex-1 border-0 bg-transparent text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none"
+          className="h-9 min-w-0 flex-1 border-0 bg-transparent text-sm text-slate-200 placeholder:text-slate-500 focus:outline-hidden"
         />
         <button
           type="button"
@@ -219,7 +219,7 @@ export function AskAiPanel({ selection, onRemoveSelection, windowHours, maxHeigh
           onClick={() => void send(input)}
           disabled={loading || !input.trim()}
           aria-label="Send to assistant"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-xs transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
         </button>

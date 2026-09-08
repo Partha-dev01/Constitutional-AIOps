@@ -238,7 +238,7 @@ export function IncidentTimeline({ incidentId: _incidentId, events, className = 
                   <div className="flex items-center gap-2 shrink-0">
                     <span className="text-xs text-muted-foreground">{formatTimestamp(event.timestamp)}</span>
                     {hasDetails && (
-                      <button className="p-0.5 hover:bg-muted rounded">
+                      <button className="p-0.5 hover:bg-muted rounded-sm">
                         {isExpanded ? (
                           <ChevronUp className="h-4 w-4 text-muted-foreground" />
                         ) : (
@@ -257,7 +257,7 @@ export function IncidentTimeline({ incidentId: _incidentId, events, className = 
                     )}
 
                     {event.metadata && (
-                      <div className="bg-muted/50 rounded p-2 text-xs font-mono overflow-x-auto">
+                      <div className="bg-muted/50 rounded-sm p-2 text-xs font-mono overflow-x-auto">
                         <pre>{JSON.stringify(event.metadata, null, 2)}</pre>
                       </div>
                     )}

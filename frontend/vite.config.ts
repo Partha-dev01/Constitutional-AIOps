@@ -14,7 +14,7 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
+      '@': path.resolve(import.meta.dirname, './src'),
     },
   },
   server: {
@@ -36,13 +36,23 @@ export default defineConfig({
     sourcemap: true,
     rollupOptions: {
       output: {
-        manualChunks: {
-          // React core + router + query — shared by every route
-          vendor: ['react', 'react-dom', 'react-router-dom', '@tanstack/react-query'],
-          // Heavy graph renderer — only Graph/Agents/Console use it
-          'force-graph': ['react-force-graph-2d'],
-          // Markdown renderer — chat and insight cards
-          markdown: ['react-markdown', 'remark-gfm'],
+        // Rolldown (Vite 8) wants the function form here, not the v5-era
+        // name->packages object. Same intent: a stable vendor chunk shared by
+        // every route, plus the two heavy libs split out so only the routes
+        // that use them pay for them.
+        manualChunks(id: string) {
+          if (!id.includes('node_modules')) return undefined
+          if (id.includes('react-force-graph-2d')) return 'force-graph'
+          if (id.includes('/react-markdown/') || id.includes('/remark-gfm/')) return 'markdown'
+          if (
+            id.includes('/react/') ||
+            id.includes('/react-dom/') ||
+            id.includes('/react-router-dom/') ||
+            id.includes('/@tanstack/react-query/')
+          ) {
+            return 'vendor'
+          }
+          return undefined
         },
       },
     },

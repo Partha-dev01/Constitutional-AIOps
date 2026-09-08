@@ -440,13 +440,13 @@ export function Infrastructure() {
               <div className="flex items-center gap-2">
                 <button
                   onClick={selectAllContainers}
-                  className="px-2 py-1 text-xs bg-muted rounded hover:bg-muted/80"
+                  className="px-2 py-1 text-xs bg-muted rounded-sm hover:bg-muted/80"
                 >
                   Select All
                 </button>
                 <button
                   onClick={deselectAllContainers}
-                  className="px-2 py-1 text-xs bg-muted rounded hover:bg-muted/80"
+                  className="px-2 py-1 text-xs bg-muted rounded-sm hover:bg-muted/80"
                 >
                   Deselect All
                 </button>
@@ -478,7 +478,7 @@ export function Infrastructure() {
                         checked={selectedContainers.has(container.name)}
                         onChange={() => toggleContainerSelection(container.name)}
                         onClick={(e) => e.stopPropagation()}
-                        className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
+                        className="h-4 w-4 rounded-sm border-border text-primary focus:ring-primary"
                       />
                       <div className={`p-2 rounded-lg ${
                         container.health === 'healthy' ? 'bg-green-500/10' :
@@ -499,7 +499,7 @@ export function Infrastructure() {
                               Monitoring
                               <button
                                 onClick={(e) => stopMonitoring(container.name, e)}
-                                className="ml-1 p-0.5 hover:bg-primary/20 rounded"
+                                className="ml-1 p-0.5 hover:bg-primary/20 rounded-sm"
                                 title="Stop monitoring"
                               >
                                 <X className="h-3 w-3" />
@@ -542,7 +542,7 @@ export function Infrastructure() {
                         <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                           Platform (this stack)
                         </span>
-                        <span className="ml-auto px-1.5 py-0.5 bg-primary/10 text-primary rounded text-xs">
+                        <span className="ml-auto px-1.5 py-0.5 bg-primary/10 text-primary rounded-sm text-xs">
                           {platformContainers.length}
                         </span>
                       </div>
@@ -560,7 +560,7 @@ export function Infrastructure() {
                         <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                           Other local containers
                         </span>
-                        <span className="ml-auto px-1.5 py-0.5 bg-primary/10 text-primary rounded text-xs">
+                        <span className="ml-auto px-1.5 py-0.5 bg-primary/10 text-primary rounded-sm text-xs">
                           {clientContainers.length}
                         </span>
                       </div>
@@ -709,7 +709,7 @@ export function Infrastructure() {
                 type="text"
                 value={domain}
                 onChange={(e) => setDomain(e.target.value)}
-                className="px-2 py-1 rounded border border-border bg-background text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-primary w-full sm:w-56"
+                className="px-2 py-1 rounded-sm border border-border bg-background text-foreground text-xs focus:outline-hidden focus:ring-1 focus:ring-primary w-full sm:w-56"
               />
             </label>
           </div>
@@ -721,11 +721,11 @@ export function Infrastructure() {
             ].map(({ label, url, k }) => (
               <div key={k} className="flex items-center gap-2">
                 <span className="w-40 shrink-0 text-xs text-muted-foreground">{label}</span>
-                <code className="flex-1 px-2 py-1 bg-muted/50 rounded text-xs font-mono break-all">{url}</code>
+                <code className="flex-1 px-2 py-1 bg-muted/50 rounded-sm text-xs font-mono break-all">{url}</code>
                 <button
                   type="button"
                   onClick={() => copy(k, url)}
-                  className="p-1.5 bg-muted rounded hover:bg-muted/80"
+                  className="p-1.5 bg-muted rounded-sm hover:bg-muted/80"
                   title="Copy URL"
                 >
                   {copied === k ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
@@ -746,7 +746,7 @@ export function Infrastructure() {
                 value={edgeLabel}
                 onChange={(e) => setEdgeLabel(e.target.value)}
                 placeholder="remote-host-1"
-                className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-hidden focus:ring-2 focus:ring-primary"
               />
               <p className="text-xs text-muted-foreground mt-1">
                 A short, stable name stamped onto every series as the <code>edge</code> label.
@@ -759,7 +759,7 @@ export function Infrastructure() {
                 value={ingestUser}
                 onChange={(e) => setIngestUser(e.target.value)}
                 placeholder="edge"
-                className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-hidden focus:ring-2 focus:ring-primary"
               />
             </div>
             <div>
@@ -770,7 +770,7 @@ export function Infrastructure() {
                 onChange={(e) => setIngestPass(e.target.value)}
                 placeholder="Set the server ingest password"
                 autoComplete="off"
-                className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-hidden focus:ring-2 focus:ring-primary"
               />
               <p className="text-xs text-muted-foreground mt-1">
                 Session-only — never stored or sent anywhere. Must match the server&apos;s ingest credential.
@@ -785,7 +785,7 @@ export function Infrastructure() {
               <button
                 type="button"
                 onClick={() => copy('env', envBlock)}
-                className="flex items-center gap-1.5 px-2.5 py-1 text-xs bg-muted rounded hover:bg-muted/80"
+                className="flex items-center gap-1.5 px-2.5 py-1 text-xs bg-muted rounded-sm hover:bg-muted/80"
               >
                 {copied === 'env' ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
                 Copy
@@ -807,7 +807,7 @@ export function Infrastructure() {
             <button
               type="button"
               onClick={() => copy('compose', composeQuickstart)}
-              className="flex items-center gap-1.5 px-2.5 py-1 text-xs bg-muted rounded hover:bg-muted/80"
+              className="flex items-center gap-1.5 px-2.5 py-1 text-xs bg-muted rounded-sm hover:bg-muted/80"
             >
               {copied === 'compose' ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
               Copy
@@ -867,11 +867,11 @@ export function Infrastructure() {
             <p className="text-xs text-muted-foreground">Manual checks in Grafana Explore:</p>
             <div className="flex items-center gap-2">
               <span className="w-24 shrink-0 text-xs text-muted-foreground">Loki (LogQL)</span>
-              <code className="flex-1 px-2 py-1 bg-muted/50 rounded text-xs font-mono break-all">{logqlCheck}</code>
+              <code className="flex-1 px-2 py-1 bg-muted/50 rounded-sm text-xs font-mono break-all">{logqlCheck}</code>
               <button
                 type="button"
                 onClick={() => copy('logql', logqlCheck)}
-                className="p-1.5 bg-muted rounded hover:bg-muted/80"
+                className="p-1.5 bg-muted rounded-sm hover:bg-muted/80"
                 title="Copy LogQL"
               >
                 {copied === 'logql' ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
@@ -879,11 +879,11 @@ export function Infrastructure() {
             </div>
             <div className="flex items-center gap-2">
               <span className="w-24 shrink-0 text-xs text-muted-foreground">Prom (PromQL)</span>
-              <code className="flex-1 px-2 py-1 bg-muted/50 rounded text-xs font-mono break-all">{promqlCheck}</code>
+              <code className="flex-1 px-2 py-1 bg-muted/50 rounded-sm text-xs font-mono break-all">{promqlCheck}</code>
               <button
                 type="button"
                 onClick={() => copy('promql', promqlCheck)}
-                className="p-1.5 bg-muted rounded hover:bg-muted/80"
+                className="p-1.5 bg-muted rounded-sm hover:bg-muted/80"
                 title="Copy PromQL"
               >
                 {copied === 'promql' ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
@@ -923,7 +923,7 @@ export function Infrastructure() {
                 ))}
               <button
                 onClick={() => { void fetchDemoStatus() }}
-                className="flex items-center gap-2 px-2.5 py-1 text-xs bg-muted rounded hover:bg-muted/80"
+                className="flex items-center gap-2 px-2.5 py-1 text-xs bg-muted rounded-sm hover:bg-muted/80"
                 title="Refresh demo status"
               >
                 <RefreshCw className="h-3.5 w-3.5" />
@@ -1009,7 +1009,7 @@ export function Infrastructure() {
                         data-testid={`demo-scenario-${sc.id}-start`}
                         onClick={() => { void runDemoChaos(sc.id, 'start') }}
                         disabled={startBusy}
-                        className="flex items-center gap-1.5 px-2.5 py-1 text-xs bg-red-500/90 text-white rounded hover:bg-red-500 disabled:opacity-50"
+                        className="flex items-center gap-1.5 px-2.5 py-1 text-xs bg-red-500/90 text-white rounded-sm hover:bg-red-500 disabled:opacity-50"
                       >
                         {startBusy ? (
                           <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -1022,7 +1022,7 @@ export function Infrastructure() {
                         data-testid={`demo-scenario-${sc.id}-heal`}
                         onClick={() => { void runDemoChaos(sc.id, 'heal') }}
                         disabled={healBusy}
-                        className="flex items-center gap-1.5 px-2.5 py-1 text-xs bg-green-500/90 text-white rounded hover:bg-green-500 disabled:opacity-50"
+                        className="flex items-center gap-1.5 px-2.5 py-1 text-xs bg-green-500/90 text-white rounded-sm hover:bg-green-500 disabled:opacity-50"
                       >
                         {healBusy ? (
                           <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -1048,7 +1048,7 @@ export function Infrastructure() {
                 data-testid="demo-target-input"
                 onChange={(e) => setDemoTargetInput(e.target.value)}
                 placeholder="http://t3-demo-agent:9099"
-                className="flex-1 px-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                className="flex-1 px-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-hidden focus:ring-2 focus:ring-primary"
               />
               <button
                 data-testid="demo-target-save"

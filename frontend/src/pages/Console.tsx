@@ -427,7 +427,7 @@ export function Console() {
               <div className="min-h-0 flex-1">
                 <Suspense
                   fallback={
-                    <div className="flex h-full items-center justify-center rounded-lg bg-gradient-to-br from-slate-900/50 to-slate-800/50">
+                    <div className="flex h-full items-center justify-center rounded-lg bg-linear-to-br from-slate-900/50 to-slate-800/50">
                       <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                     </div>
                   }
@@ -442,7 +442,7 @@ export function Console() {
               <p className="mt-1.5 flex shrink-0 flex-wrap items-center gap-x-2 gap-y-1 text-[11px] leading-snug text-muted-foreground/80">
                 <span>Click a service to inspect</span>
                 <span className="inline-flex items-center gap-1 rounded-md border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-primary">
-                  <kbd className="rounded border border-primary/40 bg-background/60 px-1 font-sans text-[10px] font-semibold">Ctrl</kbd>
+                  <kbd className="rounded-sm border border-primary/40 bg-background/60 px-1 font-sans text-[10px] font-semibold">Ctrl</kbd>
                   <span>+ click a node → attach it to the chat as context</span>
                 </span>
               </p>
@@ -454,7 +454,7 @@ export function Console() {
               <div ref={episodicBodyRef} className="min-h-0 flex-1 overflow-hidden">
                 <Suspense
                   fallback={
-                    <div className="flex h-full items-center justify-center rounded-lg bg-gradient-to-br from-slate-900/50 to-slate-800/50">
+                    <div className="flex h-full items-center justify-center rounded-lg bg-linear-to-br from-slate-900/50 to-slate-800/50">
                       <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                     </div>
                   }
@@ -472,7 +472,7 @@ export function Console() {
               <p className="mt-1.5 flex shrink-0 flex-wrap items-center gap-x-2 gap-y-1 text-[11px] leading-snug text-muted-foreground/80">
                 <span>Episodic memory — pick an incident to see its root cause and the services it touched</span>
                 <span className="inline-flex items-center gap-1 rounded-md border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-primary">
-                  <kbd className="rounded border border-primary/40 bg-background/60 px-1 font-sans text-[10px] font-semibold">Ctrl</kbd>
+                  <kbd className="rounded-sm border border-primary/40 bg-background/60 px-1 font-sans text-[10px] font-semibold">Ctrl</kbd>
                   <span>+ click a node → attach to chat</span>
                 </span>
               </p>

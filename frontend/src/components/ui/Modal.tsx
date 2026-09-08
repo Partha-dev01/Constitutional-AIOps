@@ -130,7 +130,7 @@ export function Modal({
         onKeyDown={handleTabTrap}
         className={cn(
           'bg-card rounded-lg border border-border p-6 w-full mx-4 max-h-[90dvh] overflow-y-auto',
-          'focus:outline-none',
+          'focus:outline-hidden',
           maxWidth,
           className,
         )}

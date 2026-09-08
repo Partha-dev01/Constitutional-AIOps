@@ -495,7 +495,7 @@ export function Settings() {
               onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                 activeTab === tab.id
-                  ? 'bg-background text-foreground shadow-sm'
+                  ? 'bg-background text-foreground shadow-xs'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
@@ -602,7 +602,7 @@ export function Settings() {
                     onChange={(e) =>
                       setConstitutional({ ...constitutional, maxActionsPerMinute: Number(e.target.value) })
                     }
-                    className="w-32 px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="w-32 px-3 py-2 rounded-lg border border-border bg-background focus:outline-hidden focus:ring-2 focus:ring-primary"
                   />
                   <p className="text-xs text-muted-foreground mt-2">Rate limit for automated actions</p>
                 </div>
@@ -779,7 +779,7 @@ export function Settings() {
                       return (
                         <label
                           key={tool.name}
-                          className="flex items-center gap-3 rounded-lg border border-border/60 bg-background/50 px-3 py-2 cursor-pointer has-[:disabled]:cursor-not-allowed"
+                          className="flex items-center gap-3 rounded-lg border border-border/60 bg-background/50 px-3 py-2 cursor-pointer has-disabled:cursor-not-allowed"
                         >
                           <input
                             type="checkbox"
@@ -820,7 +820,7 @@ export function Settings() {
                       setRemediation({ ...remediation, demoTargetUrl: e.target.value })
                     }
                     placeholder="http://t3-demo-agent:9099"
-                    className="w-full px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="w-full px-3 py-2 rounded-lg border border-border bg-background focus:outline-hidden focus:ring-2 focus:ring-primary"
                   />
                   <p className="text-xs text-muted-foreground mt-2">
                     Base URL of the t3 demo agent that runs chaos scenarios and applies fixes.
@@ -882,7 +882,7 @@ export function Settings() {
                         setNotifications({ ...notifications, webhookUrl: e.target.value })
                       }
                       placeholder="https://example.com/webhook"
-                      className="w-full px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                      className="w-full px-3 py-2 rounded-lg border border-border bg-background focus:outline-hidden focus:ring-2 focus:ring-primary"
                     />
                     <div className="mt-3 grid gap-3 sm:grid-cols-2">
                       <div>
@@ -897,7 +897,7 @@ export function Settings() {
                                 .value as NotificationSettings['webhookMinSeverity'],
                             })
                           }
-                          className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                          className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-hidden focus:ring-2 focus:ring-primary"
                         >
                           <option value="info">Info and above</option>
                           <option value="warning">Warning and above</option>
@@ -918,7 +918,7 @@ export function Settings() {
                           }
                           placeholder="Leave blank for unsigned"
                           autoComplete="off"
-                          className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                          className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-hidden focus:ring-2 focus:ring-primary"
                         />
                       </div>
                     </div>
@@ -1040,7 +1040,7 @@ export function Settings() {
                         data-testid="loki-url-input"
                         onChange={(e) => setTelemetry({ ...telemetry, lokiUrl: e.target.value })}
                         placeholder="http://loki:3100"
-                        className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                        className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-hidden focus:ring-2 focus:ring-primary"
                       />
                     </div>
                   )}
@@ -1071,7 +1071,7 @@ export function Settings() {
                           setTelemetry({ ...telemetry, prometheusUrl: e.target.value })
                         }
                         placeholder="http://prometheus:9090"
-                        className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                        className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-hidden focus:ring-2 focus:ring-primary"
                       />
                     </div>
                   )}
@@ -1098,7 +1098,7 @@ export function Settings() {
                         data-testid="tempo-url-input"
                         onChange={(e) => setTelemetry({ ...telemetry, tempoUrl: e.target.value })}
                         placeholder="http://tempo:3200"
-                        className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                        className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-hidden focus:ring-2 focus:ring-primary"
                       />
                     </div>
                   )}
@@ -1120,7 +1120,7 @@ export function Settings() {
                     onChange={(e) =>
                       setTelemetry({ ...telemetry, retentionDays: Number(e.target.value) })
                     }
-                    className="w-32 px-3 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="w-32 px-3 py-2 rounded-lg border border-border bg-background focus:outline-hidden focus:ring-2 focus:ring-primary"
                   />
                   <p className="text-xs text-muted-foreground mt-2">
                     How long to keep logs, metrics, and traces (7–365 days)
@@ -1223,13 +1223,13 @@ export function Settings() {
                             <>
                               <button
                                 onClick={() => handleSavePrompt(prompt.name)}
-                                className="px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600"
+                                className="px-3 py-1 bg-green-500 text-white rounded-sm text-sm hover:bg-green-600"
                               >
                                 Save
                               </button>
                               <button
                                 onClick={() => setEditingPrompt(null)}
-                                className="px-3 py-1 bg-muted text-muted-foreground rounded text-sm hover:bg-muted/80"
+                                className="px-3 py-1 bg-muted text-muted-foreground rounded-sm text-sm hover:bg-muted/80"
                               >
                                 Cancel
                               </button>
@@ -1242,13 +1242,13 @@ export function Settings() {
                                   setEditedPromptText(prompt.prompt)
                                 }}
                                 disabled={!prompt.editable}
-                                className="px-3 py-1 bg-primary text-primary-foreground rounded text-sm hover:bg-primary/90 disabled:opacity-50"
+                                className="px-3 py-1 bg-primary text-primary-foreground rounded-sm text-sm hover:bg-primary/90 disabled:opacity-50"
                               >
                                 Edit
                               </button>
                               <button
                                 onClick={() => handleResetPrompt(prompt.name)}
-                                className="px-3 py-1 bg-muted text-muted-foreground rounded text-sm hover:bg-muted/80 flex items-center gap-1"
+                                className="px-3 py-1 bg-muted text-muted-foreground rounded-sm text-sm hover:bg-muted/80 flex items-center gap-1"
                               >
                                 <RotateCcw className="h-3 w-3" />
                                 Reset
@@ -1263,7 +1263,7 @@ export function Settings() {
                           value={editedPromptText}
                           onChange={(e) => setEditedPromptText(e.target.value)}
                           rows={10}
-                          className="w-full mt-2 p-3 text-sm font-mono bg-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary resize-y"
+                          className="w-full mt-2 p-3 text-sm font-mono bg-background rounded-lg border border-border focus:outline-hidden focus:ring-2 focus:ring-primary resize-y"
                         />
                       ) : (
                         <pre className="mt-2 p-3 text-sm font-mono bg-background/50 rounded-lg overflow-x-auto max-h-32 overflow-y-auto whitespace-pre-wrap">
@@ -1698,7 +1698,7 @@ function LlmEndpointsCard({ health }: { health: HealthResponse | null }) {
   )
 
   const inputClass =
-    'w-full px-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary'
+    'w-full px-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-hidden focus:ring-2 focus:ring-primary'
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
@@ -1964,7 +1964,7 @@ function SeveritySelect({
         value={value}
         data-testid={testId}
         onChange={(e) => onChange(e.target.value as AlertSeverity)}
-        className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+        className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-hidden focus:ring-2 focus:ring-primary"
       >
         {ALERT_SEVERITIES.map((s) => (
           <option key={s.value} value={s.value}>
@@ -2102,7 +2102,7 @@ function RemoteAlertingCard() {
     mxEnabled && !(mxHomeserver.trim() && mxRoomId.trim() && (mxTokenSet || mxToken.trim()))
 
   const inputClass =
-    'w-full px-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary'
+    'w-full px-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-hidden focus:ring-2 focus:ring-primary'
 
   return (
     <div className="bg-card rounded-lg border border-border p-6" data-testid="remote-alerting-card">

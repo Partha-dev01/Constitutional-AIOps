@@ -335,7 +335,7 @@ export function EpisodeBrowser({
   if (loading) {
     return (
       <div
-        className="flex items-center justify-center rounded-lg bg-gradient-to-br from-slate-900/50 to-slate-800/50"
+        className="flex items-center justify-center rounded-lg bg-linear-to-br from-slate-900/50 to-slate-800/50"
         style={{ height }}
         data-testid="episode-browser-loading"
       >
@@ -392,7 +392,7 @@ export function EpisodeBrowser({
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search episodes, root causes…"
                 aria-label="Search episodes"
-                className="h-8 w-full rounded-md border border-slate-700 bg-slate-800/70 pl-8 pr-2 text-xs text-slate-200 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-primary"
+                className="h-8 w-full rounded-md border border-slate-700 bg-slate-800/70 pl-8 pr-2 text-xs text-slate-200 placeholder:text-slate-500 focus:outline-hidden focus:ring-1 focus:ring-primary"
               />
             </div>
             <div className="flex flex-wrap items-center gap-1" role="group" aria-label="Filter by severity">
@@ -436,7 +436,7 @@ export function EpisodeBrowser({
                       data-testid="episode-list-item"
                       className={`group w-full rounded-lg border p-2.5 text-left transition-colors ${
                         isActive
-                          ? 'border-primary/50 bg-primary/[0.08] ring-1 ring-inset ring-primary/30'
+                          ? 'border-primary/50 bg-primary/8 ring-1 ring-inset ring-primary/30'
                           : 'border-slate-800 bg-slate-900/40 hover:border-slate-700 hover:bg-slate-800/50'
                       }`}
                     >
@@ -558,7 +558,7 @@ export function EpisodeBrowser({
                   />
                 )}
                 {/* Tiny legend so the colour story reads without a manual. */}
-                <div className="pointer-events-none absolute bottom-2 left-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 rounded-md border border-slate-700/60 bg-slate-900/80 px-2 py-1 text-[10px] text-slate-400 backdrop-blur-sm">
+                <div className="pointer-events-none absolute bottom-2 left-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 rounded-md border border-slate-700/60 bg-slate-900/80 px-2 py-1 text-[10px] text-slate-400 backdrop-blur-xs">
                   <LegendDot accent="271 35% 58%" label="Episode" />
                   <LegendDot accent="25 45% 52%" label="Root cause" />
                   <LegendDot accent="189 30% 45%" label="Action" />

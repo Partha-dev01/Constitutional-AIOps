@@ -65,7 +65,7 @@ export function LiveServicesCard({ nodes, onPick, dense = false }: LiveServicesC
                   />
                   <span className="truncate text-xs font-medium" title={n.label}>{n.label}</span>
                 </span>
-                <span className="shrink-0 rounded bg-muted/60 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide text-muted-foreground">
+                <span className="shrink-0 rounded-sm bg-muted/60 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide text-muted-foreground">
                   {n.kind}
                 </span>
               </div>
@@ -74,7 +74,7 @@ export function LiveServicesCard({ nodes, onPick, dense = false }: LiveServicesC
                   <Sparkline values={s!.cpu} min={0} height={20} area={false} ariaLabel={`${n.label} CPU trend`} />
                 ) : (
                   <span
-                    className="h-px w-full bg-gradient-to-r from-border via-border/60 to-transparent"
+                    className="h-px w-full bg-linear-to-r from-border via-border/60 to-transparent"
                     aria-hidden="true"
                   />
                 )}

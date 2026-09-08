@@ -34,11 +34,20 @@ updates:
       - dependency-name: "huggingface-hub"
       - dependency-name: "websockets"
       - dependency-name: "opentelemetry-instrumentation-fastapi"
+      - dependency-name: "scipy"
+      - dependency-name: "orjson"
+      - dependency-name: "pandas"
+      - dependency-name: "transformers"
+      # `asyncio` on PyPI is a pre-3.4 stdlib backport that must NOT be installed
+      # on modern Python; the requirements pin is stale, so never auto-bump it.
+      - dependency-name: "asyncio"
       # Dev-only tools (requirements-dev.txt; not shipped, not CI-installed).
       - dependency-name: "ipython"
       - dependency-name: "rich"
       - dependency-name: "watchfiles"
       - dependency-name: "pytest-mock"
+      - dependency-name: "flake8"
+      - dependency-name: "types-python-dateutil"
 
   # Node / npm — covers frontend/package.json (React, Playwright, Vitest, etc.)
   - package-ecosystem: "npm"
@@ -61,12 +70,6 @@ updates:
       # TypeScript 6.1+/7 breaks typescript-eslint 8 (its peer caps typescript
       # <6.1); revisit when typescript-eslint ships TS7 support.
       - dependency-name: "typescript"
-        update-types: ["version-update:semver-major"]
-      # vitest 5 requires vite >=6.4 and @vitejs/plugin-react 6 requires vite ^8
-      # (rolldown-vite); both deferred with a deliberate vite major bump.
-      - dependency-name: "vitest"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "@vitejs/plugin-react"
         update-types: ["version-update:semver-major"]
       # React 19 is a runtime migration handled as its own task.
       - dependency-name: "react"

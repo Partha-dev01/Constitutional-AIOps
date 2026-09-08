@@ -95,7 +95,7 @@ export function Tabs({
               ? cn(
                   'flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap',
                   isSelected
-                    ? 'bg-background text-foreground shadow-sm'
+                    ? 'bg-background text-foreground shadow-xs'
                     : 'text-muted-foreground hover:text-foreground',
                 )
               : cn(
@@ -149,7 +149,7 @@ export function TabPanel({ id, activeTab, children, className }: TabPanelProps) 
       id={`tabpanel-${id}`}
       aria-labelledby={`tab-${id}`}
       tabIndex={0}
-      className={cn('focus:outline-none', className)}
+      className={cn('focus:outline-hidden', className)}
     >
       {children}
     </div>

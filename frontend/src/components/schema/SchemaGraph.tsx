@@ -285,7 +285,7 @@ export default function SchemaGraph({ height = 520, embedded = false, onSelectio
   if (loading && !data) {
     return (
       <div
-        className={`flex items-center justify-center rounded-lg bg-gradient-to-br from-slate-900/50 to-slate-800/50 ${embedded ? 'h-full' : ''}`}
+        className={`flex items-center justify-center rounded-lg bg-linear-to-br from-slate-900/50 to-slate-800/50 ${embedded ? 'h-full' : ''}`}
         style={embedded ? undefined : { height }}
       >
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -297,7 +297,7 @@ export default function SchemaGraph({ height = 520, embedded = false, onSelectio
     // Never blank: explicit fallback with a retry affordance.
     return (
       <div
-        className={`flex flex-col items-center justify-center rounded-lg border border-slate-800 bg-gradient-to-br from-slate-900/40 to-slate-800/40 text-muted-foreground ${embedded ? 'h-full' : ''}`}
+        className={`flex flex-col items-center justify-center rounded-lg border border-slate-800 bg-linear-to-br from-slate-900/40 to-slate-800/40 text-muted-foreground ${embedded ? 'h-full' : ''}`}
         style={embedded ? undefined : { height }}
         data-testid="schema-empty-state"
       >

@@ -116,7 +116,7 @@ export function ServiceActionBar({ onAction }: ServiceActionBarProps) {
           onChange={(e) => setSelected(e.target.value)}
           aria-label="Select a service"
           data-testid="service-action-select"
-          className="ml-auto max-w-[45%] truncate rounded-md border border-border bg-background px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+          className="ml-auto max-w-[45%] truncate rounded-md border border-border bg-background px-2 py-1 text-xs focus:outline-hidden focus:ring-1 focus:ring-primary"
         >
           {nodes.map((n) => (
             <option key={n.id} value={n.label}>{n.label}</option>

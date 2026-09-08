@@ -49,12 +49,12 @@ export function ToolCallTimeline({ steps, reducedMotionFallbackText }: ToolCallT
 
   return (
     <div className="flex gap-3" aria-live="polite">
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary shadow-sm">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary shadow-xs">
         <Sparkles className="h-4 w-4" />
       </div>
       <div
         className={cn(
-          'min-w-[220px] max-w-[70%] flex-1 rounded-xl border bg-gradient-to-br from-muted/40 via-muted/20 to-transparent p-3 backdrop-blur-[2px]',
+          'min-w-[220px] max-w-[70%] flex-1 rounded-xl border bg-linear-to-br from-muted/40 via-muted/20 to-transparent p-3 backdrop-blur-[2px]',
           anyRunning ? 'timeline-active border-primary/30' : 'border-border/50',
         )}
       >
@@ -144,8 +144,8 @@ export function ToolCallTimeline({ steps, reducedMotionFallbackText }: ToolCallT
                       aria-label={`${isExpanded ? 'Collapse' : 'Expand'} detail for ${step.label}`}
                       onClick={() => toggle(step.id)}
                       className={cn(
-                        'ml-1 rounded p-0.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors',
-                        'focus:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+                        'ml-1 rounded-sm p-0.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors',
+                        'focus:outline-hidden focus-visible:ring-2 focus-visible:ring-primary',
                       )}
                       data-testid={`step-toggle-${step.id}`}
                     >
@@ -171,7 +171,7 @@ export function ToolCallTimeline({ steps, reducedMotionFallbackText }: ToolCallT
                   {/* Collapsible detail region. */}
                   {isExpanded && (
                     <div
-                      className="mt-1.5 rounded-lg border border-border/50 bg-background/60 p-2 text-xs space-y-1.5 backdrop-blur"
+                      className="mt-1.5 rounded-lg border border-border/50 bg-background/60 p-2 text-xs space-y-1.5 backdrop-blur-sm"
                       data-testid={`step-detail-${step.id}`}
                     >
                       {/* Static fields — always available immediately. */}

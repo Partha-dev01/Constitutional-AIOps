@@ -365,7 +365,7 @@ export function Dashboard() {
                   }`} />
                   <span className="font-medium text-sm">{service.name}</span>
                   {service.monitored && (
-                    <span className="px-1.5 py-0.5 bg-blue-500/10 text-blue-500 rounded text-xs">
+                    <span className="px-1.5 py-0.5 bg-blue-500/10 text-blue-500 rounded-sm text-xs">
                       Monitoring
                     </span>
                   )}

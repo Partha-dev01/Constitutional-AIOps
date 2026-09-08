@@ -180,24 +180,24 @@ export function DependencyGraph({
   return (
     <div className={`relative ${className}`}>
       {/* Controls */}
-      <div className="absolute top-2 right-2 z-10 flex items-center gap-1 bg-card/80 backdrop-blur rounded-lg p-1 border border-border">
+      <div className="absolute top-2 right-2 z-10 flex items-center gap-1 bg-card/80 backdrop-blur-sm rounded-lg p-1 border border-border">
         <button
           onClick={() => setZoom((z) => Math.min(z + 0.1, 1.5))}
-          className="p-1.5 hover:bg-muted rounded"
+          className="p-1.5 hover:bg-muted rounded-sm"
           title="Zoom in"
         >
           <ZoomIn className="h-4 w-4" />
         </button>
         <button
           onClick={() => setZoom((z) => Math.max(z - 0.1, 0.5))}
-          className="p-1.5 hover:bg-muted rounded"
+          className="p-1.5 hover:bg-muted rounded-sm"
           title="Zoom out"
         >
           <ZoomOut className="h-4 w-4" />
         </button>
         <button
           onClick={() => setZoom(1)}
-          className="p-1.5 hover:bg-muted rounded"
+          className="p-1.5 hover:bg-muted rounded-sm"
           title="Reset zoom"
         >
           <RefreshCw className="h-4 w-4" />
@@ -370,7 +370,7 @@ export function DependencyGraph({
                   return (
                     <span
                       key={depId}
-                      className="px-2 py-1 bg-muted rounded text-xs flex items-center gap-1"
+                      className="px-2 py-1 bg-muted rounded-sm text-xs flex items-center gap-1"
                     >
                       <ChevronRight className="h-3 w-3" />
                       {dep?.name || depId}
@@ -399,7 +399,7 @@ export function DependencyGraph({
 
 function MetricCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="p-2 bg-muted/50 rounded">
+    <div className="p-2 bg-muted/50 rounded-sm">
       <p className="text-xs text-muted-foreground">{label}</p>
       <p className="text-sm font-semibold">{value}</p>
     </div>

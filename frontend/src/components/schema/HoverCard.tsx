@@ -28,7 +28,7 @@ interface HoverCardProps {
 export function HoverCard({ target, x, y, episodic }: HoverCardProps) {
   return (
     <div
-      className="schema-hover-card pointer-events-none absolute z-20 max-w-[240px] rounded-lg border border-slate-700/80 bg-slate-900/95 px-3 py-2 text-xs shadow-xl backdrop-blur-sm"
+      className="schema-hover-card pointer-events-none absolute z-20 max-w-[240px] rounded-lg border border-slate-700/80 bg-slate-900/95 px-3 py-2 text-xs shadow-xl backdrop-blur-xs"
       style={{ left: x + 14, top: y + 10 }}
       data-testid="schema-hover-card"
     >
@@ -37,7 +37,7 @@ export function HoverCard({ target, x, y, episodic }: HoverCardProps) {
           <div className="flex items-center gap-2">
             <span className="font-semibold text-slate-100">{episodic.title}</span>
             <span
-              className="rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide"
+              className="rounded-sm px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide"
               style={{
                 backgroundColor: `hsl(${episodic.accent} / 0.16)`,
                 color: `hsl(${episodic.accent})`,
@@ -62,7 +62,7 @@ export function HoverCard({ target, x, y, episodic }: HoverCardProps) {
           <div className="flex items-center gap-2">
             <span className="font-semibold text-slate-100">{target.node.label}</span>
             <span
-              className="rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide"
+              className="rounded-sm px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide"
               style={{
                 backgroundColor: `hsl(${kindAccent(target.node.kind)} / 0.16)`,
                 color: `hsl(${kindAccent(target.node.kind)})`,

@@ -180,7 +180,7 @@ export function Audit() {
           <select
             value={days}
             onChange={(e) => updateFilter('days', e.target.value, '7')}
-            className="rounded border border-border bg-background p-1.5 text-sm text-foreground"
+            className="rounded-sm border border-border bg-background p-1.5 text-sm text-foreground"
           >
             {DAY_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>
@@ -194,7 +194,7 @@ export function Audit() {
           <select
             value={eventType}
             onChange={(e) => updateFilter('event', e.target.value, '')}
-            className="rounded border border-border bg-background p-1.5 text-sm text-foreground"
+            className="rounded-sm border border-border bg-background p-1.5 text-sm text-foreground"
           >
             <option value="">All events</option>
             {eventTypes.map((t) => (
@@ -261,7 +261,7 @@ export function Audit() {
                   <td className="px-4 py-2">
                     {ev.description || '—'}
                     {ev.outcome && ev.outcome !== 'success' && (
-                      <span className="ml-2 rounded bg-red-500/15 px-1.5 py-0.5 text-xs text-red-600 dark:text-red-400">
+                      <span className="ml-2 rounded-sm bg-red-500/15 px-1.5 py-0.5 text-xs text-red-600 dark:text-red-400">
                         {ev.outcome}
                       </span>
                     )}

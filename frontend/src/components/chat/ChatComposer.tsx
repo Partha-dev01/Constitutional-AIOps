@@ -108,7 +108,7 @@ export function ChatComposer({
   return (
     <form
       onSubmit={onSubmit}
-      className="composer-glow mt-4 flex items-center gap-2 rounded-2xl border border-border/60 bg-card/80 p-2 pl-3 shadow-sm backdrop-blur-sm"
+      className="composer-glow mt-4 flex items-center gap-2 rounded-2xl border border-border/60 bg-card/80 p-2 pl-3 shadow-xs backdrop-blur-xs"
     >
       <div ref={toolsWrapRef} className="relative shrink-0">
         <button
@@ -127,7 +127,7 @@ export function ChatComposer({
           <div
             role="menu"
             aria-label="Available tools"
-            className="absolute bottom-full left-0 z-20 mb-2 max-h-72 w-72 overflow-y-auto rounded-xl border border-border/60 bg-card/95 p-1 shadow-lg backdrop-blur-sm"
+            className="absolute bottom-full left-0 z-20 mb-2 max-h-72 w-72 overflow-y-auto rounded-xl border border-border/60 bg-card/95 p-1 shadow-lg backdrop-blur-xs"
           >
             <p className="px-2 py-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
               Available tools
@@ -174,13 +174,13 @@ export function ChatComposer({
         value={input}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="h-10 min-w-0 flex-1 border-0 bg-transparent text-sm text-foreground placeholder:text-muted-foreground/70 focus:outline-none disabled:opacity-60"
+        className="h-10 min-w-0 flex-1 border-0 bg-transparent text-sm text-foreground placeholder:text-muted-foreground/70 focus:outline-hidden disabled:opacity-60"
         disabled={isLoading}
       />
       <button
         type="submit"
         disabled={isLoading || !input.trim()}
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-xs transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
         aria-label="Send message"
       >
         {isLoading ? (

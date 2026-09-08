@@ -93,7 +93,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       <div
         aria-live="polite"
         aria-atomic="false"
-        className="fixed bottom-4 right-4 z-[60] flex flex-col gap-2 w-80 max-w-[calc(100vw-2rem)]"
+        className="fixed bottom-4 right-4 z-60 flex flex-col gap-2 w-80 max-w-[calc(100vw-2rem)]"
       >
         {toasts.map((toast) => (
           <ToastItem
@@ -179,7 +179,7 @@ function ToastItem({
       <p className="flex-1 text-sm">{toast.message}</p>
       <button
         onClick={onDismiss}
-        className="shrink-0 p-0.5 rounded hover:bg-muted"
+        className="shrink-0 p-0.5 rounded-sm hover:bg-muted"
         aria-label="Dismiss notification"
       >
         <X className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />

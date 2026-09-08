@@ -176,7 +176,7 @@ export function Notifications() {
             type="checkbox"
             checked={unreadOnly}
             onChange={(e) => setUnreadOnly(e.target.checked)}
-            className="h-4 w-4 rounded border-border"
+            className="h-4 w-4 rounded-sm border-border"
           />
           <span className="text-muted-foreground">Unread only</span>
         </label>
@@ -223,7 +223,7 @@ export function Notifications() {
               className={cn(
                 'rounded-lg border border-l-4 border-border bg-card p-4',
                 SEVERITY_ACCENT[n.severity] || SEVERITY_ACCENT.info,
-                !n.read && 'bg-primary/[0.04]',
+                !n.read && 'bg-primary/4',
               )}
             >
               <div className="flex flex-wrap items-start justify-between gap-2">

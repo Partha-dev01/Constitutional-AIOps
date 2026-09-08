@@ -459,7 +459,7 @@ export function Metrics() {
                       <tr key={idx} className="border-b border-border/50">
                         <td className="py-2 px-3">
                           <span className={cn(
-                            'px-2 py-0.5 rounded text-xs',
+                            'px-2 py-0.5 rounded-sm text-xs',
                             record.agent === 'fast'
                               ? 'bg-primary/10 text-primary'
                               : 'bg-primary/20 text-primary'
@@ -680,7 +680,7 @@ export function Metrics() {
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-medium">{result.prompt}</span>
                         <span className={cn(
-                          'text-xs px-2 py-0.5 rounded',
+                          'text-xs px-2 py-0.5 rounded-sm',
                           result.is_deterministic
                             ? 'bg-green-500/10 text-green-500'
                             : 'bg-yellow-500/10 text-yellow-500'

@@ -62,11 +62,11 @@ export function DetailDrawer({ target, inContext, onClose, onToggleAskAi, episod
       className="schema-drawer absolute inset-y-3 right-3 z-30 flex w-72 max-w-[calc(100%-1.5rem)] flex-col overflow-hidden rounded-xl border border-slate-600/50 bg-slate-900/70 shadow-2xl shadow-black/50 ring-1 ring-inset ring-white/10 backdrop-blur-xl"
       data-testid="schema-drawer"
     >
-      <div className="flex items-start justify-between gap-2 border-b border-white/[0.06] bg-white/[0.03] p-3">
+      <div className="flex items-start justify-between gap-2 border-b border-white/6 bg-white/3 p-3">
         <div className="min-w-0">
           <h4 className="truncate text-sm font-semibold text-slate-100">{title}</h4>
           <span
-            className="mt-1 inline-block rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide"
+            className="mt-1 inline-block rounded-sm px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide"
             style={
               episodic
                 ? {
@@ -92,7 +92,7 @@ export function DetailDrawer({ target, inContext, onClose, onToggleAskAi, episod
           type="button"
           onClick={onClose}
           aria-label="Close details"
-          className="rounded p-1 text-slate-500 hover:bg-slate-800 hover:text-slate-300"
+          className="rounded-sm p-1 text-slate-500 hover:bg-slate-800 hover:text-slate-300"
         >
           <X className="h-4 w-4" />
         </button>
@@ -163,7 +163,7 @@ export function DetailDrawer({ target, inContext, onClose, onToggleAskAi, episod
                       <>
                         <div className="flex items-center gap-1.5">
                           <span
-                            className={`rounded px-1.5 py-0.5 text-[10px] font-medium capitalize ${SEVERITY_CHIP[ep.severity] ?? SEVERITY_CHIP.info}`}
+                            className={`rounded-sm px-1.5 py-0.5 text-[10px] font-medium capitalize ${SEVERITY_CHIP[ep.severity] ?? SEVERITY_CHIP.info}`}
                           >
                             {ep.severity}
                           </span>
@@ -185,7 +185,7 @@ export function DetailDrawer({ target, inContext, onClose, onToggleAskAi, episod
                           type="button"
                           onClick={() => onAskEpisode(askPrompt)}
                           data-testid="schema-ask-episode"
-                          className="group w-full rounded-lg border border-slate-700/50 bg-slate-950/50 p-2 text-left transition-colors hover:border-blue-500/50 hover:bg-blue-500/[0.06]"
+                          className="group w-full rounded-lg border border-slate-700/50 bg-slate-950/50 p-2 text-left transition-colors hover:border-blue-500/50 hover:bg-blue-500/6"
                         >
                           {body}
                         </button>
@@ -219,7 +219,7 @@ export function DetailDrawer({ target, inContext, onClose, onToggleAskAi, episod
         )}
       </div>
 
-      <div className="border-t border-white/[0.06] bg-white/[0.02] p-3">
+      <div className="border-t border-white/6 bg-white/2 p-3">
         <button
           type="button"
           onClick={() => onToggleAskAi(target)}

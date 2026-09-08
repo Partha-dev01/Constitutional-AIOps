@@ -36,7 +36,7 @@ function UL({ children }: { children: ReactNode }) {
 }
 function Code({ children }: { children: ReactNode }) {
   return (
-    <code className="rounded bg-card px-1.5 py-0.5 font-mono text-[0.85em] text-primary">
+    <code className="rounded-sm bg-card px-1.5 py-0.5 font-mono text-[0.85em] text-primary">
       {children}
     </code>
   )

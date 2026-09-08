@@ -287,7 +287,7 @@ export function Agents() {
                             </span>
                             {activity.model && (
                               <span
-                                className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground"
+                                className="rounded-sm bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground"
                                 title="Model that produced this"
                               >
                                 {activity.model}
@@ -296,14 +296,14 @@ export function Agents() {
                           </div>
                           {expandedIds.has(activity.id) ? (
                             <div className="mt-2 space-y-2">
-                              <pre className="text-xs font-mono whitespace-pre-wrap break-words bg-muted/50 p-2 rounded">
+                              <pre className="text-xs font-mono whitespace-pre-wrap wrap-break-word bg-muted/50 p-2 rounded-sm">
                                 {activity.input.trim()}
                               </pre>
                               <JsonView raw={activity.output} />
                             </div>
                           ) : (
                             <>
-                              <p className="text-sm font-mono bg-muted/50 p-2 rounded mt-2 truncate">
+                              <p className="text-sm font-mono bg-muted/50 p-2 rounded-sm mt-2 truncate">
                                 {activity.input.trim().split('\n')[0].slice(0, 100)}
                               </p>
                               <p className="text-sm text-muted-foreground mt-2 truncate">
@@ -417,7 +417,7 @@ export function Agents() {
                             </span>
                             {activity.model && (
                               <span
-                                className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground"
+                                className="rounded-sm bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground"
                                 title="Model that produced this"
                               >
                                 {activity.model}
@@ -426,14 +426,14 @@ export function Agents() {
                           </div>
                           {expandedIds.has(activity.id) ? (
                             <div className="mt-2 space-y-2">
-                              <pre className="text-xs font-mono whitespace-pre-wrap break-words bg-muted/50 p-2 rounded">
+                              <pre className="text-xs font-mono whitespace-pre-wrap wrap-break-word bg-muted/50 p-2 rounded-sm">
                                 {activity.input.trim()}
                               </pre>
                               <JsonView raw={activity.output} />
                             </div>
                           ) : (
                             <>
-                              <p className="text-sm font-mono bg-muted/50 p-2 rounded mt-2 truncate">
+                              <p className="text-sm font-mono bg-muted/50 p-2 rounded-sm mt-2 truncate">
                                 {activity.input.trim().split('\n')[0].slice(0, 100)}
                               </p>
                               <p className="text-sm text-muted-foreground mt-2 truncate">

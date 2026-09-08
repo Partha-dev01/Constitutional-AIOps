@@ -263,7 +263,7 @@ export function Layout({ children }: LayoutProps) {
             aria-label="Expand sidebar"
             aria-expanded={false}
             title="Expand sidebar"
-            className="flex items-center justify-center rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary/40"
+            className="flex items-center justify-center rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted focus:outline-hidden focus:ring-2 focus:ring-primary/40"
           >
             <img src="/logo-mark.png" alt="" aria-hidden="true" className="h-7 w-7" />
           </button>
@@ -273,7 +273,7 @@ export function Layout({ children }: LayoutProps) {
               <a
                 href={landingUrl}
                 aria-label="Constitutional AIOps — landing page"
-                className="flex min-w-0 items-center gap-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/40"
+                className="flex min-w-0 items-center gap-2 rounded-md focus:outline-hidden focus:ring-2 focus:ring-primary/40"
               >
                 <img src="/logo-mark.png" alt="" aria-hidden="true" className="h-9 w-9 shrink-0" />
                 <div className="min-w-0">
@@ -285,7 +285,7 @@ export function Layout({ children }: LayoutProps) {
               <Link
                 to="/"
                 aria-label="Constitutional AIOps — home"
-                className="flex min-w-0 items-center gap-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/40"
+                className="flex min-w-0 items-center gap-2 rounded-md focus:outline-hidden focus:ring-2 focus:ring-primary/40"
               >
                 <img src="/logo-mark.png" alt="" aria-hidden="true" className="h-9 w-9 shrink-0" />
                 <div className="min-w-0">
@@ -302,7 +302,7 @@ export function Layout({ children }: LayoutProps) {
               aria-label="Collapse sidebar"
               aria-expanded={true}
               title="Collapse sidebar"
-              className="hidden shrink-0 items-center justify-center rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 md:inline-flex"
+              className="hidden shrink-0 items-center justify-center rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus:outline-hidden focus:ring-2 focus:ring-primary/40 md:inline-flex"
             >
               <PanelLeftClose className="h-5 w-5" aria-hidden="true" />
             </button>
@@ -327,7 +327,7 @@ export function Layout({ children }: LayoutProps) {
           {!isRail && (
             <>
               <span className="truncate">Search</span>
-              <kbd className="ml-auto rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+              <kbd className="ml-auto rounded-sm border border-border bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
                 {shortcutLabel}
               </kbd>
             </>
@@ -383,7 +383,7 @@ export function Layout({ children }: LayoutProps) {
               onClick={() => { void handleLogout() }}
               title={`Signed in as ${user.username} — log out`}
               aria-label={`Signed in as ${user.username}. Log out`}
-              className="flex items-center justify-center rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+              className="flex items-center justify-center rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus:outline-hidden focus:ring-2 focus:ring-primary/40"
             >
               <LogOut className="h-4 w-4" aria-hidden="true" />
             </button>
@@ -399,7 +399,7 @@ export function Layout({ children }: LayoutProps) {
               <button
                 type="button"
                 onClick={() => { void handleLogout() }}
-                className="flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                className="flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus:outline-hidden focus:ring-2 focus:ring-primary/40"
               >
                 <LogOut className="h-4 w-4" aria-hidden="true" />
                 Logout
@@ -434,7 +434,7 @@ export function Layout({ children }: LayoutProps) {
   )
 
   return (
-    <div className="flex h-[100dvh] overflow-hidden bg-background">
+    <div className="flex h-dvh overflow-hidden bg-background">
       {/* Desktop: static column (full or icon-rail). Hidden on mobile. */}
       <div className="hidden shrink-0 md:block">{sidebar}</div>
 
@@ -468,7 +468,7 @@ export function Layout({ children }: LayoutProps) {
             onClick={() => setMobileOpen((prev) => !prev)}
             aria-label={mobileOpen ? 'Close navigation' : 'Open navigation'}
             aria-expanded={mobileOpen}
-            className="flex items-center justify-center rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+            className="flex items-center justify-center rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus:outline-hidden focus:ring-2 focus:ring-primary/40"
           >
             <Menu className="h-5 w-5" aria-hidden="true" />
           </button>
@@ -478,7 +478,7 @@ export function Layout({ children }: LayoutProps) {
             type="button"
             onClick={() => setHelpOpen(true)}
             aria-label="Keyboard shortcuts"
-            className="ml-auto flex items-center justify-center rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+            className="ml-auto flex items-center justify-center rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus:outline-hidden focus:ring-2 focus:ring-primary/40"
           >
             <Keyboard className="h-5 w-5" aria-hidden="true" />
           </button>

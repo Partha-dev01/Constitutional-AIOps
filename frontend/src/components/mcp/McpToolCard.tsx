@@ -52,7 +52,7 @@ export function McpToolCard({ tool, selected, onSelect }: McpToolCardProps) {
         disabled
           ? 'cursor-not-allowed border-border/50 bg-muted/10 opacity-60'
           : selected
-            ? 'border-primary/60 bg-primary/[0.08]'
+            ? 'border-primary/60 bg-primary/8'
             : 'cursor-pointer border-border/70 bg-muted/20 hover:border-slate-600/70 hover:bg-muted/40'
       }`}
     >

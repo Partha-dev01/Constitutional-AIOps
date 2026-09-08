@@ -215,7 +215,7 @@ export function ProposedActionCard({ action }: ProposedActionCardProps) {
             <XCircle className="h-4 w-4 shrink-0" />
             Failed
             {decision.error_code && (
-              <code className="rounded bg-red-500/15 px-1.5 py-0.5 text-xs">
+              <code className="rounded-sm bg-red-500/15 px-1.5 py-0.5 text-xs">
                 {decision.error_code}
               </code>
             )}
@@ -248,7 +248,7 @@ export function ProposedActionCard({ action }: ProposedActionCardProps) {
     <div
       data-testid="proposed-action-card"
       data-status="proposed"
-      className="mt-2 rounded-xl border border-primary/30 bg-primary/5 p-3 text-sm shadow-sm"
+      className="mt-2 rounded-xl border border-primary/30 bg-primary/5 p-3 text-sm shadow-xs"
     >
       <div className="flex items-center gap-2 font-medium text-primary">
         <ShieldCheck className="h-4 w-4 shrink-0" />

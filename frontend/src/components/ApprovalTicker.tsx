@@ -34,7 +34,7 @@ function TierBadges({ tiers }: { tiers: TickerItem['tiers'] }) {
           key={label}
           title={ok ? `${label} passed` : `${label} not passed`}
           className={cn(
-            'rounded px-1.5 py-0.5 font-mono text-xs',
+            'rounded-sm px-1.5 py-0.5 font-mono text-xs',
             ok
               ? 'bg-muted text-muted-foreground'
               : 'bg-red-500/15 text-red-600 dark:text-red-400',

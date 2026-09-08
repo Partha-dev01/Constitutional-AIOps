@@ -136,7 +136,7 @@ export function LocalChat() {
               value={modelId}
               onChange={(e) => setModelId(e.target.value)}
               disabled={status === 'loading'}
-              className="rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              className="rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-ring"
             >
               {LOCAL_MODELS.map((m) => (
                 <option key={m.id} value={m.id}>
@@ -226,7 +226,7 @@ export function LocalChat() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder={`Message ${activeModel?.label ?? 'the model'}…`}
-              className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-ring"
             />
             <button
               type="submit"

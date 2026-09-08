@@ -97,7 +97,7 @@ export function CommandPalette({
 
   return (
     <div
-      className="fixed inset-0 z-[70] flex items-start justify-center bg-black/50 p-4 pt-[12vh]"
+      className="fixed inset-0 z-70 flex items-start justify-center bg-black/50 p-4 pt-[12vh]"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose()
       }}
@@ -121,7 +121,7 @@ export function CommandPalette({
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Jump to a page..."
             aria-label="Search pages"
-            className="w-full bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground"
+            className="w-full bg-transparent py-3 text-sm outline-hidden placeholder:text-muted-foreground"
             role="combobox"
             aria-expanded="true"
             aria-controls="command-palette-list"
@@ -156,7 +156,7 @@ export function CommandPalette({
                 <span className="truncate">{cmd.title}</span>
                 <span className="flex shrink-0 items-center gap-2">
                   {cmd.group && (
-                    <span className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+                    <span className="rounded-sm bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
                       {cmd.group}
                     </span>
                   )}

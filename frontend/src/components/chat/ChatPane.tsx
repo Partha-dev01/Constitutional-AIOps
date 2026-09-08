@@ -541,7 +541,7 @@ export function ChatPane({ variant = 'page', seedContext, injectedPrompt, classN
       {/* Messages. The outer wrapper paints the gradient backdrop + a subtle
           inset top glow hairline; the inner div stays the ONE scrollable
           element that auto-scroll (messagesEndRef) depends on. */}
-      <div className="relative min-h-0 flex-1 overflow-hidden rounded-xl border border-border/60 bg-gradient-to-b from-card to-card/70 shadow-sm before:pointer-events-none before:absolute before:inset-x-6 before:top-0 before:z-10 before:h-px before:bg-gradient-to-r before:from-transparent before:via-primary/40 before:to-transparent">
+      <div className="relative min-h-0 flex-1 overflow-hidden rounded-xl border border-border/60 bg-linear-to-b from-card to-card/70 shadow-xs before:pointer-events-none before:absolute before:inset-x-6 before:top-0 before:z-10 before:h-px before:bg-linear-to-r before:from-transparent before:via-primary/40 before:to-transparent">
         <div className="flex h-full flex-col space-y-4 overflow-y-auto p-4">
           {messages.map((message) => (
             <div key={message.id} className="msg-in space-y-4">

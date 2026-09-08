@@ -108,7 +108,7 @@ export function Mcp() {
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search tools…"
             aria-label="Search tools"
-            className="w-56 max-w-full rounded-lg border border-border bg-card py-1.5 pl-8 pr-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+            className="w-56 max-w-full rounded-lg border border-border bg-card py-1.5 pl-8 pr-3 text-sm placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-primary/50"
           />
         </div>
         {categories.length > 1 && (

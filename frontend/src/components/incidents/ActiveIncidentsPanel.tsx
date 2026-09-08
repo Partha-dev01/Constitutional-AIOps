@@ -198,7 +198,7 @@ export function ActiveIncidentsPanel({ className = '', onOpenInChat, onCountChan
                   )}
                   <span className="ml-auto text-xs text-muted-foreground/50">{inc.id}</span>
                 </div>
-                <p className="mt-1.5 text-sm font-semibold text-foreground break-words">
+                <p className="mt-1.5 text-sm font-semibold text-foreground wrap-break-word">
                   {inc.title}
                 </p>
                 {rca && (
@@ -218,7 +218,7 @@ export function ActiveIncidentsPanel({ className = '', onOpenInChat, onCountChan
                     ) : (
                       <XCircle className="mt-px h-4 w-4 shrink-0" />
                     )}
-                    <span className="break-words">{st.result.text}</span>
+                    <span className="wrap-break-word">{st.result.text}</span>
                   </div>
                 )}
 

@@ -253,7 +253,7 @@ function AccessTokensCard() {
   }
 
   const field =
-    'rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring'
+    'rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-ring'
 
   return (
     <div className="rounded-lg border border-border bg-card p-6">
@@ -263,7 +263,7 @@ function AccessTokensCard() {
       </div>
       <p className="mb-4 text-sm text-muted-foreground">
         Create a token to call the API or the SDK as yourself. Send it as{' '}
-        <code className="rounded bg-muted px-1 py-0.5 text-xs">Authorization: Bearer &lt;token&gt;</code>.
+        <code className="rounded-sm bg-muted px-1 py-0.5 text-xs">Authorization: Bearer &lt;token&gt;</code>.
         The secret is shown once.
       </p>
 
@@ -499,7 +499,7 @@ function ChangePasswordCard({ username }: { username: string }) {
   }
 
   const field =
-    'w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring'
+    'w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-ring'
 
   return (
     <div className="rounded-lg border border-border bg-card p-6">
@@ -660,7 +660,7 @@ function UserManagementCard({ currentUsername }: { currentUsername: string }) {
   }
 
   const field =
-    'rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring'
+    'rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-ring'
 
   return (
     <div className="rounded-lg border border-border bg-card p-6">

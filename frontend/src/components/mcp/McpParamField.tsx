@@ -13,7 +13,7 @@ export function McpParamField({ field, value, error, disabled, onChange }: McpPa
   const { name, schema, required } = field
   const type = schema.type ?? 'string'
   const inputBase =
-    'w-full px-3 py-2 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 ' +
+    'w-full px-3 py-2 rounded-lg border bg-background text-sm focus:outline-hidden focus:ring-2 focus:ring-primary disabled:opacity-50 ' +
     (error ? 'border-red-500/60' : 'border-border')
 
   const renderInput = () => {
@@ -44,7 +44,7 @@ export function McpParamField({ field, value, error, disabled, onChange }: McpPa
             checked={checked}
             disabled={disabled}
             onChange={(e) => onChange(e.target.checked)}
-            className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
+            className="h-4 w-4 rounded-sm border-border text-primary focus:ring-primary"
           />
           <span className="text-sm text-muted-foreground">{checked ? 'true' : 'false'}</span>
         </label>

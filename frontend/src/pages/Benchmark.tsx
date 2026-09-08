@@ -317,7 +317,7 @@ export function Benchmark() {
                     onClick={handleEvaluate}
                     disabled={evalLoading || status?.is_running}
                     className={cn(
-                      'flex items-center gap-2 px-4 py-2 rounded font-medium',
+                      'flex items-center gap-2 px-4 py-2 rounded-sm font-medium',
                       'bg-primary text-primary-foreground',
                       'disabled:opacity-50 disabled:cursor-not-allowed',
                     )}
@@ -424,7 +424,7 @@ export function Benchmark() {
         <TabPanel id="datasets" activeTab={activeTab} className="pt-6">
           <p className="mb-4 text-sm text-muted-foreground">
             These are the research datasets used to reproduce the paper. To bring your own,
-            replace the files under <code className="rounded bg-muted px-1 py-0.5 text-xs">data/benchmark</code>.
+            replace the files under <code className="rounded-sm bg-muted px-1 py-0.5 text-xs">data/benchmark</code>.
             To just check the model you configured, use the <span className="font-medium">Your setup</span> tab.
           </p>
           <div className="grid gap-4 md:grid-cols-2">
@@ -448,7 +448,7 @@ export function Benchmark() {
                 {dataset.distribution && (
                   <div className="mt-2 flex flex-wrap gap-2">
                     {Object.entries(dataset.distribution).map(([key, value]) => (
-                      <span key={key} className="px-2 py-1 text-xs bg-muted rounded">
+                      <span key={key} className="px-2 py-1 text-xs bg-muted rounded-sm">
                         {key}: {value}
                       </span>
                     ))}
@@ -457,7 +457,7 @@ export function Benchmark() {
                 {dataset.categories && (
                   <div className="mt-2 flex flex-wrap gap-2">
                     {Object.entries(dataset.categories).map(([key, value]) => (
-                      <span key={key} className="px-2 py-1 text-xs bg-muted rounded">
+                      <span key={key} className="px-2 py-1 text-xs bg-muted rounded-sm">
                         {key}: {value}
                       </span>
                     ))}
@@ -486,7 +486,7 @@ export function Benchmark() {
                     id="model-select"
                     value={selectedModel}
                     onChange={(e) => setSelectedModel(e.target.value)}
-                    className="w-full p-2 rounded border border-border bg-background text-foreground"
+                    className="w-full p-2 rounded-sm border border-border bg-background text-foreground"
                     disabled={status?.is_running}
                   >
                     {Object.entries(models).map(([name, info]) => (
@@ -507,7 +507,7 @@ export function Benchmark() {
                     onChange={(e) => setMaxAnnotation(parseInt(e.target.value) || 100)}
                     min={1}
                     max={200}
-                    className="w-full p-2 rounded border border-border bg-background text-foreground"
+                    className="w-full p-2 rounded-sm border border-border bg-background text-foreground"
                     disabled={status?.is_running}
                   />
                 </div>
@@ -522,7 +522,7 @@ export function Benchmark() {
                     onChange={(e) => setMaxRca(parseInt(e.target.value) || 50)}
                     min={1}
                     max={100}
-                    className="w-full p-2 rounded border border-border bg-background text-foreground"
+                    className="w-full p-2 rounded-sm border border-border bg-background text-foreground"
                     disabled={status?.is_running}
                   />
                 </div>
@@ -533,7 +533,7 @@ export function Benchmark() {
                     onClick={handleStartBenchmark}
                     disabled={status?.is_running || loading}
                     className={cn(
-                      'flex items-center gap-2 px-4 py-2 rounded font-medium',
+                      'flex items-center gap-2 px-4 py-2 rounded-sm font-medium',
                       'bg-primary text-primary-foreground',
                       'disabled:opacity-50 disabled:cursor-not-allowed'
                     )}
@@ -583,21 +583,21 @@ export function Benchmark() {
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => handleExport('json')}
-                className="flex items-center gap-2 px-3 py-1.5 text-sm rounded border border-border hover:bg-muted"
+                className="flex items-center gap-2 px-3 py-1.5 text-sm rounded-sm border border-border hover:bg-muted"
               >
                 <FileJson className="h-4 w-4" aria-hidden="true" />
                 JSON
               </button>
               <button
                 onClick={() => handleExport('csv')}
-                className="flex items-center gap-2 px-3 py-1.5 text-sm rounded border border-border hover:bg-muted"
+                className="flex items-center gap-2 px-3 py-1.5 text-sm rounded-sm border border-border hover:bg-muted"
               >
                 <FileSpreadsheet className="h-4 w-4" aria-hidden="true" />
                 CSV
               </button>
               <button
                 onClick={() => handleExport('latex')}
-                className="flex items-center gap-2 px-3 py-1.5 text-sm rounded border border-border hover:bg-muted"
+                className="flex items-center gap-2 px-3 py-1.5 text-sm rounded-sm border border-border hover:bg-muted"
               >
                 <FileCode className="h-4 w-4" aria-hidden="true" />
                 LaTeX
