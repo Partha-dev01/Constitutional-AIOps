@@ -220,8 +220,8 @@ create_env_file() {
 # Deployment Mode: gpu | local
 DEPLOYMENT_MODE=${DEPLOYMENT_MODE:-$RECOMMENDED_MODE}
 
-# Neo4j Configuration
-NEO4J_PASSWORD=changeme_neo4j_password
+# Neo4j Configuration (set NEO4J_PASSWORD in your shell to override the default)
+NEO4J_PASSWORD=${NEO4J_PASSWORD:-changeme_neo4j_password}
 
 # Grafana Configuration
 GRAFANA_PASSWORD=admin
@@ -337,7 +337,7 @@ print_success() {
     echo "  Backend API:  http://localhost:8000"
     echo "  API Docs:     http://localhost:8000/docs"
     echo "  Grafana:      http://localhost:3001 (admin/admin)"
-    echo "  Neo4j:        http://localhost:7474 (neo4j/changeme_neo4j_password)"
+    echo "  Neo4j:        http://localhost:7474 (user neo4j; password = NEO4J_PASSWORD in .env)"
     echo ""
     echo "Useful commands:"
     echo "  View logs:    docker compose logs -f"

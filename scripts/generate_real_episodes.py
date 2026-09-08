@@ -9,6 +9,7 @@ This script:
 """
 
 import asyncio
+import os
 import httpx
 import json
 from datetime import datetime, timedelta
@@ -19,7 +20,7 @@ BACKEND_URL = "http://localhost:8000"
 JARVIS_URL = "https://[YOUR-ENDPOINT].notebooks.jarvislabs.net/v1"
 NEO4J_BOLT = "bolt://localhost:7687"
 NEO4J_USER = "neo4j"
-NEO4J_PASS = "changeme_neo4j_password"
+NEO4J_PASS = os.getenv("NEO4J_PASSWORD", "devpassword")
 
 # Services in the Constitutional AIOps architecture
 SERVICES = [
