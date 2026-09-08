@@ -161,3 +161,15 @@ dist/
 
 # Local-only scratch: proofs, backups, archives, old creds. NEVER committed.
 /_local/
+
+# --- Pre-public exposure sweep (2026-09-08): internal/dev-only, kept local ---
+# AI-assistant dev instructions; local dev still reads the local copy.
+/CLAUDE.md
+# Internal dev session logs (RELEASES.md is the public-facing changelog).
+docs/CHECKLIST.md
+docs/SESSION_STATE.md
+docs/ISSUES.md
+# Orphaned dev-era screenshots (product shots live under frontend/ & marketing/public).
+/screenshots/
+# Playwright runner cache at repo root (.playwright-mcp/ + frontend/test-results already ignored).
+/test-results/

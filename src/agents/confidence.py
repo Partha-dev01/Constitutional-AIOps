@@ -1,7 +1,7 @@
 """
 Constitutional AIOps - genuine composite confidence (pure, dependency-free).
 
-Implements the documented confidence formula from Research_V7.tex / CLAUDE.md:
+Implements the documented confidence formula from Research_V7.tex:
 
     C(a) = 0.40 * C_LLM + 0.35 * C_hist + 0.25 * C_sim
 

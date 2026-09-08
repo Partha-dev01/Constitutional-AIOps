@@ -5,7 +5,7 @@
 # (see aws/EBS_PERSISTENCE.md), so ingested logs survive instance stop/start.
 #
 # Tuned for a single-node deployment (replication_factor 1, inmemory ring) with
-# the 30-day retention quoted in CLAUDE.md. Pinned to the grafana/loki:2.9.3
+# a 30-day log retention. Pinned to the grafana/loki:2.9.3
 # schema (tsdb + v13 + filesystem object store).
 
 auth_enabled: false
