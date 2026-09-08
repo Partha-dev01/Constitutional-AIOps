@@ -21,16 +21,6 @@
   }
 }
 
-/* Marching dashes along the hero flow-strip connectors (CSS background-x). */
-@keyframes wire-flow {
-  from {
-    background-position-x: 0;
-  }
-  to {
-    background-position-x: -20px;
-  }
-}
-
 /* ------------------------- Anchor scroll offsets ------------------------ */
 
 /* The fixed glass header is 4rem tall; keep anchored sections clear of it.
@@ -136,121 +126,10 @@
   animation: dash-flow 2.2s linear infinite;
 }
 
-/* Hero flow-strip connector wire: a repeating dash track that marches toward
- * the arrow, echoing the architecture pipeline at a smaller scale. */
-.flow-wire {
-  height: 2px;
-  background-image: linear-gradient(90deg, hsl(var(--primary) / 0.4) 45%, transparent 45%);
-  background-size: 10px 2px;
-  background-repeat: repeat-x;
-  animation: wire-flow 0.9s linear infinite;
-}
-
 /* Pulsing ring on the Constitutional Validator stage icon. Reuses the
  * tool-pulse keyframe defined in index.css. */
 .validator-ring {
   animation: tool-pulse 1.8s ease-in-out infinite;
-}
-
-/* --------------------- Hero signal-flow loop --------------------------- */
-/* Once the strip scrolls in (.flow-run), a telemetry packet runs the pipeline
- * on a shared 3.4s loop. Each stage offsets via its own --flow-delay so the
- * charge + travel cascade stays in order (see HeroSection HeroFlow). */
-
-/* Bright packet that travels a connector rail left to right, then fades. */
-.flow-spark {
-  position: absolute;
-  top: 50%;
-  left: 0;
-  height: 7px;
-  width: 7px;
-  transform: translate(-50%, -50%);
-  border-radius: 9999px;
-  background: hsl(var(--primary));
-  box-shadow: 0 0 10px 2px hsl(var(--primary) / 0.85);
-  opacity: 0;
-}
-
-@keyframes flow-spark {
-  0% {
-    left: 0;
-    opacity: 0;
-  }
-  10% {
-    opacity: 1;
-  }
-  30% {
-    left: 100%;
-    opacity: 1;
-  }
-  40%,
-  100% {
-    left: 100%;
-    opacity: 0;
-  }
-}
-
-/* Stage node charges: a glow + slight lift as the signal arrives. */
-@keyframes flow-charge {
-  0%,
-  18%,
-  100% {
-    box-shadow: 0 0 0 0 hsl(var(--primary) / 0);
-    transform: translateY(0) scale(1);
-  }
-  6% {
-    box-shadow: 0 0 30px 0 hsl(var(--primary) / 0.5);
-    transform: translateY(-3px) scale(1.04);
-  }
-}
-
-/* Stage icon flares in time with its node. */
-@keyframes flow-icon-charge {
-  0%,
-  18%,
-  100% {
-    background-color: hsl(var(--primary) / 0.15);
-    box-shadow: none;
-  }
-  6% {
-    background-color: hsl(var(--primary) / 0.4);
-    box-shadow: 0 0 14px hsl(var(--primary) / 0.7);
-  }
-}
-
-/* Gate validator ring fires an outward ping as the signal passes through. */
-@keyframes flow-ring-ping {
-  0%,
-  6% {
-    transform: scale(1);
-    opacity: 0.7;
-  }
-  22%,
-  100% {
-    transform: scale(1.75);
-    opacity: 0;
-  }
-}
-
-.flow-run .flow-node {
-  animation: flow-charge 3.4s ease-in-out infinite;
-  animation-delay: var(--flow-delay, 0ms);
-}
-
-.flow-run .flow-icon {
-  animation: flow-icon-charge 3.4s ease-in-out infinite;
-  animation-delay: var(--flow-delay, 0ms);
-}
-
-.flow-run .flow-spark {
-  animation: flow-spark 3.4s cubic-bezier(0.45, 0, 0.25, 1) infinite;
-  animation-delay: var(--flow-delay, 0ms);
-}
-
-/* In-strip, the gate ring pings on the beat instead of its steady pulse. */
-.flow-run .validator-ring {
-  animation: flow-ring-ping 3.4s ease-out infinite;
-  animation-delay: var(--flow-delay, 0ms);
 }
 
 /* --------------------------- Aurora backdrop ---------------------------- */
@@ -345,10 +224,7 @@
   .glass-header,
   .flow-line,
   .flow-return,
-  .flow-wire,
   .validator-ring,
-  .flow-node,
-  .flow-icon,
   .aurora::before,
   .aurora::after,
   .logo-glow {
@@ -356,21 +232,6 @@
     transform: none;
     animation: none;
     transition: none;
-  }
-
-  /* Match the .flow-run compound selectors' specificity so the signal loop is
-   * genuinely disabled (a bare class would lose the cascade to them). */
-  .flow-run .flow-node,
-  .flow-run .flow-icon,
-  .flow-run .flow-spark,
-  .flow-run .validator-ring {
-    animation: none;
-    transform: none;
-    box-shadow: none;
-  }
-
-  .flow-spark {
-    opacity: 0;
   }
 
   .hero-word {

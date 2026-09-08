@@ -59,9 +59,8 @@ export function HeroSection() {
           className="hero-enter mt-4 max-w-2xl text-balance text-sm text-muted-foreground sm:text-base"
           style={{ animationDelay: '450ms' }}
         >
-          A dual-agent LLM core, a 12-principle Constitutional AI safety framework, and
-          Neo4j graph-episodic memory — correlating logs, metrics, and traces into safe,
-          explainable remediation.
+          Two LLM agents read your telemetry and propose fixes. Every one clears the
+          safety gate before it runs.
         </p>
 
         <div
@@ -95,101 +94,64 @@ export function HeroSection() {
 }
 
 /**
- * Control-room flow strip: detect -> constitution gate -> remediate, the core
- * loop the product runs. Once it scrolls into view a telemetry signal runs the
- * pipeline on a continuous loop: each stage charges (glow + lift, its icon
- * flares) in sequence as a bright packet travels the connectors, and the gate
- * fires a validator ring-ping as the signal passes through it. Timing is one
- * shared 3.4s loop; every element offsets via a --flow-delay CSS var so the
- * cascade stays in order. .flow-run (added on scroll-in) arms the loop, and the
- * whole thing is reduced-motion-killed.
+ * Detect -> constitution gate -> remediate, the core loop the product runs.
+ * One unified panel split by hairline dividers into three stages, the gate
+ * stage carrying a quiet primary accent. A single gentle fade-in on scroll; no
+ * connectors, no looping animation.
  */
 function HeroFlow() {
   const { ref, visible } = useReveal<HTMLDivElement>()
   return (
     <div
       ref={ref}
-      className={`reveal${visible ? ' reveal-visible flow-run' : ''} mt-12 w-full max-w-3xl`}
+      className={`reveal${visible ? ' reveal-visible' : ''} mt-12 w-full max-w-2xl`}
     >
-      <div className="flex items-stretch justify-center gap-1 sm:gap-3">
-        <FlowNode
+      <div className="grid grid-cols-3 divide-x divide-border overflow-hidden rounded-xl border border-border bg-card/50 backdrop-blur">
+        <FlowStage
           icon={<Radar className="h-4 w-4" aria-hidden="true" />}
           title="Detect"
           detail="logs · metrics · traces"
-          delay={0}
         />
-        <FlowConnector delay={300} />
-        <FlowNode
+        <FlowStage
           icon={<ShieldCheck className="h-4 w-4" aria-hidden="true" />}
           title="Constitution gate"
           detail="12 principles · 3 tiers"
           highlight
-          delay={750}
         />
-        <FlowConnector delay={1050} />
-        <FlowNode
+        <FlowStage
           icon={<Wrench className="h-4 w-4" aria-hidden="true" />}
           title="Remediate"
           detail="safe · reversible"
-          delay={1500}
         />
       </div>
     </div>
   )
 }
 
-function FlowNode({
+function FlowStage({
   icon,
   title,
   detail,
   highlight = false,
-  delay,
 }: {
   icon: React.ReactNode
   title: string
   detail: string
   highlight?: boolean
-  delay: number
 }) {
   return (
-    <div
-      className={`flow-node flex flex-1 flex-col items-center gap-1.5 rounded-xl border bg-card/60 px-2 py-3 backdrop-blur sm:px-4 ${
-        highlight ? 'border-primary/40' : 'border-border'
-      }`}
-      style={{ '--flow-delay': `${delay}ms` } as React.CSSProperties}
-    >
-      <span className="flow-icon relative inline-flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15 text-primary">
-        {highlight && (
-          <span
-            className="validator-ring absolute inset-0 rounded-lg ring-2 ring-primary/50"
-            aria-hidden="true"
-          />
-        )}
+    <div className="flex flex-col items-center gap-1.5 px-3 py-4 sm:px-5">
+      <span
+        className={`inline-flex h-7 w-7 items-center justify-center ${
+          highlight ? 'text-primary' : 'text-muted-foreground'
+        }`}
+      >
         {icon}
       </span>
       <span className="text-xs font-semibold text-foreground sm:text-sm">{title}</span>
       <span className="font-mono text-[10px] uppercase tracking-wide text-muted-foreground sm:text-[11px]">
         {detail}
       </span>
-    </div>
-  )
-}
-
-/** Connector between flow nodes: a faint marching-dash rail carrying a bright
- *  signal packet that travels toward the arrow, timed off the shared
- *  --flow-delay so it hands the signal to the next stage on the beat. */
-function FlowConnector({ delay }: { delay: number }) {
-  return (
-    <div
-      className="flex items-center gap-1"
-      style={{ '--flow-delay': `${delay}ms` } as React.CSSProperties}
-      aria-hidden="true"
-    >
-      <span className="relative flex h-2 w-8 items-center sm:w-16">
-        <span className="flow-wire absolute inset-x-0 top-1/2 -translate-y-1/2" />
-        <span className="flow-spark" />
-      </span>
-      <ArrowRight className="h-3.5 w-3.5 text-primary/70" />
     </div>
   )
 }
