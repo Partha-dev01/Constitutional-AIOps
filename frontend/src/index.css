@@ -4,7 +4,16 @@
 
 @custom-variant dark (&:is(.dark *));
 
-@theme {
+/*
+  `inline` is REQUIRED here: these theme colors reference other CSS variables
+  (`--background` etc.) that are redefined by `.dark` on <body>. Without inline,
+  Tailwind resolves `hsl(var(--background))` once at :root (light) and inherits
+  that literal value down, so the `.dark` override never takes effect and the
+  whole app renders light. `inline` makes utilities emit `hsl(var(--background))`
+  directly, resolving at the use-site where `.dark` applies. See the Tailwind v4
+  "Referencing other variables" docs.
+*/
+@theme inline {
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
   --color-card: hsl(var(--card));
