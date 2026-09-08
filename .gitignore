@@ -165,10 +165,9 @@ dist/
 # --- Pre-public exposure sweep (2026-09-08): internal/dev-only, kept local ---
 # AI-assistant dev instructions; local dev still reads the local copy.
 /CLAUDE.md
-# Internal dev session logs (RELEASES.md is the public-facing changelog).
-docs/CHECKLIST.md
-docs/SESSION_STATE.md
-docs/ISSUES.md
+# Internal working docs kept local, not shipped in the public repo.
+# RELEASES.md (repo root) is the public changelog; openapi/ is the public API ref.
+/docs/
 # Orphaned dev-era screenshots (product shots live under frontend/ & marketing/public).
 /screenshots/
 # Playwright runner cache at repo root (.playwright-mcp/ + frontend/test-results already ignored).

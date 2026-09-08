@@ -9,7 +9,7 @@
 Two LLM agents read your telemetry and propose fixes. Every one clears a
 12-principle safety gate before it can run.
 
-[**Open the live app →**](https://aiops.imaginaerium.in) &nbsp;·&nbsp; [Live demo](https://aiops.imaginaerium.in/demo/index.html) &nbsp;·&nbsp; [Docs](docs/) &nbsp;·&nbsp; [By Imaginaerium](https://imaginaerium.in)
+[**Open the live app →**](https://aiops.imaginaerium.in) &nbsp;·&nbsp; [Live demo](https://aiops.imaginaerium.in/demo/index.html) &nbsp;·&nbsp; [API spec](openapi/openapi.json) &nbsp;·&nbsp; [By Imaginaerium](https://imaginaerium.in)
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
@@ -155,8 +155,8 @@ C(a) = 0.40 · C_LLM(a) + 0.35 · C_hist(a) + 0.25 · C_sim(a)
 ## 🚀 Quick start (lite self-host)
 
 The recommended self-host is the **lite** profile: backend, frontend, and your
-own OpenAI-compatible LLM endpoint. No GPU, no bundled models, no Neo4j. Full
-guide in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
+own OpenAI-compatible LLM endpoint. No GPU, no bundled models, no Neo4j. The
+quick start below covers it end to end.
 
 **Prerequisites:** Docker and Docker Compose v2, an OpenAI-compatible LLM
 endpoint, and roughly 2GB RAM plus 20GB disk.
@@ -245,8 +245,7 @@ proposed action is gated before it can touch anything.
 
 Self-hosters run the **lite** profile (backend + frontend + your endpoint, no
 GPU, no Neo4j). The research reference config puts both models on one 24GB GPU
-with vLLM AWQ. See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full
-design.
+with vLLM AWQ.
 
 ---
 
@@ -265,7 +264,6 @@ constitutional-aiops/
 ├── marketing/               # Standalone static marketing site
 ├── sdk/                     # Python SDK + TypeScript types
 ├── docker/                  # Compose profiles (lite / local / gpu / production)
-├── docs/                    # Documentation
 └── tests/                   # Test suite
 ```
 
@@ -273,14 +271,11 @@ constitutional-aiops/
 
 ## 📚 Documentation
 
-| Document | Contents |
-|---|---|
-| [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) | Self-host and deployment guide |
-| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | System design and data flow |
-| [`docs/API.md`](docs/API.md) | REST API reference |
-| [`docs/BACKEND.md`](docs/BACKEND.md) | Python backend reference |
-| [`docs/FRONTEND.md`](docs/FRONTEND.md) | React frontend reference |
-| [`docs/INDEX.md`](docs/INDEX.md) | Full documentation index |
+A live overview and walkthrough is at
+[aiops.imaginaerium.in](https://aiops.imaginaerium.in). The REST API is fully
+described by the OpenAPI spec at [`openapi/openapi.json`](openapi/openapi.json),
+served interactively at `/docs` when the backend runs with
+`AIOPS_ENABLE_DOCS=true`.
 
 ---
 
