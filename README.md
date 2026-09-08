@@ -1,64 +1,165 @@
+<div align="center">
+
+<img src="marketing/public/logo-mark.png" alt="Constitutional AIOps logo" width="120" />
+
 # Constitutional AIOps
 
-> Autonomous Infrastructure Management with Constitutional AI Safety
+### Autonomous infrastructure operations with a constitution it cannot break
 
-**Version**: 1.0.0 | **Status**: Production deployed (AWS lite tier) | **Last Updated**: 2026-09-04
+Two LLM agents read your telemetry and propose fixes. Every one clears a
+12-principle safety gate before it can run.
 
-[![License](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/python-3.11+-blue.svg)]()
-[![TypeScript](https://img.shields.io/badge/typescript-5.0+-blue.svg)]()
+[**Open the live app →**](https://aiops.imaginaerium.in) &nbsp;·&nbsp; [Live demo](https://aiops.imaginaerium.in/demo/index.html) &nbsp;·&nbsp; [Docs](docs/) &nbsp;·&nbsp; [By Imaginaerium](https://imaginaerium.in)
 
-## Overview
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
 
-Constitutional AIOps is an autonomous infrastructure management system that combines:
+![Constitutional AIOps dashboard](marketing/public/screenshots/dashboard.png)
 
-- **Dual-Agent LLM Architecture**: a fast annotation agent and a reasoning agent, each pointed at any OpenAI-compatible endpoint (vLLM, Ollama, AWS Bedrock, OpenAI, ...). Both can share one endpoint for a minimal setup; the research reference config runs Qwen3-4B (fast) + Qwen3-14B (reasoning) on a single 24GB GPU.
-- **Constitutional AI Safety**: 12 principles across 3 tiers ensuring safe autonomous actions
-- **Graph-Episodic Memory**: Neo4j-based incident correlation and context retention (optional; omitted in the lite profile)
-- **Human-in-the-Loop**: Approval workflows for uncertain actions
+</div>
 
-## Architecture
+---
 
-The recommended deployment is the **lite** profile: the backend and frontend plus
-your own OpenAI-compatible LLM endpoint. No GPU, no bundled models, no Neo4j. The
-diagram below is the **research reference config** (both models co-resident on one
-24GB GPU), not a requirement for self-hosting.
+> [!IMPORTANT]
+> **Autonomous remediation is off by default.** Every proposed action is checked
+> against a 12-principle constitutional gate, and above the confidence line it
+> still queues for a human Approve/Reject before anything runs. This is an
+> academic engineering research project, not a hardened commercial product. Point
+> it at systems you are comfortable experimenting on, and read
+> [the safety model](#-the-constitutional-safety-model) before enabling action tools.
+
+---
+
+## 📑 Table of contents
+
+- [What it is](#-what-it-is)
+- [Key features](#-key-features)
+- [Screenshots](#-screenshots)
+- [The constitutional safety model](#-the-constitutional-safety-model)
+- [Quick start (lite self-host)](#-quick-start-lite-self-host)
+- [Deployment options](#-deployment-options)
+- [Tech stack](#-tech-stack)
+- [Architecture](#-architecture)
+- [Project structure](#-project-structure)
+- [Documentation](#-documentation)
+- [Development](#-development)
+- [Contributing](#-contributing)
+- [License](#-license)
+- [Credits](#-credits)
+
+---
+
+## 🧩 What it is
+
+Constitutional AIOps is a self-hosted system that watches your infrastructure
+telemetry, reasons about what is going wrong, and proposes remediation, with a
+safety framework it is not allowed to break.
+
+Two LLM agents split the work. A **fast agent** annotates and classifies the
+stream of logs, metrics, and traces. A **reasoning agent** does root-cause
+analysis, drafts a remediation plan, and handles the human chat. Every action
+the system might take is scored for confidence and run through a constitutional
+gate first. High-confidence actions are audited, mid-confidence actions wait for
+your approval, and low-confidence ones only raise an alert.
+
+The defining trait is **bring your own endpoint**: both agents point at any
+OpenAI-compatible LLM API (vLLM, Ollama, AWS Bedrock, OpenAI, and so on), and
+they can share a single endpoint for a minimal setup. There is no bundled model
+and no required GPU. The research reference configuration runs Qwen3-4B (fast)
+and Qwen3-14B (reasoning) co-resident on one 24GB GPU, but that is a reference,
+not a requirement.
+
+---
+
+## ✨ Key features
+
+- 🏛️ **Constitutional safety gate** — 12 principles across 3 tiers. Tier 1
+  (safety) is never violated, Tier 2 (operational) needs approval, Tier 3
+  (learning) is a soft guideline. Every action passes through it.
+- 🤖 **Dual-agent architecture** — a fast annotation agent and a deep reasoning
+  agent, each pointed at any OpenAI-compatible endpoint. Both can share one
+  endpoint for a minimal deploy.
+- 🙋 **Human-in-the-loop remediation** — action tools never fire inside the model
+  loop. Proposals queue as an Approve/Reject card in chat. Settings pick
+  diagnose / approve / auto per tool, and everything is audit-logged.
+- 🧠 **Graph-episodic memory** — an optional Neo4j store correlates incidents and
+  feeds past resolutions back into reasoning (omitted in the lite profile).
+- 📡 **Unified observability** — logs, metrics, and traces through the LGTM stack
+  (Loki, Grafana, Tempo, Prometheus) plus an OpenTelemetry collector.
+- 💬 **ChatOps alerting** — outbound and inbound relay for Telegram and Matrix,
+  with cost fencing on the LLM spend.
+- 🔑 **Multi-tenant, bring-your-own-key** — per-user LLM credentials, public
+  signup (with Turnstile), and an optional in-browser WebLLM path.
+- 🧩 **Extensible** — a Python SDK, personal access tokens, and a fail-closed
+  plugin loader that routes plugin actions through the same constitutional gate.
+- 🐳 **One-command self-host** — a lite Docker Compose profile runs the whole
+  thing with no GPU and no bundled models.
+- 🖥️ **No-login demo** — a static demo build runs the real UI from bundled
+  fixtures, so you can click around before deploying anything.
+
+---
+
+## 📸 Screenshots
+
+The dashboard is shown at the top of this README. A few more of the surfaces
+(there are more in [`marketing/public/screenshots/`](marketing/public/screenshots/)):
+
+| | |
+|---|---|
+| **Chat + remediation** | **Graph-episodic memory** |
+| ![Chat](marketing/public/screenshots/chat.png) | ![Graph explorer](marketing/public/screenshots/graph-explorer.png) |
+| **Incidents** | **Infrastructure** |
+| ![Incidents](marketing/public/screenshots/incidents.png) | ![Infrastructure](marketing/public/screenshots/infrastructure.png) |
+
+Or try the whole thing live: **[the no-login demo](https://aiops.imaginaerium.in/demo/index.html)**.
+
+---
+
+## 🏛️ The constitutional safety model
+
+Every candidate action gets a confidence score, then a tier decides who has to
+sign off.
+
+**Authorization matrix**
+
+| Confidence | Action | Human review |
+|---|---|---|
+| > 0.90 | Automatic | Audit only |
+| 0.70 – 0.90 | Approval required | Must approve |
+| < 0.70 | Alert only | Notify only |
+
+**Principle tiers (12 total)**
+
+- **Tier 1 — Safety (never violate):** no data deletion without confirmation,
+  keep a minimum of healthy replicas, no cascade affecting many services, and
+  every action reversible within 60 seconds.
+- **Tier 2 — Operational (approval to override):** prefer minimal intervention,
+  require evidence, check historical precedent, and degrade gracefully rather
+  than shut down.
+- **Tier 3 — Learning (soft guidelines):** attribute outcomes to actions, analyze
+  failures, reinforce what worked, and keep solution diversity.
+
+The confidence score itself blends model self-confidence, historical success
+rate, and similarity to past incidents:
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                 L4 24GB VRAM - BOTH ALWAYS LOADED               │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  ┌───────────────────────────────────────────────────────────┐  │
-│  │  FAST AGENT (Port 8000)                                   │  │
-│  │  Model: Qwen3-4B Q4_K_M | Latency: <100ms P95             │  │
-│  │  Purpose: Telemetry annotation, classification            │  │
-│  └───────────────────────────────────────────────────────────┘  │
-│                                                                 │
-│  ┌───────────────────────────────────────────────────────────┐  │
-│  │  REASONING AGENT (Port 8001)                              │  │
-│  │  Model: Qwen3-14B Q4_K_M | Latency: 200-500ms P95         │  │
-│  │  Purpose: RCA, remediation planning, human chat           │  │
-│  └───────────────────────────────────────────────────────────┘  │
-│                                                                 │
-│  TOTAL: ~15GB used / 24GB available                            │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+C(a) = 0.40 · C_LLM(a) + 0.35 · C_hist(a) + 0.25 · C_sim(a)
 ```
 
-## Quick Start
+---
 
-The recommended self-host is the **lite** profile: backend + frontend + your own
-OpenAI-compatible LLM endpoint. No GPU, no bundled models, no Neo4j. See
-[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for the full guide.
+## 🚀 Quick start (lite self-host)
 
-### Prerequisites
+The recommended self-host is the **lite** profile: backend, frontend, and your
+own OpenAI-compatible LLM endpoint. No GPU, no bundled models, no Neo4j. Full
+guide in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 
-- Docker & Docker Compose v2
-- An OpenAI-compatible LLM endpoint (vLLM, Ollama, AWS Bedrock, OpenAI, ...)
-- ~2GB RAM, ~20GB disk
-
-### Lite Self-Host (no GPU)
+**Prerequisites:** Docker and Docker Compose v2, an OpenAI-compatible LLM
+endpoint, and roughly 2GB RAM plus 20GB disk.
 
 ```bash
 # Clone
@@ -70,277 +171,170 @@ cp .env.example .env
 #   set FAST_AGENT_URL / REASONING_AGENT_URL / *_MODEL, and LLM_API_KEY if the
 #   endpoint needs a bearer token.
 
-# Start (self-contained)
+# Start
 docker compose -f docker/docker-compose.lite.yml up -d
 
-# Open http://localhost:3000  (backend http://localhost:8000/docs)
+# Open http://localhost:3000  (backend API docs at http://localhost:8000/docs)
 ```
 
-### Local Development (mock LLM)
+---
 
-```bash
-docker compose -f docker-compose.yml -f docker/docker-compose.local.yml up -d
-# Backend hot-reload:  cd src && uvicorn main:app --reload
-# Frontend hot-reload: cd frontend && npm install && npm run dev
-```
-
-### Full GPU Stack (research reference config)
-
-Both models on one 24GB GPU (vLLM AWQ): Qwen3-4B (fast, :8000) + Qwen3-14B
-(reasoning, :8001), plus Neo4j and the LGTM observability stack.
-
-```bash
-cp .env.production.example .env   # set NEO4J_PASSWORD, AUTH_*, WS_TOKEN, ...
-docker compose -f docker-compose.yml -f docker/docker-compose.gpu.yml up -d
-curl http://localhost:8000/health   # fast agent
-curl http://localhost:8001/health   # reasoning agent
-```
-
-## Deployment Options
+## 🧰 Deployment options
 
 | Mode | GPU | LLM | Best for |
-|------|-----|-----|----------|
+|---|---|---|---|
 | **Lite self-host** | None | Your own OpenAI-compatible endpoint | Most self-hosters |
 | **Local development** | None | Mock (no external calls) | Working on the code |
 | **Full GPU stack** | One 24GB GPU | Two co-resident models (research reference) | Reproducing the paper |
 
-The lite profile is what the hosted instance runs. It has no fixed running cost
-beyond a small always-on VM, since compute sleeps when idle.
+The lite profile is what the hosted instance at
+[aiops.imaginaerium.in](https://aiops.imaginaerium.in) runs. Compute sleeps when
+idle, so there is no fixed running cost beyond a small always-on VM.
 
-## Project Structure
+```bash
+# Local development (mock LLM, no external calls)
+docker compose -f docker-compose.yml -f docker/docker-compose.local.yml up -d
+
+# Full GPU stack (research reference: two models on one 24GB GPU + Neo4j + LGTM)
+cp .env.production.example .env   # set NEO4J_PASSWORD, AUTH_*, WS_TOKEN, ...
+docker compose -f docker-compose.yml -f docker/docker-compose.gpu.yml up -d
+```
+
+---
+
+## 🛠️ Tech stack
+
+| Area | Technology |
+|---|---|
+| Backend | FastAPI (Python 3.11+), 21 API routers, OpenAPI 3.1 |
+| Frontend | React 18 + TypeScript 5 + Tailwind CSS 4 + Vite 8 |
+| LLM runtime | Any OpenAI-compatible endpoint (vLLM, Ollama, AWS Bedrock, OpenAI, ...) |
+| Graph memory | Neo4j 5.x (optional; omitted in lite) |
+| Observability | Loki, Grafana, Tempo, Prometheus + OpenTelemetry |
+| Packaging | Docker Compose (lite / local / GPU / production profiles) |
+| SDK | Python client + generated TypeScript types |
+| Testing | pytest (backend), Vitest + Playwright (frontend) |
+
+---
+
+## 🏗️ Architecture
+
+Telemetry flows in, the two agents annotate and reason over it, and every
+proposed action is gated before it can touch anything.
+
+```
+  logs · metrics · traces
+            │
+            ▼
+   ┌──────────────────┐      ┌───────────────────┐
+   │   Fast agent     │      │  Reasoning agent  │
+   │  annotate +      │─────▶│  root-cause +     │
+   │  classify        │      │  remediation plan │
+   └──────────────────┘      └─────────┬─────────┘
+            ▲                          │
+            │                          ▼
+   ┌────────┴─────────┐      ┌───────────────────┐
+   │  Graph-episodic  │◀────▶│  Constitutional   │
+   │  memory (Neo4j)  │      │  gate: 12 / 3 tier│
+   └──────────────────┘      └─────────┬─────────┘
+                                       │
+                       ┌───────────────┴───────────────┐
+                       ▼               ▼                ▼
+                  auto (audit)   approve/reject     alert only
+```
+
+Self-hosters run the **lite** profile (backend + frontend + your endpoint, no
+GPU, no Neo4j). The research reference config puts both models on one 24GB GPU
+with vLLM AWQ. See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full
+design.
+
+---
+
+## 🗂️ Project structure
 
 ```
 constitutional-aiops/
-├── README.md                # Quick Start (this file)
-├── CLAUDE.md                # AI assistant instructions
-├── src/                     # Python backend
-│   ├── agents/              # LLM agents (FastAnnotator, ReasoningAgent)
-│   ├── constitutional/      # Constitutional AI framework
+├── src/                     # Python backend (FastAPI)
+│   ├── agents/              # Fast annotator + reasoning agent, model router
+│   ├── constitutional/      # 12-principle safety framework + validator
 │   ├── memory/              # Neo4j graph-episodic memory
-│   ├── telemetry/           # OTEL integration
-│   ├── benchmark/           # Benchmark runner and evaluator
-│   └── api/                 # FastAPI routes
-├── frontend/                # React dashboard
-├── docker/                  # Docker configurations
+│   ├── telemetry/           # OpenTelemetry ingestion
+│   ├── benchmark/           # Benchmark runner + evaluator (generic engine)
+│   └── api/                 # REST routes
+├── frontend/                # React + TypeScript dashboard (Vite)
+├── marketing/               # Standalone static marketing site
+├── sdk/                     # Python SDK + TypeScript types
+├── docker/                  # Compose profiles (lite / local / gpu / production)
 ├── docs/                    # Documentation
-│   ├── INDEX.md             # Documentation index
-│   ├── BENCHMARK.md         # Benchmark documentation
-│   ├── ARCHITECTURE.md      # System design
-│   ├── DEPLOYMENT.md        # Deployment guide
-│   ├── CHECKLIST.md         # Development progress
-│   └── CHANGELOG.md         # Version history
 └── tests/                   # Test suite
 ```
 
-## Constitutional AI Framework
+---
 
-### Authorization Matrix
+## 📚 Documentation
 
-| Confidence | Action | Human Review |
-|------------|--------|--------------|
-| >90% | AUTOMATIC | Audit only |
-| 70-90% | APPROVAL_REQUIRED | Must approve |
-| <70% | ALERT_ONLY | Notify only |
+| Document | Contents |
+|---|---|
+| [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) | Self-host and deployment guide |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | System design and data flow |
+| [`docs/API.md`](docs/API.md) | REST API reference |
+| [`docs/BACKEND.md`](docs/BACKEND.md) | Python backend reference |
+| [`docs/FRONTEND.md`](docs/FRONTEND.md) | React frontend reference |
+| [`docs/INDEX.md`](docs/INDEX.md) | Full documentation index |
 
-### Principle Tiers
+---
 
-**Tier 1 (Safety-Critical)** - NEVER violate:
-- P1.1: Data Protection
-- P1.2: Active Incident Safety
-- P1.3: Cascade Prevention
-- P1.4: Security Integrity
-
-**Tier 2 (Operational)** - Require approval to violate:
-- P2.1: Minimal Intervention
-- P2.2: Evidence-Based Actions
-- P2.3: Audit Trail
-- P2.4: Uncertainty Escalation
-
-**Tier 3 (Learning)** - Soft guidelines:
-- P3.1: Outcome Tracking
-- P3.2: Human Correction Learning
-- P3.3: Long-term Optimization
-
-## Performance Targets
-
-These are the original design targets. Measured camera-ready results (overall 82.4% accuracy; end-to-end latency P95 ~49s on an L4 GPU) live in [KEY_METRICS.md](docs/KEY_METRICS.md).
-
-| Metric | Design target |
-|--------|--------|
-| Fast Agent Latency | <100ms P95 |
-| Reasoning Agent Latency | 200-500ms P95 |
-| Annotation Accuracy | 87-92% |
-| RCA Accuracy | 85-90% |
-| Token Compression Rate | 92% |
-| Resolution Time | <5 minutes |
-
-### Confidence Formula
-
-```
-C(a) = 0.4 · C_LLM + 0.35 · C_hist + 0.25 · C_sim
-```
-
-See [KEY_METRICS.md](docs/KEY_METRICS.md) for complete metrics reference.
-
-## Benchmarking System
-
-The Benchmark page has two jobs. The **Your setup** tab runs a few sample cases
-through the exact agents the app uses, against the LLM endpoint you configured,
-so you can check whether your model is good enough before trusting it. The
-**Research run** tab reproduces the paper's evaluation.
-
-### Research reference datasets
-
-The app ships a small synthetic sample so the page works out of the box. The
-research evaluation used the datasets below; bring your own by replacing the
-files under `data/benchmark/` in the same shape.
-
-| Dataset | Source | Cases | Purpose |
-|---------|--------|-------|---------|
-| **Annotation Test** | Loghub HDFS + BGL | 200 | Log classification (normal vs anomaly) |
-| **RCA Test** | OpsEval | 100 | Root cause analysis questions |
-
-### Models Evaluated
-
-| Model | Type | VRAM |
-|-------|------|------|
-| Constitutional AIOps | Hybrid (Qwen3-4B + Qwen3-14B) | ~15GB |
-| llama3:70b | Single | ~40GB |
-| llama3:8b | Single | ~5GB |
-| qwen3:4b | Single | ~4GB |
-| qwen3:14b | Single | ~11GB |
-
-### Quick Benchmark Commands
-
-The app ships a small **synthetic sample** dataset so the Benchmark page works
-out of the box. Regenerate it (or use it as a template for your own data) with:
+## 🧑‍💻 Development
 
 ```bash
-# (Re)seed the synthetic sample datasets under data/benchmark/
-python scripts/seed_benchmark_data.py
+# Backend
+pytest tests/ -v                       # tests
+pytest tests/ --cov=src                 # with coverage
+black src/ && isort src/                # format
+ruff check src/                         # lint
+
+# Frontend
+cd frontend
+npm install
+npm run dev                             # dev server on :3000
+npm run test                            # Vitest
+npm run lint                            # ESLint
 ```
 
-**Bring your own dataset:** replace the JSON files under
-`data/benchmark/intermediate/datasets/` with your own cases in the same shape,
-then start a run from the Benchmark page (requires a configured LLM endpoint).
+Key environment variables are documented in `.env.example` (lite) and
+`.env.production.example` (full stack).
 
-### Evaluation Metrics
+---
 
-- **Annotation Accuracy**: Exact match on log classification
-- **RCA Accuracy**: Partial match + BERTScore F1
-- **BERTScore**: Semantic similarity using DeBERTa-XLarge-MNLI
-- **Latency**: P50, P95, P99 with network compensation
+## 🤝 Contributing
 
-## Research Gaps Addressed
+Contributions are welcome. A few ground rules:
 
-This project addresses 5 critical research gaps in AI-enhanced observability:
+- Keep changes accurate and honest. Never overstate what the safety gate
+  guarantees.
+- Do not commit secrets. `.env*` files are gitignored.
+- Run the backend and frontend test suites and the linters before opening a PR.
+- Shared `src/` fixes should hold across the lite, local, and GPU profiles.
 
-| ID | Research Gap | Solution |
-|----|--------------|----------|
-| RG1 | Automated Knowledge Extraction | Graph-episodic memory with incident correlation |
-| RG2 | Graph-Based Operational Knowledge | Neo4j semantic + episodic hybrid retrieval |
-| RG3 | Observability-Specific Tokenization | 92% compression via dedup + aggregation |
-| RG4 | Constitutional AI for Operations | 12 principles across 3 tiers |
-| RG5 | Comprehensive AI-Enhanced Observability | Dual-agent LGTM integration |
+---
 
-The research paper behind this project is maintained separately and is not part of this repository.
-
-## Technology Stack
-
-| Component | Technology |
-|-----------|------------|
-| LLM Hosting | Bring your own (vLLM, Ollama, AWS Bedrock, OpenAI, ...) |
-| LLM Runtime | Any OpenAI-compatible endpoint |
-| Graph Memory | Neo4j 5.x |
-| Observability | Grafana, Loki, Tempo, Prometheus |
-| Backend | FastAPI (Python 3.11+) |
-| Frontend | React 18 + TypeScript + Tailwind |
-| Container | Docker Compose |
-
-## Development
-
-### Running Tests
-
-```bash
-# Run all tests
-pytest tests/ -v
-
-# Run with coverage
-pytest tests/ --cov=src --cov-report=html
-
-# Run specific test file
-pytest tests/test_agents/test_model_router.py -v
-```
-
-### Code Quality
-
-```bash
-# Format code
-black src/ && isort src/
-
-# Type checking
-mypy src/
-
-# Linting
-ruff src/
-```
-
-## Configuration
-
-Key environment variables (see `.env.example`):
-
-```bash
-# LLM Endpoints
-FAST_AGENT_URL=http://localhost:8081/v1
-REASONING_AGENT_URL=http://localhost:8082/v1
-
-# Neo4j
-NEO4J_URI=bolt://localhost:7687
-NEO4J_PASSWORD=changeme_neo4j_password
-
-# Constitutional AI
-CONFIDENCE_THRESHOLD_AUTO=0.90
-CONFIDENCE_THRESHOLD_APPROVAL=0.70
-```
-
-## Documentation
-
-- **[CLAUDE.md](CLAUDE.md)**: Instructions for AI assistants (read first on every session)
-- **[docs/INDEX.md](docs/INDEX.md)**: Master documentation index (100+ files)
-- **[docs/KEY_METRICS.md](docs/KEY_METRICS.md)**: Performance metrics reference
-- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**: System architecture
-- **[docs/BACKEND.md](docs/BACKEND.md)**: Python backend (45+ files)
-- **[docs/API.md](docs/API.md)**: REST API reference (55+ endpoints)
-- **[docs/FRONTEND.md](docs/FRONTEND.md)**: React frontend (25+ files)
-- **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**: Deployment overview
-- **[docs/CHECKLIST.md](docs/CHECKLIST.md)**: Development progress tracker
-- **[docs/CHANGELOG.md](docs/CHANGELOG.md)**: Version history
-
-## About
-
-Constitutional AIOps is an academic engineering research project.
-
-## License
+## 📄 License
 
 Licensed under the **GNU Affero General Public License v3.0** (AGPL-3.0). See
-[LICENSE](LICENSE) for the full text.
+[`LICENSE`](LICENSE) for the full text.
 
 Copyright (C) 2026 Partha-dev01.
 
 Because this project is AGPL-licensed, if you run a modified version as a network
-service, you must offer its users the corresponding source of your modified version.
+service you must offer its users the corresponding source of your modified
+version.
 
 ---
 
-## For Claude Code Users
+## 🙏 Credits
 
-When starting a new session, always read:
-1. `CLAUDE.md` - Development instructions
-2. `docs/INDEX.md` - Documentation index
-3. `docs/CHECKLIST.md` - Current progress
-4. `docs/ISSUES.md` - Active blockers
+Built by **[Imaginaerium](https://imaginaerium.in)**.
 
-The research reference configuration:
-- 24GB VRAM simultaneous dual-model (not hot-swap)
-- Qwen3-4B (fast) + Qwen3-14B (reasoning)
-- Self-hosters instead point both agents at any OpenAI-compatible endpoint (see the lite profile)
+- Live app: https://aiops.imaginaerium.in
+- No-login demo: https://aiops.imaginaerium.in/demo/index.html
+- Repository: https://github.com/Partha-dev01/Constitutional-AIOps

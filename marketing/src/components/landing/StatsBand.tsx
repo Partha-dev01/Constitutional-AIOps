@@ -10,34 +10,11 @@ interface Stat {
 }
 
 /**
- * Figures from the camera-ready paper (COMSYS 2026, 431-case benchmark under
- * matched-substring evaluation): Table 2 (82.4% overall, 82.0% RCA), Table 6
- * cross-system comparison (RCA beats Llama-3.3-70B by 10.8pp), and the
- * preliminary vLLM AWQ gate in Sec 5.5 (about 1.5x). Static constants; the page
- * makes no network calls.
+ * Product facts about the safety model and architecture. No benchmark or paper
+ * figures here (the dedicated Benchmark page covers evaluation). Static
+ * constants; the band makes no network calls.
  */
 const STATS: Stat[] = [
-  {
-    value: 82.4,
-    decimals: 1,
-    suffix: '%',
-    label: 'Overall accuracy',
-    sub: '431-case benchmark, 6 sources',
-  },
-  {
-    value: 82.0,
-    decimals: 1,
-    suffix: '%',
-    label: 'Root-cause accuracy',
-    sub: 'beats Llama-3.3-70B by 10.8pp',
-  },
-  {
-    value: 1.5,
-    decimals: 1,
-    suffix: 'x',
-    label: 'Faster inference on vLLM',
-    sub: 'preliminary AWQ gate',
-  },
   {
     value: 12,
     decimals: 0,
@@ -46,11 +23,32 @@ const STATS: Stat[] = [
     sub: 'across 3 safety tiers',
   },
   {
+    value: 3,
+    decimals: 0,
+    suffix: '',
+    label: 'Authorization tiers',
+    sub: 'automatic · approve · alert',
+  },
+  {
     value: 2,
     decimals: 0,
     suffix: '',
-    label: 'LLMs loaded at once',
-    sub: 'on a single 24 GB GPU',
+    label: 'LLM agents',
+    sub: 'fast annotate + deep reasoning',
+  },
+  {
+    value: 3,
+    decimals: 0,
+    suffix: '',
+    label: 'Telemetry signals',
+    sub: 'logs · metrics · traces',
+  },
+  {
+    value: 1,
+    decimals: 0,
+    suffix: '',
+    label: 'Safety gate',
+    sub: 'every action must pass it',
   },
 ]
 
@@ -65,7 +63,7 @@ export function StatsBand() {
     <section className="border-b border-border bg-card/30">
       <div className="mx-auto max-w-6xl px-6 py-14 sm:py-16">
         <p className="mb-10 text-center font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
-          From the COMSYS 2026 benchmark · 431 cases · 6 sources
+          The system at a glance
         </p>
         <div
           ref={ref}

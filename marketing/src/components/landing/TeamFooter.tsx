@@ -33,7 +33,7 @@ export function TeamFooter() {
             </div>
             <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
               Autonomous infrastructure operations gated by a constitutional
-              safety framework — dual LLM agents, graph memory, and graduated
+              safety framework. Dual LLM agents, graph memory, and graduated
               human trust.
             </p>
           </div>
@@ -83,7 +83,7 @@ export function TeamFooter() {
           </a>
 
           <p className="font-mono text-xs text-muted-foreground">
-            Constitutional AIOps · v1.0.0 · Peer-reviewed at COMSYS 2026
+            Constitutional AIOps · v1.0.0 · AGPL-3.0
           </p>
         </div>
       </div>
