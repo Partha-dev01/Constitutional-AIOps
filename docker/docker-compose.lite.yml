@@ -198,6 +198,9 @@ services:
         # Top-left brand link. Empty = self-host (links to app home); our hosted
         # build sets PUBLIC_LANDING_URL to the marketing site.
         - VITE_LANDING_URL=${PUBLIC_LANDING_URL:-}
+        # Reveal the in-app Docs "Self-host" tab. Default false keeps a plain
+        # self-host build unchanged; our hosted box passes VITE_SHOW_SELFHOST=true.
+        - VITE_SHOW_SELFHOST=${VITE_SHOW_SELFHOST:-false}
     container_name: aiops-frontend
     ports:
       - "${FRONTEND_PORT:-3000}:3000"

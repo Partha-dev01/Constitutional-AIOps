@@ -21,6 +21,12 @@ COPY frontend/ ./
 ARG VITE_LANDING_URL=""
 ENV VITE_LANDING_URL=$VITE_LANDING_URL
 
+# Reveal the in-app Docs "Self-host" tab. Empty/false (the default) hides it so
+# a plain self-host build is unchanged; our hosted build passes true now that
+# the project is open source. Prefixed VITE_ so Vite bakes it into the bundle.
+ARG VITE_SHOW_SELFHOST="false"
+ENV VITE_SHOW_SELFHOST=$VITE_SHOW_SELFHOST
+
 # Build application
 RUN npm run build
 
