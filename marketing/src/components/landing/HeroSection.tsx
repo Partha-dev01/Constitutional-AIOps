@@ -1,4 +1,4 @@
-import { ArrowRight, BadgeCheck, Radar, ShieldCheck, Wrench } from 'lucide-react'
+import { ArrowRight, Radar, ShieldCheck, Wrench } from 'lucide-react'
 import { useReveal } from '../../hooks/useReveal'
 import { ShotFrame } from './ShotFrame'
 import { APP_URL, DEMO_URL } from '../../config'
@@ -9,11 +9,10 @@ import { APP_URL, DEMO_URL } from '../../config'
  * "Constitutional AIOps" (word-stagger spans only), which the live e2e suite
  * depends on.
  *
- * Flagship pass: a research-authority credibility badge (one headline figure
- * from the camera-ready benchmark — the rest live in the StatsBand below, so no
- * stat is duplicated), a compact "detect -> constitution gate -> remediate"
- * control-room flow strip that echoes the ArchitectureBand, then the product
- * showcase.
+ * Flagship pass: the wordmark, product promise, CTAs, a compact
+ * "detect -> constitution gate -> remediate" control-room flow strip that
+ * echoes the ArchitectureBand, then the product showcase. No stat or badge in
+ * the hero itself — the numbers live in the StatsBand below.
  */
 export function HeroSection() {
   return (
@@ -32,23 +31,6 @@ export function HeroSection() {
       />
 
       <div className="relative mx-auto flex max-w-5xl flex-col items-center px-6 pb-20 pt-32 text-center sm:pb-24 sm:pt-40">
-        {/* Provenance chip: points at the benchmark evidence rather than asserting
-            a figure (the numbers live in the StatsBand below). */}
-        <a
-          href="/benchmark.html"
-          className="hero-enter group mb-8 inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-3.5 py-1.5 text-xs font-medium text-muted-foreground backdrop-blur transition-colors hover:border-primary/50 hover:text-foreground"
-          style={{ animationDelay: '40ms' }}
-        >
-          <BadgeCheck className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
-          COMSYS 2026
-          <span aria-hidden="true" className="text-border">·</span>
-          <span className="font-semibold text-foreground">See the benchmark</span>
-          <ArrowRight
-            className="h-3 w-3 transition-transform group-hover:translate-x-0.5"
-            aria-hidden="true"
-          />
-        </a>
-
         <div className="mb-6 flex flex-col items-center justify-center gap-4 sm:flex-row">
           <img
             src="/logo-mark.png"
@@ -114,40 +96,42 @@ export function HeroSection() {
 
 /**
  * Control-room flow strip: detect -> constitution gate -> remediate, the core
- * loop the product runs. A compact echo of the ArchitectureBand pipeline. On
- * scroll-in the nodes rise in sequence and the connectors carry marching dashes
- * (signal flowing left to right); the gate node keeps its validator ring. The
- * stagger uses the shared reveal utility with an inline transition-delay; the
- * connector dashes use .flow-wire, both reduced-motion-killed.
+ * loop the product runs. Once it scrolls into view a telemetry signal runs the
+ * pipeline on a continuous loop: each stage charges (glow + lift, its icon
+ * flares) in sequence as a bright packet travels the connectors, and the gate
+ * fires a validator ring-ping as the signal passes through it. Timing is one
+ * shared 3.4s loop; every element offsets via a --flow-delay CSS var so the
+ * cascade stays in order. .flow-run (added on scroll-in) arms the loop, and the
+ * whole thing is reduced-motion-killed.
  */
 function HeroFlow() {
   const { ref, visible } = useReveal<HTMLDivElement>()
   return (
-    <div ref={ref} className="mt-12 w-full max-w-3xl">
-      <div className="flex items-stretch justify-center gap-2 sm:gap-3">
+    <div
+      ref={ref}
+      className={`reveal${visible ? ' reveal-visible flow-run' : ''} mt-12 w-full max-w-3xl`}
+    >
+      <div className="flex items-stretch justify-center gap-1 sm:gap-3">
         <FlowNode
           icon={<Radar className="h-4 w-4" aria-hidden="true" />}
           title="Detect"
           detail="logs · metrics · traces"
-          visible={visible}
           delay={0}
         />
-        <FlowConnector visible={visible} delay={120} />
+        <FlowConnector delay={300} />
         <FlowNode
           icon={<ShieldCheck className="h-4 w-4" aria-hidden="true" />}
           title="Constitution gate"
           detail="12 principles · 3 tiers"
           highlight
-          visible={visible}
-          delay={180}
+          delay={750}
         />
-        <FlowConnector visible={visible} delay={300} />
+        <FlowConnector delay={1050} />
         <FlowNode
           icon={<Wrench className="h-4 w-4" aria-hidden="true" />}
           title="Remediate"
           detail="safe · reversible"
-          visible={visible}
-          delay={360}
+          delay={1500}
         />
       </div>
     </div>
@@ -159,24 +143,22 @@ function FlowNode({
   title,
   detail,
   highlight = false,
-  visible,
   delay,
 }: {
   icon: React.ReactNode
   title: string
   detail: string
   highlight?: boolean
-  visible: boolean
   delay: number
 }) {
   return (
     <div
-      className={`reveal${visible ? ' reveal-visible' : ''} flex flex-1 flex-col items-center gap-1.5 rounded-xl border bg-card/60 px-2 py-3 backdrop-blur sm:px-4 ${
+      className={`flow-node flex flex-1 flex-col items-center gap-1.5 rounded-xl border bg-card/60 px-2 py-3 backdrop-blur sm:px-4 ${
         highlight ? 'border-primary/40' : 'border-border'
       }`}
-      style={{ transitionDelay: `${delay}ms` }}
+      style={{ '--flow-delay': `${delay}ms` } as React.CSSProperties}
     >
-      <span className="relative inline-flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15 text-primary">
+      <span className="flow-icon relative inline-flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15 text-primary">
         {highlight && (
           <span
             className="validator-ring absolute inset-0 rounded-lg ring-2 ring-primary/50"
@@ -193,16 +175,20 @@ function FlowNode({
   )
 }
 
-/** Connector between flow nodes: a marching-dash wire (signal flow) tipped with
- *  an arrow. Reveals with the same stagger as the nodes it sits between. */
-function FlowConnector({ visible, delay }: { visible: boolean; delay: number }) {
+/** Connector between flow nodes: a faint marching-dash rail carrying a bright
+ *  signal packet that travels toward the arrow, timed off the shared
+ *  --flow-delay so it hands the signal to the next stage on the beat. */
+function FlowConnector({ delay }: { delay: number }) {
   return (
     <div
-      className={`reveal${visible ? ' reveal-visible' : ''} flex items-center gap-0.5`}
-      style={{ transitionDelay: `${delay}ms` }}
+      className="flex items-center gap-1"
+      style={{ '--flow-delay': `${delay}ms` } as React.CSSProperties}
       aria-hidden="true"
     >
-      <span className="flow-wire w-3 sm:w-6" />
+      <span className="relative flex h-2 w-8 items-center sm:w-16">
+        <span className="flow-wire absolute inset-x-0 top-1/2 -translate-y-1/2" />
+        <span className="flow-spark" />
+      </span>
       <ArrowRight className="h-3.5 w-3.5 text-primary/70" />
     </div>
   )
