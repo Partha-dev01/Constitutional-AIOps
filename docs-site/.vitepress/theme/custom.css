@@ -1,0 +1,91 @@
+/**
+ * Constitutional AIOps docs theme.
+ *
+ * Maps the marketing/app brand palette (marketing/src/index.css, dark) onto
+ * VitePress design tokens. Values are the same HSL triples the product uses:
+ *   --background 222.2 84% 4.9%  (navy)   --primary 217.2 91.2% 59.8% (blue)
+ *   --foreground 210 40% 98%              --border 217.2 32.6% 17.5%
+ *   --muted-foreground 215 20.2% 65.1%    theme-color #050c1c
+ * The site is forced dark (config appearance: 'force-dark'); tokens are defined
+ * under both :root and .dark so the palette is stable regardless of mode.
+ */
+
+:root,
+.dark {
+  /* Brand (blue accent) */
+  --vp-c-brand-1: hsl(217.2 91.2% 63%);
+  --vp-c-brand-2: hsl(217.2 91.2% 68%);
+  --vp-c-brand-3: hsl(217.2 91.2% 55%);
+  --vp-c-brand-soft: hsla(217, 91%, 60%, 0.14);
+  --vp-c-brand-softer: hsla(217, 91%, 60%, 0.08);
+
+  /* Backgrounds (navy, with subtle elevation steps) */
+  --vp-c-bg: hsl(222.2 84% 4.9%);
+  --vp-c-bg-alt: hsl(222.2 60% 7%);
+  --vp-c-bg-soft: hsl(217 33% 11%);
+  --vp-c-bg-elv: hsl(217 33% 13%);
+  --vp-c-bg-elv-mute: hsl(217 33% 15%);
+
+  /* Text */
+  --vp-c-text-1: hsl(210 40% 98%);
+  --vp-c-text-2: hsl(215 20.2% 74%);
+  --vp-c-text-3: hsl(215 20.2% 55%);
+
+  /* Lines + borders */
+  --vp-c-divider: hsl(217.2 32.6% 17.5%);
+  --vp-c-border: hsl(217.2 32.6% 22%);
+  --vp-c-gutter: hsl(222.2 84% 3%);
+
+  /* Code surfaces */
+  --vp-code-block-bg: hsl(222 47% 8%);
+  --vp-code-line-highlight-color: hsla(217, 91%, 60%, 0.12);
+
+  /* Typography */
+  --vp-font-family-base: 'Inter', ui-sans-serif, system-ui, -apple-system,
+    'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* Home hero: blue wordmark gradient + soft glow, matching the landing hero. */
+:root,
+.dark {
+  --vp-home-hero-name-color: transparent;
+  --vp-home-hero-name-background: linear-gradient(
+    120deg,
+    hsl(217 91% 68%) 20%,
+    hsl(199 89% 62%)
+  );
+  --vp-home-hero-image-background-image: linear-gradient(
+    -45deg,
+    hsla(217, 91%, 60%, 0.35),
+    hsla(199, 89%, 55%, 0.2)
+  );
+  --vp-home-hero-image-filter: blur(56px);
+}
+
+/* Buttons: keep the brand-solid button readable on navy. */
+:root,
+.dark {
+  --vp-button-brand-bg: var(--vp-c-brand-3);
+  --vp-button-brand-hover-bg: var(--vp-c-brand-2);
+  --vp-button-brand-active-bg: var(--vp-c-brand-3);
+  --vp-button-brand-text: hsl(222.2 84% 4.9%);
+  --vp-button-brand-hover-text: hsl(222.2 84% 4.9%);
+}
+
+/* Custom containers (tip/info) tinted toward the brand rather than default. */
+.dark .custom-block.tip {
+  border-color: var(--vp-c-brand-soft);
+}
+
+/* Slightly tighter, brand-tinted focus ring for keyboard users. */
+:focus-visible {
+  outline-color: var(--vp-c-brand-1);
+}
+
+/* Screenshot figures: rounded, hairline border, subtle lift to read as a
+   framed product shot rather than a raw inline image. */
+.vp-doc img[src*='/screenshots/'] {
+  border-radius: 10px;
+  border: 1px solid var(--vp-c-divider);
+  box-shadow: 0 10px 30px -12px hsla(222, 84%, 2%, 0.8);
+}

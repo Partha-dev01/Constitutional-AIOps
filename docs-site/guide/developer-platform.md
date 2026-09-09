@@ -42,8 +42,8 @@ that does this without forking is on the roadmap below.
 
 Official clients live in the repository under `sdk/`:
 
-- **Python**, `sdk/python` — package `constitutional-aiops`.
-- **TypeScript**, `sdk/typescript` — package `@constitutional-aiops/sdk`.
+- **Python**, `sdk/python`: package `constitutional-aiops`.
+- **TypeScript**, `sdk/typescript`: package `@constitutional-aiops/sdk`.
 
 Both are pre-release, hand-written, and dependency-free today. They cover listing
 with automatic pagination, reading incidents, approving actions through the
