@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { APP_URL, SHOW_SELFHOST } from '../../config'
 
-// #self-host is only present when the SelfHostSection is rendered (post public
-// flip), so its nav anchor is added conditionally to avoid a dead link.
-// Absolute (/#...) so they resolve from the docs page too, not only the
-// landing. Docs is now its own page (/docs.html), not an in-page anchor.
+// The Self-host page (/selfhost.html) ships only at the public-source flip, so
+// its nav link is added conditionally (SHOW_SELFHOST) to avoid pointing at a
+// page the private build never emits. Absolute paths so they resolve from any
+// content page, not only the landing. Docs is its own page (/docs.html).
 const ANCHORS = [
   { href: '/#features', label: 'Features' },
   { href: '/architecture.html', label: 'Architecture' },
@@ -12,7 +12,7 @@ const ANCHORS = [
   { href: '/benchmark.html', label: 'Benchmark' },
   { href: '/#live', label: 'Live demo' },
   { href: '/docs.html', label: 'Docs' },
-  ...(SHOW_SELFHOST ? [{ href: '/#self-host', label: 'Self-host' }] : []),
+  ...(SHOW_SELFHOST ? [{ href: '/selfhost.html', label: 'Self-host' }] : []),
   { href: '/#about', label: 'About' },
 ]
 

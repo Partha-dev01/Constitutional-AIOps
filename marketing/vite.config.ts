@@ -32,6 +32,7 @@ export default defineConfig({
         usecases: path.resolve(__dirname, 'usecases.html'),
         faq: path.resolve(__dirname, 'faq.html'),
         opensource: path.resolve(__dirname, 'opensource.html'),
+        selfhost: path.resolve(__dirname, 'selfhost.html'),
       },
     },
   },
