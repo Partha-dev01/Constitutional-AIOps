@@ -1,0 +1,89 @@
+name: publish-sdk
+
+# Publishes the Python + TypeScript client SDKs (sdk/python, sdk/typescript) to
+# PyPI and npm.
+#
+# Safety + auth contract (mirrors deploy.yml):
+#   - Runs ONLY for the canonical repo, never forks.
+#   - Triggered by an `sdk-v*` tag (cutting + pushing the tag IS the per-action
+#     publish go-ahead) or a manual dispatch. A first publish also needs the
+#     one-time registry setup below.
+#   - PyPI uses OIDC Trusted Publishing: NO long-lived token. Configure a Trusted
+#     Publisher on PyPI for project `constitutional-aiops` -> this repo ->
+#     workflow `publish-sdk.yml` -> environment `pypi`.
+#   - npm publishes with provenance (an OIDC-signed supply-chain attestation).
+#     It needs ONE secret: an npm automation token as `NPM_TOKEN` on the `npm`
+#     environment. (If you prefer fully tokenless npm, configure npm OIDC Trusted
+#     Publishing for `@constitutional-aiops/sdk` and drop NPM_TOKEN + the env var;
+#     that path needs npm >= 11.5.1 on the runner.)
+#   - The package version comes from each manifest (sdk/python/pyproject.toml,
+#     sdk/typescript/package.json). Bump those, commit, then push `sdk-v<version>`.
+#
+# No live infra IDs, no repo secrets beyond NPM_TOKEN — preserves the Phase-5b scrub.
+
+on:
+  push:
+    tags:
+      - 'sdk-v*'
+  workflow_dispatch:
+
+# Least-privilege default; each job elevates to exactly what it needs.
+permissions:
+  contents: read
+
+# Never run two publishes of the same SDKs at once.
+concurrency:
+  group: publish-sdk
+  cancel-in-progress: false
+
+jobs:
+  publish-python:
+    if: github.repository == 'Partha-dev01/Constitutional-AIOps'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: pypi
+    permissions:
+      contents: read
+      id-token: write # OIDC for PyPI Trusted Publishing
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+      - name: Build sdist + wheel
+        working-directory: sdk/python
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade build
+          python -m build
+          ls -la dist
+      - name: Publish to PyPI (OIDC Trusted Publishing)
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # release/v1
+        with:
+          packages-dir: sdk/python/dist
+
+  publish-npm:
+    if: github.repository == 'Partha-dev01/Constitutional-AIOps'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write # provenance attestation
+    defaults:
+      run:
+        working-directory: sdk/typescript
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+      - name: Install
+        run: npm install
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Publish to npm (provenance)
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
