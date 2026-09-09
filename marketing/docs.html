@@ -8,23 +8,37 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="theme-color" content="#050c1c" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Docs — Constitutional AIOps</title>
-    <meta name="description" content="Documentation for Constitutional AIOps: quick start, configuring your model endpoint and monitoring, a tour of every screen, and the interactive API reference." />
-    <!-- Allow ordinary search indexing, but opt OUT of AI training / dataset use. -->
-    <meta name="robots" content="index, follow, noai, noimageai" />
-    <meta property="og:type" content="website" />
-    <meta property="og:title" content="Docs — Constitutional AIOps" />
-    <meta property="og:description" content="Quick start, model + monitoring configuration, a tour of every screen, and the interactive API reference." />
-    <meta property="og:image" content="/logo.png" />
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Docs — Constitutional AIOps" />
-    <meta name="twitter:image" content="/logo.png" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>Docs moved — Constitutional AIOps</title>
+    <!-- The documentation now lives on its own VitePress site. This page is a
+         redirect so older links to /docs.html keep working. Keep this file and
+         its vite.config input; it is a static redirect, no bundle. -->
+    <meta http-equiv="refresh" content="0; url=https://partha-dev01.github.io/Constitutional-AIOps/" />
+    <link rel="canonical" href="https://partha-dev01.github.io/Constitutional-AIOps/" />
+    <meta name="robots" content="noindex, follow" />
+    <style>
+      html, body { margin: 0; height: 100%; }
+      body {
+        background: #050c1c;
+        color: #e6edf6;
+        font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+      }
+      a { color: #5aa2f6; }
+    </style>
   </head>
-  <body class="dark">
-    <div id="root"></div>
-    <script type="module" src="/src/docs-main.tsx"></script>
+  <body>
+    <p>
+      The documentation has moved.
+      <br />
+      <a href="https://partha-dev01.github.io/Constitutional-AIOps/">Continue to the docs site</a>
+    </p>
+    <script>
+      // Backup for browsers that ignore the meta refresh. replace() keeps the
+      // old URL out of history so Back does not bounce here.
+      window.location.replace('https://partha-dev01.github.io/Constitutional-AIOps/')
+    </script>
   </body>
 </html>

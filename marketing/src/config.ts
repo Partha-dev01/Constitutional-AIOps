@@ -41,6 +41,16 @@ export const DEMO_URL: string = import.meta.env.VITE_DEMO_URL ?? '/demo/index.ht
 export const DOCS_URL: string = import.meta.env.VITE_DOCS_URL ?? '/docs'
 
 /**
+ * The public documentation site (VitePress on GitHub Pages). The marketing
+ * "Docs" nav points here now, and the old /docs.html page is a static redirect
+ * to this same URL so existing inbound links keep working. Env-overridable so a
+ * fork can point at its own docs.
+ */
+export const DOCS_SITE_URL: string =
+  import.meta.env.VITE_DOCS_SITE_URL ??
+  'https://partha-dev01.github.io/Constitutional-AIOps/'
+
+/**
  * Whether to show the "Self-host" section + nav anchor. OFF by default so the
  * public marketing build never ships the self-host walkthrough (a real
  * `git clone` + AGPL notice) while the repository is still private. Set

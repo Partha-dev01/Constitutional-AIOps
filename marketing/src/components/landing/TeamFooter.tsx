@@ -1,5 +1,5 @@
 import { GraduationCap, ArrowRight } from 'lucide-react'
-import { APP_URL } from '../../config'
+import { APP_URL, DOCS_SITE_URL } from '../../config'
 
 // Full page sitemap. Standalone content pages by their own URL; the live demo
 // stays a landing-section anchor (absolute, so it resolves from any page).
@@ -10,7 +10,7 @@ const SECTION_LINKS = [
   { href: '/benchmark.html', label: 'Benchmark' },
   { href: '/usecases.html', label: 'Use cases' },
   { href: '/faq.html', label: 'FAQ' },
-  { href: '/docs.html', label: 'Docs' },
+  { href: DOCS_SITE_URL, label: 'Docs' },
   { href: '/opensource.html', label: 'Open source' },
   { href: '/#live', label: 'Live demo' },
 ]

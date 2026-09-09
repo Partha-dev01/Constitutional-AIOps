@@ -1,17 +1,18 @@
 import { useEffect, useState } from 'react'
-import { APP_URL, SHOW_SELFHOST } from '../../config'
+import { APP_URL, SHOW_SELFHOST, DOCS_SITE_URL } from '../../config'
 
 // The Self-host page (/selfhost.html) ships only at the public-source flip, so
 // its nav link is added conditionally (SHOW_SELFHOST) to avoid pointing at a
 // page the private build never emits. Absolute paths so they resolve from any
-// content page, not only the landing. Docs is its own page (/docs.html).
+// content page, not only the landing. Docs points at the dedicated VitePress
+// docs site (DOCS_SITE_URL); the old /docs.html now redirects there.
 const ANCHORS = [
   { href: '/#features', label: 'Features' },
   { href: '/architecture.html', label: 'Architecture' },
   { href: '/safety.html', label: 'Safety' },
   { href: '/benchmark.html', label: 'Benchmark' },
   { href: '/#live', label: 'Live demo' },
-  { href: '/docs.html', label: 'Docs' },
+  { href: DOCS_SITE_URL, label: 'Docs' },
   ...(SHOW_SELFHOST ? [{ href: '/selfhost.html', label: 'Self-host' }] : []),
   { href: '/#about', label: 'About' },
 ]
