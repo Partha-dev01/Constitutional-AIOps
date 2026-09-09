@@ -1,18 +1,16 @@
 name: deploy-docs
 
 # Builds the VitePress docs site and publishes it to GitHub Pages.
-# Pages must be enabled with "Source: GitHub Actions" (repo Settings, Pages),
-# which requires the repository to be public (or a plan that allows private
-# Pages). Until then configure-pages fails on every run, so the push trigger is
-# disabled and this workflow is manual-only (same gating pattern as deploy.yml).
-# Re-enable the push trigger below once Pages is enabled at the public flip.
+# Pages is enabled with "Source: GitHub Actions" (done 2026-09-09, once the repo
+# went public). Auto-deploys on pushes to main that touch docs-site or this
+# workflow; workflow_dispatch stays as a manual override.
 
 on:
-  # push:
-  #   branches: [main]
-  #   paths:
-  #     - 'docs-site/**'
-  #     - '.github/workflows/deploy-docs.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'docs-site/**'
+      - '.github/workflows/deploy-docs.yml'
   workflow_dispatch:
 
 # Least-privilege by default; the deploy job elevates to exactly what Pages needs.
