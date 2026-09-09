@@ -4,6 +4,12 @@ Every proposed action passes a constitutional validator before it can run. The
 validator scores the action, and an authorization matrix decides what happens
 next. This is the core safety property of the system.
 
+![The Constitutional AI thresholds in Settings](/screenshots/settings.png)
+
+These thresholds live under
+[Settings → Constitutional AI](/features/settings#constitutional-ai). The
+sliders you see there map directly onto the table below.
+
 ## Authorization matrix
 
 | Confidence | Action | Human review |
@@ -24,6 +30,12 @@ the action, and its similarity to past incidents:
 ```
 C(a) = 0.4 · C_LLM + 0.35 · C_hist + 0.25 · C_sim
 ```
+
+![Confidence score on an incident](/screenshots/incidents.png)
+
+[Incidents](/features/incidents#how-confidence-connects-to-action) shows this
+score in practice: a high-confidence, low-risk analysis can move forward on
+its own, and an uncertain one waits for you.
 
 ## The twelve principles
 
@@ -56,3 +68,12 @@ Restart and scale remediation is off by default (`AIOPS_ENABLE_ACTION_TOOLS`).
 Even when enabled, an action still passes the validator and the authorization
 matrix, and uncertain actions queue for human approval rather than running. This
 means turning tools on does not turn off the safety gate.
+
+## Related
+
+- [MCP tools](/features/mcp#the-constitutional-gate-over-action-tools) shows
+  this gate applied to a real tool call, step by step.
+- [Settings](/features/settings#constitutional-ai) is where you tune the
+  thresholds and toggles above.
+- [Incidents and RCA](/features/incidents) is where the confidence score
+  shows up per incident.

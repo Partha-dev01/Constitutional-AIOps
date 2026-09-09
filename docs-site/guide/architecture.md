@@ -4,6 +4,17 @@ Constitutional AIOps has four parts: a dual-agent LLM pipeline, a constitutional
 safety framework, an optional graph-episodic memory, and human-in-the-loop
 approval.
 
+![The platform topology and assistant in Console](/screenshots/console.png)
+
+The topology graph above is rendered by [Console](/features/console). The same
+graph structure, with episodes and root causes layered on top, is what
+[Graph Explorer](/features/graph-explorer) visualizes in full.
+
+::: tip Full screenshot walkthrough
+This page explains how the pieces fit together. For every screen with its own
+tutorial, start at [Features and tutorials](/features/).
+:::
+
 ## Dual-agent pipeline
 
 Two logical agents split the work by latency and depth:

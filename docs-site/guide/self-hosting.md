@@ -3,6 +3,15 @@
 The lite profile is the recommended self-host. This page covers every option,
 TLS at the edge, and troubleshooting.
 
+![A self-hosted instance, both agents served locally](/screenshots/selfhost.png)
+
+That is what a running self-host looks like: both agents point at local
+ports (8000 and 8001 in the full GPU stack below) instead of a remote
+endpoint. For a screenshot walkthrough of every screen once it is up, see
+[Features and tutorials](/features/), especially
+[Infrastructure](/features/infrastructure) for the containers these compose
+files bring up.
+
 ## Deployment options
 
 | Option | LLM | GPU | Compose file | Best for |

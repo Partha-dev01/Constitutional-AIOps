@@ -5,6 +5,15 @@ two logical agents, a fast annotator and a reasoning agent. They may point at
 the same URL and model for a minimal single-endpoint setup, or at two separate
 endpoints for the dual-engine reference configuration.
 
+![The settings page](/screenshots/settings.png)
+
+Everything on this page has a home in the app too. Open **Settings** and pick
+the **Models** tab for the Models and endpoints card, covered in
+[Settings, Models and endpoints](/features/settings#models-and-endpoints).
+Once an endpoint answers, [Agent Hub](/features/agent-hub) shows the live
+effect: online status, latency, and a stream of what each agent actually
+processed.
+
 ## Minimal setup (one endpoint)
 
 ```bash

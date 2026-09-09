@@ -4,6 +4,18 @@ Constitutional AIOps is an autonomous infrastructure management system. It
 combines a dual-agent LLM pipeline, a constitutional safety framework, and an
 optional graph-episodic memory, with human approval for anything uncertain.
 
+![The dashboard after sign-in](/screenshots/dashboard.png)
+
+This is the Dashboard, the first screen you land on after signing in: live
+service status, agent latency, and a set of event-driven widgets.
+
+::: tip See every screen first
+[Features and tutorials](/features/) is a screenshot walkthrough of every
+screen in the app. Start with [Dashboard](/features/dashboard) and
+[Generative UI](/features/generative-ui), then come back here to set things
+up.
+:::
+
 ## The pieces
 
 - **Dual-agent pipeline.** A fast agent annotates and classifies telemetry. A

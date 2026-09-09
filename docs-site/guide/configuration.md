@@ -4,6 +4,16 @@ All configuration is environment-driven. Copy `.env.example` to `.env` and set
 what you need. The most important values are the LLM endpoint (see
 [Bring Your Own Endpoint](/guide/bring-your-own-endpoint)).
 
+![The settings page](/screenshots/settings.png)
+
+Most of the values below are also editable live in the running app under
+**Settings**. This page is the environment-variable source of truth used at
+boot. Settings is the day-to-day way to change the same values afterward,
+usually with no restart needed. The screenshot above shows the Constitutional
+AI tab, where `CONFIDENCE_THRESHOLD_AUTO` and `CONFIDENCE_THRESHOLD_APPROVAL`
+below become the Automatic Action Threshold and Approval Required Threshold
+sliders.
+
 ## Environment reference
 
 | Variable | Default | Description |
@@ -25,6 +35,24 @@ what you need. The most important values are the LLM endpoint (see
 | `CONFIDENCE_THRESHOLD_AUTO` | `0.90` | Auto-approve threshold |
 | `CONFIDENCE_THRESHOLD_APPROVAL` | `0.70` | Require-approval threshold |
 
+## Configuration and the UI
+
+Most rows in the table above have a live counterpart in
+[Settings](/features/settings): thresholds, remediation mode, notification
+channels, and the LLM endpoint itself are all editable there, and most
+changes apply without a restart.
+
+One thing has no environment variable at all: the per-user AI-widgets
+opt-in. The [Dashboard](/features/dashboard) ships with computed widgets
+(Blast-Radius Preview, Anomaly Scan, and others) that read your real
+telemetry in the browser and never call a model. A separate, opt-in layer
+lets a widget ask an LLM to explain a result it already computed. That layer
+is cost-fenced and always labelled as model-generated, never shown as
+measured telemetry. The opt-in toggle lives under **Settings, Account**, per
+user, not in `.env`. See [Generative UI](/features/generative-ui) for the
+full explanation of both layers and [Settings](/features/settings) for where
+to toggle it.
+
 ## Authentication
 
 Set `AUTH_REQUIRED=true` to gate the app behind the built-in session login, then
@@ -44,7 +72,8 @@ when you understand the blast radius.
 
 Even with tools enabled, actions pass the constitutional gate and the
 authorization matrix before anything runs. See
-[Constitutional Safety](/guide/safety).
+[Constitutional Safety](/guide/safety). [MCP tools](/features/mcp) lists
+these same two tools and shows the gate they pass through, live.
 
 ## Public self-service signup (hosted demo only)
 

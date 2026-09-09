@@ -3,6 +3,12 @@
 The Benchmark page has two jobs. One checks whether the model you configured is
 good enough for your telemetry. The other reproduces the research evaluation.
 
+![The Benchmark page](/screenshots/benchmark.png)
+
+For the full tab-by-tab walkthrough, see [Benchmark](/features/benchmark). For
+raw latency and determinism checks instead of accuracy scoring, see
+[Metrics](/features/metrics).
+
 ## Your setup
 
 The **Your setup** tab runs a few sample annotation and root cause cases through

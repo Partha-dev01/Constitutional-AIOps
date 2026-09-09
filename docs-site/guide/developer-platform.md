@@ -5,6 +5,13 @@ page describes the developer surface: what you can use today, and what is on the
 near-term roadmap. Anything not yet shipped is labeled as such, so nothing here is
 a promise you cannot check against the code.
 
+![The MCP tools page](/screenshots/mcp.png)
+
+The tool registry described below is the same one [MCP tools](/features/mcp)
+exposes directly: every tool, its parameters, and a way to run one yourself
+and read the result. [Agent Hub](/features/agent-hub) shows the two agents
+that call these tools day to day.
+
 ## Available today
 
 ### The REST API
