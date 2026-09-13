@@ -62,70 +62,71 @@ export default defineConfig({
       },
     ],
 
-    sidebar: {
-      '/features/': [
-        {
-          text: 'Features',
-          items: [{ text: 'All features', link: '/features/' }],
-        },
-        {
-          text: 'Observe',
-          items: [
-            { text: 'Dashboard', link: '/features/dashboard' },
-            { text: 'Generative UI', link: '/features/generative-ui' },
-            { text: 'Incidents and RCA', link: '/features/incidents' },
-            { text: 'Metrics', link: '/features/metrics' },
-            { text: 'Telemetry', link: '/features/telemetry' },
-          ],
-        },
-        {
-          text: 'Investigate',
-          items: [
-            { text: 'Graph Explorer', link: '/features/graph-explorer' },
-            { text: 'Console', link: '/features/console' },
-            { text: 'Chat and Assistant', link: '/features/chat' },
-          ],
-        },
-        {
-          text: 'Operate',
-          items: [
-            { text: 'Infrastructure', link: '/features/infrastructure' },
-            { text: 'MCP tools', link: '/features/mcp' },
-            { text: 'Agent Hub', link: '/features/agent-hub' },
-            { text: 'Settings', link: '/features/settings' },
-          ],
-        },
-        {
-          text: 'Evaluate',
-          items: [{ text: 'Benchmark', link: '/features/benchmark' }],
-        },
-      ],
-      '/guide/': [
-        {
-          text: 'Getting Started',
-          items: [
-            { text: 'Overview', link: '/guide/getting-started' },
-            { text: 'Self-Hosting', link: '/guide/self-hosting' },
-            { text: 'Bring Your Own Endpoint', link: '/guide/bring-your-own-endpoint' },
-            { text: 'Configuration', link: '/guide/configuration' },
-          ],
-        },
-        {
-          text: 'Concepts',
-          items: [
-            { text: 'Architecture', link: '/guide/architecture' },
-            { text: 'Constitutional Safety', link: '/guide/safety' },
-            { text: 'Benchmarking', link: '/guide/benchmarking' },
-          ],
-        },
-        {
-          text: 'Build',
-          items: [
-            { text: 'Developer Platform', link: '/guide/developer-platform' },
-          ],
-        },
-      ],
-    },
+    // One unified sidebar shown on every page, so navigation never swaps out
+    // from under you. Grouped Getting Started -> Concepts -> Features -> Build;
+    // the Features subsections are nested and collapsible.
+    sidebar: [
+      {
+        text: 'Getting Started',
+        items: [
+          { text: 'Overview', link: '/guide/getting-started' },
+          { text: 'Self-Hosting', link: '/guide/self-hosting' },
+          { text: 'Bring Your Own Endpoint', link: '/guide/bring-your-own-endpoint' },
+          { text: 'Configuration', link: '/guide/configuration' },
+        ],
+      },
+      {
+        text: 'Concepts',
+        items: [
+          { text: 'Architecture', link: '/guide/architecture' },
+          { text: 'Constitutional Safety', link: '/guide/safety' },
+          { text: 'Benchmarking', link: '/guide/benchmarking' },
+        ],
+      },
+      {
+        text: 'Features',
+        items: [
+          { text: 'All features', link: '/features/' },
+          {
+            text: 'Observe',
+            collapsed: false,
+            items: [
+              { text: 'Dashboard', link: '/features/dashboard' },
+              { text: 'Generative UI', link: '/features/generative-ui' },
+              { text: 'Incidents and RCA', link: '/features/incidents' },
+              { text: 'Metrics', link: '/features/metrics' },
+              { text: 'Telemetry', link: '/features/telemetry' },
+            ],
+          },
+          {
+            text: 'Investigate',
+            collapsed: false,
+            items: [
+              { text: 'Graph Explorer', link: '/features/graph-explorer' },
+              { text: 'Console', link: '/features/console' },
+              { text: 'Chat and Assistant', link: '/features/chat' },
+            ],
+          },
+          {
+            text: 'Operate',
+            collapsed: false,
+            items: [
+              { text: 'Infrastructure', link: '/features/infrastructure' },
+              { text: 'MCP tools', link: '/features/mcp' },
+              { text: 'Agent Hub', link: '/features/agent-hub' },
+              { text: 'Settings', link: '/features/settings' },
+            ],
+          },
+          { text: 'Benchmark', link: '/features/benchmark' },
+        ],
+      },
+      {
+        text: 'Build',
+        items: [
+          { text: 'Developer Platform', link: '/guide/developer-platform' },
+        ],
+      },
+    ],
 
     socialLinks: [{ icon: 'github', link: REPO }],
     search: { provider: 'local' },
