@@ -198,7 +198,7 @@ export function TopologySchemaEditor({
       const c = (await res.json()) as { fastApiKeySet?: boolean; reasoningApiKeySet?: boolean }
       setLlmKey('')
       setLlmKeySet(Boolean(c.reasoningApiKeySet || c.fastApiKeySet))
-      setNotice('LLM endpoint saved — the AI generator will use it.')
+      setNotice('LLM endpoint saved. The AI generator will use it.')
       setTimeout(() => setNotice(null), 5000)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save the LLM endpoint')
@@ -228,7 +228,7 @@ export function TopologySchemaEditor({
       setIsPreview(true)
       setNotice(
         data.note ??
-          'Preview generated — review the JSON below, then click Apply to make it the live topology.',
+          'Preview generated. Review the JSON below, then click Apply to make it the live topology.',
       )
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Generation failed')
@@ -248,7 +248,7 @@ export function TopologySchemaEditor({
       setIsPreview(true)
       setNotice(
         data.note ??
-          'Preview generated from your services — review the JSON below, then click Apply to make it the live topology.',
+          'Preview generated from your services. Review the JSON below, then click Apply to make it the live topology.',
       )
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Generation failed')
@@ -275,7 +275,7 @@ export function TopologySchemaEditor({
       setIsPreview(true)
       setNotice(
         data.note ??
-          'Synced from live infrastructure — review the JSON below, then click Apply to make it the live topology.',
+          'Synced from live infrastructure. Review the JSON below, then click Apply to make it the live topology.',
       )
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Sync failed')
@@ -308,7 +308,7 @@ export function TopologySchemaEditor({
         return
       }
       setDoc((await res.json()) as SchemaDoc)
-      setNotice('Applied — the platform topology now uses this custom schema.')
+      setNotice('Applied. The platform topology now uses this custom schema.')
       onApplied?.()
       setTimeout(() => setNotice(null), 6000)
     } catch (err) {
@@ -393,8 +393,8 @@ export function TopologySchemaEditor({
           <RefreshCw className="h-5 w-5 text-primary" /> Sync from live infrastructure
         </h2>
         <p className="text-sm text-muted-foreground mb-3">
-          Snapshot what is actually running on this host — the services with a live container and any
-          discovered remote hosts — into an editable schema. Shown as a preview; nothing changes until
+          Snapshot what is actually running on this host (the services with a live container and any
+          discovered remote hosts) into an editable schema. Shown as a preview; nothing changes until
           you click Apply. Use this to make the Command Center graph match a lite or custom deployment.
         </p>
         <button
@@ -428,7 +428,7 @@ export function TopologySchemaEditor({
         </div>
         <p className="text-sm text-muted-foreground mb-3">
           Describe the architecture you want. Your reasoning model drafts a schema; it is
-          validated against the strict shape and shown as a preview below — nothing changes until you
+          validated against the strict shape and shown as a preview below. Nothing changes until you
           click Apply.
         </p>
 
@@ -442,7 +442,7 @@ export function TopologySchemaEditor({
             </p>
             <p className="text-xs text-muted-foreground mt-0.5 mb-3">
               AI generation runs on your reasoning model. Set its OpenAI-compatible endpoint and API
-              key first{llmKeySet ? ' — an API key is already saved (leave blank to keep it).' : '.'}
+              key first{llmKeySet ? '. An API key is already saved (leave blank to keep it).' : '.'}
             </p>
             <div className="grid gap-2 sm:grid-cols-2">
               <input

@@ -220,7 +220,7 @@ export function SchemaCanvas({
       ref={svgRef}
       data-testid="schema-canvas"
       role="application"
-      aria-label="Service topology diagram — use Tab to move between nodes, Enter or Space to select"
+      aria-label="Service topology diagram. Use Tab to move between nodes, Enter or Space to select"
       className="block h-full w-full touch-none select-none"
       style={{ height }}
       viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`}

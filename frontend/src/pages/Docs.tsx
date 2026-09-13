@@ -170,8 +170,8 @@ export function Docs() {
 
           <H2 id="monitoring">Connect monitoring</H2>
           <P>
-            Under <Code>Settings → Telemetry</Code> you can connect your observability sources —
-            Loki for logs, Prometheus for metrics and Tempo for traces — by URL, and the setup
+            Under <Code>Settings → Telemetry</Code> you can connect your observability sources
+            (Loki for logs, Prometheus for metrics and Tempo for traces) by URL, and the setup
             wizard live-tests each one.
           </P>
           <P>
@@ -222,7 +222,7 @@ export function Docs() {
 
           <H2 id="api">Interactive API reference</H2>
           <P>
-            Every endpoint the UI uses is documented in a live Swagger / OpenAPI console — try
+            Every endpoint the UI uses is documented in a live Swagger / OpenAPI console. Try
             calls, read the schemas and script your own automation against your instance.
           </P>
           <div className="mb-4 flex flex-col items-start gap-4 rounded-xl border border-border bg-card/60 p-6 sm:flex-row sm:items-center sm:justify-between">

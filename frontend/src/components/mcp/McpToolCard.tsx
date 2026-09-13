@@ -87,13 +87,13 @@ export function McpToolCard({ tool, selected, onSelect }: McpToolCardProps) {
           <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{tool.description}</p>
           {disabled && (
             <p className="mt-1.5 text-xs text-yellow-500">
-              Gated off — set {tool.gated_by ?? 'AIOPS_ENABLE_ACTION_TOOLS'}=true on the backend to enable
+              Gated off: set {tool.gated_by ?? 'AIOPS_ENABLE_ACTION_TOOLS'}=true on the backend to enable
             </p>
           )}
           {!disabled && action && (
             <p className="mt-1.5 flex items-center gap-1 text-xs text-orange-500">
               <ShieldCheck className="h-3 w-3" />
-              Constitutionally gated — every call is validated before execution
+              Constitutionally gated: every call is validated before execution
             </p>
           )}
         </div>

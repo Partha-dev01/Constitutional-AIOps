@@ -139,8 +139,8 @@ export function AskAiPanel({ selection, onRemoveSelection, windowHours, maxHeigh
           </div>
         ) : (
           <p className="text-[11px] leading-snug text-slate-500">
-            Click a service to inspect it, then <span className="text-slate-400">Add to Ask AI</span> —
-            or Ctrl-click services and links — to add them here as context for the assistant.
+            Click a service to inspect it, then <span className="text-slate-400">Add to Ask AI</span>.
+            Or Ctrl-click services and links to add them here as context for the assistant.
           </p>
         )}
       </div>

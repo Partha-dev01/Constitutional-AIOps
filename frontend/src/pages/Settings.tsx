@@ -103,11 +103,11 @@ const DEFAULT_REMEDIATION: RemediationSettings = {
 // Helper copy for each remediation mode.
 const REMEDIATION_MODE_HELP: Record<RemediationMode, string> = {
   diagnose:
-    'Diagnose only — the AI investigates and explains, but never proposes or runs a fix.',
+    'Diagnose only. The AI investigates and explains, but never proposes or runs a fix.',
   approve:
-    'Approve to run — the AI proposes a fix in chat; nothing executes until you click Approve.',
+    'Approve to run. The AI proposes a fix in chat; nothing executes until you click Approve.',
   auto:
-    'Auto-remediate — allowlisted, high-confidence fixes execute automatically once they pass the constitution; everything else still asks for approval.',
+    'Auto-remediate. Allowlisted, high-confidence fixes execute automatically once they pass the constitution; everything else still asks for approval.',
 }
 
 // The mutating action tools an operator can allow to run autonomously.
@@ -365,7 +365,7 @@ export function Settings() {
       setSaved(true)
       setTimeout(() => setSaved(false), 2500)
     } catch {
-      setSaveError('Save failed — backend unavailable. Changes are shown in UI but not persisted.')
+      setSaveError('Save failed. Backend unavailable. Changes are shown in UI but not persisted.')
       setTimeout(() => setSaveError(null), 4000)
     } finally {
       setSaving(false)
@@ -1317,12 +1317,12 @@ export function Settings() {
 
 const SERVING_MODE_INFO: Record<1 | 2, { title: string; description: string }> = {
   1: {
-    title: 'Mode 1 — Dual engine',
+    title: 'Mode 1: Dual engine',
     description:
       'Qwen3-4B (fast) + Qwen3-14B (reasoning) on dedicated engines. The frozen research-paper configuration.',
   },
   2: {
-    title: 'Mode 2 — Modernized stack',
+    title: 'Mode 2: Modernized stack',
     description:
       'Single engine serving both agent roles via the mode-2 overlay, with streaming / guided JSON / priority scheduling as those phases land.',
   },
@@ -1441,8 +1441,8 @@ function ServingModeCard() {
         )}
       </div>
       <p className="text-sm text-muted-foreground mb-4">
-        Which LLM serving stack backs the agents. Swapping restarts the engines —
-        chat and analysis are unavailable for ~3–5 minutes while it runs.
+        Which LLM serving stack backs the agents. Swapping restarts the engines.
+        Chat and analysis are unavailable for ~3–5 minutes while it runs.
       </p>
 
       <div
@@ -1517,8 +1517,8 @@ function ServingModeCard() {
           <Loader2 className="h-4 w-4 mt-0.5 animate-spin shrink-0" />
           <span>
             {unreachable
-              ? 'Swapping — the backend is restarting; reconnecting…'
-              : `Swap ${targetMode !== null ? `to Mode ${targetMode} ` : ''}in progress — engines are restarting (~3–5 min). This page keeps polling.`}
+              ? 'Swapping. The backend is restarting; reconnecting…'
+              : `Swap ${targetMode !== null ? `to Mode ${targetMode} ` : ''}in progress. Engines are restarting (~3–5 min). This page keeps polling.`}
           </span>
         </div>
       )}
@@ -1632,7 +1632,7 @@ function LlmEndpointsCard({ health }: { health: HealthResponse | null }) {
         c.fastAgentUrl === c.reasoningAgentUrl && c.fastAgentModel === c.reasoningAgentModel,
       )
     } catch {
-      setError('Could not load the LLM endpoint configuration — is the backend running?')
+      setError('Could not load the LLM endpoint configuration. Is the backend running?')
     } finally {
       setLoading(false)
     }
@@ -1671,7 +1671,7 @@ function LlmEndpointsCard({ health }: { health: HealthResponse | null }) {
       setError(
         err instanceof Error
           ? err.message
-          : 'Save failed — only an admin can change the LLM endpoints.',
+          : 'Save failed. Only an admin can change the LLM endpoints.',
       )
     } finally {
       setSaving(false)
@@ -1712,7 +1712,7 @@ function LlmEndpointsCard({ health }: { health: HealthResponse | null }) {
           {loading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
         </div>
         <p className="text-sm text-muted-foreground mb-4">
-          Bring your own OpenAI-compatible endpoint. Saved changes apply live — no restart.
+          Bring your own OpenAI-compatible endpoint. Saved changes apply live with no restart.
         </p>
 
         {error && (
@@ -1735,7 +1735,7 @@ function LlmEndpointsCard({ health }: { health: HealthResponse | null }) {
 
           <div>
             <label className="block text-xs font-medium text-muted-foreground mb-1">
-              {sameEndpoint ? 'Endpoint URL' : 'Fast agent — endpoint URL'}
+              {sameEndpoint ? 'Endpoint URL' : 'Fast agent endpoint URL'}
             </label>
             <input
               type="url"
@@ -1747,7 +1747,7 @@ function LlmEndpointsCard({ health }: { health: HealthResponse | null }) {
           </div>
           <div>
             <label className="block text-xs font-medium text-muted-foreground mb-1">
-              {sameEndpoint ? 'Model name' : 'Fast agent — model name'}
+              {sameEndpoint ? 'Model name' : 'Fast agent model name'}
             </label>
             <input
               type="text"
@@ -1762,7 +1762,7 @@ function LlmEndpointsCard({ health }: { health: HealthResponse | null }) {
             <>
               <div>
                 <label className="block text-xs font-medium text-muted-foreground mb-1">
-                  Reasoning agent — endpoint URL
+                  Reasoning agent endpoint URL
                 </label>
                 <input
                   type="url"
@@ -1774,7 +1774,7 @@ function LlmEndpointsCard({ health }: { health: HealthResponse | null }) {
               </div>
               <div>
                 <label className="block text-xs font-medium text-muted-foreground mb-1">
-                  Reasoning agent — model name
+                  Reasoning agent model name
                 </label>
                 <input
                   type="text"
@@ -1796,7 +1796,7 @@ function LlmEndpointsCard({ health }: { health: HealthResponse | null }) {
               type="password"
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
-              placeholder={keyIsSet ? '•••••••• (leave blank to keep)' : 'Optional — for a secured endpoint'}
+              placeholder={keyIsSet ? '•••••••• (leave blank to keep)' : 'Optional (for a secured endpoint)'}
               autoComplete="off"
               className={inputClass}
             />
@@ -2029,7 +2029,7 @@ function RemoteAlertingCard() {
     try {
       applyConfig(await api.settings.getAlerting())
     } catch {
-      setError('Could not load remote alerting settings — admin only, and the backend must be running.')
+      setError('Could not load remote alerting settings. Admin only, and the backend must be running.')
     } finally {
       setLoading(false)
     }
@@ -2066,7 +2066,7 @@ function RemoteAlertingCard() {
       setSaved(true)
       setTimeout(() => setSaved(false), 2500)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Save failed — only an admin can change remote alerting.')
+      setError(err instanceof Error ? err.message : 'Save failed. Only an admin can change remote alerting.')
     } finally {
       setSaving(false)
     }
@@ -2361,7 +2361,7 @@ function RemoteAlertingCard() {
           {saved ? 'Saved!' : 'Save alerting'}
         </button>
         <p className="text-xs text-muted-foreground">
-          Send test uses the last saved config — save before testing edited values.
+          Send test uses the last saved config. Save before testing edited values.
         </p>
       </div>
     </div>

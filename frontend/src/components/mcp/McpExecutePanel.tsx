@@ -129,7 +129,7 @@ export function McpExecutePanel({ tool }: McpExecutePanelProps) {
             </span>
             <p className="text-sm font-medium">Select a tool to execute</p>
             <p className="mt-1 max-w-[240px] text-center text-xs">
-              Pick a tool from the list — its parameters and results appear here.
+              Pick a tool from the list. Its parameters and results appear here.
             </p>
           </div>
         ) : (

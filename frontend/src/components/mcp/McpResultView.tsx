@@ -377,7 +377,7 @@ function VerdictBlock({ verdict }: { verdict: ConstitutionalVerdict }) {
                 {v.principle_id ?? 'principle'}
               </span>
               {v.principle_name && <span className="text-red-500"> {v.principle_name}</span>}
-              {v.reason && <span className="text-muted-foreground"> — {v.reason}</span>}
+              {v.reason && <span className="text-muted-foreground">: {v.reason}</span>}
             </div>
           ))}
         </div>
@@ -446,7 +446,7 @@ export function McpResultView({ toolName, result }: McpResultViewProps) {
           <div className="p-3 bg-amber-500/10 border border-amber-500/25 rounded-lg">
             <p className="text-sm font-medium text-amber-600 flex items-center gap-1.5">
               <ShieldAlert className="h-4 w-4 shrink-0" />
-              Human approval required — not executed
+              Human approval required: not executed
             </p>
             <p className="text-xs text-amber-600/90 mt-1">
               {result.error || 'The constitutional validator requires a human to approve this action.'}

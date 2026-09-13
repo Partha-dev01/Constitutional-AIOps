@@ -470,7 +470,7 @@ export function Console() {
                 </Suspense>
               </div>
               <p className="mt-1.5 flex shrink-0 flex-wrap items-center gap-x-2 gap-y-1 text-[11px] leading-snug text-muted-foreground/80">
-                <span>Episodic memory — pick an incident to see its root cause and the services it touched</span>
+                <span>Episodic memory: pick an incident to see its root cause and the services it touched</span>
                 <span className="inline-flex items-center gap-1 rounded-md border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-primary">
                   <kbd className="rounded-sm border border-primary/40 bg-background/60 px-1 font-sans text-[10px] font-semibold">Ctrl</kbd>
                   <span>+ click a node → attach to chat</span>
@@ -560,7 +560,7 @@ export function Console() {
       {/* Narrow-viewport hint: the cockpit stacks vertically below lg. */}
       <p className="flex shrink-0 items-center gap-1.5 text-[11px] text-muted-foreground/60 lg:hidden">
         <AlertTriangle className="h-3 w-3" />
-        Best viewed on a wider screen — panes stack on narrow viewports.
+        Best viewed on a wider screen. Panes stack on narrow viewports.
       </p>
     </div>
   )

@@ -427,7 +427,7 @@ export default function SchemaGraph({ height = 520, embedded = false, onSelectio
           </span>
           {data.stats.episodes_in_window === 0 && (
             <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-amber-300">
-              No episodes in this window — static architecture view
+              No episodes in this window: static architecture view
             </span>
           )}
         </div>

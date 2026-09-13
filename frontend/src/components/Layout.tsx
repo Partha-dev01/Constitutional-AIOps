@@ -272,7 +272,7 @@ export function Layout({ children }: LayoutProps) {
             {landingUrl ? (
               <a
                 href={landingUrl}
-                aria-label="Constitutional AIOps — landing page"
+                aria-label="Constitutional AIOps landing page"
                 className="flex min-w-0 items-center gap-2 rounded-md focus:outline-hidden focus:ring-2 focus:ring-primary/40"
               >
                 <img src={`${import.meta.env.BASE_URL}logo-mark.png`} alt="" aria-hidden="true" className="h-9 w-9 shrink-0" />
@@ -284,7 +284,7 @@ export function Layout({ children }: LayoutProps) {
             ) : (
               <Link
                 to="/"
-                aria-label="Constitutional AIOps — home"
+                aria-label="Constitutional AIOps home"
                 className="flex min-w-0 items-center gap-2 rounded-md focus:outline-hidden focus:ring-2 focus:ring-primary/40"
               >
                 <img src={`${import.meta.env.BASE_URL}logo-mark.png`} alt="" aria-hidden="true" className="h-9 w-9 shrink-0" />
@@ -381,7 +381,7 @@ export function Layout({ children }: LayoutProps) {
             <button
               type="button"
               onClick={() => { void handleLogout() }}
-              title={`Signed in as ${user.username} — log out`}
+              title={`Signed in as ${user.username}. Log out`}
               aria-label={`Signed in as ${user.username}. Log out`}
               className="flex items-center justify-center rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus:outline-hidden focus:ring-2 focus:ring-primary/40"
             >
@@ -410,7 +410,7 @@ export function Layout({ children }: LayoutProps) {
 
         {isRail ? (
           <span
-            title={`${healthLabel} — Fast Agent ${fastAgentOnline ? 'online' : 'offline'}, Reasoning Agent ${reasoningAgentOnline ? 'online' : 'offline'}`}
+            title={`${healthLabel}. Fast Agent ${fastAgentOnline ? 'online' : 'offline'}, Reasoning Agent ${reasoningAgentOnline ? 'online' : 'offline'}`}
             aria-label={healthLabel}
           >
             <Activity className={cn('h-5 w-5', systemHealthy ? 'text-green-500' : 'text-red-500')} aria-hidden="true" />

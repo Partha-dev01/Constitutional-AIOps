@@ -365,7 +365,7 @@ function TopologyStep() {
       ? {
           label: 'Generate from your services',
           description:
-            'Build a dependency map from the services you listed. Shown as a preview — nothing changes until you click Apply.',
+            'Build a dependency map from the services you listed. Shown as a preview; nothing changes until you click Apply.',
           run: () => api.topology.generateFromServices({ services: cleaned, mode: 'template' }),
         }
       : undefined
@@ -623,7 +623,7 @@ function LlmStep({
     }
   }
 
-  const keyPlaceholder = cfg?.reasoningApiKeySet || cfg?.fastApiKeySet ? 'Key set — leave blank to keep it' : 'sk-… (optional)'
+  const keyPlaceholder = cfg?.reasoningApiKeySet || cfg?.fastApiKeySet ? 'Key set (leave blank to keep it)' : 'sk-… (optional)'
 
   return (
     <div className="space-y-6">
@@ -685,7 +685,7 @@ function LlmStep({
             onChange={setApiKey}
             type="password"
             placeholder={keyPlaceholder}
-            hint="Sent as an Authorization: Bearer header. Write-only — it is never shown back."
+            hint="Sent as an Authorization: Bearer header. Write-only. It is never shown back."
           />
 
           <div className="flex flex-wrap items-center gap-2">
@@ -716,7 +716,7 @@ function LlmStep({
             </div>
           )}
           {showTest && (
-            <p className="text-xs text-muted-foreground">Test checks the currently saved endpoints — save first to test new values.</p>
+            <p className="text-xs text-muted-foreground">Test checks the currently saved endpoints. Save first to test new values.</p>
           )}
         </div>
       )}
@@ -890,7 +890,7 @@ function MonitoringStep() {
             </button>
           </div>
           <p className="text-xs text-muted-foreground">
-            No telemetry yet? Leave these blank and skip — the assistant still works, it just has less
+            No telemetry yet? Leave these blank and skip. The assistant still works, it just has less
             evidence to draw on.
           </p>
         </div>
@@ -1275,7 +1275,7 @@ function ByokOnlySetup() {
           <h1 className="text-xl font-semibold tracking-tight">Connect your LLM endpoint</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Constitutional AIOps runs on your own OpenAI-compatible model. Point it at your
-            endpoint and key to start — chat and analysis use this, and the key is stored encrypted
+            endpoint and key to start. Chat and analysis use this, and the key is stored encrypted
             for your account only.
           </p>
         </div>

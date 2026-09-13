@@ -103,7 +103,7 @@ export function ActiveIncidentsPanel({ className = '', onOpenInChat, onCountChan
         result: {
           ok: res.success,
           text: res.success
-            ? `Remediated — ${res.method === 'demo_heal' ? 'fault healed on host' : 'service restarted via the constitutional gate'}.`
+            ? `Remediated: ${res.method === 'demo_heal' ? 'fault healed on host' : 'service restarted via the constitutional gate'}.`
             : `Declined${res.error_code ? ` (${res.error_code})` : ''}. ${res.detail ?? ''}`.trim(),
         },
       })
@@ -168,7 +168,7 @@ export function ActiveIncidentsPanel({ className = '', onOpenInChat, onCountChan
       ) : incidents.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-8 text-center text-sm text-muted-foreground">
           <ShieldCheck className="h-6 w-6 mb-2 text-green-500" />
-          No active incidents — all clear.
+          No active incidents. All clear.
         </div>
       ) : (
         <ul className="space-y-3">

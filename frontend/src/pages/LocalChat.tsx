@@ -122,7 +122,7 @@ export function LocalChat() {
         <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
         <p>
           Runs entirely in your browser on WebGPU. The model downloads once (then it is
-          cached) and every message is processed on your device — nothing is sent to our
+          cached) and every message is processed on your device. Nothing is sent to our
           servers. Small local models are slower and far less capable than a configured
           endpoint; treat this as a preview.
         </p>

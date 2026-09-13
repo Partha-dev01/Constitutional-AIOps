@@ -278,7 +278,7 @@ function AccessTokensCard() {
         <div className="mb-4 rounded-lg border border-green-500/30 bg-green-500/10 p-3">
           <div className="mb-2 flex items-center gap-2 text-sm font-medium text-green-700">
             <CheckCircle className="h-4 w-4 shrink-0" />
-            Copy your token now — it will not be shown again.
+            Copy your token now. It will not be shown again.
           </div>
           <div className="flex items-center gap-2">
             <code className="flex-1 overflow-x-auto rounded-md border border-border bg-background px-2 py-1.5 text-xs">

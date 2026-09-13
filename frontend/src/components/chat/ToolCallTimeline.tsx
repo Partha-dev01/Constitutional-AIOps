@@ -217,7 +217,7 @@ export function ToolCallTimeline({ steps, reducedMotionFallbackText }: ToolCallT
                         </div>
                       ) : step.status === 'error' ? (
                         <p className="text-red-600 dark:text-red-400 italic">
-                          This step did not complete — the request failed or timed out.
+                          This step did not complete. The request failed or timed out.
                         </p>
                       ) : step.status === 'done' ? null : (
                         <p className="text-muted-foreground italic">Waiting for response…</p>

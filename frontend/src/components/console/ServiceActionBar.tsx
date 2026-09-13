@@ -138,7 +138,7 @@ export function ServiceActionBar({ onAction }: ServiceActionBarProps) {
         <button
           type="button"
           onClick={() => fire(RESTART_ACTION)}
-          title="Prefills a restart request — sending it still goes through the constitutional approval card and the container whitelist."
+          title="Prefills a restart request. Sending it still goes through the constitutional approval card and the container whitelist."
           className="inline-flex items-center gap-1 rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-xs text-amber-600 transition-colors hover:bg-amber-500/20 dark:text-amber-400"
         >
           <RESTART_ACTION.Icon className="h-3 w-3" />

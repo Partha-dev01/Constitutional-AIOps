@@ -106,7 +106,7 @@ function SchemaNodeInner({
       data-testid={`schema-node-${node.id}`}
       role="button"
       tabIndex={0}
-      aria-label={`${node.label} — ${node.kind}${node.health ? `, ${node.health}` : ''}`}
+      aria-label={`${node.label}: ${node.kind}${node.health ? `, ${node.health}` : ''}`}
       aria-pressed={selected}
       onClick={(e) => {
         e.stopPropagation()

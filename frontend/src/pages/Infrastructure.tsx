@@ -691,7 +691,7 @@ export function Infrastructure() {
           </h2>
           <p className="text-sm text-muted-foreground">
             Run one Grafana Alloy agent on any Linux Docker host to ship its container
-            logs, metrics, and traces into this stack. Onboard the host once — all its
+            logs, metrics, and traces into this stack. Onboard the host once. All its
             containers (current and future) appear automatically.
           </p>
         </div>
@@ -773,7 +773,7 @@ export function Infrastructure() {
                 className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-hidden focus:ring-2 focus:ring-primary"
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Session-only — never stored or sent anywhere. Must match the server&apos;s ingest credential.
+                Session-only. Never stored or sent anywhere. Must match the server&apos;s ingest credential.
               </p>
             </div>
           </div>
@@ -859,7 +859,7 @@ export function Infrastructure() {
           {verifyState === 'not-yet' && (
             <div className="p-2.5 bg-yellow-500/10 text-yellow-600 rounded-lg text-sm">
               No telemetry seen for this edge label yet. Give the agent ~30s after starting,
-              then check again — or confirm in Grafana directly.
+              then check again or confirm in Grafana directly.
             </div>
           )}
 
@@ -905,7 +905,7 @@ export function Infrastructure() {
                 Demo / Chaos
               </h3>
               <p className="text-sm text-muted-foreground mt-0.5">
-                Inject faults into the demo target, then heal them — to showcase AI remediation.
+                Inject faults into the demo target, then heal them to showcase AI remediation.
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -941,7 +941,7 @@ export function Infrastructure() {
               className="flex items-start gap-2 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg text-sm text-yellow-700"
             >
               <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
-              <span>Agent unreachable — set the t3 target URL below and Save.</span>
+              <span>Agent unreachable. Set the t3 target URL below and Save.</span>
             </div>
           )}
 

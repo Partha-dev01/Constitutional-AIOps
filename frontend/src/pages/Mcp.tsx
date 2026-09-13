@@ -67,7 +67,7 @@ export function Mcp() {
         <div className="min-w-0">
           <h1 className="text-2xl font-bold">MCP Tools</h1>
           <p className="text-xs text-muted-foreground">
-            The platform's tool surface — read-only queries run directly; action tools pass
+            The platform's tool surface: read-only queries run directly; action tools pass
             constitutional validation first.
           </p>
         </div>
