@@ -42,6 +42,22 @@ yourself and see exactly what it returns.
    blocked, or needs human approval.
 6. **Check the history strip** to see what you have run this session.
 
+## What a run looks like
+
+![The MCP page with a read-only analyze_logs tool selected and executed. The result and its timing show on the right with an execution-history strip, while the two action tools sit locked in the list](/screenshots/mcp-tool-execute.png)
+
+Selecting a read-only tool loads it into the execute panel on the right.
+`analyze_logs` runs the moment you click Execute, and the result comes back
+with its timing and lands in the execution-history strip marked `ok`. In the
+list on the left, `restart_service` and `scale_service` are locked with a
+lock icon and a "Gated off" note, since `AIOPS_ENABLE_ACTION_TOOLS` is not
+set here. The header counts them too, next to a `gated` badge. That is the
+kill-switch layer of the gate, visible before you even open a tool.
+
+The demo exposes six tools here, four read/analysis plus the two gated action
+tools. A full backend ships the eight described next, with the same two action
+tools gated off until you enable them.
+
 ## The built-in tools
 
 Eight tools ship by default. Six are read/analysis tools with no gating:

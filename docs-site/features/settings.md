@@ -54,6 +54,14 @@ changes survive a restart.
 
 ## Remediation
 
+![The Remediation tab with the Diagnose, Approve, and Auto mode selector set to Approve, an auto-execute confidence slider, a require-telemetry-evidence toggle, and the restart_service and scale_service allowlist](/screenshots/settings-remediation.png)
+
+The mode selector reads back what each choice means as you pick it, so the
+line under the buttons changes with the mode. The Auto-execute Confidence
+slider and the autonomous action tools only bite in Auto mode. Left
+unchecked, `restart_service` and `scale_service` always route through an
+Approve or Reject card in chat no matter which mode is set.
+
 - **A three-way mode selector**: Diagnose (investigates and explains, never
   proposes or runs a fix), Approve (proposes a fix in chat, nothing executes
   until you click Approve), and Auto (allowlisted, high-confidence fixes
@@ -115,6 +123,20 @@ take effect on the next backend restart or collector reload.
 ## Models and endpoints
 
 Two cards: Serving Mode (only for local engines) and LLM Endpoints.
+
+![The Serving Mode card with Mode 1 dual engine selected, a Mode 2 modernized-stack option, a Mode 1 active badge, and a note on how the host-side swap works](/screenshots/settings-serving-mode.png)
+
+The Serving Mode card marks the live mode with an active badge and explains
+the swap plainly: the toggle writes a request that a host-side watcher runs
+via a swap script, since the backend has no Docker access of its own. Both
+modes share the same data stores, so a swap migrates nothing.
+
+![The LLM Endpoints card with a fast agent URL and model, a reasoning agent URL and model, a shared-endpoint checkbox, an optional write-only API key, and Save and Test connection buttons](/screenshots/settings-models.png)
+
+The LLM Endpoints card is the bring-your-own configuration. Each agent takes
+a URL and a model name, the checkbox reuses one endpoint for both, and the
+API key is optional and write-only. This is the same card a self-host admin
+and a per-user tenant both use for their own endpoint.
 
 - **Serving Mode** only renders when the fast agent's endpoint resolves to
   `localhost`/`127.0.0.1`, since remote or bring-your-own endpoints have no

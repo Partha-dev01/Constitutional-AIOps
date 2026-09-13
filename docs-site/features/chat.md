@@ -17,6 +17,9 @@ cockpit, so what you learn here applies there too.
   reply.
 - **A history sidebar** listing prior conversations so you can pick one back up.
 - **Suggested prompts** to get started when you are not sure what to ask.
+- **Live service cards** on the empty state, one per service in your topology,
+  each with a live CPU sparkline. Clicking a card prefills a scoped "diagnose
+  this service" question rather than sending it, so you stay in control.
 
 ## How to use it
 
@@ -28,6 +31,28 @@ cockpit, so what you learn here applies there too.
    restating everything.
 4. **Reopen a past thread** from the history sidebar to continue where you left
    off.
+
+## What an answer contains
+
+![A chat answer with its tool-call timeline, confidence score, suggested actions, and related incidents](/screenshots/chat-answer.png)
+
+A reply is more than a block of text. The assistant shows its work:
+
+- **A tool-call timeline** at the top of the answer. Each step names the tool it
+  ran and the result, so you see the telemetry query, the similar-incident
+  lookup, and the reasoning pass that produced the answer. On a streaming
+  endpoint these fill in as they happen, so a long answer is never a blank wait.
+- **A confidence bar**, scored and labeled. This is the same score the
+  authorization matrix reads, so a low reading is your cue to look closer before
+  acting.
+- **Suggested actions** you can send as the next question in one click. They fill
+  the composer and never fire on their own.
+- **Related incidents** the answer drew on, linked so you can open the full
+  record.
+
+The answer above is grounded in the demo's own data: it names the critical
+incident, its root cause, and the remediation waiting for approval, rather than
+answering from generic knowledge.
 
 ## The constitutional gate is in the loop
 

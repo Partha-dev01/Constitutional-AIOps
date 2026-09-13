@@ -30,6 +30,28 @@ concluded, and how sure it was. It is where root-cause analysis lands.
    closer, not to auto-approve.
 4. **Export the filtered set** as CSV or JSON for a report or a hand-off.
 
+## Inside an incident
+
+![An incident detail panel with its root-cause analysis, causal chain, and a numbered remediation plan](/screenshots/incident-detail.png)
+
+Opening an incident shows the full record in one panel:
+
+- **The header facts**: status, severity, category, when it was created, and the
+  affected services.
+- **Root-cause analysis** with its confidence, plus the causal chain the
+  reasoning agent reconstructed step by step, from the first symptom to the
+  downstream failure.
+- **A remediation plan** as ordered steps, each with the exact command, so the
+  fix is reviewable before anything runs.
+- **The incident copilot**, an on-demand reasoning-tier read of what most likely
+  happened and the single most useful next step, marked as a model-generated
+  hypothesis rather than measured data.
+
+A remediation that needs a human lands in the approval queue with its confidence
+attached, so you review the proposed action, not just the incident.
+
+![Remediation actions awaiting approval, each with its confidence score and a review control](/screenshots/incidents-approvals.png)
+
 ## How confidence connects to action
 
 The confidence score is not decoration. It feeds the authorization matrix from

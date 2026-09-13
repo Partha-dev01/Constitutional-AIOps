@@ -31,6 +31,16 @@ without switching pages.
 4. **Flip to the episodic view** to see recent incidents laid over the same
    structure.
 
+## Acting on a selected service
+
+![The service action bar with diagnose, recent logs, dependencies, health, and a gated restart, plus live CPU](/screenshots/console-service-actions.png)
+
+Picking a service turns the action bar into a set of one-click starting points.
+Diagnose, Recent logs, Dependencies, and Health each prefill a scoped question
+about that service, and its live CPU sits right on the bar so you see load while
+you investigate. A mutating action like Restart is marked "needs approval", so
+the same constitutional gate applies here as everywhere else.
+
 ## Why one screen
 
 Investigation is a loop of look, ask, look again. The Console removes the page

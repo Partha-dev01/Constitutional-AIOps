@@ -101,6 +101,29 @@ a 403 for non-admins. Everyone can still view datasets, results, and
 comparisons.
 :::
 
+## Reading results
+
+![The Results tab showing a table of completed runs with annotation accuracy, RCA accuracy, BERTScore F1, latency, and a status icon, plus JSON, CSV, and LaTeX export buttons](/screenshots/benchmark-results.png)
+
+The Results tab is one row per completed run. Each row carries the model
+name, annotation accuracy, RCA accuracy, BERTScore F1, average latency in
+milliseconds, and a pass or fail status icon. The three buttons above the
+table export the whole set as JSON, CSV, or a LaTeX table.
+
+The numbers above are the demo's synthetic sample, so they read close to the
+paper's ranges without being the paper. Your own runs replace them once you
+start one from the Research run tab against your configured endpoint.
+
+## Comparing models
+
+![The Compare tab showing one card per model, each with an annotation-accuracy bar and an RCA-accuracy bar plus average latency and BERTScore F1](/screenshots/benchmark-compare.png)
+
+Once two or more runs finish, the Compare tab lays them side by side. Each
+model gets a card with an annotation-accuracy bar, an RCA-accuracy bar, its
+average latency, and its BERTScore F1. It reads the same numbers as the
+Results table and draws them as bars, so a stronger model stands out at a
+glance. With fewer than two results the tab just asks you to run more.
+
 ## Related
 
 - [Metrics](/features/metrics) covers raw latency benchmarking and

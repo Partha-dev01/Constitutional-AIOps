@@ -36,6 +36,16 @@ current state.
 4. **Trace a service** to see every episode it was part of, which is how a
    recurring cause becomes obvious.
 
+## Ask the graph copilot
+
+![The graph copilot reading of the incident memory, labeled as a model-generated hypothesis](/screenshots/graph-copilot.png)
+
+The "Explain this graph" copilot gives a reasoning-tier read of what the incident
+memory suggests: the dominant failure themes, which remediations actually worked,
+and where to focus next. It summarizes the graph you are looking at and is
+labeled as a model-generated hypothesis, not measured telemetry, so you treat it
+as a starting point rather than a fact.
+
 ## Requires the graph memory
 
 The episodic graph is backed by Neo4j. This is the one feature that depends on

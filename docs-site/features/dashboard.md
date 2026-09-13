@@ -30,6 +30,25 @@ without a manual reload.
   Recent Activity. These are covered in depth in
   [Generative UI](/features/generative-ui).
 
+### Measured agent latency
+
+![The fast and reasoning agent cards showing measured request counts and latency](/screenshots/dashboard-agents.png)
+
+The agent cards read from real request metrics, not placeholders. Each shows the
+model, the configured endpoint as host or host:port, the average and p95 latency,
+and the measured request count. A remote endpoint with no local port, such as
+Bedrock, shows the host honestly rather than inventing a port.
+
+### Live per-service metrics
+
+![Live per-service CPU and memory read from the Docker socket, each with a rolling sparkline](/screenshots/dashboard-live-metrics.png)
+
+On the lite tier the Live System Metrics panel reads CPU and memory per service
+straight from the Docker socket and keeps a rolling client-side window, so each
+card shows a real trend rather than a single frozen number. A service that stops
+reporting simply stops growing its line, and when no source is present the panel
+says so instead of drawing a fabricated one.
+
 ## How to use it
 
 1. **Read the top row first.** Service status and the connection indicator tell

@@ -58,6 +58,21 @@ Accuracy figures on the Validation tab are a different case: they carry a
 disclaimer ("Pending validation" until you run a benchmark against labeled
 data) so they are never mistaken for a live measurement.
 
+## Inside the validation report
+
+![The Validation tab showing per-agent system configuration, a validation-status grid, accuracy metrics marked Not run with expected ranges and disclaimers, and a latency measurement disclaimer](/screenshots/metrics-validation.png)
+
+The Validation tab is built to be honest about what is measured and what is
+not. It has three blocks. System Configuration shows the model, temperature,
+and purpose for the fast agent, the reasoning agent, and chat mode, read from
+the box's actual config rather than hardcoded. The validation-status grid
+marks latency as Measured and determinism as Configured, while annotation and
+RCA accuracy stay Pending until you score them. Accuracy Metrics then repeats
+that: each figure reads Not run in this snapshot, next to its expected range
+and a disclaimer pointing you at the Benchmark page to actually score it. A
+latency disclaimer at the bottom states plainly that the numbers include
+queueing and network and are single-node figures, not a controlled benchmark.
+
 ::: tip Admin-only actions
 Running a benchmark or a determinism test spends the box's configured LLM
 endpoint, so both are admin actions. The backend enforces this with a 403;
