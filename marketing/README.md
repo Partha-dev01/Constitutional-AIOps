@@ -29,8 +29,16 @@ point at `VITE_APP_URL`. In production this is the **front-door launch path**
 wake Lambda and starts the demo box on genuine human intent. Plain visits to the
 marketing root (`/`) are served from S3 and never wake the box.
 
+```powershell
+# PowerShell (recommended on Windows — no path mangling):
+$env:VITE_APP_URL='/launch'; npm run build
+```
+
 ```bash
-VITE_APP_URL=/launch npm run build
+# macOS/Linux, or Git Bash on Windows. In Git Bash you MUST disable MSYS path
+# conversion, or it rewrites the leading-slash value into a Windows path
+# (e.g. C:/Program Files/Git/launch) and bakes a dead href into the bundle:
+MSYS_NO_PATHCONV=1 VITE_APP_URL=/launch npm run build
 ```
 
 Default (unset): `/login?next=/` (relative), useful for local preview only.
@@ -47,8 +55,11 @@ Export them, then:
 MARKETING_BUCKET=<your-marketing-bucket>
 DIST_ID=<your-cdn-distribution-id>
 
-# 1. Build with the production launch path.
-VITE_APP_URL=/launch npm run build
+# 1. Build with the production launch path. On Windows use PowerShell
+#    ($env:VITE_APP_URL='/launch'; npm run build); in Git Bash you MUST prefix
+#    MSYS_NO_PATHCONV=1 or MSYS rewrites /launch into a Windows path and the
+#    Sign-in button ships broken.
+MSYS_NO_PATHCONV=1 VITE_APP_URL=/launch npm run build
 
 # 2. Sync to the private marketing bucket (removes stale files).
 #    --exclude "demo/*" is MANDATORY: the no-login demo lives under demo/ in the
