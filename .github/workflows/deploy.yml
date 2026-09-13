@@ -121,7 +121,7 @@ jobs:
           # Build the remote script; ARTIFACT_BUCKET and GITHUB_SHA are baked in
           # here, while $ts / $(date) are escaped so they evaluate on the box.
           remote_script=$(cat <<REMOTE
-          set -euo pipefail
+          set -eu
           cd /home/ubuntu/aiops
           ts=\$(date +%Y%m%d-%H%M%S)
           mkdir -p .predeploy-backup
