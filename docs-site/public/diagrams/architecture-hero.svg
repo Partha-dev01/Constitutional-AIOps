@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 520" role="img" aria-labelledby="hero-title hero-desc" font-family="Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif">
+  <title id="hero-title">Constitutional AIOps architecture</title>
+  <desc id="hero-desc">Telemetry feeds a fast agent and a reasoning agent backed by graph-episodic memory. Every proposed action passes the constitutional safety gate, which routes it to an audited auto-run, human approval, or an alert.</desc>
+  <defs>
+    <marker id="h-ah" markerWidth="9" markerHeight="9" refX="6.5" refY="3" orient="auto"><path d="M0,0 L6.5,3 L0,6 Z" fill="#3b82f6"/></marker>
+  </defs>
+  <rect x="6" y="6" width="548" height="508" rx="20" fill="#050c1c" stroke="#1e293b" stroke-width="1.5"/>
+  <text x="32" y="42" fill="#3b82f6" font-size="11" font-weight="600" letter-spacing="3">AUTONOMOUS, WITH A SAFETY LAYER</text>
+
+  <!-- input -->
+  <rect x="150" y="58" width="260" height="40" rx="20" fill="#0e1c33" stroke="#2a3b57"/>
+  <text x="280" y="83" text-anchor="middle" fill="#cbd5e1" font-size="13">logs &#183; metrics &#183; traces</text>
+  <path d="M280,98 L280,109 M145,109 L415,109" fill="none" stroke="#334155" stroke-width="1.6"/>
+  <line x1="145" y1="109" x2="145" y2="117" stroke="#3b82f6" stroke-width="1.6" marker-end="url(#h-ah)"/>
+  <line x1="415" y1="109" x2="415" y2="117" stroke="#3b82f6" stroke-width="1.6" marker-end="url(#h-ah)"/>
+
+  <!-- agents -->
+  <rect x="40" y="118" width="210" height="78" rx="12" fill="#0b1628" stroke="#24324a" stroke-width="1.5"/>
+  <text x="58" y="144" fill="#5aa2f6" font-size="10" font-weight="600" letter-spacing="2">FAST AGENT</text>
+  <text x="58" y="168" fill="#f8fafc" font-size="13.5" font-weight="600">Annotate + classify</text>
+  <text x="58" y="186" fill="#94a3b8" font-size="10.5">High volume, low latency</text>
+
+  <rect x="310" y="118" width="210" height="78" rx="12" fill="#0b1628" stroke="#24324a" stroke-width="1.5"/>
+  <text x="328" y="144" fill="#5aa2f6" font-size="10" font-weight="600" letter-spacing="2">REASONING AGENT</text>
+  <text x="328" y="168" fill="#f8fafc" font-size="13.5" font-weight="600">Root cause + plan</text>
+  <text x="328" y="186" fill="#94a3b8" font-size="10.5">RCA &#183; remediation &#183; chat</text>
+
+  <line x1="250" y1="157" x2="309" y2="157" stroke="#3b82f6" stroke-width="1.6" marker-end="url(#h-ah)"/>
+
+  <!-- agents <-> memory -->
+  <line x1="145" y1="196" x2="145" y2="213" stroke="#3b82f6" stroke-width="1.6" marker-start="url(#h-ah)" marker-end="url(#h-ah)"/>
+  <line x1="415" y1="196" x2="415" y2="213" stroke="#3b82f6" stroke-width="1.6" marker-start="url(#h-ah)" marker-end="url(#h-ah)"/>
+
+  <!-- memory -->
+  <rect x="40" y="214" width="480" height="64" rx="12" fill="#0b1628" stroke="#24324a" stroke-width="1.5"/>
+  <text x="58" y="240" fill="#5aa2f6" font-size="10" font-weight="600" letter-spacing="2">GRAPH-EPISODIC MEMORY</text>
+  <text x="58" y="264" fill="#f8fafc" font-size="13.5" font-weight="600">Similar past incidents + the actions that worked</text>
+
+  <line x1="280" y1="278" x2="280" y2="297" stroke="#3b82f6" stroke-width="1.6" marker-end="url(#h-ah)"/>
+
+  <!-- gate -->
+  <rect x="40" y="298" width="480" height="72" rx="12" fill="#0c1b33" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="58" y="326" fill="#93c5fd" font-size="10" font-weight="600" letter-spacing="2">CONSTITUTIONAL SAFETY GATE</text>
+  <text x="58" y="352" fill="#f8fafc" font-size="13.5" font-weight="600">12 principles &#183; 3 tiers &#183; scored per action</text>
+
+  <!-- gate -> outcomes -->
+  <path d="M280,370 L280,384 M115,384 L445,384" fill="none" stroke="#334155" stroke-width="1.6"/>
+  <line x1="115" y1="384" x2="115" y2="391" stroke="#3b82f6" stroke-width="1.6" marker-end="url(#h-ah)"/>
+  <line x1="280" y1="384" x2="280" y2="391" stroke="#3b82f6" stroke-width="1.6" marker-end="url(#h-ah)"/>
+  <line x1="445" y1="384" x2="445" y2="391" stroke="#3b82f6" stroke-width="1.6" marker-end="url(#h-ah)"/>
+
+  <!-- outcomes -->
+  <rect x="40" y="392" width="150" height="48" rx="12" fill="#0c1f16" stroke="#166534" stroke-width="1.5"/>
+  <text x="115" y="421" text-anchor="middle" fill="#34d399" font-size="12" font-weight="600">Auto &#183; audited</text>
+
+  <rect x="205" y="392" width="150" height="48" rx="12" fill="#221a0c" stroke="#854d0e" stroke-width="1.5"/>
+  <text x="280" y="421" text-anchor="middle" fill="#fbbf24" font-size="12" font-weight="600">Approve / reject</text>
+
+  <rect x="370" y="392" width="150" height="48" rx="12" fill="#0e1c33" stroke="#1d4ed8" stroke-width="1.5"/>
+  <text x="445" y="421" text-anchor="middle" fill="#60a5fa" font-size="12" font-weight="600">Alert only</text>
+
+  <text x="280" y="470" text-anchor="middle" fill="#64748b" font-size="11.5">Autonomous where safe. Human where it matters.</text>
+</svg>

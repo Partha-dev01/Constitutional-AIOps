@@ -5,6 +5,9 @@ hero:
   name: Constitutional AIOps
   text: Autonomous infrastructure management with a safety layer
   tagline: A dual-agent system that annotates telemetry, finds root cause, and proposes remediation. Every action passes a constitutional safety gate and, when uncertain, waits for human approval. Bring your own OpenAI-compatible LLM endpoint.
+  image:
+    src: /diagrams/architecture-hero.svg
+    alt: Constitutional AIOps architecture. Telemetry feeds a fast agent and a reasoning agent backed by graph-episodic memory, then every proposed action passes the constitutional safety gate, which routes it to an audited auto-run, human approval, or an alert.
   actions:
     - theme: brand
       text: Get Started

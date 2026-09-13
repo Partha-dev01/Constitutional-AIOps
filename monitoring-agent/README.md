@@ -5,17 +5,7 @@ on **any remote host** and ships that host's Docker telemetry into the Constitut
 AIOps LGTM stack on AWS. The AIOps backend then reasons over it through its existing
 read-only `TelemetryCollector` — **no backend change is required to onboard a host.**
 
-```
- remote host                                     AWS VM (aiops.example.com)
-┌──────────────────────────┐                    ┌───────────────────────────────┐
-│ your Docker containers    │  logs/metrics/     │  Caddy  /ingest/* (basic_auth)│
-│        │ stdout, /metrics │  traces over TLS   │    ├─ /ingest/loki -> Loki     │
-│        ▼                  │  + basic_auth      │    ├─ /ingest/prom -> Prometheus│
-│   ┌──────────┐  ───────────────────────────▶  │    └─ /ingest/otlp -> Tempo     │
-│   │  Alloy   │            │                    │           │                    │
-│   └──────────┘            │                    │     backend TelemetryCollector │
-└──────────────────────────┘                    └───────────────────────────────┘
-```
+![Monitoring agent data flow: on a remote host your Docker containers emit logs and metrics that Alloy ships over TLS with basic auth to the AWS VM, where Caddy routes /ingest/loki to Loki, /ingest/prom to Prometheus, and /ingest/otlp to Tempo, feeding the backend TelemetryCollector.](./architecture.svg)
 
 ## What it collects
 

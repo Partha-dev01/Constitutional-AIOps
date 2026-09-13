@@ -222,26 +222,9 @@ docker compose -f docker-compose.yml -f docker/docker-compose.gpu.yml up -d
 Telemetry flows in, the two agents annotate and reason over it, and every
 proposed action is gated before it can touch anything.
 
-```
-  logs · metrics · traces
-            │
-            ▼
-   ┌──────────────────┐      ┌───────────────────┐
-   │   Fast agent     │      │  Reasoning agent  │
-   │  annotate +      │─────▶│  root-cause +     │
-   │  classify        │      │  remediation plan │
-   └──────────────────┘      └─────────┬─────────┘
-            ▲                          │
-            │                          ▼
-   ┌────────┴─────────┐      ┌───────────────────┐
-   │  Graph-episodic  │◀────▶│  Constitutional   │
-   │  memory (Neo4j)  │      │  gate: 12 / 3 tier│
-   └──────────────────┘      └─────────┬─────────┘
-                                       │
-                       ┌───────────────┴───────────────┐
-                       ▼               ▼                ▼
-                  auto (audit)   approve/reject     alert only
-```
+<p align="center">
+  <img src="docs-site/public/diagrams/pipeline.svg" width="760" alt="Constitutional AIOps pipeline: telemetry flows to a fast agent and a reasoning agent backed by graph-episodic memory; every proposed action passes the constitutional gate, which routes it to an audited auto-run, a human approval, or an alert.">
+</p>
 
 Self-hosters run the **lite** profile (backend + frontend + your endpoint, no
 GPU, no Neo4j). The research reference config puts both models on one 24GB GPU

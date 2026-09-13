@@ -34,17 +34,7 @@ The research-paper reference runs both models co-resident on a single 24 GB GPU
 with vLLM. This is not a requirement for self-hosting, which is why the lite
 profile offloads the LLM to a remote endpoint instead.
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                 24 GB VRAM, both models loaded                   │
-├─────────────────────────────────────────────────────────────────┤
-│  FAST AGENT (port 8000)                                         │
-│  Model: Qwen3-4B  ·  Purpose: telemetry annotation              │
-│                                                                 │
-│  REASONING AGENT (port 8001)                                    │
-│  Model: Qwen3-14B  ·  Purpose: RCA, remediation, chat           │
-└─────────────────────────────────────────────────────────────────┘
-```
+![Reference configuration: both models co-resident on one 24 GB GPU with vLLM. A fast agent runs Qwen3-4B on port 8000 for telemetry annotation; a reasoning agent runs Qwen3-14B on port 8001 for root cause, remediation, and chat.](/diagrams/reference-config.svg)
 
 ## Graph-episodic memory
 
