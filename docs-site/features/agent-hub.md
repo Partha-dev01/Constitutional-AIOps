@@ -49,6 +49,17 @@ field in the output and shows that, or falls back to a severity/category
 pair, or finally just the first 120 characters of the raw text if none of
 that parses.
 
+## Inside an activity row
+
+![An expanded reasoning-agent RCA row showing the full prompt and a JSON result with a root cause and a confidence score](/screenshots/agent-hub-activity.png)
+
+Click any row to open it. The collapsed summary gives way to the full input the
+agent received and the full output it produced, rendered as JSON when it parses.
+Here a reasoning-agent RCA shows the prompt it ran, then a result carrying the
+root cause and a confidence score, with the type badge, latency, and model chip
+still on the header. The rows below stay collapsed, so you scan the stream and
+open only the one you care about.
+
 ## One endpoint, two roles
 
 The fast and reasoning agents are conceptually separate: one built for quick

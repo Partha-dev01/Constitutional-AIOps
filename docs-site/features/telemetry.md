@@ -42,6 +42,18 @@ fallback source without saying so.
    other isn't.
 5. Use Refresh to pull a new snapshot on demand.
 
+## Reading a structured log line
+
+![A Caddy access log expanded to its full JSON payload, beside coloured level badges and a Local Docker socket source badge](/screenshots/telemetry-logs.png)
+
+Container stdout is not always a clean sentence. A Caddy access log arrives as a
+JSON object wrapped in ANSI colour codes, unreadable when dumped raw. The page
+strips the colour codes and shows a one-line summary instead: method, status,
+path, duration, and host. Click the line to expand the full JSON payload beneath
+it, with the request block, status, size, and duration intact. The level badges
+colour by severity and the source badge names where the line came from, so you
+always know you are reading real container output rather than a fabricated feed.
+
 ## Data provenance
 
 Every log and metric fetch tries the LGTM stack first: Loki for logs,

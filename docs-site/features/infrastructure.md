@@ -53,6 +53,17 @@ Linux host so its containers show up here too.
    button. This does not delete telemetry: it only hides the label until you
    restore it, and it reappears if the host keeps shipping data.
 
+## Onboarding a remote host
+
+![The Monitor a Remote Host block: ingest endpoint URLs, an agent configuration form, and a live generated .env block](/screenshots/infrastructure-remote-host.png)
+
+The onboarding block does the wiring for you. The ingest endpoint URLs are built
+from your own domain, so Loki, Prometheus, and OTLP each get a copy button. Fill
+in an edge label and the ingest credentials and the generated `.env` block
+updates live, ready to paste onto the remote host beside one Grafana Alloy agent.
+The ingest password stays in the browser for the session only and is never
+saved, so nothing sensitive is written to disk on this side.
+
 ## The remote-host list is derived, not managed
 
 Monitored remote hosts are not something you register by hand. The backend

@@ -115,6 +115,8 @@ tab.
 
 ## Command palette
 
+![The command palette open with a query typed, showing a ranked list of pages each tagged by section](/screenshots/command-palette.png)
+
 Press <kbd>Cmd</kbd>/<kbd>Ctrl</kbd> + <kbd>K</kbd> anywhere to open the command
 palette. It is a zero-dependency fuzzy quick-nav over the app's own routes: type
 a few characters, get a ranked list, press Enter to go. An exact title match
