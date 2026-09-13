@@ -1,4 +1,4 @@
-import { GraduationCap, ArrowRight } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { APP_URL, DOCS_SITE_URL } from '../../config'
 
 // Full page sitemap. Standalone content pages by their own URL; the live demo
@@ -59,10 +59,6 @@ export function TeamFooter() {
 
           {/* About */}
           <div>
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-1.5 text-xs font-medium text-muted-foreground">
-              <GraduationCap className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
-              Academic research project
-            </div>
             <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
               An engineering research project exploring constitutional safety
               for autonomous, LLM-driven infrastructure operations.

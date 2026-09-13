@@ -1,4 +1,4 @@
-import { Check, Terminal } from 'lucide-react'
+import { Check } from 'lucide-react'
 import { useReveal } from '../../hooks/useReveal'
 import { ShotFrame } from './ShotFrame'
 
@@ -50,11 +50,7 @@ export function SelfHostSection() {
     <section id="self-host" className="border-b border-border py-20 sm:py-28">
       <div className="mx-auto max-w-6xl px-6">
         <div className="mx-auto mb-16 max-w-2xl text-center">
-          <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-3 py-1 text-xs font-medium text-muted-foreground">
-            <Terminal className="h-3.5 w-3.5" aria-hidden="true" />
-            Open-source · AGPL-3.0
-          </span>
-          <h2 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">
+          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
             Self-host in minutes
           </h2>
           <p className="mt-4 text-muted-foreground">
