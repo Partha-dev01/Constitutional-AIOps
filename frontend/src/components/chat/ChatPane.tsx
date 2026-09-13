@@ -6,7 +6,7 @@ import { ChatComposer } from './ChatComposer'
 import { ChatMessage } from './ChatMessage'
 import type { ChatMessageData } from './ChatMessage'
 import type { MessageInsights } from './InsightCards'
-import type { ProposedAction, TopologySchemaDoc } from '../../lib/api'
+import type { ChatResponse, ProposedAction, TopologySchemaDoc } from '../../lib/api'
 import { ConversationSidebar } from './ConversationSidebar'
 import { SuggestedPrompts } from './SuggestedPrompts'
 import { LiveServicesCard } from './LiveServicesCard'
@@ -102,6 +102,31 @@ export function ChatPane({ variant = 'page', seedContext, injectedPrompt, classN
   useEffect(() => {
     seedContextRef.current = seedContext
   }, [seedContext])
+
+  /**
+   * Whether the live backend advertises SSE token streaming (serving Mode 2).
+   * Probed once on mount from GET /health/serving. When true, a send consumes
+   * /chat/stream and grows the bubble token-by-token; when false (Mode 1, the
+   * default, or no probe) it keeps today's buffered send + typewriter. The
+   * probe is best-effort — any failure leaves streaming off, and the streamed
+   * `done` frame carries the same ChatResponse the buffered path returns, so
+   * this is purely a UX choice, never a correctness one.
+   */
+  const streamingSupportedRef = useRef(false)
+  useEffect(() => {
+    let cancelled = false
+    api.health
+      .serving()
+      .then((s) => {
+        if (!cancelled) streamingSupportedRef.current = Boolean(s?.features?.streaming)
+      })
+      .catch(() => {
+        /* No serving probe (older/offline backend) — keep buffered + typewriter. */
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const history = useConversationHistory()
 
@@ -301,25 +326,12 @@ export function ChatPane({ variant = 'page', seedContext, injectedPrompt, classN
       pushRecentPrompt(trimmed)
       rebuildPrompts()
 
-      try {
-        const response = await api.chat.send({
-          message: trimmed,
-          conversation_id: conversationId || undefined,
-          context: seedContextRef.current,
-        })
-
-        if (response.conversation_id) {
-          setConversationId(response.conversation_id)
-        }
-
-        const messageId = (Date.now() + 1).toString()
-        const assistantMessage: ChatMessageData = {
-          id: messageId,
-          role: 'assistant',
-          content: response.message.content,
-          timestamp: toDate(response.message.timestamp),
-        }
-
+      // Apply the completed ChatResponse shared by both transports: conversation
+      // id, insight cards, any proposed action, the enriched tool timeline, and
+      // the sidebar refresh. The caller renders the message text itself (the
+      // streamed bubble and the buffered typewriter differ only in display).
+      const finalize = (messageId: string, response: ChatResponse) => {
+        if (response.conversation_id) setConversationId(response.conversation_id)
         setInsightsById((prev) => ({
           ...prev,
           [messageId]: {
@@ -328,14 +340,12 @@ export function ChatPane({ variant = 'page', seedContext, injectedPrompt, classN
             relatedIncidents: response.related_incidents,
           },
         }))
-
         // Stash any AI-proposed remediation against this assistant turn so the
         // approve-to-run card renders (and persists) beneath the reply.
         if (response.proposed_action) {
           const proposed = response.proposed_action
           setProposedById((prev) => ({ ...prev, [messageId]: proposed }))
         }
-
         commitToolSteps(messageId, 'done', {
           confidence: response.confidence,
           related_incidents: response.related_incidents,
@@ -344,13 +354,116 @@ export function ChatPane({ variant = 'page', seedContext, injectedPrompt, classN
           userMessage: trimmed,
           attachedContext: seedContextRef.current,
         })
-        setMessages((prev) => [...prev, assistantMessage])
-        startTypewriter(messageId, response.message.content)
-
         // Reflect the new/updated conversation in the sidebar.
         void history.refresh()
+      }
+
+      try {
+        if (streamingSupportedRef.current) {
+          // ---- Streaming path (serving Mode 2): grow the bubble as SSE deltas
+          // arrive; the authoritative `done` ChatResponse then replaces the
+          // streamed text. A transport failure falls through to the catch.
+          const messageId = (Date.now() + 1).toString()
+          let acc = ''
+          let bubbleShown = false
+          // A holder object, not bare `let`s: TS narrows a `let` that is assigned
+          // only inside a callback back to its initializer, so a plain
+          // `finalResponse` would read as `never` after the null guard. An object
+          // property is not narrowed by control-flow analysis.
+          const result: { response: ChatResponse | null; error: string | null } = {
+            response: null,
+            error: null,
+          }
+
+          const showBubble = () => {
+            if (bubbleShown) return
+            bubbleShown = true
+            setTypingMessageId(messageId)
+            setDisplayedContent('')
+            setMessages((prev) => [
+              ...prev,
+              { id: messageId, role: 'assistant', content: '', timestamp: new Date() },
+            ])
+          }
+
+          await api.chat.stream(
+            {
+              message: trimmed,
+              conversation_id: conversationId || undefined,
+              context: seedContextRef.current,
+            },
+            {
+              onMeta: (meta) => {
+                if (meta.conversation_id) setConversationId(meta.conversation_id)
+              },
+              onDelta: (text) => {
+                if (!text) return
+                showBubble()
+                acc += text
+                setDisplayedContent(acc)
+              },
+              onDone: (response) => {
+                result.response = response
+              },
+              onError: (detail) => {
+                result.error = detail
+              },
+            },
+          )
+
+          const response = result.response
+          if (!response) {
+            throw new Error(result.error || 'The response stream ended before completing.')
+          }
+          const finalText = response.message.content
+          finalize(messageId, response)
+
+          if (bubbleShown) {
+            // Swap the streamed text for the authoritative content in place and
+            // drop the typing cursor.
+            setTypingMessageId(null)
+            setDisplayedContent('')
+            setMessages((prev) =>
+              prev.map((m) => (m.id === messageId ? { ...m, content: finalText } : m)),
+            )
+          } else {
+            // No deltas arrived (a single-frame answer): append and typewriter it.
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: messageId,
+                role: 'assistant',
+                content: finalText,
+                timestamp: toDate(response.message.timestamp),
+              },
+            ])
+            startTypewriter(messageId, finalText)
+          }
+        } else {
+          // ---- Buffered path (serving Mode 1 / no streaming): the original flow.
+          const response = await api.chat.send({
+            message: trimmed,
+            conversation_id: conversationId || undefined,
+            context: seedContextRef.current,
+          })
+
+          const messageId = (Date.now() + 1).toString()
+          const assistantMessage: ChatMessageData = {
+            id: messageId,
+            role: 'assistant',
+            content: response.message.content,
+            timestamp: toDate(response.message.timestamp),
+          }
+          finalize(messageId, response)
+          setMessages((prev) => [...prev, assistantMessage])
+          startTypewriter(messageId, response.message.content)
+        }
       } catch (err) {
         console.error('Chat error:', err)
+        // A mid-stream failure can leave the bubble mid-type: drop the cursor so
+        // it does not pulse forever before we surface the error turn.
+        setTypingMessageId(null)
+        setDisplayedContent('')
         const errorMessage = err instanceof Error ? err.message : 'Failed to send message'
         setError(errorMessage)
 

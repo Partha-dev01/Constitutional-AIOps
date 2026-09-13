@@ -25,6 +25,34 @@ export interface HealthResponse {
   version?: string;
 }
 
+/**
+ * GET /health/serving — which serving mode is live and which engine features it
+ * exposes. `features.streaming` is the flag the chat UI probes to decide whether
+ * to consume SSE token deltas (Mode 2) or fall back to the buffered send +
+ * typewriter (Mode 1). Every field degrades safely: a probe field is null when
+ * it could not be measured, never a 500.
+ */
+export interface ServingHealth {
+  mode: number;
+  single_engine: boolean;
+  features: {
+    streaming: boolean;
+    native_tools: boolean;
+    guided_json: boolean;
+    priority: boolean;
+  };
+  engine: {
+    fast_url: string;
+    reasoning_url: string;
+    fast_model: string;
+    reasoning_model: string;
+    fast_agent_healthy: boolean | null;
+    reasoning_agent_healthy: boolean | null;
+    fast_agent_latency_ms: number | null;
+    reasoning_agent_latency_ms: number | null;
+  };
+}
+
 // Helper function to check if a specific component is healthy
 export function isComponentHealthy(health: HealthResponse | null, componentName: string): boolean {
   if (!health || !health.components) return false;
@@ -1125,6 +1153,8 @@ export const api = {
     check: () => request<HealthResponse>('/health'),
     ready: () => request<{ ready: boolean }>('/health/ready'),
     live: () => request<{ alive: boolean }>('/health/live'),
+    /** Serving-mode + engine-feature probe (drives the chat streaming decision). */
+    serving: () => request<ServingHealth>('/health/serving'),
   },
 
   // LLM insight widgets (Track 2 W3): opt-in, cost-fenced, degrade-graceful.
