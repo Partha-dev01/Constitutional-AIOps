@@ -2,25 +2,45 @@
   <title id="hero-title">Constitutional AIOps system architecture</title>
   <desc id="hero-desc">A layered pipeline. Monitored applications and infrastructure emit telemetry to an OpenTelemetry collector, stored in the LGTM stack with a Neo4j graph memory. A fast agent and a reasoning agent, coordinated by a LangGraph orchestrator, produce root-cause analysis and plans. The MCP server and the constitutional validator gate every action before it reaches self-heal, auto-scale, or configure. A dashed feedback loop returns outcomes to the monitored layer.</desc>
   <defs>
-    <marker id="ah" markerWidth="9" markerHeight="9" refX="6.2" refY="3" orient="auto"><path d="M0,0 L6.2,3 L0,6 Z" fill="#3b82f6"/></marker>
-    <filter id="soft" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="7"/></filter>
-    <radialGradient id="halo" cx="50%" cy="44%" r="62%">
-      <stop offset="0%" stop-color="#1d4ed8" stop-opacity="0.16"/>
+    <!-- larger, absolute-sized arrowhead so it stays bold regardless of stroke width -->
+    <marker id="ah" markerUnits="userSpaceOnUse" markerWidth="15" markerHeight="15" refX="8.6" refY="5" orient="auto"><path d="M0,0.4 L10.5,5 L0,9.6 Z" fill="#7db8ff"/></marker>
+    <!-- soft, wide ambient glow for the validator (replaces the hard blocky halo) -->
+    <filter id="soft" x="-95%" y="-95%" width="290%" height="290%"><feGaussianBlur stdDeviation="13"/></filter>
+    <!-- gentle card lift: soft shadow so boxes read as lit panels, not flat blocks -->
+    <filter id="lift" x="-25%" y="-35%" width="150%" height="185%"><feDropShadow dx="0" dy="3" stdDeviation="6.5" flood-color="#01040d" flood-opacity="0.55"/></filter>
+    <radialGradient id="halo" cx="50%" cy="43%" r="60%">
+      <stop offset="0%" stop-color="#1d4ed8" stop-opacity="0.19"/>
+      <stop offset="58%" stop-color="#1d4ed8" stop-opacity="0.05"/>
       <stop offset="100%" stop-color="#1d4ed8" stop-opacity="0"/>
     </radialGradient>
+    <!-- subtle top-lit fills so panels have depth instead of a flat wash -->
+    <linearGradient id="gNavy" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#13233d"/><stop offset="100%" stop-color="#0b1628"/></linearGradient>
+    <linearGradient id="gSlate" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#17283f"/><stop offset="100%" stop-color="#0e1c33"/></linearGradient>
+    <linearGradient id="gAmber" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#2c1c0a"/><stop offset="100%" stop-color="#1a1005"/></linearGradient>
+    <linearGradient id="gAmberDeep" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#251707"/><stop offset="100%" stop-color="#140c03"/></linearGradient>
+    <linearGradient id="gViolet" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1d1437"/><stop offset="100%" stop-color="#120c24"/></linearGradient>
     <style>
-      .flow { stroke-dasharray: 3 7; animation: flow 1.9s linear infinite; }
-      @keyframes flow { to { stroke-dashoffset: -10; } }
-      .fb { animation: fb 2.8s linear infinite; }
-      @keyframes fb { to { stroke-dashoffset: -16; } }
-      .glow { animation: glow 3.6s ease-in-out infinite; }
-      @keyframes glow { 0%,100% { opacity: 0.24; } 50% { opacity: 0.07; } }
-      @media (prefers-reduced-motion: reduce) { .flow,.fb,.glow { animation: none; } }
+      .wire  { fill: none; stroke: #3b82f6; stroke-width: 1.5; stroke-opacity: .42; }
+      .pulse { fill: none; stroke: #8ec5ff; stroke-width: 2.8; stroke-linecap: round;
+               stroke-dasharray: 14 65; animation: pulse 2s cubic-bezier(.5,0,.5,1) infinite; }
+      @keyframes pulse { from { stroke-dashoffset: 79; } to { stroke-dashoffset: 0; } }
+      .fbwire  { fill: none; stroke: #3b82f6; stroke-width: 1.4; stroke-opacity: .3; stroke-dasharray: 4 5; }
+      .fbpulse { fill: none; stroke: #93c5fd; stroke-width: 2.2; stroke-linecap: round;
+                 stroke-dasharray: 16 220; animation: fb 4s linear infinite; }
+      @keyframes fb { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -560; } }
+      .glow  { animation: glow 4.4s ease-in-out infinite; }
+      @keyframes glow { 0%,100% { opacity: .32; } 50% { opacity: .11; } }
+      .halo  { animation: halo 7.5s ease-in-out infinite; }
+      @keyframes halo { 0%,100% { opacity: .95; } 50% { opacity: .62; } }
+      @media (prefers-reduced-motion: reduce) {
+        .pulse,.fbpulse,.glow,.halo { animation: none; }
+        .pulse,.fbpulse { stroke-opacity: .5; }
+      }
     </style>
   </defs>
 
   <!-- soft depth glow, no border: the diagram floats seamlessly on the page -->
-  <ellipse cx="358" cy="332" rx="352" ry="340" fill="url(#halo)"/>
+  <ellipse class="halo" cx="358" cy="332" rx="352" ry="340" fill="url(#halo)" opacity="0.85"/>
 
   <text x="118" y="38" fill="#3b82f6" font-size="11" font-weight="600" letter-spacing="2.5">SYSTEM ARCHITECTURE</text>
 
@@ -34,104 +54,124 @@
     <text x="96" y="616">MONITOR</text>
   </g>
 
-  <!-- flow spine (data flows up); blue arrows animate, grey connectors stay static -->
-  <g fill="none" stroke="#3b82f6" stroke-width="1.6">
-    <!-- monitor -> collect -->
-    <path d="M221,588 L221,576 M519,588 L519,576 M221,576 L519,576" stroke="#334155"/>
-    <line class="flow" x1="370" y1="576" x2="370" y2="543" marker-end="url(#ah)"/>
-    <!-- collect -> storage -->
-    <line class="flow" x1="370" y1="492" x2="370" y2="459" marker-end="url(#ah)"/>
-    <!-- storage -> ai -->
-    <line class="flow" x1="370" y1="356" x2="370" y2="319" marker-end="url(#ah)"/>
-    <!-- ai -> control -->
-    <path d="M370,250 L370,224 M221,224 L519,224" stroke="#334155"/>
-    <line class="flow" x1="221" y1="224" x2="221" y2="207" marker-end="url(#ah)"/>
-    <line class="flow" x1="519" y1="224" x2="519" y2="207" marker-end="url(#ah)"/>
-    <!-- control -> actions -->
-    <path d="M221,156 L221,132 M519,156 L519,132 M192,132 L548,132" stroke="#334155"/>
-    <line class="flow" x1="192" y1="132" x2="192" y2="111" marker-end="url(#ah)"/>
-    <line class="flow" x1="370" y1="132" x2="370" y2="111" marker-end="url(#ah)"/>
-    <line class="flow" x1="548" y1="132" x2="548" y2="111" marker-end="url(#ah)"/>
-    <!-- ai row internal: fast -> orchestrator -> reasoning -->
-    <line class="flow" x1="278" y1="283" x2="289" y2="283" marker-end="url(#ah)"/>
-    <line class="flow" x1="450" y1="283" x2="461" y2="283" marker-end="url(#ah)"/>
+  <!-- structural manifolds (static risers + horizontal buses) -->
+  <g fill="none" stroke="#334155" stroke-width="1.6">
+    <path d="M221,588 L221,576 M519,588 L519,576 M221,576 L519,576"/>
+    <path d="M370,250 L370,224 M221,224 L519,224"/>
+    <path d="M221,156 L221,132 M519,156 L519,132 M192,132 L548,132"/>
   </g>
 
-  <!-- feedback loop (dashed, actions back to monitor), gently flowing -->
-  <path class="fb" d="M118,88 L104,88 L104,612 L113,612" fill="none" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="4 4" opacity="0.5" marker-end="url(#ah)"/>
+  <!-- flow wires: faint, always-visible connections carrying the bright arrowheads -->
+  <g class="wire" marker-end="url(#ah)">
+    <line x1="370" y1="576" x2="370" y2="543"/>
+    <line x1="370" y1="492" x2="370" y2="459"/>
+    <line x1="370" y1="356" x2="370" y2="319"/>
+    <line x1="221" y1="224" x2="221" y2="207"/>
+    <line x1="519" y1="224" x2="519" y2="207"/>
+    <line x1="192" y1="132" x2="192" y2="111"/>
+    <line x1="370" y1="132" x2="370" y2="111"/>
+    <line x1="548" y1="132" x2="548" y2="111"/>
+    <line x1="278" y1="283" x2="289" y2="283"/>
+    <line x1="450" y1="283" x2="461" y2="283"/>
+  </g>
 
-  <!-- ACTIONS -->
-  <g>
-    <rect x="118" y="68" width="148" height="40" rx="11" fill="#0b1f1c" stroke="#14b8a6" stroke-width="1.3"/>
-    <text x="192" y="93" text-anchor="middle" fill="#2dd4bf" font-size="12.5" font-weight="600">Self-Heal</text>
-    <rect x="296" y="68" width="148" height="40" rx="11" fill="#0b1f1c" stroke="#14b8a6" stroke-width="1.3"/>
-    <text x="370" y="93" text-anchor="middle" fill="#2dd4bf" font-size="12.5" font-weight="600">Auto-Scale</text>
-    <rect x="474" y="68" width="148" height="40" rx="11" fill="#0b1f1c" stroke="#14b8a6" stroke-width="1.3"/>
-    <text x="548" y="93" text-anchor="middle" fill="#2dd4bf" font-size="12.5" font-weight="600">Configure</text>
+  <!-- travelling pulses of data, staggered so they ripple upward layer by layer -->
+  <g class="pulse">
+    <line x1="370" y1="576" x2="370" y2="543" style="animation-delay:0s"/>
+    <line x1="370" y1="492" x2="370" y2="459" style="animation-delay:-.30s"/>
+    <line x1="370" y1="356" x2="370" y2="319" style="animation-delay:-.60s"/>
+    <line x1="221" y1="224" x2="221" y2="207" style="animation-delay:-.92s"/>
+    <line x1="519" y1="224" x2="519" y2="207" style="animation-delay:-1.02s"/>
+    <line x1="192" y1="132" x2="192" y2="111" style="animation-delay:-1.28s"/>
+    <line x1="370" y1="132" x2="370" y2="111" style="animation-delay:-1.38s"/>
+    <line x1="548" y1="132" x2="548" y2="111" style="animation-delay:-1.48s"/>
+    <line x1="278" y1="283" x2="289" y2="283" style="animation-delay:-.66s"/>
+    <line x1="450" y1="283" x2="461" y2="283" style="animation-delay:-.54s"/>
+  </g>
+
+  <!-- feedback loop (dashed, actions back to monitor), with a slow gliding pulse -->
+  <path class="fbwire" d="M118,88 L104,88 L104,612 L113,612" marker-end="url(#ah)"/>
+  <path class="fbpulse" d="M118,88 L104,88 L104,612 L113,612"/>
+
+  <!-- ACTIONS (warm accent) -->
+  <g filter="url(#lift)">
+    <rect x="118" y="68" width="148" height="40" rx="12" fill="url(#gAmber)" stroke="#f97316" stroke-width="1.4"/>
+    <rect x="296" y="68" width="148" height="40" rx="12" fill="url(#gAmber)" stroke="#f97316" stroke-width="1.4"/>
+    <rect x="474" y="68" width="148" height="40" rx="12" fill="url(#gAmber)" stroke="#f97316" stroke-width="1.4"/>
+  </g>
+  <g text-anchor="middle" fill="#fdba74" font-size="12.5" font-weight="600">
+    <text x="192" y="93">Self-Heal</text>
+    <text x="370" y="93">Auto-Scale</text>
+    <text x="548" y="93">Configure</text>
   </g>
 
   <!-- CONTROL -->
-  <g>
-    <rect x="118" y="156" width="206" height="48" rx="12" fill="#0b1628" stroke="#24324a" stroke-width="1.4"/>
-    <text x="221" y="179" text-anchor="middle" fill="#f8fafc" font-size="13" font-weight="600">MCP Server</text>
-    <text x="221" y="195" text-anchor="middle" fill="#94a3b8" font-size="10">Typed tool gateway</text>
-    <rect class="glow" x="416" y="156" width="206" height="48" rx="12" fill="#3b82f6" filter="url(#soft)"/>
-    <rect x="416" y="156" width="206" height="48" rx="12" fill="#0c1b33" stroke="#3b82f6" stroke-width="1.7"/>
-    <text x="519" y="179" text-anchor="middle" fill="#f8fafc" font-size="13" font-weight="600">Constitutional Validator</text>
-    <text x="519" y="195" text-anchor="middle" fill="#93c5fd" font-size="10">12 principles &#183; 3 tiers</text>
+  <g filter="url(#lift)">
+    <rect x="118" y="156" width="206" height="48" rx="12" fill="url(#gNavy)" stroke="#2b3e5e" stroke-width="1.4"/>
   </g>
+  <text x="221" y="179" text-anchor="middle" fill="#f8fafc" font-size="13" font-weight="600">MCP Server</text>
+  <text x="221" y="195" text-anchor="middle" fill="#94a3b8" font-size="10">Typed tool gateway</text>
+  <rect class="glow" x="416" y="154" width="206" height="52" rx="16" fill="#3b82f6" filter="url(#soft)" opacity="0.2"/>
+  <rect x="416" y="156" width="206" height="48" rx="12" fill="#0c1b33" stroke="#3b82f6" stroke-width="1.7"/>
+  <text x="519" y="179" text-anchor="middle" fill="#f8fafc" font-size="13" font-weight="600">Constitutional Validator</text>
+  <text x="519" y="195" text-anchor="middle" fill="#93c5fd" font-size="10">12 principles &#183; 3 tiers</text>
 
   <!-- AI LAYER -->
+  <g filter="url(#lift)">
+    <rect x="118" y="250" width="160" height="66" rx="12" fill="url(#gNavy)" stroke="#2b3e5e" stroke-width="1.4"/>
+    <rect x="290" y="250" width="160" height="66" rx="12" fill="url(#gNavy)" stroke="#2b3e5e" stroke-width="1.4"/>
+    <rect x="462" y="250" width="160" height="66" rx="12" fill="url(#gNavy)" stroke="#2b3e5e" stroke-width="1.4"/>
+  </g>
   <g>
-    <rect x="118" y="250" width="160" height="66" rx="12" fill="#0b1628" stroke="#24324a" stroke-width="1.4"/>
     <text x="198" y="273" text-anchor="middle" fill="#5aa2f6" font-size="9" font-weight="600" letter-spacing="1.5">FAST AGENT</text>
     <text x="198" y="293" text-anchor="middle" fill="#f8fafc" font-size="13" font-weight="600">Qwen3-4B</text>
     <text x="198" y="308" text-anchor="middle" fill="#94a3b8" font-size="9.5">Annotate + classify</text>
 
-    <rect x="290" y="250" width="160" height="66" rx="12" fill="#0b1628" stroke="#24324a" stroke-width="1.4"/>
     <text x="370" y="273" text-anchor="middle" fill="#5aa2f6" font-size="9" font-weight="600" letter-spacing="1.5">ORCHESTRATOR</text>
     <text x="370" y="293" text-anchor="middle" fill="#f8fafc" font-size="13" font-weight="600">LangGraph</text>
     <text x="370" y="308" text-anchor="middle" fill="#94a3b8" font-size="9.5">Routes fast to slow</text>
 
-    <rect x="462" y="250" width="160" height="66" rx="12" fill="#0b1628" stroke="#24324a" stroke-width="1.4"/>
     <text x="542" y="273" text-anchor="middle" fill="#5aa2f6" font-size="9" font-weight="600" letter-spacing="1.5">REASONING AGENT</text>
     <text x="542" y="293" text-anchor="middle" fill="#f8fafc" font-size="13" font-weight="600">Qwen3-14B</text>
     <text x="542" y="308" text-anchor="middle" fill="#94a3b8" font-size="9.5">Root cause + plan</text>
   </g>
 
   <!-- STORAGE -->
-  <g>
-    <rect x="118" y="356" width="352" height="100" rx="12" fill="#0b1a14" stroke="#1f7a4d" stroke-width="1.3" stroke-dasharray="5 4"/>
-    <text x="130" y="378" fill="#34d399" font-size="9" font-weight="600" letter-spacing="1.2">LGTM TELEMETRY STORE</text>
-    <g font-family="Inter, sans-serif">
-      <rect x="130" y="390" width="76" height="52" rx="9" fill="#0c1f16" stroke="#1f7a4d" stroke-width="1.1"/>
-      <text x="168" y="414" text-anchor="middle" fill="#d1fae5" font-size="11.5" font-weight="600">Loki</text>
-      <text x="168" y="428" text-anchor="middle" fill="#6ee7b7" font-size="8.5">Logs</text>
-      <rect x="214" y="390" width="76" height="52" rx="9" fill="#0c1f16" stroke="#1f7a4d" stroke-width="1.1"/>
-      <text x="252" y="414" text-anchor="middle" fill="#d1fae5" font-size="11.5" font-weight="600">Grafana</text>
-      <text x="252" y="428" text-anchor="middle" fill="#6ee7b7" font-size="8.5">Views</text>
-      <rect x="298" y="390" width="76" height="52" rx="9" fill="#0c1f16" stroke="#1f7a4d" stroke-width="1.1"/>
-      <text x="336" y="414" text-anchor="middle" fill="#d1fae5" font-size="11.5" font-weight="600">Mimir</text>
-      <text x="336" y="428" text-anchor="middle" fill="#6ee7b7" font-size="8.5">Metrics</text>
-      <rect x="382" y="390" width="76" height="52" rx="9" fill="#0c1f16" stroke="#1f7a4d" stroke-width="1.1"/>
-      <text x="420" y="414" text-anchor="middle" fill="#d1fae5" font-size="11.5" font-weight="600">Tempo</text>
-      <text x="420" y="428" text-anchor="middle" fill="#6ee7b7" font-size="8.5">Traces</text>
-    </g>
-
-    <rect x="486" y="376" width="136" height="60" rx="12" fill="#150f2b" stroke="#7c5cbf" stroke-width="1.4"/>
-    <text x="554" y="401" text-anchor="middle" fill="#c4b5fd" font-size="13" font-weight="600">Neo4j</text>
-    <text x="554" y="418" text-anchor="middle" fill="#a78bfa" font-size="9.5">Graph memory</text>
+  <g filter="url(#lift)">
+    <rect x="118" y="356" width="352" height="100" rx="12" fill="url(#gAmberDeep)" stroke="#dd7a1e" stroke-width="1.3" stroke-dasharray="5 4"/>
+    <rect x="486" y="376" width="136" height="60" rx="12" fill="url(#gViolet)" stroke="#7c5cbf" stroke-width="1.4"/>
   </g>
+  <text x="130" y="378" fill="#fdba74" font-size="9" font-weight="600" letter-spacing="1.2">LGTM TELEMETRY STORE</text>
+  <g>
+    <rect x="130" y="390" width="76" height="52" rx="9" fill="url(#gAmber)" stroke="#c2660c" stroke-width="1.1"/>
+    <text x="168" y="414" text-anchor="middle" fill="#fed7aa" font-size="11.5" font-weight="600">Loki</text>
+    <text x="168" y="428" text-anchor="middle" fill="#fdba74" font-size="8.5">Logs</text>
+    <rect x="214" y="390" width="76" height="52" rx="9" fill="url(#gAmber)" stroke="#c2660c" stroke-width="1.1"/>
+    <text x="252" y="414" text-anchor="middle" fill="#fed7aa" font-size="11.5" font-weight="600">Grafana</text>
+    <text x="252" y="428" text-anchor="middle" fill="#fdba74" font-size="8.5">Views</text>
+    <rect x="298" y="390" width="76" height="52" rx="9" fill="url(#gAmber)" stroke="#c2660c" stroke-width="1.1"/>
+    <text x="336" y="414" text-anchor="middle" fill="#fed7aa" font-size="11.5" font-weight="600">Mimir</text>
+    <text x="336" y="428" text-anchor="middle" fill="#fdba74" font-size="8.5">Metrics</text>
+    <rect x="382" y="390" width="76" height="52" rx="9" fill="url(#gAmber)" stroke="#c2660c" stroke-width="1.1"/>
+    <text x="420" y="414" text-anchor="middle" fill="#fed7aa" font-size="11.5" font-weight="600">Tempo</text>
+    <text x="420" y="428" text-anchor="middle" fill="#fdba74" font-size="8.5">Traces</text>
+  </g>
+  <text x="554" y="401" text-anchor="middle" fill="#c4b5fd" font-size="13" font-weight="600">Neo4j</text>
+  <text x="554" y="418" text-anchor="middle" fill="#a78bfa" font-size="9.5">Graph memory</text>
 
   <!-- COLLECT -->
-  <rect x="246" y="492" width="248" height="48" rx="12" fill="#0e1c33" stroke="#2a3b57" stroke-width="1.4"/>
+  <g filter="url(#lift)">
+    <rect x="246" y="492" width="248" height="48" rx="12" fill="url(#gSlate)" stroke="#2a3b57" stroke-width="1.4"/>
+  </g>
   <text x="370" y="513" text-anchor="middle" fill="#e2e8f0" font-size="13" font-weight="600">OpenTelemetry Collector</text>
   <text x="370" y="529" text-anchor="middle" fill="#64748b" font-size="10">logs &#183; metrics &#183; traces</text>
 
   <!-- MONITOR -->
-  <rect x="118" y="588" width="206" height="48" rx="12" fill="#0e1c33" stroke="#2a3b57" stroke-width="1.4"/>
+  <g filter="url(#lift)">
+    <rect x="118" y="588" width="206" height="48" rx="12" fill="url(#gSlate)" stroke="#2a3b57" stroke-width="1.4"/>
+    <rect x="416" y="588" width="206" height="48" rx="12" fill="url(#gSlate)" stroke="#2a3b57" stroke-width="1.4"/>
+  </g>
   <text x="221" y="617" text-anchor="middle" fill="#cbd5e1" font-size="13" font-weight="600">Applications</text>
-  <rect x="416" y="588" width="206" height="48" rx="12" fill="#0e1c33" stroke="#2a3b57" stroke-width="1.4"/>
   <text x="519" y="617" text-anchor="middle" fill="#cbd5e1" font-size="13" font-weight="600">Infrastructure</text>
 
   <text x="330" y="658" text-anchor="middle" fill="#64748b" font-size="11">Telemetry flows up through the safety gate. The dashed path is the feedback loop.</text>
