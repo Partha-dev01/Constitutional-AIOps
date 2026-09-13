@@ -59,7 +59,7 @@ constitutional gate, and streaming a chat turn. Example, Python:
 ```python
 from constitutional_aiops import AIOpsClient
 
-client = AIOpsClient("https://your-instance.example.com", token="caiops_pat_...")
+client = AIOpsClient("https://your-instance.example.com", token="aiops_pat_...")
 for incident in client.paginate("/incidents/", severity="critical"):
     print(incident["id"], incident["title"])
 ```
@@ -69,25 +69,27 @@ TypeScript:
 ```ts
 import { AIOpsClient } from '@constitutional-aiops/sdk'
 
-const client = new AIOpsClient({ baseUrl: 'https://your-instance.example.com', token: 'caiops_pat_...' })
+const client = new AIOpsClient({ baseUrl: 'https://your-instance.example.com', token: 'aiops_pat_...' })
 for await (const incident of client.paginate('/incidents/', { severity: 'critical' })) {
   console.log(incident.id, incident.title)
 }
 ```
 
-The final clients will be generated from the OpenAPI schema, with this
-hand-written layer kept on top as the ergonomic surface. The published packages
-are gated on the repository going public.
+Each package also ships a generated typed core (from the committed OpenAPI
+schema) alongside this hand-written ergonomic layer. The packages publish to
+PyPI (`constitutional-aiops`) and npm (`@constitutional-aiops/sdk`) on a pushed
+`sdk-v*` tag.
 
 ## Authentication for scripts
 
 Today the API accepts the session cookie the UI uses, and against an instance with
 `AUTH_REQUIRED` unset (the default single-user mode) no credential is needed.
 
-**Planned: personal access tokens.** A per-user token you create, list and revoke,
-sent as `Authorization: Bearer caiops_pat_...`, hashed at rest, scoped to your own
-role. This is the clean path for CI and scripts. It is not built yet; this page
-will show the exact flow when it ships.
+**Personal access tokens.** A per-user token you create, list and revoke in the
+app (Settings, or `POST /api/v1/auth/tokens`), sent as `Authorization: Bearer
+aiops_pat_...`, hashed at rest and scoped to your own role. This is the clean path
+for CI and scripts, and it resolves to your user even when `AUTH_REQUIRED` is off,
+so calls stay attributed and cost-fenced.
 
 ## Extensions (roadmap)
 

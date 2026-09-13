@@ -4,7 +4,15 @@ Official TypeScript client for the Constitutional AIOps REST API. Two layers shi
 together: a hand-written ergonomic client (`AIOpsClient`, no runtime dependency,
 global `fetch`, Node 18+ or a browser) and a generated typed core
 (`createTypedClient`, full type safety over the raw REST surface) that rides on
-`openapi-fetch`. See `../README.md` for the full status.
+`openapi-fetch`. See the
+[SDK overview](https://github.com/Partha-dev01/Constitutional-AIOps/tree/main/sdk)
+for the full status.
+
+## Install
+
+```bash
+npm install @constitutional-aiops/sdk
+```
 
 ## Use — ergonomic client
 

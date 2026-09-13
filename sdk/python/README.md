@@ -3,14 +3,22 @@
 Official Python client for the Constitutional AIOps REST API. Two layers ship
 together: a hand-written ergonomic client (`AIOpsClient`, standard library only)
 and an optional generated typed core (`constitutional_aiops_client`, full type
-safety over every endpoint) that rides on `httpx` + `attrs`. See `../README.md`
+safety over every endpoint) that rides on `httpx` + `attrs`. See the
+[SDK overview](https://github.com/Partha-dev01/Constitutional-AIOps/tree/main/sdk)
 for the full status.
 
-## Install (from source, pre-publish)
+## Install
 
 ```bash
-pip install -e sdk/python            # ergonomic client only, zero dependencies
-pip install -e "sdk/python[typed]"   # also install the generated typed core
+pip install constitutional-aiops            # ergonomic client only, zero dependencies
+pip install "constitutional-aiops[typed]"   # also install the generated typed core
+```
+
+Or from a source checkout (development):
+
+```bash
+pip install -e sdk/python
+pip install -e "sdk/python[typed]"
 ```
 
 ## Use — ergonomic client

@@ -3,11 +3,11 @@
 Official client libraries for the Constitutional AIOps REST API. Two packages
 live here:
 
-- `python/` — the Python client (`constitutional-aiops` on PyPI, planned).
+- `python/` — the Python client (`constitutional-aiops` on PyPI).
 - `typescript/` — the TypeScript / JavaScript client
-  (`@constitutional-aiops/sdk` on npm, planned).
+  (`@constitutional-aiops/sdk` on npm).
 
-## Status: pre-release, not yet published
+## Status: pre-release (0.1.0)
 
 Each package ships two layers:
 
@@ -29,8 +29,10 @@ and sent as `Authorization: Bearer`. It resolves to the real user even when
 `AUTH_REQUIRED` is off, so SDK calls are attributed and cost-fenced. Against a
 single-user instance with `AUTH_REQUIRED` unset a token is optional.
 
-Neither package is published yet. Publishing is gated on the repository going
-public. See the developer-platform guide in the docs site for the full plan.
+The repository is public (AGPL-3.0). The first release (`0.1.0`) publishes to
+PyPI (`constitutional-aiops`) and npm (`@constitutional-aiops/sdk`) on a pushed
+`sdk-v*` tag via `.github/workflows/publish-sdk.yml`. See the developer-platform
+guide in the docs site for the full plan.
 
 ## Design goals
 
