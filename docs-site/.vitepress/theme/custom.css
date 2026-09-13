@@ -83,17 +83,35 @@
 }
 
 /* Home hero: enlarge the architecture diagram so it reads as the centrepiece,
-   and let it sit borderless on the page (its own SVG has no panel). */
+   and let it sit borderless on the page (its own SVG has no panel). VitePress
+   sizes the image via the container + its absolutely-positioned .image-src, so
+   all three are overridden (!important to beat the theme's own media queries). */
 @media (min-width: 960px) {
+  .VPHero .image-container {
+    width: 440px !important;
+    height: 500px !important;
+  }
+  .VPHero .image-bg {
+    width: 420px !important;
+    height: 440px !important;
+  }
   .VPHero .image-src {
-    max-width: 500px;
-    max-height: 560px;
+    max-width: 440px !important;
+    max-height: 500px !important;
   }
 }
 @media (min-width: 1280px) {
+  .VPHero .image-container {
+    width: 520px !important;
+    height: 580px !important;
+  }
+  .VPHero .image-bg {
+    width: 500px !important;
+    height: 500px !important;
+  }
   .VPHero .image-src {
-    max-width: 560px;
-    max-height: 640px;
+    max-width: 520px !important;
+    max-height: 580px !important;
   }
 }
 
