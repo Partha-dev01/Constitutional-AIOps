@@ -22,7 +22,7 @@ export function LegalPage({
       <div className="mx-auto w-full max-w-3xl px-4 py-10">
         <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
           <Link to="/" className="flex items-center gap-2">
-            <img src="/logo-mark.png" alt="" aria-hidden="true" className="h-8 w-8" />
+            <img src={`${import.meta.env.BASE_URL}logo-mark.png`} alt="" aria-hidden="true" className="h-8 w-8" />
             <div>
               <p className="text-sm font-bold leading-tight">Constitutional</p>
               <p className="text-xs text-muted-foreground">AIOps</p>

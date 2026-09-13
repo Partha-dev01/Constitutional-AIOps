@@ -60,6 +60,9 @@ export interface UseWebSocketOptions {
   onConnect?: () => void
   onDisconnect?: () => void
   onError?: (error: Event) => void
+  /** Demo build only: play the scripted event burst once on connect so the
+   *  event-driven widgets populate. No effect outside a DEMO_MODE build. */
+  emitDemoEvents?: boolean
 }
 
 // Default WebSocket URL - use relative path that works with nginx proxy in Docker
@@ -96,6 +99,21 @@ async function getWsToken(): Promise<string> {
   return token
 }
 
+// Demo-only scripted event burst. The demo build has no backend socket, so the
+// event-driven Dashboard widgets (Recent Activity, Live Incident Narrative)
+// would stay empty. This short, coherent burst — the nextcloud-host incident
+// lifecycle — is played once on the Dashboard's socket so those widgets fill in.
+// Referenced only inside the `if (DEMO_MODE)` branch below, so the compile-time
+// constant lets the bundler tree-shake it out of the normal build entirely.
+const DEMO_EVENT_SCRIPT: Array<{ type: EventType; payload: Record<string, unknown> }> = [
+  { type: EventType.INCIDENT_CREATED, payload: { incident_id: 'inc-2043', title: 'Nextcloud database connection refused on nextcloud-host' } },
+  { type: EventType.RCA_COMPLETED, payload: { incident_id: 'inc-2043', summary: 'Root cause: disk pressure to php-fpm OOM to dropped DB connection (confidence 0.91)' } },
+  { type: EventType.REMEDIATION_PLANNED, payload: { incident_id: 'inc-2043', title: 'Queued a 3-step remediation plan' } },
+  { type: EventType.ACTION_CREATED, payload: { incident_id: 'inc-2043', title: 'Restart nextcloud-db to recover the connection pool' } },
+  { type: EventType.ACTION_APPROVED, payload: { incident_id: 'inc-2043', title: 'Restart nextcloud-db approved by admin' } },
+  { type: EventType.ACTION_EXECUTED, payload: { incident_id: 'inc-2030', summary: 'grafana restarted; datasource healthy' } },
+]
+
 /**
  * React hook for WebSocket connection management.
  *
@@ -122,6 +140,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     onConnect,
     onDisconnect,
     onError,
+    emitDemoEvents = false,
   } = options
 
   const [connectionState, setConnectionState] = useState<ConnectionState>('disconnected')
@@ -131,6 +150,9 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   const reconnectAttemptsRef = useRef(0)
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const listenersRef = useRef<Map<EventType | '*', Set<(event: WebSocketEvent) => void>>>(new Map())
+  // Demo build only: timers for the scripted event burst, so they can be cleared.
+  const demoTimersRef = useRef<ReturnType<typeof setTimeout>[]>([])
+  const demoPlayedRef = useRef(false)
 
   // Clear reconnect timeout
   const clearReconnectTimeout = useCallback(() => {
@@ -163,6 +185,22 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
       setConnectionState('connected')
       reconnectAttemptsRef.current = 0
       onConnect?.()
+      // Play the scripted burst once so the event-driven widgets populate. Opt-in
+      // per hook (emitDemoEvents) so only the Dashboard drives it; other pages
+      // just show a live-but-quiet connection. Staggered so the subscriptions
+      // registered right after connect are in place before the first event.
+      if (emitDemoEvents && !demoPlayedRef.current) {
+        demoPlayedRef.current = true
+        DEMO_EVENT_SCRIPT.forEach((e, i) => {
+          const timer = setTimeout(() => {
+            const evt: WebSocketEvent = { ...e, timestamp: new Date().toISOString() }
+            setLastEvent(evt)
+            listenersRef.current.get(evt.type)?.forEach((l) => l(evt))
+            listenersRef.current.get('*')?.forEach((l) => l(evt))
+          }, 500 + i * 450)
+          demoTimersRef.current.push(timer)
+        })
+      }
       return
     }
 
@@ -235,11 +273,13 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     }
 
     wsRef.current = ws
-  }, [url, clientId, clearReconnectTimeout, onConnect, onDisconnect, onError, attemptReconnect])
+  }, [url, clientId, clearReconnectTimeout, onConnect, onDisconnect, onError, attemptReconnect, emitDemoEvents])
 
   // Disconnect from WebSocket
   const disconnect = useCallback(() => {
     clearReconnectTimeout()
+    demoTimersRef.current.forEach(clearTimeout)
+    demoTimersRef.current = []
     reconnectAttemptsRef.current = maxReconnectAttempts // Prevent auto-reconnect
 
     if (wsRef.current) {

@@ -467,6 +467,8 @@ const SETTINGS = {
     slackEnabled: false,
     webhookEnabled: false,
     webhookUrl: '',
+    webhookSecret: '',
+    webhookMinSeverity: 'warning',
     notifyOnCritical: true,
     notifyOnApproval: true,
     notifyOnResolution: false,
@@ -478,6 +480,7 @@ const SETTINGS = {
     prometheusUrl: 'http://prometheus:9090',
     tempoEnabled: false,
     tempoUrl: 'http://tempo:3200',
+    dockerEnabled: true,
     retentionDays: 30,
   },
   remediation: {
@@ -607,6 +610,8 @@ const REASONING_ACTIVITY = {
 // ---------------------------------------------------------------------------
 
 const TELEMETRY_LOGS = {
+  source: 'docker',
+  total: 6,
   logs: [
     { timestamp: iso(6), level: 'error', service: 'backend', message: 'nextcloud-db: connection refused (ECONNREFUSED)' },
     { timestamp: iso(6), level: 'error', service: 'nextcloud-host', message: 'php-fpm: worker 12 killed by OOM' },
@@ -617,13 +622,30 @@ const TELEMETRY_LOGS = {
   ],
 }
 
-const TELEMETRY_METRICS = {
-  metrics: [
-    { name: 'backend_5xx_rate', value: 4.7, unit: '/min' },
-    { name: 'reasoning_queue_depth', value: 18, unit: 'jobs' },
-    { name: 'nextcloud_host_disk_pct', value: 93, unit: '%' },
-    { name: 'neo4j_pool_in_use', value: 40, unit: 'conns' },
-  ],
+// GET /telemetry/metrics — per-service CPU%/mem% points from the local Docker
+// socket source. Shaped like the real endpoint so BOTH the Telemetry "Metrics
+// Summary" (value + label) and useContainerStats (service + metric) consume it.
+// Values jitter each poll so the Dashboard / Console live charts animate across
+// their rolling window instead of drawing a flat line.
+function telemetryMetrics(): DemoResult {
+  const t = Date.now() / 1000
+  const now = new Date().toISOString()
+  const services = [
+    { service: 'backend', cpu: 34, mem: 61, memMb: 512 },
+    { service: 'neo4j', cpu: 22, mem: 74, memMb: 1536 },
+    { service: 'caddy', cpu: 4, mem: 9, memMb: 48 },
+    { service: 'frontend', cpu: 2, mem: 6, memMb: 40 },
+    { service: 'nextcloud-host', cpu: 71, mem: 93, memMb: 1892 },
+  ]
+  const j = (base: number, amp: number, phase: number): number =>
+    Math.max(0, +(base + amp * Math.sin(t / 6 + phase) + (Math.random() - 0.5) * amp * 0.5).toFixed(1))
+  const metrics: Array<Record<string, unknown>> = []
+  services.forEach((s, i) => {
+    metrics.push({ timestamp: now, service: s.service, metric: 'cpu_percent', value: j(s.cpu, 6, i), label: `${s.service} CPU %` })
+    metrics.push({ timestamp: now, service: s.service, metric: 'mem_percent', value: j(s.mem, 4, i + 1), label: `${s.service} Mem %` })
+    metrics.push({ timestamp: now, service: s.service, metric: 'mem_mb', value: j(s.memMb, 32, i + 2), label: `${s.service} Mem MB` })
+  })
+  return { status: 200, json: { metrics, range: '1h', step: '5m', source: 'docker' } }
 }
 
 // ---------------------------------------------------------------------------
@@ -1037,6 +1059,145 @@ const ENDPOINT_EVAL = {
   detail: 'demo: 5 sample cases against the demo endpoint.',
 }
 
+// ---------------------------------------------------------------------------
+// Serving-mode health (GET /health/serving) — the chat streaming probe. The
+// demo streams its canned answer token-by-token, so it advertises serving
+// Mode 2 with streaming on; the engine block mirrors the dual-agent reference.
+// ---------------------------------------------------------------------------
+const SERVING_HEALTH = {
+  mode: 2,
+  single_engine: false,
+  features: { streaming: true, native_tools: true, guided_json: true, priority: true },
+  engine: {
+    fast_url: 'http://localhost:8000/v1',
+    reasoning_url: 'http://localhost:8001/v1',
+    fast_model: 'qwen3-4b',
+    reasoning_model: 'qwen3-14b',
+    fast_agent_healthy: true,
+    reasoning_agent_healthy: true,
+    fast_agent_latency_ms: 74,
+    reasoning_agent_latency_ms: 830,
+  },
+}
+
+// ---------------------------------------------------------------------------
+// LLM insight widgets (Track 2 W3): opt-in per-user preferences + the
+// cost-fenced explain endpoint. Enabled here so the demo shows the "Explain"
+// buttons; autoExplain stays off so nothing fires on mount (the honesty rule).
+// ---------------------------------------------------------------------------
+const INSIGHT_PREFERENCES = {
+  aiWidgets: { enabled: true, autoExplain: false },
+  budget: {
+    enabled: true,
+    dailyTokenLimit: 100_000,
+    usedToday: 6_240,
+    requestsToday: 12,
+    remaining: 93_760,
+  },
+}
+
+/** POST /insights/explain — a short, kind-tailored model-generated reading. */
+function insightExplain(bodyText?: string): DemoResult {
+  let kind = ''
+  try {
+    kind = (JSON.parse(bodyText || '{}') as { kind?: string }).kind ?? ''
+  } catch {
+    // keep default
+  }
+  const byKind: Record<string, string> = {
+    anomaly:
+      'The flagged points are the disk-usage series on nextcloud-host crossing 92% and the backend 5xx rate spiking to 4.7/min. Both sit well above their recent baselines (z ≈ 3.1 and 2.7) and move together, consistent with the disk-pressure to OOM chain rather than independent noise.',
+    blast_radius:
+      'Restarting nextcloud-db touches the Nextcloud app and, downstream, the backend API that depends on it. It does not reach the observability stack or the reasoning agent, so the change stays contained to the edge-host services already implicated in inc-2043.',
+    diff:
+      'Between the two snapshots the backend moved from healthy to unhealthy, the reasoning queue depth rose from 2 to 18, and nextcloud-host disk crossed its threshold. The Neo4j pool went from 22 to 40 in-use connections.',
+    runbook:
+      'Similar past incidents on this host were resolved by pruning /var/lib/docker and restarting php-fpm with the database container, then verifying 200s through Caddy. That sequence resolved inc-1007 in about five minutes.',
+    next_best_action:
+      'The highest-value next step is to approve the queued restart of nextcloud-db, which directly addresses the dropped connection pool. Pruning disk first keeps the OOM from recurring during the restart.',
+    incident:
+      'inc-2043 is a saturation cascade: disk pressure OOM-killed php-fpm, which dropped the database connection and surfaced as upstream 5xx. Confidence is high (0.91) because the log and metric timelines line up within the same 40-second window.',
+    graph:
+      'The causal chain reads episode inc-2043 to root cause "disk pressure to OOM" to the resolving action restart_service, with a SIMILAR_TO link to the earlier backend 5xx incident. The shared root cause is why both point back to the same edge host.',
+  }
+  const explanation =
+    byKind[kind] ??
+    'This reading summarizes the already-computed widget result. It is generated by a model on request and is not measured telemetry.'
+  return {
+    status: 200,
+    json: {
+      available: true,
+      explanation,
+      model_generated: true,
+      reason: null,
+      tokens_used: 180 + Math.floor(explanation.length / 4),
+      remaining: 93_760,
+    },
+  }
+}
+
+// Onboarding wizard state — completed so the demo lands straight on the app.
+const ONBOARDING = { completed: true, skipped: false, step: 4 }
+
+// Remote chat alerting (Settings -> Notifications). Secrets never returned.
+const ALERTING = {
+  telegram: {
+    enabled: false, chatId: '', tokenSet: false, minSeverity: 'critical',
+    inboundEnabled: false, routingId: '', webhookSecretSet: false,
+  },
+  matrix: {
+    enabled: false, homeserver: '', roomId: '', accessTokenSet: false, minSeverity: 'critical',
+  },
+}
+
+// Live-probe result for the setup wizard's Monitoring step + Settings test.
+const MONITORING_TEST = {
+  loki: { ok: true, detail: 'demo: reachable (6 streams)' },
+  prometheus: { ok: true, detail: 'demo: reachable (up=1)' },
+  tempo: { ok: false, detail: 'demo: no telemetry received in window' },
+  docker: { ok: true, detail: 'demo: docker socket reachable' },
+}
+
+// System prompts (Settings -> Prompts). Three editable base prompts.
+const PROMPTS = [
+  {
+    name: 'fast_agent', agent: 'fast', editable: true,
+    description: 'Telemetry annotation + severity classification (Qwen3-4B).',
+    prompt:
+      'You are the fast annotation agent. Classify each telemetry line by severity and component. Respond with strict JSON only.',
+  },
+  {
+    name: 'reasoning_agent', agent: 'reasoning', editable: true,
+    description: 'Root-cause analysis + remediation planning (Qwen3-14B).',
+    prompt:
+      'You are the reasoning agent. Given an incident and its telemetry, produce a root cause, a causal chain, and a step-by-step remediation plan. Never propose an irreversible action without approval.',
+  },
+  {
+    name: 'chat', agent: 'reasoning', editable: true,
+    description: 'Operator chat + explanations.',
+    prompt:
+      'You are the Constitutional AIOps operator assistant. Answer from the system context. Every proposed action still passes the constitutional gate.',
+  },
+]
+
+// Topology schema (Settings editor + setup wizard) — the demo service map.
+const TOPOLOGY_SCHEMA = {
+  mode: 'custom',
+  nodes: [
+    { id: 'caddy', label: 'Caddy', kind: 'gateway', tier: 0, port: 443, description: 'TLS + reverse proxy' },
+    { id: 'frontend', label: 'Frontend', kind: 'web', tier: 1, port: 3000, description: 'React SPA' },
+    { id: 'backend', label: 'Backend', kind: 'service', tier: 2, port: 8080, description: 'FastAPI core' },
+    { id: 'neo4j', label: 'Neo4j', kind: 'database', tier: 3, port: 7687, description: 'Graph-episodic memory' },
+    { id: 'nextcloud-host', label: 'nextcloud-host', kind: 'edge', tier: 3, port: null, description: 'Remote edge host' },
+  ],
+  edges: [
+    { source: 'caddy', target: 'frontend', relationship: 'routes', kind: 'http' },
+    { source: 'caddy', target: 'backend', relationship: 'routes', kind: 'http' },
+    { source: 'backend', target: 'neo4j', relationship: 'reads', kind: 'bolt' },
+    { source: 'backend', target: 'nextcloud-host', relationship: 'monitors', kind: 'agent' },
+  ],
+}
+
 /**
  * Resolve a demo response for an /api/v1 request. `route` is the path with the
  * `/api/v1` prefix already stripped and no query string. Unknown routes get a
@@ -1049,6 +1210,11 @@ export function matchRoute(method: string, route: string, bodyText?: string): De
   if (route === '/health' || route === '/health/') return ok(HEALTH)
   if (route === '/health/ready') return ok({ ready: true })
   if (route === '/health/live') return ok({ alive: true })
+  if (route === '/health/serving') return ok(SERVING_HEALTH)
+
+  // Insights (opt-in, cost-fenced LLM widgets)
+  if (route === '/insights/preferences') return ok(INSIGHT_PREFERENCES)
+  if (route === '/insights/explain') return insightExplain(bodyText)
 
   // Auth: no enforcement in the demo -> Dashboard renders with no login.
   if (route === '/auth/config') {
@@ -1074,6 +1240,13 @@ export function matchRoute(method: string, route: string, bodyText?: string): De
   }
   const incSimilar = route.match(/^\/incidents\/([^/]+)\/similar$/)
   if (incSimilar) return ok({ similar: INCIDENTS.filter((i) => i.id !== incSimilar[1]).slice(0, 2) })
+  const incAnalyze = route.match(/^\/incidents\/([^/]+)\/analyze$/)
+  if (incAnalyze) return ok(INCIDENTS.find((i) => i.id === incAnalyze[1]) ?? INCIDENTS[0])
+  const incDismiss = route.match(/^\/incidents\/([^/]+)\/dismiss$/)
+  if (incDismiss) {
+    const inc = INCIDENTS.find((i) => i.id === incDismiss[1]) ?? INCIDENTS[0]
+    return ok({ ...inc, status: 'closed' })
+  }
   const incRemediate = route.match(/^\/incidents\/([^/]+)\/remediate$/)
   if (incRemediate) {
     const inc = INCIDENTS.find((i) => i.id === incRemediate[1]) ?? INCIDENTS[0]
@@ -1088,9 +1261,24 @@ export function matchRoute(method: string, route: string, bodyText?: string): De
   if (route === '/actions/' || route === '/actions') {
     return ok({ items: ACTIONS, total: ACTIONS.length, page: 1, page_size: 20, has_more: false })
   }
+  const actDecision = route.match(/^\/actions\/([^/]+)\/(approve|execute|cancel)$/)
+  if (actDecision) {
+    const base = ACTIONS.find((a) => a.id === actDecision[1]) ?? ACTIONS[0]
+    const status =
+      actDecision[2] === 'cancel' ? 'cancelled' : actDecision[2] === 'execute' ? 'completed' : 'approved'
+    return ok({
+      ...base,
+      status,
+      updated_at: iso(0),
+      execution_result:
+        actDecision[2] === 'execute'
+          ? { success: true, output: 'demo: executed', duration_ms: 3200 }
+          : base.execution_result ?? null,
+    })
+  }
   const actId = route.match(/^\/actions\/([^/]+)$/)
   if (actId) return ok(ACTIONS.find((a) => a.id === actId[1]) ?? ACTIONS[0])
-  if (route.startsWith('/actions/')) return ok({ ok: true }) // approve/execute/cancel
+  if (route.startsWith('/actions/')) return ok({ ok: true }) // any other action sub-route
 
   // Tools (MCP)
   if (route === '/tools' || route === '/tools/') return ok(TOOLS)
@@ -1102,8 +1290,11 @@ export function matchRoute(method: string, route: string, bodyText?: string): De
   if (route === '/graph/topology') return ok(topology)
   if (route === '/graph/episodes') return ok(EPISODES_GRAPH)
 
-  // Topology schema editor
-  if (route.startsWith('/topology/schema')) return ok({ nodes: [], edges: [] })
+  // Topology schema editor + setup wizard
+  if (route === '/topology/schema' || route.startsWith('/topology/schema')) return ok(TOPOLOGY_SCHEMA)
+  if (route === '/topology/generate') {
+    return ok({ preview: true, nodes: TOPOLOGY_SCHEMA.nodes, edges: TOPOLOGY_SCHEMA.edges, note: 'demo: generated from template' })
+  }
 
   // Settings
   if (route === '/settings/' || route === '/settings') {
@@ -1114,8 +1305,21 @@ export function matchRoute(method: string, route: string, bodyText?: string): De
   if (route === '/settings/models') return ok(MODELS_CONFIG)
   if (route === '/settings/models/test') return ok({ fast_agent: true, reasoning_agent: true })
   if (route === '/settings/notifications/test-webhook') return ok({ ok: true, detail: 'demo: webhook not actually sent' })
+  if (route === '/settings/notifications/alerting') return ok(ALERTING)
+  if (route === '/settings/notifications/alerting/test') return ok({ ok: true, detail: 'demo: test alert not actually sent' })
+  if (route === '/settings/monitoring/test') return ok(MONITORING_TEST)
+  if (route === '/settings/onboarding') return ok(ONBOARDING)
   if (route === '/settings/reset') return ok(SETTINGS)
-  if (route.startsWith('/prompts')) return ok({ prompts: [] })
+
+  // System prompts (Settings -> Prompts)
+  if (route === '/prompts' || route === '/prompts/') return ok({ prompts: PROMPTS })
+  if (route === '/prompts/generate') {
+    return ok({ prompt: PROMPTS[1].prompt, note: 'demo: generated from your services' })
+  }
+  const promptReset = route.match(/^\/prompts\/([^/]+)\/reset$/)
+  if (promptReset) return ok(PROMPTS.find((p) => p.name === promptReset[1]) ?? PROMPTS[0])
+  const promptName = route.match(/^\/prompts\/([^/]+)$/)
+  if (promptName) return ok(PROMPTS.find((p) => p.name === promptName[1]) ?? PROMPTS[0])
 
   // Demo / chaos
   if (route === '/demo/scenarios') return ok(DEMO_SCENARIOS)
@@ -1129,6 +1333,17 @@ export function matchRoute(method: string, route: string, bodyText?: string): De
   // Infrastructure
   if (route === '/infrastructure/containers') return ok(CONTAINERS)
   if (route === '/infrastructure/remote-hosts') return ok(REMOTE_HOSTS)
+  const remoteHost = route.match(/^\/infrastructure\/remote-hosts\/([^/]+)$/)
+  if (remoteHost) {
+    return ok({
+      edge_label: decodeURIComponent(remoteHost[1]),
+      health: 'critical',
+      last_seen: iso(6),
+      episode_count: 8,
+      incident_count: 3,
+      recent_incidents: INCIDENTS.slice(0, 2),
+    })
+  }
   if (route.startsWith('/infrastructure/')) return ok({ ok: true })
 
   // Agents
@@ -1137,7 +1352,7 @@ export function matchRoute(method: string, route: string, bodyText?: string): De
 
   // Telemetry
   if (route === '/telemetry/logs') return ok(TELEMETRY_LOGS)
-  if (route === '/telemetry/metrics') return ok(TELEMETRY_METRICS)
+  if (route === '/telemetry/metrics') return telemetryMetrics()
 
   // Chat
   if (route === '/chat/stream') return { status: 200, sse: chatSseFrames(bodyConversationId(bodyText), bodyMessage(bodyText)) }

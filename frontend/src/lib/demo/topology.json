@@ -35,7 +35,7 @@
     },
     {
       "id": "backend",
-      "label": "Backend API",
+      "label": "Backend",
       "kind": "backend",
       "tier": 1,
       "health": "warning",

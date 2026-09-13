@@ -77,6 +77,9 @@ export function Dashboard() {
   const { isConnected, subscribe } = useWebSocket({
     autoConnect: true,
     reconnect: true,
+    // Demo build only: play the scripted event burst so Recent Activity and the
+    // Live Incident Narrative populate. No effect in a normal build.
+    emitDemoEvents: true,
     onConnect: () => {
       console.log('Dashboard connected to WebSocket')
     },
