@@ -609,16 +609,20 @@ const REASONING_ACTIVITY = {
 // Telemetry
 // ---------------------------------------------------------------------------
 
+// Levels are UPPERCASE to match the real backend LogEntry contract (INFO / WARN
+// / ERROR / DEBUG) so the level badges colour correctly and the level filter
+// works. The caddy line is a raw JSON access log (with ANSI colour codes) so the
+// Telemetry beautifier shows its one-line summary with the full JSON on expand.
 const TELEMETRY_LOGS = {
   source: 'docker',
   total: 6,
   logs: [
-    { timestamp: iso(6), level: 'error', service: 'backend', message: 'nextcloud-db: connection refused (ECONNREFUSED)' },
-    { timestamp: iso(6), level: 'error', service: 'nextcloud-host', message: 'php-fpm: worker 12 killed by OOM' },
-    { timestamp: iso(7), level: 'warn', service: 'nextcloud-host', message: 'disk usage on /var/lib/docker at 93%' },
-    { timestamp: iso(12), level: 'warn', service: 'backend', message: 'reasoning queue depth 18 (backlog)' },
-    { timestamp: iso(20), level: 'info', service: 'caddy', message: 'GET /api/v1/incidents 200 8ms' },
-    { timestamp: iso(31), level: 'error', service: 'neo4j', message: 'connection pool exhausted (max 40)' },
+    { timestamp: iso(6), level: 'ERROR', service: 'backend', message: 'nextcloud-db: connection refused (ECONNREFUSED)' },
+    { timestamp: iso(6), level: 'ERROR', service: 'nextcloud-host', message: 'php-fpm: worker 12 killed by OOM' },
+    { timestamp: iso(7), level: 'WARN', service: 'nextcloud-host', message: 'disk usage on /var/lib/docker at 93%' },
+    { timestamp: iso(12), level: 'WARN', service: 'backend', message: 'reasoning queue depth 18 (backlog)' },
+    { timestamp: iso(20), level: 'INFO', service: 'caddy', message: '\u001b[34mINFO\u001b[0m http.log.access handled request {"level":"info","logger":"http.log.access.log0","msg":"handled request","request":{"remote_ip":"10.0.0.4","proto":"HTTP/2.0","method":"GET","host":"aiops.example.com","uri":"/api/v1/incidents?status=open"},"status":200,"size":8423,"duration":0.0081}' },
+    { timestamp: iso(31), level: 'ERROR', service: 'neo4j', message: 'connection pool exhausted (max 40)' },
   ],
 }
 
