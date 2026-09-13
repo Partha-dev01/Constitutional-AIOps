@@ -70,28 +70,92 @@ and it is deliberately fenced:
 - **It is labelled.** An explanation carries an honesty chip that says it is
   model-generated, not measured telemetry.
 
-### The "Explain" flow
+### Where the "Explain" button appears
 
-1. Turn on AI widgets in [Settings](/features/settings). This writes a per-user
-   preference (`enabled`, and optionally `autoExplain`).
-2. On a supported widget, click **Explain**.
-3. The widget sends its small, bounded payload to the opt-in `/insights/explain`
-   endpoint.
-4. You get a short, plain-language reading of the computed result, clearly marked
-   as model-generated.
+Seven widgets carry an opt-in "Explain" button. Each button reads the same
+computed result the widget already shows, then asks a model to put it in words.
+The wording is specific to the widget, so you always know what you are asking
+about. Most explain on the cheap fast tier. The three incident and graph reads
+that need deeper reasoning use the reasoning tier.
 
-### Degrade contract
+| Widget | Page | Button label | Tier |
+| --- | --- | --- | --- |
+| Anomaly scan | [Dashboard](/features/dashboard) | Explain these anomalies | Fast |
+| Blast-Radius Preview | [Dashboard](/features/dashboard) | Explain the blast radius | Fast |
+| What-Changed Diff | [Dashboard](/features/dashboard) | Explain what changed | Fast |
+| Learned Runbook | [Dashboard](/features/dashboard) | Explain this runbook | Fast |
+| Live Incident Narrative | [Dashboard](/features/dashboard) | Suggest next best action | Reasoning |
+| Incident Copilot | [Incidents](/features/incidents) detail | Explain this incident | Reasoning |
+| Graph Copilot | [Graph Explorer](/features/graph-explorer) | Explain this graph | Reasoning |
 
-The insight layer is designed to never break the computed view underneath it:
+A button shows only when two things are true at once: you have AI widgets turned
+on, and the widget actually has data to explain. An empty widget offers no
+button, so a call is never spent on nothing.
 
-- **No endpoint configured**: you keep the rule-based computed view. The explain
-  button simply is not offered.
-- **Rate limited (429)**: you see a brief notice and stay on the computed view.
-  Nothing is lost.
-- **Preference fetch fails**: AI widgets resolve to off.
+### How to turn it on
 
-In every failure case the honest, computed widget is still there. The LLM layer
-is additive, never load-bearing.
+1. Open [Settings](/features/settings) and find the AI insight widgets card.
+2. Turn on **AI widgets**. This writes a per-user preference, so your choice does
+   not change anything for anyone else.
+3. Open a supported widget from the table above and use its Explain button.
+
+There is nothing to install and no key to paste here. The button uses whatever
+LLM endpoint the app is already pointed at. Explanations always happen on a
+click. Nothing explains itself on load.
+
+### The button, state by state
+
+Every Explain button moves through the same states. The Anomaly scan widget is
+the worked example below, and the other six behave identically with their own
+wording.
+
+1. **Idle.** A small outlined button with a sparkle icon and the widget's label,
+   for example `Explain these anomalies`. Nothing has been sent yet.
+2. **Working.** On click the sparkle becomes a spinner and the label switches to
+   `Explaining…`. The reasoning-tier widgets read `Thinking…`,
+   `Reading the incident…` or `Reading the graph…` instead. The button is
+   disabled while it runs, so a second click cannot fire a second call.
+3. **Explained.** The button is replaced in place by an explanation panel. The
+   panel always carries the same honesty header: a sparkle icon with the words
+   **AI explanation**, the model's text, and a caption that reads
+   *Model-generated hypothesis, not measured telemetry.* The computed widget
+   above it is untouched.
+4. **Note.** If the call cannot produce an explanation, the button stays and a
+   short line appears under it saying why and what to do next. The exact lines
+   are in the table further down.
+
+### What each explanation is allowed to send
+
+An explanation never ships your raw telemetry to a model. It sends only the small
+computed summary the widget already shows, capped so a noisy view cannot build a
+large prompt. The server truncates again on its own side.
+
+- **Anomaly scan**: the strongest 5 flagged points plus the total count.
+- **Blast-Radius Preview**: up to 12 services per hop, with empty hops dropped.
+- **Live Incident Narrative**: up to 3 incidents, 12 stages each.
+- **Learned Runbook**: the strongest 6 rows.
+- **Graph Copilot**: the top 6 root causes, actions and services, plus 5
+  incidents worth attention.
+- **Incident Copilot**: up to 8 services, causal-chain steps and remediation
+  steps, with any long description trimmed.
+
+### When it cannot explain
+
+The insight layer never breaks the computed widget under it. When a call cannot
+return an explanation the widget keeps its rule-based view and shows one honest
+line:
+
+| Situation | Line shown |
+| --- | --- |
+| AI widgets are off | Turn on AI insight widgets in Settings to explain this. |
+| No LLM endpoint set | Add an LLM endpoint in Settings to enable explanations. |
+| Daily budget reached | Daily AI budget reached. Explanations resume tomorrow. |
+| Model returned nothing | The model returned no explanation. Try again. |
+| Endpoint unreachable | Could not reach the LLM endpoint just now. |
+| Anything else | Explanation is unavailable right now. |
+
+In every one of these cases the computed widget is still there and still correct.
+The LLM layer is additive, never load-bearing.
 
 ## In-browser local chat (WebLLM)
 
