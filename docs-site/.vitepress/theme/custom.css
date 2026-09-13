@@ -82,6 +82,21 @@
   outline-color: var(--vp-c-brand-1);
 }
 
+/* Home hero: enlarge the architecture diagram so it reads as the centrepiece,
+   and let it sit borderless on the page (its own SVG has no panel). */
+@media (min-width: 960px) {
+  .VPHero .image-src {
+    max-width: 500px;
+    max-height: 560px;
+  }
+}
+@media (min-width: 1280px) {
+  .VPHero .image-src {
+    max-width: 560px;
+    max-height: 640px;
+  }
+}
+
 /* Screenshot figures: rounded, hairline border, subtle lift to read as a
    framed product shot rather than a raw inline image. */
 .vp-doc img[src*='/screenshots/'] {
