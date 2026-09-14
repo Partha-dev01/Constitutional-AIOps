@@ -49,7 +49,7 @@ dependencies = [
     # python-multipart is required by FastAPI for any form/file upload handling.
     # Its absence from pyproject means CI cannot fully validate the app's
     # request-parsing capabilities. Moved from requirements.txt (P0 #6 fix).
-    "python-multipart>=0.0.6",
+    "python-multipart>=0.0.32",
     # cryptography backs src/auth/crypto.py at-rest Fernet encryption of the
     # bring-your-own LLM API key. It lived only in requirements.txt, which
     # `pip install -e ".[dev]"` (used by CI) does not read, so CI ran the
