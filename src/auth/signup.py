@@ -107,7 +107,18 @@ def verify_captcha(token: str, remote_ip: str = "") -> bool:
     try:
         with urllib.request.urlopen(req, timeout=6) as resp:
             result = json.loads(resp.read().decode("utf-8"))
-        return bool(result.get("success"))
+        if not result.get("success"):
+            # error-codes says WHY: "timeout-or-duplicate" means a single-use
+            # token was reused (the widget must re-challenge before a retry),
+            # "invalid-input-response" a bad token. Turnstile and hCaptcha both
+            # return the hyphenated key.
+            logger.warning(
+                "captcha siteverify (%s) rejected: error-codes=%s",
+                provider,
+                result.get("error-codes") or [],
+            )
+            return False
+        return True
     except Exception as exc:  # noqa: BLE001 - any failure => not verified
         logger.warning("captcha siteverify (%s) failed: %s", provider, exc)
         return False

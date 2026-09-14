@@ -35,6 +35,7 @@ export function Signup() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [captchaToken, setCaptchaToken] = useState<string | null>(null)
+  const [captchaNonce, setCaptchaNonce] = useState(0)
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
@@ -72,6 +73,12 @@ export function Signup() {
         setError(err.message || 'Please check your details and try again.')
       } else {
         setError(err instanceof Error ? err.message : 'Signup failed. Please try again.')
+      }
+      // The captcha token is single-use and now spent; re-challenge so a retry
+      // gets a fresh token instead of one rejected as a duplicate.
+      if (captchaRequired) {
+        setCaptchaToken(null)
+        setCaptchaNonce((n) => n + 1)
       }
     } finally {
       setSubmitting(false)
@@ -162,7 +169,12 @@ export function Signup() {
           </div>
 
           {captchaRequired && (
-            <CaptchaWidget provider={captchaProvider} siteKey={captchaSiteKey} onToken={onToken} />
+            <CaptchaWidget
+              provider={captchaProvider}
+              siteKey={captchaSiteKey}
+              onToken={onToken}
+              resetSignal={captchaNonce}
+            />
           )}
 
           {error && (

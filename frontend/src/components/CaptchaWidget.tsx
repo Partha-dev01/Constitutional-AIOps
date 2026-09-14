@@ -76,10 +76,17 @@ export interface CaptchaWidgetProps {
   siteKey: string
   /** Fires with the solved token, or null when it expires/errors. */
   onToken: (token: string | null) => void
+  /**
+   * Bump this to re-challenge the widget. Turnstile/hCaptcha tokens are
+   * single-use, so after a failed signup the spent token must be discarded and
+   * a fresh one issued, else the retry is rejected as a duplicate.
+   */
+  resetSignal?: number
 }
 
-export function CaptchaWidget({ provider, siteKey, onToken }: CaptchaWidgetProps) {
+export function CaptchaWidget({ provider, siteKey, onToken, resetSignal = 0 }: CaptchaWidgetProps) {
   const containerRef = useRef<HTMLDivElement | null>(null)
+  const widgetIdRef = useRef<string | null>(null)
   const [failed, setFailed] = useState(false)
 
   useEffect(() => {
@@ -92,7 +99,7 @@ export function CaptchaWidget({ provider, siteKey, onToken }: CaptchaWidgetProps
       .then((apiObj) => {
         if (cancelled) return
         el.innerHTML = ''
-        apiObj.render(el, {
+        widgetIdRef.current = apiObj.render(el, {
           sitekey: siteKey,
           callback: (token: string) => onToken(token),
           'expired-callback': () => onToken(null),
@@ -104,8 +111,18 @@ export function CaptchaWidget({ provider, siteKey, onToken }: CaptchaWidgetProps
       })
     return () => {
       cancelled = true
+      widgetIdRef.current = null
     }
   }, [provider, siteKey, onToken])
+
+  // Re-challenge on demand: the parent bumps resetSignal after a failed submit
+  // so the next attempt carries a fresh token, not the spent (duplicate) one.
+  useEffect(() => {
+    if (resetSignal === 0) return
+    const id = widgetIdRef.current
+    const api = isProvider(provider) ? window[provider] : undefined
+    if (api && id !== null) api.reset(id)
+  }, [resetSignal, provider])
 
   if (!isProvider(provider) || !siteKey) return null
   if (failed) {

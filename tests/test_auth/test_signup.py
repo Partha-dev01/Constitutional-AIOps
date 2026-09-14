@@ -6,6 +6,8 @@ Route functions are invoked directly with MagicMock requests + monkeypatched
 env, mirroring tests/test_api/test_auth_routes.py (src.main is never imported).
 """
 
+import json
+import logging
 import sqlite3
 from unittest.mock import MagicMock
 
@@ -48,6 +50,22 @@ def _request(ip: str = "10.0.0.1", headers=None) -> MagicMock:
 
 def _signup_body(username="newuser", email="new@example.com", password="a-long-password-1"):
     return auth_routes.SignupRequest(username=username, email=email, password=password)
+
+
+class _FakeSiteverify:
+    """Stand-in for urlopen's context manager, returning a canned JSON body."""
+
+    def __init__(self, payload: dict):
+        self._body = json.dumps(payload).encode("utf-8")
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+    def read(self):
+        return self._body
 
 
 # ---------------------------------------------------------------------------
@@ -124,6 +142,32 @@ class TestSignupModule:
         monkeypatch.setenv("SIGNUP_CAPTCHA_PROVIDER", "turnstile")
         monkeypatch.delenv("SIGNUP_CAPTCHA_SECRET", raising=False)
         assert signup.verify_captcha("token", "1.2.3.4") is False
+
+    def test_captcha_success_passes(self, monkeypatch):
+        monkeypatch.setenv("SIGNUP_CAPTCHA_PROVIDER", "turnstile")
+        monkeypatch.setenv("SIGNUP_CAPTCHA_SECRET", "sekret")
+        monkeypatch.setattr(
+            signup.urllib.request,
+            "urlopen",
+            lambda req, timeout=6: _FakeSiteverify({"success": True}),
+        )
+        assert signup.verify_captcha("good-token", "1.2.3.4") is True
+
+    def test_captcha_rejection_logs_error_codes(self, monkeypatch, caplog):
+        # A reused single-use token comes back as {"success": false,
+        # "error-codes": ["timeout-or-duplicate"]}; verify_captcha must fail
+        # closed AND surface the error-codes so the cause is diagnosable.
+        monkeypatch.setenv("SIGNUP_CAPTCHA_PROVIDER", "turnstile")
+        monkeypatch.setenv("SIGNUP_CAPTCHA_SECRET", "sekret")
+        payload = {"success": False, "error-codes": ["timeout-or-duplicate"]}
+        monkeypatch.setattr(
+            signup.urllib.request,
+            "urlopen",
+            lambda req, timeout=6: _FakeSiteverify(payload),
+        )
+        with caplog.at_level(logging.WARNING):
+            assert signup.verify_captcha("spent-token", "1.2.3.4") is False
+        assert "timeout-or-duplicate" in caplog.text
 
     def test_verify_token_roundtrip_and_tamper(self, signup_env):
         tok = signup.make_verify_token("user-id-1", "e@example.com")
