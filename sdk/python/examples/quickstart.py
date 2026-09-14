@@ -24,6 +24,11 @@ def main() -> None:
     pending = client.pending_actions()
     print(f"\nPending actions: {pending.get('count', 0)}")
 
+    # A few of the 0.2.0 read helpers.
+    print(f"Action stats: {client.action_stats()}")
+    print(f"Episodic graph: {client.graph_stats()}")
+    print(f"Unread notifications: {client.unread_count().get('count', 0)}")
+
     print("\nChat:")
     try:
         result = client.stream_chat(

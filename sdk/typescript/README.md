@@ -42,6 +42,29 @@ const result = await client.streamChat('why is nextcloud slow?', {
 })
 ```
 
+## What you can call (ergonomic client, 0.2.0)
+
+Every method returns the decoded JSON. Constructor options: `baseUrl`, `token`,
+`timeoutMs`, `maxRetries` (default 0), `backoffMs`.
+
+- **Incidents:** `listIncidents`, `paginate('/incidents/')`, `getIncident`, `incidentStats`, `createIncident`, `updateIncident`, `similarIncidents`
+- **Actions** (each still passes the constitutional gate): `listActions`, `getAction`, `pendingActions`, `createAction`, `approveAction`, `executeAction`, `cancelAction`, `actionStats`, `confidenceFormula`
+- **Agents:** `fastAgentStats`, `fastAgentActivity`, `reasoningAgentStats`, `reasoningAgentActivity`
+- **Episodic graph:** `graphStats`, `topology`, `services`, `episodes`, `getEpisode`, `similarEpisodes`
+- **Audit:** `auditEvents`, `auditEventTypes`
+- **Tokens (self-service PAT):** `listTokens`, `createToken`, `revokeToken`
+- **Notifications:** `notifications`, `unreadCount`, `markRead`, `clearNotifications`
+- **Benchmark:** `evaluateEndpoint`, `benchmarkStatus`, `benchmarkResults`
+- **Metrics:** `metrics`, `metricsHistory`, `metricsLatency`
+- **Chat:** `chat`, `streamChat`, `analyze`, `listConversations`, `getConversation`
+
+Anything not wrapped here is reachable through the typed core (below) or the
+generic escape hatch `client.request(method, path, { params, body })`.
+
+**Opt-in retries.** `new AIOpsClient({ baseUrl, maxRetries: 2 })` retries a 429 on
+any method and 5xx or network failures on GET only, with exponential backoff that
+honors a `Retry-After` header. The default (`maxRetries: 0`) never retries.
+
 ## Use — typed core
 
 For full type safety over every endpoint, use the generated client. Paths, path

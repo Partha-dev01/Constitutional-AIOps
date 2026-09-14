@@ -47,6 +47,30 @@ result = client.stream_chat("why is nextcloud slow?", on_delta=lambda t: print(t
 print("\n", result.get("message", {}).get("content"))
 ```
 
+## What you can call (ergonomic client, 0.2.0)
+
+Every method returns plain decoded JSON. Constructor:
+`AIOpsClient(base_url, token=None, timeout=90.0, max_retries=0, backoff=0.5)`;
+`with AIOpsClient(...) as client:` is supported.
+
+- **Incidents:** `list_incidents`, `paginate("/incidents/")`, `get_incident`, `incident_stats`, `create_incident`, `update_incident`, `similar_incidents`
+- **Actions** (each still passes the constitutional gate): `list_actions`, `get_action`, `pending_actions`, `create_action`, `approve_action`, `execute_action`, `cancel_action`, `action_stats`, `confidence_formula`
+- **Agents:** `fast_agent_stats`, `fast_agent_activity`, `reasoning_agent_stats`, `reasoning_agent_activity`
+- **Episodic graph:** `graph_stats`, `topology`, `services`, `episodes`, `get_episode`, `similar_episodes`
+- **Audit:** `audit_events`, `audit_event_types`
+- **Tokens (self-service PAT):** `list_tokens`, `create_token`, `revoke_token`
+- **Notifications:** `notifications`, `unread_count`, `mark_read`, `clear_notifications`
+- **Benchmark:** `evaluate_endpoint`, `benchmark_status`, `benchmark_results`
+- **Metrics:** `metrics`, `metrics_history`, `metrics_latency`
+- **Chat:** `chat`, `stream_chat`, `analyze`, `list_conversations`, `get_conversation`
+
+Anything not wrapped here is reachable through the typed core (below) or the
+generic escape hatch `client.request(method, path, params=..., body=...)`.
+
+**Opt-in retries.** `AIOpsClient(url, max_retries=2)` retries a 429 on any method
+and 5xx or network failures on GET only, with exponential backoff that honors a
+`Retry-After` header. The default (`max_retries=0`) never retries.
+
 ## Use — typed core
 
 With the `typed` extra installed, every path, parameter, request body and response

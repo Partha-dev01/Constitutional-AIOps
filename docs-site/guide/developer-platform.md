@@ -52,9 +52,13 @@ Official clients live in the repository under `sdk/`:
 - **Python**, `sdk/python`: package `constitutional-aiops`.
 - **TypeScript**, `sdk/typescript`: package `@constitutional-aiops/sdk`.
 
-Both are published (0.1.0, live on PyPI and npm), hand-written, and dependency-free today. They cover listing
-with automatic pagination, reading incidents, approving actions through the
-constitutional gate, and streaming a chat turn. Example, Python:
+Both are published (0.2.0, live on PyPI and npm), hand-written, and dependency-free today. As of 0.2.0 the
+ergonomic client covers the high-value tags directly: incidents, actions (each
+still passing the constitutional gate), agents, the episodic graph, audit,
+notifications, benchmark, metrics, chat (streaming and non-streaming), and
+self-service personal access tokens, plus automatic pagination and opt-in retries.
+The full 127-path surface stays available through the generated typed core. Each
+package README lists every method; see `sdk/CHANGELOG.md`. Example, Python:
 
 ```python
 from constitutional_aiops import AIOpsClient

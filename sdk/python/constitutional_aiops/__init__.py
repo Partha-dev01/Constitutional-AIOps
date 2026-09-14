@@ -40,4 +40,12 @@ __all__ = [
     "RateLimited",
 ]
 
-__version__ = "0.1.0"
+# Single source of truth: read the installed distribution version, falling back to
+# the literal for a source checkout that was never installed. This is the fix for
+# the 0.1.x drift where this literal lagged the manifest.
+try:
+    from importlib.metadata import version as _pkg_version
+
+    __version__ = _pkg_version("constitutional-aiops")
+except Exception:  # pragma: no cover - source checkout without install metadata
+    __version__ = "0.2.0"

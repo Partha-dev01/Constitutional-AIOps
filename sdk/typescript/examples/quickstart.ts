@@ -22,6 +22,12 @@ async function main(): Promise<void> {
   const pending = (await client.pendingActions()) as { count?: number }
   console.log(`\nPending actions: ${pending.count ?? 0}`)
 
+  // A few of the 0.2.0 read helpers.
+  console.log('Action stats:', await client.actionStats())
+  console.log('Episodic graph:', await client.graphStats())
+  const unread = (await client.unreadCount()) as { count?: number }
+  console.log(`Unread notifications: ${unread.count ?? 0}`)
+
   console.log('\nChat:')
   try {
     const result = await client.streamChat('Summarize the current state of the system.', {
