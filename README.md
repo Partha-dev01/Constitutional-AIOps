@@ -12,6 +12,8 @@ Two LLM agents read your telemetry and propose fixes. Every one clears a
 [**Open the live app →**](https://aiops.imaginaerium.in) &nbsp;·&nbsp; [Live demo](https://aiops.imaginaerium.in/demo/index.html) &nbsp;·&nbsp; [API spec](openapi/openapi.json) &nbsp;·&nbsp; [By Imaginaerium](https://imaginaerium.in)
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
+[![PyPI](https://img.shields.io/pypi/v/constitutional-aiops?logo=pypi&logoColor=white&label=PyPI)](https://pypi.org/project/constitutional-aiops/)
+[![npm](https://img.shields.io/npm/v/%40constitutional-aiops%2Fsdk?logo=npm&label=npm)](https://www.npmjs.com/package/@constitutional-aiops/sdk)
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)](https://react.dev/)
@@ -94,8 +96,9 @@ not a requirement.
   with cost fencing on the LLM spend.
 - 🔑 **Multi-tenant, bring-your-own-key** — per-user LLM credentials, public
   signup (with Turnstile), and an optional in-browser WebLLM path.
-- 🧩 **Extensible** — a Python SDK, personal access tokens, and a fail-closed
-  plugin loader that routes plugin actions through the same constitutional gate.
+- 🧩 **Extensible** — Python and TypeScript SDKs, personal access tokens, and a
+  fail-closed plugin loader that routes plugin actions through the same
+  constitutional gate.
 - 🐳 **One-command self-host** — a lite Docker Compose profile runs the whole
   thing with no GPU and no bundled models.
 - 🖥️ **No-login demo** — a static demo build runs the real UI from bundled
@@ -212,7 +215,7 @@ docker compose -f docker-compose.yml -f docker/docker-compose.gpu.yml up -d
 | Graph memory | Neo4j 5.x (optional; omitted in lite) |
 | Observability | Loki, Grafana, Tempo, Prometheus + OpenTelemetry |
 | Packaging | Docker Compose (lite / local / GPU / production profiles) |
-| SDK | Python client + generated TypeScript types |
+| SDK | Python + TypeScript clients (PyPI + npm, provenance-signed) |
 | Testing | pytest (backend), Vitest + Playwright (frontend) |
 
 ---
@@ -245,7 +248,7 @@ constitutional-aiops/
 │   └── api/                 # REST routes
 ├── frontend/                # React + TypeScript dashboard (Vite)
 ├── marketing/               # Standalone static marketing site
-├── sdk/                     # Python SDK + TypeScript types
+├── sdk/                     # Python + TypeScript client SDKs
 ├── docker/                  # Compose profiles (lite / local / gpu / production)
 └── tests/                   # Test suite
 ```
@@ -259,6 +262,22 @@ A live overview and walkthrough is at
 described by the OpenAPI spec at [`openapi/openapi.json`](openapi/openapi.json),
 served interactively at `/docs` when the backend runs with
 `AIOPS_ENABLE_DOCS=true`.
+
+### Client SDKs
+
+Official clients for the REST API ship from this repo and are published to the
+public registries (each built from CI with attestations: PyPI Trusted Publishing
+and npm provenance):
+
+| Language | Package | Install |
+|---|---|---|
+| Python | [`constitutional-aiops`](https://pypi.org/project/constitutional-aiops/) (PyPI) | `pip install constitutional-aiops` |
+| TypeScript / JS | [`@constitutional-aiops/sdk`](https://www.npmjs.com/package/@constitutional-aiops/sdk) (npm) | `npm install @constitutional-aiops/sdk` |
+
+Source and design notes live in [`sdk/`](sdk/). Full docs: the
+[SDK reference](https://partha-dev01.github.io/Constitutional-AIOps/guide/sdk),
+the [SDK cookbook](https://partha-dev01.github.io/Constitutional-AIOps/guide/sdk-cookbook),
+and the [developer platform guide](https://partha-dev01.github.io/Constitutional-AIOps/guide/developer-platform).
 
 ---
 

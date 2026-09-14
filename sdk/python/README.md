@@ -1,11 +1,19 @@
 # constitutional-aiops (Python)
 
+[![PyPI](https://img.shields.io/pypi/v/constitutional-aiops?logo=pypi&logoColor=white&label=PyPI)](https://pypi.org/project/constitutional-aiops/)
+[![Python versions](https://img.shields.io/pypi/pyversions/constitutional-aiops?logo=python&logoColor=white)](https://pypi.org/project/constitutional-aiops/)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://github.com/Partha-dev01/Constitutional-AIOps/blob/main/LICENSE)
+
 Official Python client for the Constitutional AIOps REST API. Two layers ship
 together: a hand-written ergonomic client (`AIOpsClient`, standard library only)
 and an optional generated typed core (`constitutional_aiops_client`, full type
 safety over every endpoint) that rides on `httpx` + `attrs`. See the
 [SDK overview](https://github.com/Partha-dev01/Constitutional-AIOps/tree/main/sdk)
-for the full status.
+for the full status. Using JavaScript or TypeScript? See the sibling package
+[`@constitutional-aiops/sdk`](https://www.npmjs.com/package/@constitutional-aiops/sdk).
+
+Published to PyPI from CI with [Trusted Publishing (OIDC)](https://docs.pypi.org/trusted-publishers/),
+no long-lived token.
 
 ## Install
 

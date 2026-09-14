@@ -1,12 +1,20 @@
 # @constitutional-aiops/sdk (TypeScript)
 
+[![npm](https://img.shields.io/npm/v/%40constitutional-aiops%2Fsdk?logo=npm&label=npm)](https://www.npmjs.com/package/@constitutional-aiops/sdk)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://github.com/Partha-dev01/Constitutional-AIOps/blob/main/LICENSE)
+
 Official TypeScript client for the Constitutional AIOps REST API. Two layers ship
 together: a hand-written ergonomic client (`AIOpsClient`, no runtime dependency,
 global `fetch`, Node 18+ or a browser) and a generated typed core
 (`createTypedClient`, full type safety over the raw REST surface) that rides on
 `openapi-fetch`. See the
 [SDK overview](https://github.com/Partha-dev01/Constitutional-AIOps/tree/main/sdk)
-for the full status.
+for the full status. Using Python? See the sibling package
+[`constitutional-aiops`](https://pypi.org/project/constitutional-aiops/) on PyPI.
+
+Published to npm from CI with [provenance](https://docs.npmjs.com/generating-provenance-statements)
+(OIDC Trusted Publishing), no long-lived token, so every release links back to the
+exact source commit and build.
 
 ## Install
 
