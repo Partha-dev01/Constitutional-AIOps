@@ -26,6 +26,7 @@ from src.memory.neo4j_client import Neo4jClient, NEO4J_AVAILABLE
 
 if TYPE_CHECKING:
     from src.memory.embedding_service import EmbeddingService
+    from src.memory.embedded_store import EmbeddedEpisodeStore
 
 # Memory System Constants (from Research_V7.tex)
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
@@ -317,6 +318,7 @@ class EpisodeStore:
         self,
         neo4j_client: Optional[Neo4jClient] = None,
         embedding_service: Optional["EmbeddingService"] = None,
+        embedded_store: Optional["EmbeddedEpisodeStore"] = None,
     ):
         """
         Initialize episode store.
@@ -324,14 +326,36 @@ class EpisodeStore:
         Args:
             neo4j_client: Optional Neo4j client instance
             embedding_service: Optional embedding service for vector similarity
+            embedded_store: Optional durable SQLite backend. When provided (the
+                ``embedded`` graph backend for the lite tier), previously stored
+                episodes are rehydrated into the in-memory working set on init
+                and every write-through is persisted. Independent of Neo4j.
         """
         self.neo4j_client = neo4j_client
-        self._memory_store: dict[str, Episode] = {}  # Fallback storage
+        self._embedded_store = embedded_store
+        self._memory_store: dict[str, Episode] = {}  # Fallback / working set
         self._signature_index: dict[str, list[str]] = {}  # Signature -> episode_ids
 
         # Embedding service (lazy-load if not provided)
         self._embedding_service = embedding_service
         self._embedding_callback: Optional[Callable[[str, str], None]] = None
+
+        # Rehydrate the working set from the durable embedded backend, if any.
+        if embedded_store is not None:
+            try:
+                loaded = embedded_store.load_all()
+                for ep in loaded:
+                    self._memory_store[ep.episode_id] = ep
+                    signature = ep.generate_signature()
+                    self._signature_index.setdefault(signature, [])
+                    if ep.episode_id not in self._signature_index[signature]:
+                        self._signature_index[signature].append(ep.episode_id)
+                logger.info(
+                    "EpisodeStore rehydrated %d episode(s) from embedded store",
+                    len(loaded),
+                )
+            except Exception as e:  # pragma: no cover - defensive
+                logger.warning("Failed to load episodes from embedded store: %s", e)
 
         logger.info("EpisodeStore initialized")
 
@@ -409,6 +433,12 @@ class EpisodeStore:
             self._signature_index[signature] = []
         if episode.episode_id not in self._signature_index[signature]:
             self._signature_index[signature].append(episode.episode_id)
+
+        # Persist to the durable embedded backend (lite tier), if configured.
+        # update_episode / record_action_outcome both funnel through here, so
+        # this single write-through covers every mutation.
+        if self._embedded_store is not None:
+            self._embedded_store.upsert(episode)
 
         # Store in Neo4j if available
         if self.neo4j_client and NEO4J_AVAILABLE:

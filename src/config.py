@@ -137,6 +137,39 @@ class Neo4jConfig:
 
 
 @dataclass
+class GraphConfig:
+    """Graph-episodic-memory backend selection.
+
+    Two persistent backends are supported, both behind the same ``EpisodeStore``
+    seam so the rest of the app is backend-agnostic:
+
+    - ``neo4j`` (default): the full Neo4j graph store used by the GPU/production
+      tier. Rich Cypher graph queries; needs a Neo4j container.
+    - ``embedded``: a dependency-free persistent store (stdlib ``sqlite3``) under
+      ``AIOPS_DATA_DIR``. No Neo4j container, so it fits the lite self-host tier;
+      episodes survive restarts (unlike the ephemeral in-memory fallback).
+    - ``memory``: the ephemeral in-process store (tests / throwaway dev); not
+      persisted.
+
+    Selected with ``AIOPS_GRAPH_BACKEND``; an unknown value falls back to
+    ``neo4j`` so a misconfiguration never silently drops durability on the full
+    tier.
+    """
+
+    _VALID = ("neo4j", "embedded", "memory")
+
+    backend: str = field(
+        default_factory=lambda: (
+            os.getenv("AIOPS_GRAPH_BACKEND", "neo4j") or "neo4j"
+        ).strip().lower()
+    )
+
+    def __post_init__(self) -> None:
+        if self.backend not in self._VALID:
+            self.backend = "neo4j"
+
+
+@dataclass
 class ObservabilityConfig:
     """LGTM stack configuration."""
     
@@ -296,6 +329,7 @@ class Config:
 
     llm: LLMConfig = field(default_factory=LLMConfig)
     neo4j: Neo4jConfig = field(default_factory=Neo4jConfig)
+    graph: GraphConfig = field(default_factory=GraphConfig)
     observability: ObservabilityConfig = field(default_factory=ObservabilityConfig)
     constitutional: ConstitutionalConfig = field(default_factory=ConstitutionalConfig)
     memory: MemoryConfig = field(default_factory=MemoryConfig)
@@ -318,6 +352,7 @@ __all__ = [
     "Config",
     "LLMConfig",
     "Neo4jConfig",
+    "GraphConfig",
     "ObservabilityConfig",
     "ConstitutionalConfig",
     "MemoryConfig",

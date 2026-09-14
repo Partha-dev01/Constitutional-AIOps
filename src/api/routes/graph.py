@@ -922,7 +922,13 @@ async def get_graph_stats(request: Request) -> GraphStatsResponse:
     neo4j_client = getattr(request.app.state, "neo4j_client", None)
     episode_store = getattr(request.app.state, "episode_store", None)
 
-    connected = neo4j_client is not None
+    # "connected" means a real graph backend is active: Neo4j (full tier) or the
+    # persistent embedded store (lite tier). The ephemeral in-memory fallback
+    # reports False so the UI can distinguish a durable graph from a throwaway one.
+    connected = (
+        neo4j_client is not None
+        or getattr(episode_store, "_embedded_store", None) is not None
+    )
     node_count = 0
     edge_count = 0
     episode_count = 0

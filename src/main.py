@@ -239,13 +239,18 @@ async def lifespan(app: FastAPI):
     app.state.embedding_service = get_embedding_service()
     logger.info(f"Embedding service initialized (available: {app.state.embedding_service.is_available})")
 
-    # Initialize Neo4j client and memory components
+    # Initialize the graph-episodic-memory backend. Selected by
+    # AIOPS_GRAPH_BACKEND: "neo4j" (default, full/GPU tier), "embedded"
+    # (persistent stdlib-sqlite3 store for the lite tier, no Neo4j container), or
+    # "memory" (ephemeral). All three sit behind the same EpisodeStore seam.
+    graph_backend = getattr(getattr(config, "graph", None), "backend", "neo4j")
+    app.state.graph_backend = graph_backend
     app.state.neo4j_client = None
     app.state.episode_store = None
     app.state.context_retriever = None
     app.state.confidence_calculator = None
 
-    if NEO4J_AVAILABLE:
+    if graph_backend == "neo4j" and NEO4J_AVAILABLE:
         try:
             neo4j_client = Neo4jClient()
             connected = await neo4j_client.connect()
@@ -290,8 +295,40 @@ async def lifespan(app: FastAPI):
             app.state.confidence_calculator = ConfidenceCalculator(
                 episode_store=app.state.episode_store,
             )
+    elif graph_backend == "embedded":
+        # Lite tier: durable stdlib-sqlite3 store, no Neo4j container. Episodes
+        # persist to ${AIOPS_DATA_DIR}/episodes.db and are rehydrated on boot.
+        try:
+            from src.memory.embedded_store import EmbeddedEpisodeStore
+
+            embedded_store = EmbeddedEpisodeStore()
+            app.state.episode_store = EpisodeStore(
+                embedding_service=app.state.embedding_service,
+                embedded_store=embedded_store,
+            )
+            logger.info(
+                "Embedded persistent episode store initialized "
+                "(backend=embedded, no Neo4j; %d episode(s) loaded)",
+                embedded_store.count(),
+            )
+        except Exception as e:
+            logger.warning(
+                "Embedded episode store init failed (%s), using in-memory fallback", e
+            )
+            app.state.episode_store = EpisodeStore(
+                embedding_service=app.state.embedding_service,
+            )
+        app.state.context_retriever = ContextRetriever(episode_store=app.state.episode_store)
+        app.state.confidence_calculator = ConfidenceCalculator(
+            episode_store=app.state.episode_store,
+        )
     else:
-        logger.info("Neo4j driver not available, using in-memory episode store")
+        if graph_backend == "neo4j":
+            logger.info("Neo4j driver not available, using in-memory episode store")
+        else:
+            logger.info(
+                "Using ephemeral in-memory episode store (backend=%s)", graph_backend
+            )
         app.state.episode_store = EpisodeStore(
             embedding_service=app.state.embedding_service,
         )

@@ -2,9 +2,11 @@
 #
 # The minimal, low-cost deployment: backend + frontend + (optional) Caddy edge.
 # NO GPU, NO bundled models (bring your own LLM endpoint), NO Neo4j, NO LGTM.
-# The app degrades gracefully without Neo4j/observability — src/main.py falls
-# back to an in-memory episode store and the Graph/Metrics pages show fallback
-# data — so this is a genuine one-command self-host, not a crippled build.
+# The app degrades gracefully without Neo4j/observability: the graph-episodic
+# memory uses the persistent EMBEDDED backend (AIOPS_GRAPH_BACKEND=embedded, a
+# dependency-free sqlite store on the data volume) so the Graph page shows a
+# real, durable graph, and the Metrics pages fall back to /api/v1/health — so
+# this is a genuine one-command self-host, not a crippled build.
 #
 # ALWAYS pass --env-file .env. Compose reads the interpolation .env from THIS
 # file's directory (docker/), NOT the repo root, so a bare
@@ -80,6 +82,14 @@ services:
       # uvicorn from accepting connections — so the edge 502s the entire cold-wake
       # window. One attempt = instant connection-refused -> fallback (~sub-second).
       - NEO4J_CONNECT_MAX_ATTEMPTS=${NEO4J_CONNECT_MAX_ATTEMPTS:-1}
+      # --- Graph-episodic-memory backend ---
+      # Lite ships WITHOUT Neo4j, so default to the persistent EMBEDDED store
+      # (dependency-free, stdlib sqlite3 at ${AIOPS_DATA_DIR}/episodes.db on the
+      # aiops-lite-state volume). Episodes survive restarts and the Graph page
+      # shows a real, durable graph instead of an empty "not connected" state.
+      # Set "neo4j" only if you also run a Neo4j container (and set NEO4J_URI);
+      # "memory" for an ephemeral in-process store.
+      - AIOPS_GRAPH_BACKEND=${AIOPS_GRAPH_BACKEND:-embedded}
       # LGTM observability (Loki/Prometheus/Tempo) is NOT deployed in lite. Pass
       # these EMPTY so the telemetry collector treats each backend as absent and
       # SKIPS the HTTP poll (no "All connection attempts failed" log spam every
