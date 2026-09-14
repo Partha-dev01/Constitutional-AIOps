@@ -7,7 +7,7 @@ live here:
 - `typescript/` — the TypeScript / JavaScript client
   (`@constitutional-aiops/sdk` on npm).
 
-## Status: pre-release (0.1.0)
+## Status: 0.1.0 (live on PyPI and npm)
 
 Each package ships two layers:
 
@@ -29,15 +29,16 @@ and sent as `Authorization: Bearer`. It resolves to the real user even when
 `AUTH_REQUIRED` is off, so SDK calls are attributed and cost-fenced. Against a
 single-user instance with `AUTH_REQUIRED` unset a token is optional.
 
-The repository is public (AGPL-3.0). The first release (`0.1.0`) publishes to
-PyPI (`constitutional-aiops`) and npm (`@constitutional-aiops/sdk`) on a pushed
-`sdk-v*` tag via `.github/workflows/publish-sdk.yml`. See the developer-platform
-guide in the docs site for the full plan.
+The repository is public (AGPL-3.0). Version `0.1.0` is published and live on
+PyPI (`constitutional-aiops`) and npm (`@constitutional-aiops/sdk`). Releases are
+cut by pushing an `sdk-v*` tag, which runs `.github/workflows/publish-sdk.yml`
+(tokenless, via OIDC Trusted Publishing on both registries). See the
+developer-platform guide in the docs site for details.
 
 ## Design goals
 
 - Zero required runtime dependencies in the hand-written layer (stdlib `urllib`
-  in Python, global `fetch` in TypeScript), so the scaffold installs and runs
+  in Python, global `fetch` in TypeScript), so the client installs and runs
   anywhere the app does.
 - The same shape in both languages: construct a client, list with a pagination
   helper over the `{items, total, page, page_size, has_more}` envelope, stream a

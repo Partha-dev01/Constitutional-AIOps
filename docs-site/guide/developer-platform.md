@@ -45,14 +45,14 @@ The tool registry that powers chat and remediation is code-defined. If you run
 your own build you can add a tool by editing the registry. A packaged plugin path
 that does this without forking is on the roadmap below.
 
-## Client SDKs (pre-release)
+## Client SDKs
 
 Official clients live in the repository under `sdk/`:
 
 - **Python**, `sdk/python`: package `constitutional-aiops`.
 - **TypeScript**, `sdk/typescript`: package `@constitutional-aiops/sdk`.
 
-Both are pre-release, hand-written, and dependency-free today. They cover listing
+Both are published (0.1.0, live on PyPI and npm), hand-written, and dependency-free today. They cover listing
 with automatic pagination, reading incidents, approving actions through the
 constitutional gate, and streaming a chat turn. Example, Python:
 

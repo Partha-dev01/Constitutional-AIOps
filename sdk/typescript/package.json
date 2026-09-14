@@ -1,7 +1,7 @@
 {
   "name": "@constitutional-aiops/sdk",
   "version": "0.1.0",
-  "description": "Official TypeScript client for the Constitutional AIOps REST API (pre-release scaffold).",
+  "description": "Official TypeScript client for the Constitutional AIOps REST API.",
   "license": "AGPL-3.0-or-later",
   "type": "module",
   "types": "./src/index.ts",
