@@ -1697,6 +1697,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/insights/explain": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Explain a widget's computed data
+         * @description Return a short, model-generated plain-language explanation of a widget's already-computed data. Opt-in and cost-fenced; degrades to a uniform available=false body when disabled, over budget, or without an endpoint.
+         */
+        post: operations["insights-explain"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/insights/preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get insight-widget preferences
+         * @description Return the per-user LLM insight-widget opt-in state and budget.
+         */
+        get: operations["insights-get_preferences"];
+        /**
+         * Update insight-widget preferences
+         * @description Turn the opt-in LLM insight widgets on or off (per user).
+         */
+        put: operations["insights-put_preferences"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/metrics": {
         parameters: {
             query?: never;
@@ -2970,6 +3014,22 @@ export interface components {
             /** Total Requests */
             total_requests: number;
         };
+        /**
+         * AiWidgetsPrefs
+         * @description The per-user opt-in state for the LLM insight widgets.
+         */
+        AiWidgetsPrefs: {
+            /**
+             * Autoexplain
+             * @default false
+             */
+            autoExplain: boolean;
+            /**
+             * Enabled
+             * @default false
+             */
+            enabled: boolean;
+        };
         /** AlertingConfigPublic */
         AlertingConfigPublic: {
             /**
@@ -3843,6 +3903,47 @@ export interface components {
              * @default 2
              */
             max_rca: number;
+        };
+        /**
+         * ExplainRequest
+         * @description A request for a plain-language explanation of a widget's computed data.
+         */
+        ExplainRequest: {
+            /**
+             * Kind
+             * @default generic
+             */
+            kind: string;
+            /** Payload */
+            payload?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Tier
+             * @default fast
+             */
+            tier: string;
+        };
+        /**
+         * ExplainResponse
+         * @description Uniform result. ``available`` is false for every non-spend outcome.
+         */
+        ExplainResponse: {
+            /** Available */
+            available: boolean;
+            /** Explanation */
+            explanation?: string | null;
+            /**
+             * Model Generated
+             * @default false
+             */
+            model_generated: boolean;
+            /** Reason */
+            reason?: string | null;
+            /** Remaining */
+            remaining?: number | null;
+            /** Tokens Used */
+            tokens_used?: number | null;
         };
         /**
          * GenerateEpisodesRequest
@@ -4778,6 +4879,27 @@ export interface components {
             urgency_breakdown: {
                 [key: string]: number;
             };
+        };
+        /**
+         * PreferencesResponse
+         * @description Current opt-in state plus the fence budget snapshot for the UI.
+         */
+        PreferencesResponse: {
+            aiWidgets: components["schemas"]["AiWidgetsPrefs"];
+            /** Budget */
+            budget?: {
+                [key: string]: unknown;
+            };
+        };
+        /**
+         * PreferencesUpdate
+         * @description Patch for the opt-in block. A null leaf leaves that field unchanged.
+         */
+        PreferencesUpdate: {
+            /** Autoexplain */
+            autoExplain?: boolean | null;
+            /** Enabled */
+            enabled?: boolean | null;
         };
         /** ProbeResult */
         ProbeResult: {
@@ -8364,6 +8486,92 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+        };
+    };
+    "insights-explain": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExplainRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExplainResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    "insights-get_preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreferencesResponse"];
+                };
+            };
+        };
+    };
+    "insights-put_preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PreferencesUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreferencesResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

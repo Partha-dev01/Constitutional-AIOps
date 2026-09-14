@@ -23,7 +23,12 @@ the generated core (``from constitutional_aiops_client import Client``); see
 ``../README.md``.
 """
 
-from .client import AIOpsClient
+from .client import (
+    AIOpsClient,
+    INSIGHT_KINDS,
+    INSIGHT_TIERS,
+    INSIGHT_UNAVAILABLE_REASONS,
+)
 from .errors import (
     AIOpsError,
     AuthError,
@@ -39,6 +44,9 @@ __all__ = [
     "ConstitutionalRefusal",
     "NotFound",
     "RateLimited",
+    "INSIGHT_KINDS",
+    "INSIGHT_TIERS",
+    "INSIGHT_UNAVAILABLE_REASONS",
 ]
 
 # Single source of truth: read the installed distribution version, falling back to
@@ -49,4 +57,4 @@ try:
 
     __version__ = _pkg_version("constitutional-aiops")
 except Exception:  # pragma: no cover - source checkout without install metadata
-    __version__ = "0.2.0"
+    __version__ = "0.3.0"

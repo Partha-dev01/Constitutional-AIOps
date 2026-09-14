@@ -49,12 +49,8 @@ class AlertingConfigUpdate:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.matrix_alerting_update import (
-            MatrixAlertingUpdate,  # noqa: PLC0415
-        )
-        from ..models.telegram_alerting_update import (
-            TelegramAlertingUpdate,  # noqa: PLC0415
-        )
+        from ..models.matrix_alerting_update import MatrixAlertingUpdate  # noqa: PLC0415
+        from ..models.telegram_alerting_update import TelegramAlertingUpdate  # noqa: PLC0415
 
         d = dict(src_dict)
         _matrix = d.pop("matrix", UNSET)

@@ -1,0 +1,83 @@
+name: sdk-drift
+
+# Keeps the committed SDK typed cores in lockstep with the OpenAPI snapshot.
+# Regenerates both generated cores with the pinned toolchain and fails on any
+# drift, so `constitutional_aiops_client` and `schema.d.ts` can never silently lag
+# `openapi/openapi.json`. The snapshot itself is checked against the live app by
+# ci-backend (`python scripts/dump_openapi.py --check`).
+on:
+  push:
+    branches: [main, thread-b-deploy]
+    paths:
+      - 'openapi/**'
+      - 'sdk/**'
+      - '.github/workflows/sdk-drift.yml'
+  pull_request:
+    paths:
+      - 'openapi/**'
+      - 'sdk/**'
+      - '.github/workflows/sdk-drift.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python-core:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+
+      # Pinned so local + CI produce byte-identical output (generate.sh applies an
+      # isolated `ruff format` because --meta none skips the generator's own one).
+      - name: Install pinned generator toolchain
+        run: python -m pip install "openapi-python-client==0.29.1" "ruff==0.15.8"
+
+      - name: Regenerate the typed core from the committed snapshot
+        run: bash sdk/python/scripts/generate.sh
+
+      - name: Fail on drift (regenerated core must match the commit)
+        run: |
+          git add -A sdk/python/constitutional_aiops_client
+          git diff --cached --quiet -- sdk/python/constitutional_aiops_client \
+            || { echo "::error::Python typed core is stale. Run sdk/python/scripts/generate.sh and commit."; \
+                 git --no-pager diff --cached --stat -- sdk/python/constitutional_aiops_client; exit 1; }
+
+      - name: Ergonomic client smoke tests
+        working-directory: sdk/python
+        run: python -m unittest discover -s tests
+
+  ts-core:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: sdk/typescript
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '20'
+
+      - name: Install
+        run: npm ci
+
+      - name: Regenerate types from the committed snapshot
+        run: npm run generate
+
+      - name: Fail on drift (regenerated schema must match the commit)
+        run: |
+          git add -A src/schema.d.ts
+          git diff --cached --quiet -- src/schema.d.ts \
+            || { echo "::error::schema.d.ts is stale. Run npm run generate and commit."; \
+                 git --no-pager diff --cached --stat -- src/schema.d.ts; exit 1; }
+
+      - name: Typecheck
+        run: npm run typecheck

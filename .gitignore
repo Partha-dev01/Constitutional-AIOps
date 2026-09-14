@@ -161,6 +161,8 @@ dist/
 
 # Local-only scratch: proofs, backups, archives, old creds. NEVER committed.
 /_local/
+# Session scratch at the repo root (renders, probes, generated images). Regenerable.
+/_scratch/
 
 # --- Pre-public exposure sweep (2026-09-08): internal/dev-only, kept local ---
 # AI-assistant dev instructions; local dev still reads the local copy.

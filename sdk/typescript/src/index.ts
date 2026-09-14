@@ -24,8 +24,15 @@
  * ```
  */
 
-export { AIOpsClient } from './client'
-export type { AIOpsClientOptions, Page, StreamChatHandlers } from './client'
+export { AIOpsClient, INSIGHT_KINDS, INSIGHT_TIERS, INSIGHT_UNAVAILABLE_REASONS } from './client'
+export type {
+  AIOpsClientOptions,
+  Page,
+  StreamChatHandlers,
+  InsightKind,
+  InsightTier,
+  InsightUnavailableReason,
+} from './client'
 export {
   AIOpsError,
   AuthError,

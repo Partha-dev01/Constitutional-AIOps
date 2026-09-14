@@ -20,6 +20,9 @@ from constitutional_aiops import (
     ConstitutionalRefusal,
     NotFound,
     RateLimited,
+    INSIGHT_KINDS,
+    INSIGHT_TIERS,
+    INSIGHT_UNAVAILABLE_REASONS,
 )
 from constitutional_aiops import __version__
 
@@ -103,6 +106,103 @@ class RequestConstructionTests(unittest.TestCase):
             with mock.patch("urllib.request.urlopen", fake):
                 call()
             self.assertTrue(calls[0].full_url.endswith(expected), calls[0].full_url)
+
+
+class GenerativeUIAndToolsTests(unittest.TestCase):
+    """0.3.0 surface: generative-UI insights, the tool registry, chat decisions."""
+
+    def setUp(self) -> None:
+        self.client = AIOpsClient("https://host.example.com", token="aiops_pat_abc")
+
+    def _capture(self, resp: _FakeResp):
+        calls: List[Any] = []
+
+        def fake_urlopen(req: Any, timeout: float = 0) -> _FakeResp:  # noqa: ARG001
+            calls.append(req)
+            return resp
+
+        return calls, fake_urlopen
+
+    def test_explain_posts_kind_tier_payload(self) -> None:
+        calls, fake = self._capture(_FakeResp('{"available": false, "reason": "no_endpoint"}'))
+        with mock.patch("urllib.request.urlopen", fake):
+            out = self.client.explain("anomaly", {"count": 3}, tier="reasoning")
+        req = calls[0]
+        self.assertEqual(req.get_method(), "POST")
+        self.assertTrue(req.full_url.endswith("/api/v1/insights/explain"))
+        self.assertIn(b'"kind": "anomaly"', req.data)
+        self.assertIn(b'"tier": "reasoning"', req.data)
+        self.assertIn(b'"payload"', req.data)
+        self.assertEqual(out, {"available": False, "reason": "no_endpoint"})
+
+    def test_explain_defaults_to_fast_tier(self) -> None:
+        calls, fake = self._capture(_FakeResp("{}"))
+        with mock.patch("urllib.request.urlopen", fake):
+            self.client.explain("spike", {"value": 1})
+        self.assertIn(b'"tier": "fast"', calls[0].data)
+
+    def test_set_insight_preferences_sends_only_given_fields(self) -> None:
+        calls, fake = self._capture(_FakeResp("{}"))
+        with mock.patch("urllib.request.urlopen", fake):
+            self.client.set_insight_preferences(enabled=True)
+        req = calls[0]
+        self.assertEqual(req.get_method(), "PUT")
+        self.assertTrue(req.full_url.endswith("/api/v1/insights/preferences"))
+        self.assertIn(b'"enabled": true', req.data)
+        self.assertNotIn(b"autoExplain", req.data)
+
+    def test_set_insight_preferences_maps_auto_explain(self) -> None:
+        calls, fake = self._capture(_FakeResp("{}"))
+        with mock.patch("urllib.request.urlopen", fake):
+            self.client.set_insight_preferences(auto_explain=True)
+        self.assertIn(b'"autoExplain": true', calls[0].data)
+
+    def test_decide_chat_action_posts_decision(self) -> None:
+        calls, fake = self._capture(_FakeResp('{"status": "executed", "success": true}'))
+        with mock.patch("urllib.request.urlopen", fake):
+            self.client.decide_chat_action("act-77", approved=True, comment="ok")
+        req = calls[0]
+        self.assertEqual(req.get_method(), "POST")
+        self.assertTrue(req.full_url.endswith("/api/v1/chat/actions/act-77/decision"))
+        self.assertIn(b'"approved": true', req.data)
+        self.assertIn(b'"comment": "ok"', req.data)
+
+    def test_delete_conversation_uses_delete(self) -> None:
+        calls, fake = self._capture(_FakeResp("{}"))
+        with mock.patch("urllib.request.urlopen", fake):
+            self.client.delete_conversation("conv-1")
+        req = calls[0]
+        self.assertEqual(req.get_method(), "DELETE")
+        self.assertTrue(req.full_url.endswith("/api/v1/chat/conversations/conv-1"))
+
+    def test_call_tool_posts_name_and_parameters(self) -> None:
+        calls, fake = self._capture(_FakeResp('{"success": true, "data": {}}'))
+        with mock.patch("urllib.request.urlopen", fake):
+            self.client.call_tool("find_similar", {"title": "db timeout"})
+        req = calls[0]
+        self.assertEqual(req.get_method(), "POST")
+        self.assertTrue(req.full_url.endswith("/api/v1/tools/call"))
+        self.assertIn(b'"tool_name": "find_similar"', req.data)
+        self.assertIn(b'"title": "db timeout"', req.data)
+
+    def test_registry_read_paths(self) -> None:
+        cases = {
+            lambda: self.client.tools(): "/api/v1/tools/",
+            lambda: self.client.get_tool("restart_service"): "/api/v1/tools/restart_service",
+            lambda: self.client.insight_preferences(): "/api/v1/insights/preferences",
+        }
+        for call, expected in cases.items():
+            calls, fake = self._capture(_FakeResp("{}"))
+            with mock.patch("urllib.request.urlopen", fake):
+                call()
+            self.assertTrue(calls[0].full_url.endswith(expected), calls[0].full_url)
+
+    def test_insight_vocab_constants(self) -> None:
+        for kind in ("anomaly", "incident", "graph_copilot", "generic"):
+            self.assertIn(kind, INSIGHT_KINDS)
+        self.assertEqual(set(INSIGHT_TIERS), {"fast", "reasoning"})
+        self.assertIn("ai_widgets_disabled", INSIGHT_UNAVAILABLE_REASONS)
+        self.assertIn("budget_reached", INSIGHT_UNAVAILABLE_REASONS)
 
 
 class ErrorMappingTests(unittest.TestCase):

@@ -72,9 +72,7 @@ class AnalysisResponse:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.analysis_response_result import (
-            AnalysisResponseResult,  # noqa: PLC0415
-        )
+        from ..models.analysis_response_result import AnalysisResponseResult  # noqa: PLC0415
 
         d = dict(src_dict)
         analysis_id = d.pop("analysis_id")

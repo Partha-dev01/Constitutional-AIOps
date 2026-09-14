@@ -124,6 +124,8 @@ export default defineConfig({
         text: 'Build',
         items: [
           { text: 'Developer Platform', link: '/guide/developer-platform' },
+          { text: 'SDK Reference', link: '/guide/sdk' },
+          { text: 'SDK Cookbook', link: '/guide/sdk-cookbook' },
         ],
       },
     ],

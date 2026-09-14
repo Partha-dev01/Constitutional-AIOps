@@ -79,15 +79,9 @@ class AllSettings:
         from ..models.constitutional_settings_model import (
             ConstitutionalSettingsModel,  # noqa: PLC0415
         )
-        from ..models.notification_settings_model import (
-            NotificationSettingsModel,  # noqa: PLC0415
-        )
-        from ..models.remediation_settings_model import (
-            RemediationSettingsModel,  # noqa: PLC0415
-        )
-        from ..models.telemetry_settings_model import (
-            TelemetrySettingsModel,  # noqa: PLC0415
-        )
+        from ..models.notification_settings_model import NotificationSettingsModel  # noqa: PLC0415
+        from ..models.remediation_settings_model import RemediationSettingsModel  # noqa: PLC0415
+        from ..models.telemetry_settings_model import TelemetrySettingsModel  # noqa: PLC0415
 
         d = dict(src_dict)
         _constitutional = d.pop("constitutional", UNSET)

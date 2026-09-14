@@ -29,6 +29,14 @@ def main() -> None:
     print(f"Episodic graph: {client.graph_stats()}")
     print(f"Unread notifications: {client.unread_count().get('count', 0)}")
 
+    # Generative UI (0.3.0): opt-in, cost-fenced explanations of computed data.
+    client.set_insight_preferences(enabled=True)
+    explained = client.explain("anomaly", {"count": 1, "top": [{"series": "cpu", "z": 3.9}]})
+    print("Explain (anomaly):", explained.get("explanation") if explained.get("available") else explained.get("reason"))
+
+    # The MCP tool registry (0.3.0) — the same tools the copilots use.
+    print(f"Tools available: {client.tools().get('total', 0)}")
+
     print("\nChat:")
     try:
         result = client.stream_chat(

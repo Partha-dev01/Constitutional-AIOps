@@ -4,6 +4,43 @@ Both packages (`constitutional-aiops` on PyPI, `@constitutional-aiops/sdk` on np
 share a version. Releases are cut by pushing an `sdk-v<version>` tag, which
 publishes both tokenlessly via OIDC Trusted Publishing.
 
+## 0.3.0
+
+Generative UI reaches the SDK, the tool and chat surface grows, and the generated
+typed core is resynced with the API. Same shape in Python and TypeScript. No
+breaking changes; existing methods are unchanged.
+
+Added to the ergonomic client (both languages):
+
+- **Generative UI (opt-in, cost-fenced insight widgets).** `explain(kind, payload, tier=)`
+  is the surface behind the dashboard "Explain" buttons: it returns a uniform
+  `ExplainResponse` (check `available`, then `explanation` or `reason`) and never
+  throws for a disabled or over-budget widget. `insight_preferences` /
+  `set_insight_preferences` read and write the per-user opt-in. The exported
+  `INSIGHT_KINDS`, `INSIGHT_TIERS` and `INSIGHT_UNAVAILABLE_REASONS` mirror the
+  server vocabulary.
+- **Tool registry.** `tools`, `get_tool`, `call_tool` — the same MCP tools the
+  copilots and the agentic chat loop use. An action tool still passes the
+  constitutional gate; the uniform `ToolCallResponse` carries the verdict.
+- **Chat decisions.** `decide_chat_action` resolves the approve-to-run card a chat
+  turn proposes (distinct from `approve_action` on the `/actions` queue), and
+  `delete_conversation` removes a conversation.
+
+Also:
+
+- **Typed core resynced.** Both generated cores (`constitutional_aiops_client`,
+  `schema.d.ts`) are regenerated from the current OpenAPI snapshot, so the full
+  typed surface now includes the `insights` (generative UI) endpoints that were
+  missing, plus the current codegen output for every other tag.
+- **Deterministic regeneration + a real drift gate.** `sdk/python/scripts/generate.sh`
+  now applies a pinned, isolated `ruff format` step (openapi-python-client with
+  `--meta none` skips its own formatter), so local and CI regeneration are
+  byte-identical. A new `sdk-drift` CI workflow regenerates both cores and the
+  OpenAPI snapshot and fails on any drift, so the cores can no longer silently
+  lag the API.
+- Extended stdlib `unittest` smoke tests for the new methods and the exported
+  insight vocabulary.
+
 ## 0.2.0
 
 A real feature release: the ergonomic `AIOpsClient` grows from a starter set to

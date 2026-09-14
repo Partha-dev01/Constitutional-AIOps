@@ -8,8 +8,11 @@ zero-dependency and forward-compatible with the typed core.
 Since 0.2.0 the ergonomic surface spans the high-value tags an operator or script
 actually reaches: incidents, actions (through the constitutional gate), agents,
 the episodic graph, audit, notifications, benchmark, metrics, chat, and
-self-service personal access tokens. The long tail of the 127-path API stays
-available through the generated typed core.
+self-service personal access tokens. 0.3.0 adds the generative-UI insight widgets
+(``explain`` + preferences), the MCP tool registry (``tools``/``get_tool``/
+``call_tool``, the same tools the copilots and agentic loop use), and chat
+decisions (``decide_chat_action``/``delete_conversation``). The long tail of the
+127-path API stays available through the generated typed core.
 """
 
 from __future__ import annotations
@@ -42,6 +45,33 @@ _CONSTITUTIONAL_CODES = {
 # retried for idempotent GETs, never for a POST that might double-submit an action.
 _RETRY_ANY_METHOD = {429}
 _RETRY_GET_ONLY = {502, 503, 504}
+
+# Generative UI (``explain``) vocabulary, mirrored from the server. ``kind``
+# selects a bounded server-side prompt template; an unknown kind falls back to
+# "generic" rather than erroring, so a new widget can ship its client first.
+INSIGHT_KINDS = (
+    "spike",
+    "anomaly",
+    "diff",
+    "blast_radius",
+    "next_best_action",
+    "runbook",
+    "graph_copilot",
+    "incident",
+    "generic",
+)
+# The fast tier writes a short caption; a widget may opt into the heavier
+# reasoning tier for the deeper incident/graph reads. Both are cost-fenced.
+INSIGHT_TIERS = ("fast", "reasoning")
+# When ``ExplainResponse.available`` is false, ``reason`` is one of these. The
+# widget keeps its computed view and shows a short hint keyed off the reason.
+INSIGHT_UNAVAILABLE_REASONS = (
+    "ai_widgets_disabled",
+    "budget_reached",
+    "no_endpoint",
+    "empty",
+    "error",
+)
 
 
 class AIOpsClient:
@@ -312,6 +342,24 @@ class AIOpsClient:
     def get_conversation(self, conversation_id: str) -> Dict[str, Any]:
         return self.request("GET", f"/chat/conversations/{conversation_id}")
 
+    def delete_conversation(self, conversation_id: str) -> Any:
+        return self.request("DELETE", f"/chat/conversations/{conversation_id}")
+
+    def decide_chat_action(
+        self, action_id: str, *, approved: bool, comment: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Approve or reject a chat-proposed remediation (the approve-to-run card).
+
+        Distinct from ``approve_action`` (which acts on the ``/actions`` queue):
+        this resolves the ``proposed_action`` a chat turn attached in approve/auto
+        mode. Execution still passes the constitutional gate; the returned
+        ``status`` is ``executed``, ``refused`` (gate declined) or ``rejected``.
+        """
+        body: Dict[str, Any] = {"approved": approved}
+        if comment is not None:
+            body["comment"] = comment
+        return self.request("POST", f"/chat/actions/{action_id}/decision", body=body)
+
     # ── chat streaming (SSE over the stdlib) ─────────────────────────────────
     def stream_chat(
         self,
@@ -358,6 +406,80 @@ class AIOpsClient:
         except urllib.error.HTTPError as exc:
             raise self._to_error(exc) from None
         return done
+
+    # ── generative UI (opt-in, cost-fenced insight explanations) ───────────────
+    def explain(
+        self, kind: str, payload: Dict[str, Any], *, tier: str = "fast"
+    ) -> Dict[str, Any]:
+        """Ask the model to explain a widget's already-computed data.
+
+        This is the generative-UI surface the dashboard "Explain" buttons use.
+        ``kind`` selects a bounded server-side prompt template (see
+        ``INSIGHT_KINDS``); ``payload`` is the small computed summary the widget
+        already shows; ``tier`` is ``"fast"`` (default) or ``"reasoning"``.
+
+        The call ALWAYS returns a 200-level ``ExplainResponse`` dict — it never
+        raises for a disabled or over-budget widget. Check ``available`` first;
+        when it is false, ``reason`` is one of ``INSIGHT_UNAVAILABLE_REASONS``
+        (turn the feature on with ``set_insight_preferences``, add an endpoint,
+        or wait for the daily budget to reset). When true, ``explanation`` holds
+        the model text and ``model_generated`` is ``True`` (label it as a
+        hypothesis, not measured telemetry).
+        """
+        return self.request(
+            "POST",
+            "/insights/explain",
+            body={"kind": kind, "tier": tier, "payload": payload},
+        )
+
+    def insight_preferences(self) -> Dict[str, Any]:
+        """The per-user insight-widget opt-in state plus the fence budget snapshot."""
+        return self.request("GET", "/insights/preferences")
+
+    def set_insight_preferences(
+        self, *, enabled: Optional[bool] = None, auto_explain: Optional[bool] = None
+    ) -> Dict[str, Any]:
+        """Turn the opt-in LLM insight widgets on or off (per user).
+
+        A ``None`` leaf leaves that field unchanged, so you can flip one flag
+        without reading the other first.
+        """
+        body: Dict[str, Any] = {}
+        if enabled is not None:
+            body["enabled"] = enabled
+        if auto_explain is not None:
+            body["autoExplain"] = auto_explain
+        return self.request("PUT", "/insights/preferences", body=body)
+
+    # ── tools (the MCP registry the copilots and agentic loop share) ───────────
+    def tools(self) -> Dict[str, Any]:
+        """List the available tools: read/analysis tools plus gated action tools
+        (each action tool reports ``enabled`` / ``gated_by``)."""
+        return self.request("GET", "/tools/")
+
+    def get_tool(self, tool_name: str) -> Dict[str, Any]:
+        return self.request("GET", f"/tools/{tool_name}")
+
+    def call_tool(
+        self,
+        tool_name: str,
+        parameters: Optional[Dict[str, Any]] = None,
+        *,
+        context: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """Execute a tool and return the uniform ``ToolCallResponse``.
+
+        Read/analysis tools run directly; an action tool (restart/scale) passes
+        the constitutional gate first. The result is ALWAYS a 200-level dict:
+        read ``success``, and on a refusal ``error_code`` (for example
+        ``action_tools_disabled`` or ``approval_required``). Note a gate refusal
+        here comes back in the body, not as a raised ``ConstitutionalRefusal`` —
+        the tool endpoint reports its own uniform result.
+        """
+        body: Dict[str, Any] = {"tool_name": tool_name, "parameters": parameters or {}}
+        if context is not None:
+            body["context"] = context
+        return self.request("POST", "/tools/call", body=body)
 
     # ── internals ────────────────────────────────────────────────────────────
     def _url(self, path: str, params: Optional[Dict[str, Any]]) -> str:

@@ -1,36 +1,41 @@
 from http import HTTPStatus
-from typing import Any, cast
-from urllib.parse import quote
+from typing import Any
 
 import httpx
 
-from ...client import AuthenticatedClient, Client
-from ...types import Response, UNSET
 from ... import errors
-
+from ...client import AuthenticatedClient, Client
+from ...models.explain_request import ExplainRequest
+from ...models.explain_response import ExplainResponse
 from ...models.http_validation_error import HTTPValidationError
-from typing import cast
+from ...types import Response
 
 
 def _get_kwargs(
-    model_name: str,
+    *,
+    body: ExplainRequest,
 ) -> dict[str, Any]:
+    headers: dict[str, Any] = {}
 
     _kwargs: dict[str, Any] = {
-        "method": "get",
-        "url": "/api/v1/benchmark/results/{model_name}".format(
-            model_name=quote(str(model_name), safe=""),
-        ),
+        "method": "post",
+        "url": "/api/v1/insights/explain",
     }
 
+    _kwargs["json"] = body.to_dict()
+
+    headers["Content-Type"] = "application/json"
+
+    _kwargs["headers"] = headers
     return _kwargs
 
 
 def _parse_response(
     *, client: AuthenticatedClient | Client, response: httpx.Response
-) -> Any | HTTPValidationError | None:
+) -> ExplainResponse | HTTPValidationError | None:
     if response.status_code == 200:
-        response_200 = response.json()
+        response_200 = ExplainResponse.from_dict(response.json())
+
         return response_200
 
     if response.status_code == 422:
@@ -46,7 +51,7 @@ def _parse_response(
 
 def _build_response(
     *, client: AuthenticatedClient | Client, response: httpx.Response
-) -> Response[Any | HTTPValidationError]:
+) -> Response[ExplainResponse | HTTPValidationError]:
     return Response(
         status_code=HTTPStatus(response.status_code),
         content=response.content,
@@ -56,27 +61,30 @@ def _build_response(
 
 
 def sync_detailed(
-    model_name: str,
     *,
     client: AuthenticatedClient | Client,
-) -> Response[Any | HTTPValidationError]:
-    """Get Model Results
+    body: ExplainRequest,
+) -> Response[ExplainResponse | HTTPValidationError]:
+    """Explain a widget's computed data
 
-     Get benchmark results for a specific model.
+     Return a short, model-generated plain-language explanation of a widget's already-computed data. Opt-
+    in and cost-fenced; degrades to a uniform available=false body when disabled, over budget, or
+    without an endpoint.
 
     Args:
-        model_name (str):
+        body (ExplainRequest): A request for a plain-language explanation of a widget's computed
+            data.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[Any | HTTPValidationError]
+        Response[ExplainResponse | HTTPValidationError]
     """
 
     kwargs = _get_kwargs(
-        model_name=model_name,
+        body=body,
     )
 
     response = client.get_httpx_client().request(
@@ -87,53 +95,59 @@ def sync_detailed(
 
 
 def sync(
-    model_name: str,
     *,
     client: AuthenticatedClient | Client,
-) -> Any | HTTPValidationError | None:
-    """Get Model Results
+    body: ExplainRequest,
+) -> ExplainResponse | HTTPValidationError | None:
+    """Explain a widget's computed data
 
-     Get benchmark results for a specific model.
+     Return a short, model-generated plain-language explanation of a widget's already-computed data. Opt-
+    in and cost-fenced; degrades to a uniform available=false body when disabled, over budget, or
+    without an endpoint.
 
     Args:
-        model_name (str):
+        body (ExplainRequest): A request for a plain-language explanation of a widget's computed
+            data.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Any | HTTPValidationError
+        ExplainResponse | HTTPValidationError
     """
 
     return sync_detailed(
-        model_name=model_name,
         client=client,
+        body=body,
     ).parsed
 
 
 async def asyncio_detailed(
-    model_name: str,
     *,
     client: AuthenticatedClient | Client,
-) -> Response[Any | HTTPValidationError]:
-    """Get Model Results
+    body: ExplainRequest,
+) -> Response[ExplainResponse | HTTPValidationError]:
+    """Explain a widget's computed data
 
-     Get benchmark results for a specific model.
+     Return a short, model-generated plain-language explanation of a widget's already-computed data. Opt-
+    in and cost-fenced; degrades to a uniform available=false body when disabled, over budget, or
+    without an endpoint.
 
     Args:
-        model_name (str):
+        body (ExplainRequest): A request for a plain-language explanation of a widget's computed
+            data.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[Any | HTTPValidationError]
+        Response[ExplainResponse | HTTPValidationError]
     """
 
     kwargs = _get_kwargs(
-        model_name=model_name,
+        body=body,
     )
 
     response = await client.get_async_httpx_client().request(**kwargs)
@@ -142,28 +156,31 @@ async def asyncio_detailed(
 
 
 async def asyncio(
-    model_name: str,
     *,
     client: AuthenticatedClient | Client,
-) -> Any | HTTPValidationError | None:
-    """Get Model Results
+    body: ExplainRequest,
+) -> ExplainResponse | HTTPValidationError | None:
+    """Explain a widget's computed data
 
-     Get benchmark results for a specific model.
+     Return a short, model-generated plain-language explanation of a widget's already-computed data. Opt-
+    in and cost-fenced; degrades to a uniform available=false body when disabled, over budget, or
+    without an endpoint.
 
     Args:
-        model_name (str):
+        body (ExplainRequest): A request for a plain-language explanation of a widget's computed
+            data.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Any | HTTPValidationError
+        ExplainResponse | HTTPValidationError
     """
 
     return (
         await asyncio_detailed(
-            model_name=model_name,
             client=client,
+            body=body,
         )
     ).parsed

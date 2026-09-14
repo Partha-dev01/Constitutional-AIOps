@@ -78,9 +78,7 @@ class RootCauseNode:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.root_cause_node_metadata import (
-            RootCauseNodeMetadata,  # noqa: PLC0415
-        )
+        from ..models.root_cause_node_metadata import RootCauseNodeMetadata  # noqa: PLC0415
 
         d = dict(src_dict)
         id = d.pop("id")

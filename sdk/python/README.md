@@ -47,7 +47,7 @@ result = client.stream_chat("why is nextcloud slow?", on_delta=lambda t: print(t
 print("\n", result.get("message", {}).get("content"))
 ```
 
-## What you can call (ergonomic client, 0.2.0)
+## What you can call (ergonomic client, 0.3.0)
 
 Every method returns plain decoded JSON. Constructor:
 `AIOpsClient(base_url, token=None, timeout=90.0, max_retries=0, backoff=0.5)`;
@@ -62,10 +62,29 @@ Every method returns plain decoded JSON. Constructor:
 - **Notifications:** `notifications`, `unread_count`, `mark_read`, `clear_notifications`
 - **Benchmark:** `evaluate_endpoint`, `benchmark_status`, `benchmark_results`
 - **Metrics:** `metrics`, `metrics_history`, `metrics_latency`
-- **Chat:** `chat`, `stream_chat`, `analyze`, `list_conversations`, `get_conversation`
+- **Chat:** `chat`, `stream_chat`, `analyze`, `list_conversations`, `get_conversation`, `delete_conversation`, `decide_chat_action`
+- **Generative UI** (opt-in, cost-fenced insight widgets): `explain`, `insight_preferences`, `set_insight_preferences` (plus the exported `INSIGHT_KINDS`, `INSIGHT_TIERS`, `INSIGHT_UNAVAILABLE_REASONS`)
+- **Tools** (the MCP registry the copilots and agentic loop share): `tools`, `get_tool`, `call_tool`
 
 Anything not wrapped here is reachable through the typed core (below) or the
 generic escape hatch `client.request(method, path, params=..., body=...)`.
+
+### Generative UI (the "Explain" surface)
+
+`explain` powers the dashboard "Explain" buttons: it sends a widget's already
+computed summary and gets back a short, labelled, model-generated hypothesis. It
+is opt-in per user and cost-fenced, and it always returns a uniform result you can
+render without special-casing status codes.
+
+```python
+client.set_insight_preferences(enabled=True)  # opt in once
+
+res = client.explain("anomaly", {"count": 3, "top": [{"series": "cpu", "z": 4.1}]})
+if res["available"]:
+    print(res["explanation"])          # model_generated == True; a hypothesis, not a measurement
+else:
+    print("no explanation:", res["reason"])   # e.g. no_endpoint, budget_reached
+```
 
 **Opt-in retries.** `AIOpsClient(url, max_retries=2)` retries a 429 on any method
 and 5xx or network failures on GET only, with exponential backoff that honors a

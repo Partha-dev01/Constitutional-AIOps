@@ -79,15 +79,9 @@ class Action:
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.action_execution_result import (
-            ActionExecutionResult,  # noqa: PLC0415
-        )
-        from ..models.action_parameters_type_0 import (
-            ActionParametersType0,  # noqa: PLC0415
-        )
-        from ..models.constitutional_validation import (
-            ConstitutionalValidation,  # noqa: PLC0415
-        )
+        from ..models.action_execution_result import ActionExecutionResult  # noqa: PLC0415
+        from ..models.action_parameters_type_0 import ActionParametersType0  # noqa: PLC0415
+        from ..models.constitutional_validation import ConstitutionalValidation  # noqa: PLC0415
 
         action_type = self.action_type.value
 
@@ -235,15 +229,9 @@ class Action:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.action_audit_log_item import ActionAuditLogItem  # noqa: PLC0415
-        from ..models.action_execution_result import (
-            ActionExecutionResult,  # noqa: PLC0415
-        )
-        from ..models.action_parameters_type_0 import (
-            ActionParametersType0,  # noqa: PLC0415
-        )
-        from ..models.constitutional_validation import (
-            ConstitutionalValidation,  # noqa: PLC0415
-        )
+        from ..models.action_execution_result import ActionExecutionResult  # noqa: PLC0415
+        from ..models.action_parameters_type_0 import ActionParametersType0  # noqa: PLC0415
+        from ..models.constitutional_validation import ConstitutionalValidation  # noqa: PLC0415
 
         d = dict(src_dict)
         action_type = ActionType(d.pop("action_type"))

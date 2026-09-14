@@ -41,9 +41,7 @@ class ChatMessage:
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.chat_message_metadata_type_0 import (
-            ChatMessageMetadataType0,  # noqa: PLC0415
-        )
+        from ..models.chat_message_metadata_type_0 import ChatMessageMetadataType0  # noqa: PLC0415
 
         content = self.content
 
@@ -82,9 +80,7 @@ class ChatMessage:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.chat_message_metadata_type_0 import (
-            ChatMessageMetadataType0,  # noqa: PLC0415
-        )
+        from ..models.chat_message_metadata_type_0 import ChatMessageMetadataType0  # noqa: PLC0415
 
         d = dict(src_dict)
         content = d.pop("content")

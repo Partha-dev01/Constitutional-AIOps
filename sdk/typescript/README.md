@@ -42,7 +42,7 @@ const result = await client.streamChat('why is nextcloud slow?', {
 })
 ```
 
-## What you can call (ergonomic client, 0.2.0)
+## What you can call (ergonomic client, 0.3.0)
 
 Every method returns the decoded JSON. Constructor options: `baseUrl`, `token`,
 `timeoutMs`, `maxRetries` (default 0), `backoffMs`.
@@ -56,10 +56,29 @@ Every method returns the decoded JSON. Constructor options: `baseUrl`, `token`,
 - **Notifications:** `notifications`, `unreadCount`, `markRead`, `clearNotifications`
 - **Benchmark:** `evaluateEndpoint`, `benchmarkStatus`, `benchmarkResults`
 - **Metrics:** `metrics`, `metricsHistory`, `metricsLatency`
-- **Chat:** `chat`, `streamChat`, `analyze`, `listConversations`, `getConversation`
+- **Chat:** `chat`, `streamChat`, `analyze`, `listConversations`, `getConversation`, `deleteConversation`, `decideChatAction`
+- **Generative UI** (opt-in, cost-fenced insight widgets): `explain`, `insightPreferences`, `setInsightPreferences` (plus the exported `INSIGHT_KINDS`, `INSIGHT_TIERS`, `INSIGHT_UNAVAILABLE_REASONS` and their types)
+- **Tools** (the MCP registry the copilots and agentic loop share): `tools`, `getTool`, `callTool`
 
 Anything not wrapped here is reachable through the typed core (below) or the
 generic escape hatch `client.request(method, path, { params, body })`.
+
+### Generative UI (the "Explain" surface)
+
+`explain` powers the dashboard "Explain" buttons: send a widget's already-computed
+summary, get back a short, labelled, model-generated hypothesis. Opt-in per user
+and cost-fenced, and it always resolves with a uniform result.
+
+```ts
+await client.setInsightPreferences({ enabled: true }) // opt in once
+
+const res = await client.explain('anomaly', { count: 3, top: [{ series: 'cpu', z: 4.1 }] })
+if (res.available) {
+  console.log(res.explanation) // model_generated; a hypothesis, not a measurement
+} else {
+  console.log('no explanation:', res.reason) // e.g. no_endpoint, budget_reached
+}
+```
 
 **Opt-in retries.** `new AIOpsClient({ baseUrl, maxRetries: 2 })` retries a 429 on
 any method and 5xx or network failures on GET only, with exponential backoff that

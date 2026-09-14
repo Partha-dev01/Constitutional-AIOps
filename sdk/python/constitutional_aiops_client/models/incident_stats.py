@@ -80,15 +80,9 @@ class IncidentStats:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.incident_stats_by_category import (
-            IncidentStatsByCategory,  # noqa: PLC0415
-        )
-        from ..models.incident_stats_by_severity import (
-            IncidentStatsBySeverity,  # noqa: PLC0415
-        )
-        from ..models.incident_stats_by_status import (
-            IncidentStatsByStatus,  # noqa: PLC0415
-        )
+        from ..models.incident_stats_by_category import IncidentStatsByCategory  # noqa: PLC0415
+        from ..models.incident_stats_by_severity import IncidentStatsBySeverity  # noqa: PLC0415
+        from ..models.incident_stats_by_status import IncidentStatsByStatus  # noqa: PLC0415
 
         d = dict(src_dict)
         by_category = IncidentStatsByCategory.from_dict(d.pop("by_category"))

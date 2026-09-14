@@ -69,9 +69,7 @@ class ToolCallRequest:
         from ..models.tool_call_request_context_type_0 import (
             ToolCallRequestContextType0,  # noqa: PLC0415
         )
-        from ..models.tool_call_request_parameters import (
-            ToolCallRequestParameters,  # noqa: PLC0415
-        )
+        from ..models.tool_call_request_parameters import ToolCallRequestParameters  # noqa: PLC0415
 
         d = dict(src_dict)
         tool_name = d.pop("tool_name")

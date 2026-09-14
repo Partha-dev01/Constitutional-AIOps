@@ -28,6 +28,19 @@ async function main(): Promise<void> {
   const unread = (await client.unreadCount()) as { count?: number }
   console.log(`Unread notifications: ${unread.count ?? 0}`)
 
+  // Generative UI (0.3.0): opt-in, cost-fenced explanations of computed data.
+  await client.setInsightPreferences({ enabled: true })
+  const explained = (await client.explain('anomaly', { count: 1, top: [{ series: 'cpu', z: 3.9 }] })) as {
+    available?: boolean
+    explanation?: string
+    reason?: string
+  }
+  console.log('Explain (anomaly):', explained.available ? explained.explanation : explained.reason)
+
+  // The MCP tool registry (0.3.0) — the same tools the copilots use.
+  const toolList = (await client.tools()) as { total?: number }
+  console.log(`Tools available: ${toolList.total ?? 0}`)
+
   console.log('\nChat:')
   try {
     const result = await client.streamChat('Summarize the current state of the system.', {

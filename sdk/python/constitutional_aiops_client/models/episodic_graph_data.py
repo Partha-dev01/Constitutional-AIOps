@@ -104,9 +104,7 @@ class EpisodicGraphData:
         from ..models.action_node import ActionNode  # noqa: PLC0415
         from ..models.entity_node import EntityNode  # noqa: PLC0415
         from ..models.episode_node import EpisodeNode  # noqa: PLC0415
-        from ..models.episodic_graph_data_stats import (
-            EpisodicGraphDataStats,  # noqa: PLC0415
-        )
+        from ..models.episodic_graph_data_stats import EpisodicGraphDataStats  # noqa: PLC0415
         from ..models.graph_edge import GraphEdge  # noqa: PLC0415
         from ..models.root_cause_node import RootCauseNode  # noqa: PLC0415
         from ..models.service_node import ServiceNode  # noqa: PLC0415

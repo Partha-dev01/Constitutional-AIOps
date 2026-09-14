@@ -20,6 +20,7 @@ from .action_type import ActionType
 from .activity_list_response import ActivityListResponse
 from .agent_activity import AgentActivity
 from .agent_stats import AgentStats
+from .ai_widgets_prefs import AiWidgetsPrefs
 from .alerting_config_public import AlertingConfigPublic
 from .alerting_config_update import AlertingConfigUpdate
 from .alerting_test_request import AlertingTestRequest
@@ -106,6 +107,9 @@ from .episode_node_metadata import EpisodeNodeMetadata
 from .episodic_graph_data import EpisodicGraphData
 from .episodic_graph_data_stats import EpisodicGraphDataStats
 from .evaluate_endpoint_request import EvaluateEndpointRequest
+from .explain_request import ExplainRequest
+from .explain_request_payload import ExplainRequestPayload
+from .explain_response import ExplainResponse
 from .generate_episodes_request import GenerateEpisodesRequest
 from .generate_episodes_response import GenerateEpisodesResponse
 from .generate_from_services_request import GenerateFromServicesRequest
@@ -231,6 +235,9 @@ from .onboarding_state import OnboardingState
 from .password_change_request import PasswordChangeRequest
 from .pending_approvals import PendingApprovals
 from .pending_approvals_urgency_breakdown import PendingApprovalsUrgencyBreakdown
+from .preferences_response import PreferencesResponse
+from .preferences_response_budget import PreferencesResponseBudget
+from .preferences_update import PreferencesUpdate
 from .probe_result import ProbeResult
 from .prompt_update import PromptUpdate
 from .prompts_list_response import PromptsListResponse
@@ -321,6 +328,7 @@ __all__ = (
     "ActivityListResponse",
     "AgentActivity",
     "AgentStats",
+    "AiWidgetsPrefs",
     "AlertingConfigPublic",
     "AlertingConfigUpdate",
     "AlertingTestRequest",
@@ -383,6 +391,9 @@ __all__ = (
     "EpisodicGraphData",
     "EpisodicGraphDataStats",
     "EvaluateEndpointRequest",
+    "ExplainRequest",
+    "ExplainRequestPayload",
+    "ExplainResponse",
     "GenerateEpisodesRequest",
     "GenerateEpisodesResponse",
     "GenerateFromServicesRequest",
@@ -464,6 +475,9 @@ __all__ = (
     "PasswordChangeRequest",
     "PendingApprovals",
     "PendingApprovalsUrgencyBreakdown",
+    "PreferencesResponse",
+    "PreferencesResponseBudget",
+    "PreferencesUpdate",
     "ProbeResult",
     "PromptsListResponse",
     "PromptUpdate",

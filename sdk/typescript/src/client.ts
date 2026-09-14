@@ -7,7 +7,10 @@
  * Since 0.2.0 the ergonomic surface spans the high-value tags an operator or
  * script actually reaches: incidents, actions (through the constitutional gate),
  * agents, the episodic graph, audit, notifications, benchmark, metrics, chat, and
- * self-service personal access tokens. The long tail stays on the typed core.
+ * self-service personal access tokens. 0.3.0 adds the generative-UI insight
+ * widgets (`explain` + preferences), the MCP tool registry (`tools`/`getTool`/
+ * `callTool`), and chat decisions (`decideChatAction`/`deleteConversation`). The
+ * long tail stays on the typed core.
  */
 
 import {
@@ -57,6 +60,39 @@ type Query = Record<string, unknown>
 
 const RETRY_ANY_METHOD = new Set([429])
 const RETRY_GET_ONLY = new Set([502, 503, 504])
+
+/**
+ * Generative-UI `explain` vocabulary, mirrored from the server. `kind` selects a
+ * bounded server-side prompt template; an unknown kind falls back to "generic"
+ * rather than erroring, so a new widget can ship its client first.
+ */
+export const INSIGHT_KINDS = [
+  'spike',
+  'anomaly',
+  'diff',
+  'blast_radius',
+  'next_best_action',
+  'runbook',
+  'graph_copilot',
+  'incident',
+  'generic',
+] as const
+export type InsightKind = (typeof INSIGHT_KINDS)[number]
+
+/** The fast tier writes a short caption; reasoning is the heavier tier for the
+ * deeper incident/graph reads. Both are cost-fenced. */
+export const INSIGHT_TIERS = ['fast', 'reasoning'] as const
+export type InsightTier = (typeof INSIGHT_TIERS)[number]
+
+/** When `ExplainResponse.available` is false, `reason` is one of these. */
+export const INSIGHT_UNAVAILABLE_REASONS = [
+  'ai_widgets_disabled',
+  'budget_reached',
+  'no_endpoint',
+  'empty',
+  'error',
+] as const
+export type InsightUnavailableReason = (typeof INSIGHT_UNAVAILABLE_REASONS)[number]
 
 export class AIOpsClient {
   private readonly base: string
@@ -343,6 +379,20 @@ export class AIOpsClient {
     return this.request('GET', `/chat/conversations/${id}`)
   }
 
+  deleteConversation(id: string): Promise<unknown> {
+    return this.request('DELETE', `/chat/conversations/${id}`)
+  }
+
+  /** Approve or reject a chat-proposed remediation (the approve-to-run card).
+   * Distinct from approveAction (which acts on the /actions queue): this resolves
+   * the proposed_action a chat turn attached. Execution still passes the
+   * constitutional gate; `status` is 'executed', 'refused' or 'rejected'. */
+  decideChatAction(actionId: string, input: { approved: boolean; comment?: string }): Promise<Json> {
+    const body: Json = { approved: input.approved }
+    if (input.comment !== undefined) body.comment = input.comment
+    return this.request('POST', `/chat/actions/${actionId}/decision`, { body })
+  }
+
   /** Stream a chat turn, resolving with the final `done` payload. */
   async streamChat(
     message: string,
@@ -395,6 +445,57 @@ export class AIOpsClient {
       }
     }
     return done
+  }
+
+  // ── generative UI (opt-in, cost-fenced insight explanations) ─────────────────
+  /** Ask the model to explain a widget's already-computed data — the generative-UI
+   * surface behind the dashboard "Explain" buttons. `kind` selects a bounded
+   * server-side prompt template (see INSIGHT_KINDS); `payload` is the small
+   * computed summary the widget already shows; `tier` is 'fast' (default) or
+   * 'reasoning'. Always resolves with an ExplainResponse (never throws for a
+   * disabled or over-budget widget): check `available`, and on false read
+   * `reason` (one of INSIGHT_UNAVAILABLE_REASONS). Opt-in per user
+   * (setInsightPreferences) and cost-fenced. */
+  explain(kind: InsightKind | string, payload: Json, opts: { tier?: InsightTier } = {}): Promise<Json> {
+    return this.request('POST', '/insights/explain', {
+      body: { kind, tier: opts.tier ?? 'fast', payload },
+    })
+  }
+
+  /** The per-user insight-widget opt-in state plus the fence budget snapshot. */
+  insightPreferences(): Promise<Json> {
+    return this.request('GET', '/insights/preferences')
+  }
+
+  /** Turn the opt-in LLM insight widgets on or off (per user). An omitted field is
+   * left unchanged, so you can flip one flag without reading the other first. */
+  setInsightPreferences(prefs: { enabled?: boolean; autoExplain?: boolean }): Promise<Json> {
+    const body: Json = {}
+    if (prefs.enabled !== undefined) body.enabled = prefs.enabled
+    if (prefs.autoExplain !== undefined) body.autoExplain = prefs.autoExplain
+    return this.request('PUT', '/insights/preferences', { body })
+  }
+
+  // ── tools (the MCP registry the copilots and agentic loop share) ─────────────
+  /** List the available tools: read/analysis tools plus gated action tools (each
+   * action tool reports `enabled` / `gated_by`). */
+  tools(): Promise<Json> {
+    return this.request('GET', '/tools/')
+  }
+
+  getTool(toolName: string): Promise<Json> {
+    return this.request('GET', `/tools/${toolName}`)
+  }
+
+  /** Execute a tool and return the uniform ToolCallResponse. Read/analysis tools
+   * run directly; an action tool (restart/scale) passes the constitutional gate
+   * first. Always a 200-level result: read `success`, and on refusal `error_code`
+   * (e.g. 'action_tools_disabled', 'approval_required'). A gate refusal is in the
+   * body, not thrown as a ConstitutionalRefusal. */
+  callTool(toolName: string, parameters: Json = {}, opts: { context?: Json } = {}): Promise<Json> {
+    const body: Json = { tool_name: toolName, parameters }
+    if (opts.context !== undefined) body.context = opts.context
+    return this.request('POST', '/tools/call', { body })
   }
 
   private url(path: string, params?: Query): string {

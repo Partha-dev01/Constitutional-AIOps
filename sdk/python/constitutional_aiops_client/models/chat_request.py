@@ -37,9 +37,7 @@ class ChatRequest:
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.chat_request_context_type_0 import (
-            ChatRequestContextType0,  # noqa: PLC0415
-        )
+        from ..models.chat_request_context_type_0 import ChatRequestContextType0  # noqa: PLC0415
 
         message = self.message
 
@@ -77,9 +75,7 @@ class ChatRequest:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.chat_request_context_type_0 import (
-            ChatRequestContextType0,  # noqa: PLC0415
-        )
+        from ..models.chat_request_context_type_0 import ChatRequestContextType0  # noqa: PLC0415
 
         d = dict(src_dict)
         message = d.pop("message")

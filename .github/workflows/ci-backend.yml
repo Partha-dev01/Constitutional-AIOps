@@ -43,6 +43,15 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
 
+      # The committed OpenAPI snapshot feeds the SDK generators + API docs. Fail
+      # if an API change here has not been captured into openapi/openapi.json
+      # (regenerate with `python scripts/dump_openapi.py`). The SDK typed cores are
+      # then checked against this snapshot by the sdk-drift workflow.
+      - name: OpenAPI snapshot is current with the app
+        env:
+          ENVIRONMENT: local
+        run: python scripts/dump_openapi.py --check
+
       # Lint/type are informational while the backlog is ratcheted down
       # (see pyproject [tool.ruff.lint]); flip to blocking once clean.
       - name: Ruff lint (informational)

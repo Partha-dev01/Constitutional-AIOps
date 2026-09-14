@@ -79,9 +79,7 @@ class ToolCallResponse:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.tool_call_response_metadata import (
-            ToolCallResponseMetadata,  # noqa: PLC0415
-        )
+        from ..models.tool_call_response_metadata import ToolCallResponseMetadata  # noqa: PLC0415
 
         d = dict(src_dict)
         data = d.pop("data")

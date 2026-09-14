@@ -1,26 +1,19 @@
 from http import HTTPStatus
-from typing import Any, cast
-from urllib.parse import quote
+from typing import Any
 
 import httpx
 
-from ...client import AuthenticatedClient, Client
-from ...types import Response, UNSET
 from ... import errors
+from ...client import AuthenticatedClient, Client
+from ...models.preferences_response import PreferencesResponse
+from ...types import Response
 
-from ...models.http_validation_error import HTTPValidationError
-from typing import cast
 
-
-def _get_kwargs(
-    model_name: str,
-) -> dict[str, Any]:
+def _get_kwargs() -> dict[str, Any]:
 
     _kwargs: dict[str, Any] = {
         "method": "get",
-        "url": "/api/v1/benchmark/results/{model_name}".format(
-            model_name=quote(str(model_name), safe=""),
-        ),
+        "url": "/api/v1/insights/preferences",
     }
 
     return _kwargs
@@ -28,15 +21,11 @@ def _get_kwargs(
 
 def _parse_response(
     *, client: AuthenticatedClient | Client, response: httpx.Response
-) -> Any | HTTPValidationError | None:
+) -> PreferencesResponse | None:
     if response.status_code == 200:
-        response_200 = response.json()
+        response_200 = PreferencesResponse.from_dict(response.json())
+
         return response_200
-
-    if response.status_code == 422:
-        response_422 = HTTPValidationError.from_dict(response.json())
-
-        return response_422
 
     if client.raise_on_unexpected_status:
         raise errors.UnexpectedStatus(response.status_code, response.content)
@@ -46,7 +35,7 @@ def _parse_response(
 
 def _build_response(
     *, client: AuthenticatedClient | Client, response: httpx.Response
-) -> Response[Any | HTTPValidationError]:
+) -> Response[PreferencesResponse]:
     return Response(
         status_code=HTTPStatus(response.status_code),
         content=response.content,
@@ -56,28 +45,22 @@ def _build_response(
 
 
 def sync_detailed(
-    model_name: str,
     *,
     client: AuthenticatedClient | Client,
-) -> Response[Any | HTTPValidationError]:
-    """Get Model Results
+) -> Response[PreferencesResponse]:
+    """Get insight-widget preferences
 
-     Get benchmark results for a specific model.
-
-    Args:
-        model_name (str):
+     Return the per-user LLM insight-widget opt-in state and budget.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[Any | HTTPValidationError]
+        Response[PreferencesResponse]
     """
 
-    kwargs = _get_kwargs(
-        model_name=model_name,
-    )
+    kwargs = _get_kwargs()
 
     response = client.get_httpx_client().request(
         **kwargs,
@@ -87,54 +70,43 @@ def sync_detailed(
 
 
 def sync(
-    model_name: str,
     *,
     client: AuthenticatedClient | Client,
-) -> Any | HTTPValidationError | None:
-    """Get Model Results
+) -> PreferencesResponse | None:
+    """Get insight-widget preferences
 
-     Get benchmark results for a specific model.
-
-    Args:
-        model_name (str):
+     Return the per-user LLM insight-widget opt-in state and budget.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Any | HTTPValidationError
+        PreferencesResponse
     """
 
     return sync_detailed(
-        model_name=model_name,
         client=client,
     ).parsed
 
 
 async def asyncio_detailed(
-    model_name: str,
     *,
     client: AuthenticatedClient | Client,
-) -> Response[Any | HTTPValidationError]:
-    """Get Model Results
+) -> Response[PreferencesResponse]:
+    """Get insight-widget preferences
 
-     Get benchmark results for a specific model.
-
-    Args:
-        model_name (str):
+     Return the per-user LLM insight-widget opt-in state and budget.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[Any | HTTPValidationError]
+        Response[PreferencesResponse]
     """
 
-    kwargs = _get_kwargs(
-        model_name=model_name,
-    )
+    kwargs = _get_kwargs()
 
     response = await client.get_async_httpx_client().request(**kwargs)
 
@@ -142,28 +114,23 @@ async def asyncio_detailed(
 
 
 async def asyncio(
-    model_name: str,
     *,
     client: AuthenticatedClient | Client,
-) -> Any | HTTPValidationError | None:
-    """Get Model Results
+) -> PreferencesResponse | None:
+    """Get insight-widget preferences
 
-     Get benchmark results for a specific model.
-
-    Args:
-        model_name (str):
+     Return the per-user LLM insight-widget opt-in state and budget.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Any | HTTPValidationError
+        PreferencesResponse
     """
 
     return (
         await asyncio_detailed(
-            model_name=model_name,
             client=client,
         )
     ).parsed
