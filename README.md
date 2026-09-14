@@ -88,8 +88,10 @@ not a requirement.
 - 🙋 **Human-in-the-loop remediation** — action tools never fire inside the model
   loop. Proposals queue as an Approve/Reject card in chat. Settings pick
   diagnose / approve / auto per tool, and everything is audit-logged.
-- 🧠 **Graph-episodic memory** — an optional Neo4j store correlates incidents and
-  feeds past resolutions back into reasoning (omitted in the lite profile).
+- 🧠 **Graph-episodic memory** — past incidents, root causes, and the actions
+  that worked, linked into a graph the reasoning agent retrieves from. Pluggable
+  backend (`AIOPS_GRAPH_BACKEND`): Neo4j on the full stack, a persistent embedded
+  store on lite with no Neo4j server to run.
 - 📡 **Unified observability** — logs, metrics, and traces through the LGTM stack
   (Loki, Grafana, Tempo, Prometheus) plus an OpenTelemetry collector.
 - 💬 **ChatOps alerting** — outbound and inbound relay for Telegram and Matrix,
@@ -212,7 +214,7 @@ docker compose -f docker-compose.yml -f docker/docker-compose.gpu.yml up -d
 | Backend | FastAPI (Python 3.11+), 21 API routers, OpenAPI 3.1 |
 | Frontend | React 18 + TypeScript 5 + Tailwind CSS 4 + Vite 8 |
 | LLM runtime | Any OpenAI-compatible endpoint (vLLM, Ollama, AWS Bedrock, OpenAI, ...) |
-| Graph memory | Neo4j 5.x (optional; omitted in lite) |
+| Graph memory | Neo4j 5.x, or a persistent embedded SQLite store on lite (`AIOPS_GRAPH_BACKEND`) |
 | Observability | Loki, Grafana, Tempo, Prometheus + OpenTelemetry |
 | Packaging | Docker Compose (lite / local / GPU / production profiles) |
 | SDK | Python + TypeScript clients (PyPI + npm, provenance-signed) |
@@ -242,7 +244,7 @@ constitutional-aiops/
 ├── src/                     # Python backend (FastAPI)
 │   ├── agents/              # Fast annotator + reasoning agent, model router
 │   ├── constitutional/      # 12-principle safety framework + validator
-│   ├── memory/              # Neo4j graph-episodic memory
+│   ├── memory/              # Graph-episodic memory (Neo4j or embedded SQLite)
 │   ├── telemetry/           # OpenTelemetry ingestion
 │   ├── benchmark/           # Benchmark runner + evaluator (generic engine)
 │   └── api/                 # REST routes

@@ -61,9 +61,19 @@ docker compose -f docker/docker-compose.lite.yml --env-file .env --profile edge 
 | Backend (FastAPI) | Yes | CPU-only image (about 1.3 GB). Embeddings and BERTScore run on CPU |
 | Frontend (React/nginx) | Yes | Static SPA |
 | Caddy edge (TLS) | optional (`--profile edge`) | Let's Encrypt on `APP_DOMAIN` |
-| Neo4j graph memory | No | In-memory episode store with similarity search |
-| LGTM observability | No | Graph and Metrics pages show fallback data |
+| Neo4j server | No | Not run on lite |
+| Graph memory | Yes, persistent | Embedded SQLite episode store (`AIOPS_GRAPH_BACKEND=embedded`), survives restarts |
+| LGTM observability | No | Metrics page shows fallback data |
 | Local GPU and models | No | Bring your own endpoint |
+
+### Where lite keeps its data
+
+Lite runs the graph without Neo4j by defaulting `AIOPS_GRAPH_BACKEND=embedded`,
+which stores episodes in a SQLite file at `AIOPS_DATA_DIR` (a named volume in the
+compose file). Incident memory therefore survives a container restart or rebuild,
+and [Graph Explorer](/features/graph-explorer) fills up as the app runs. See
+[Configuration](/guide/configuration#graph-memory-backend) for the backend
+options. To wipe it, remove the volume (see [Reset](#reset) below).
 
 ### Container health on the Dashboard
 
@@ -144,3 +154,6 @@ docker exec aiops-backend python -c "import docker; print([c.name for c in docke
 docker compose -f docker/docker-compose.lite.yml down -v   # removes volumes too
 docker compose -f docker/docker-compose.lite.yml --env-file .env up -d
 ```
+
+`down -v` removes the state volume, so this also clears the embedded graph
+(`AIOPS_DATA_DIR`). Drop `-v` to keep incident memory across the restart.

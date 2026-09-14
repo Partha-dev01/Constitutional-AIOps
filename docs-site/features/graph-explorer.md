@@ -46,13 +46,23 @@ and where to focus next. It summarizes the graph you are looking at and is
 labeled as a model-generated hypothesis, not measured telemetry, so you treat it
 as a starting point rather than a fact.
 
-## Requires the graph memory
+## Graph memory backends
 
-The episodic graph is backed by Neo4j. This is the one feature that depends on
-it. If you run the lite profile without Neo4j, the app falls back to an in-memory
-episode store with similarity search for the rest of the product, but the full
-graph visualization is the part that wants the graph database. See
-[Configuration](/guide/configuration) for enabling Neo4j.
+The episodic graph has a pluggable backend, set by `AIOPS_GRAPH_BACKEND`:
+
+- **`neo4j`** (the default, and the full GPU stack): the full graph database, the
+  richest queries and the highest fidelity.
+- **`embedded`** (the lite tier default): a persistent store in a local SQLite
+  file, with no Neo4j server to run. Incident memory survives restarts and the
+  graph fills up as the app runs.
+- **`memory`**: an ephemeral in-process store for tests, empty again after a
+  restart.
+
+Whichever backend is active, the rest of the product uses the same in-process
+episode working set and similarity search. Neo4j gives the fullest graph
+queries; the embedded store is the lightweight, no-server path that still
+persists. See [Configuration](/guide/configuration#graph-memory-backend) for the
+details.
 
 ## Related
 

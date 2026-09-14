@@ -30,10 +30,31 @@ sliders.
 | `APP_DOMAIN` | unset | Domain for the Caddy `edge` profile |
 | `ACME_EMAIL` | `admin@example.com` | Let's Encrypt contact for the `edge` profile |
 | `PUBLIC_API_URL` | `http://localhost:8000/api/v1` | SPA build-time API base. Set to `/api/v1` for same-origin edge |
-| `NEO4J_URI` | `bolt://localhost:7687` | Neo4j URI (full stack only; lite falls back to in-memory) |
-| `NEO4J_PASSWORD` | required in production | Neo4j password (a dummy is fine on lite, no server runs) |
+| `AIOPS_GRAPH_BACKEND` | `neo4j` | Episode-graph store: `neo4j`, `embedded`, or `memory`. See [Graph memory backend](#graph-memory-backend) |
+| `NEO4J_URI` | `bolt://localhost:7687` | Neo4j URI. Used only when the backend is `neo4j` |
+| `NEO4J_PASSWORD` | required with Neo4j | Neo4j password. Used only when the backend is `neo4j` |
+| `AIOPS_DATA_DIR` | `./data` | Where persistent state lives, including the `embedded` graph file. A mounted volume on the lite tier |
 | `CONFIDENCE_THRESHOLD_AUTO` | `0.90` | Auto-approve threshold |
 | `CONFIDENCE_THRESHOLD_APPROVAL` | `0.70` | Require-approval threshold |
+
+## Graph memory backend
+
+The episodic memory behind [Graph Explorer](/features/graph-explorer) has a
+pluggable backend, chosen by `AIOPS_GRAPH_BACKEND`.
+
+| Value | Storage | Survives a restart | When to use |
+|-------|---------|--------------------|-------------|
+| `neo4j` | Neo4j server | Yes | The default, and the full GPU stack. Full graph queries at the highest fidelity |
+| `embedded` | SQLite file under `AIOPS_DATA_DIR` | Yes | The lite tier default. A persistent graph with no Neo4j server to run |
+| `memory` | Process memory | No | Tests and throwaway runs. Empties on restart |
+
+Whichever backend is active, the rest of the product uses the same in-process
+episode working set and vector similarity search. The `embedded` backend adds a
+durable mirror: it writes each episode to `episodes.db` in `AIOPS_DATA_DIR`, so a
+fresh boot reloads incident memory without a Neo4j server. On the lite tier that
+directory is a mounted volume, so the graph fills up as the app runs and stays
+put across container restarts. The lite compose file already sets
+`AIOPS_GRAPH_BACKEND=embedded`; the full stack leaves it at `neo4j`, unchanged.
 
 ## Configuration and the UI
 

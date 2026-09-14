@@ -42,8 +42,11 @@ An optional Neo4j store keeps past incidents as episodes and links them into a
 graph, so the reasoning agent can retrieve similar past incidents and their
 successful actions. Retrieval is hybrid: vector similarity plus graph structure.
 
-The lite profile drops Neo4j and falls back to an in-memory episode store with
-similarity search, so the Graph page still works with reduced fidelity.
+The backend is pluggable through `AIOPS_GRAPH_BACKEND`. The full stack uses
+Neo4j. The lite profile defaults to an embedded SQLite store that persists to
+disk with no Neo4j server, so the Graph page keeps its memory across restarts. A
+`memory` option gives an ephemeral store for tests. See
+[Configuration](/guide/configuration#graph-memory-backend).
 
 ## Human-in-the-loop
 
@@ -59,7 +62,7 @@ approve or reject decision, or only raises an alert. See
 |-----------|------------|
 | LLM hosting | Bring your own (vLLM, Ollama, AWS Bedrock, OpenAI) |
 | LLM runtime | Any OpenAI-compatible endpoint |
-| Graph memory | Neo4j 5.x (optional) |
+| Graph memory | Neo4j 5.x, or an embedded SQLite store (`AIOPS_GRAPH_BACKEND`) |
 | Observability | Grafana, Loki, Tempo, Prometheus (full stack) |
 | Backend | FastAPI (Python 3.11+) |
 | Frontend | React 18 + TypeScript + Tailwind |
