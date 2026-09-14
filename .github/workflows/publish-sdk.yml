@@ -11,15 +11,18 @@ name: publish-sdk
 #   - PyPI uses OIDC Trusted Publishing: NO long-lived token. Configure a Trusted
 #     Publisher on PyPI for project `constitutional-aiops` -> this repo ->
 #     workflow `publish-sdk.yml` -> environment `pypi`.
-#   - npm publishes with provenance (an OIDC-signed supply-chain attestation).
-#     It needs ONE secret: an npm automation token as `NPM_TOKEN` on the `npm`
-#     environment. (If you prefer fully tokenless npm, configure npm OIDC Trusted
-#     Publishing for `@constitutional-aiops/sdk` and drop NPM_TOKEN + the env var;
-#     that path needs npm >= 11.5.1 on the runner.)
+#   - npm ALSO uses OIDC Trusted Publishing: NO token. Configure a Trusted
+#     Publisher on npmjs.com for `@constitutional-aiops/sdk` -> this repo ->
+#     workflow `publish-sdk.yml` -> environment `npm`. Needs npm >= 11.5.1 and
+#     Node >= 22.14 on the runner (Node 24 + setup-node v7 satisfy this and
+#     auto-use OIDC when no NODE_AUTH_TOKEN is set); provenance is emitted
+#     automatically. Migrated off the NPM_TOKEN automation token 2026-09-14 (it
+#     was a 2FA stopgap needed only for the FIRST publish; delete that secret
+#     once a release confirms OIDC works).
 #   - The package version comes from each manifest (sdk/python/pyproject.toml,
 #     sdk/typescript/package.json). Bump those, commit, then push `sdk-v<version>`.
 #
-# No live infra IDs, no repo secrets beyond NPM_TOKEN — preserves the Phase-5b scrub.
+# No live infra IDs and NO repo secrets — fully tokenless, preserves the Phase-5b scrub.
 
 on:
   push:
@@ -69,7 +72,7 @@ jobs:
     environment: npm
     permissions:
       contents: read
-      id-token: write # provenance attestation
+      id-token: write # OIDC auth (Trusted Publishing) + provenance attestation
     defaults:
       run:
         working-directory: sdk/typescript
@@ -77,13 +80,12 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: '20'
+          node-version: '24' # OIDC Trusted Publishing needs npm >= 11.5.1 / Node >= 22.14
           registry-url: 'https://registry.npmjs.org'
+          package-manager-cache: false # don't cache creds/OIDC token (setup-node OIDC guidance)
       - name: Install
         run: npm install
       - name: Typecheck
         run: npm run typecheck
-      - name: Publish to npm (provenance)
+      - name: Publish to npm (OIDC Trusted Publishing + provenance)
         run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
