@@ -223,7 +223,7 @@ Telemetry flows in, the two agents annotate and reason over it, and every
 proposed action is gated before it can touch anything.
 
 <p align="center">
-  <img src="docs-site/public/diagrams/pipeline.svg" width="760" alt="Constitutional AIOps pipeline: telemetry flows to a fast agent and a reasoning agent backed by graph-episodic memory; every proposed action passes the constitutional gate, which routes it to an audited auto-run, a human approval, or an alert.">
+  <img src="docs-site/public/diagrams/pipeline.svg" width="760" alt="Constitutional AIOps pipeline: telemetry enters the fast agent, which annotates it and hands off to the reasoning agent; the reasoning agent draws on graph-episodic memory and proposes actions that pass the constitutional gate, which routes each to an audited auto-run, a human approval, or an alert.">
 </p>
 
 Self-hosters run the **lite** profile (backend + frontend + your endpoint, no
