@@ -16,7 +16,7 @@ const STEPS: Step[] = [
   },
   {
     title: 'Point it at your LLM',
-    body: 'Any OpenAI-compatible endpoint — vLLM, Ollama, AWS Bedrock, OpenAI. Both agents may share one URL and model.',
+    body: 'Any OpenAI-compatible endpoint: vLLM, Ollama, AWS Bedrock, OpenAI. Both agents may share one URL and model.',
     code: 'cp .env.example .env\n#  FAST_AGENT_URL / REASONING_AGENT_URL\n#  FAST_AGENT_MODEL / REASONING_AGENT_MODEL\n#  LLM_API_KEY   (only if your endpoint needs one)',
   },
   {
@@ -26,7 +26,7 @@ const STEPS: Step[] = [
   },
   {
     title: 'Open the app',
-    body: 'The full dashboard, chat, incidents and topology — running on your own box.',
+    body: 'The full dashboard, chat, incidents and topology running on your own box.',
     code: '# http://localhost:3000',
   },
 ]
@@ -55,7 +55,7 @@ export function SelfHostSection() {
           </h2>
           <p className="mt-4 text-muted-foreground">
             Run the whole platform on your own infrastructure. Bring any
-            OpenAI-compatible model endpoint — nothing is locked to a vendor.
+            OpenAI-compatible model endpoint. Nothing is locked to a vendor.
           </p>
         </div>
 

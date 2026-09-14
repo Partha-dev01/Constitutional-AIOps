@@ -45,7 +45,7 @@ const ROWS: ProofRow[] = [
     alt: 'Metrics view with agent latency and system performance panels',
     title: 'Monitor agent performance',
     blurb:
-      'Latency, throughput, and resource panels expose exactly what both agents are doing. Nothing is a black box — every inference is measured.',
+      'Latency, throughput, and resource panels expose exactly what both agents are doing. Nothing is a black box. Every inference is measured.',
     bullets: [
       'Per-agent P50/P95 latency percentiles',
       'Prometheus-backed live dashboards',

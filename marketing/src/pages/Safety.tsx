@@ -28,7 +28,7 @@ function Code({ children }: { children: ReactNode }) {
 
 const TIERS: { tier: string; rule: string; principles: string[] }[] = [
   {
-    tier: 'Tier 1 — Safety critical',
+    tier: 'Tier 1: Safety critical',
     rule: 'Never violated',
     principles: [
       'No data deletion without confirmation',
@@ -38,7 +38,7 @@ const TIERS: { tier: string; rule: string; principles: string[] }[] = [
     ],
   },
   {
-    tier: 'Tier 2 — Operational',
+    tier: 'Tier 2: Operational',
     rule: 'Require approval',
     principles: [
       'Prefer the minimal intervention',
@@ -48,7 +48,7 @@ const TIERS: { tier: string; rule: string; principles: string[] }[] = [
     ],
   },
   {
-    tier: 'Tier 3 — Learning',
+    tier: 'Tier 3: Learning',
     rule: 'Soft guidelines',
     principles: [
       'Attribute outcomes to the actions that caused them',
