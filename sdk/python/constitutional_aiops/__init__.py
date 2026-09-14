@@ -1,8 +1,9 @@
 """Official Python client for the Constitutional AIOps REST API.
 
-Pre-release scaffold. This hand-written layer talks to the app's ``/api/v1``
-surface with the standard library only. It is the seed for the generated client
-(``openapi-python-client``) described in the developer-platform spec.
+A published, dependency-free ergonomic client. This hand-written layer talks to
+the app's ``/api/v1`` surface with the standard library only, and ships beside a
+generated typed core (``openapi-python-client``, the ``typed`` extra) that covers
+the full endpoint surface; see the developer-platform guide.
 
 Quick start::
 

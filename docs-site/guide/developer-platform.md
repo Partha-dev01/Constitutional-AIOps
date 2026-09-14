@@ -43,7 +43,7 @@ without touching code.
 
 The tool registry that powers chat and remediation is code-defined. If you run
 your own build you can add a tool by editing the registry. A packaged plugin path
-that does this without forking is on the roadmap below.
+that does this without forking is available today; see Extensions below.
 
 ## Client SDKs
 
@@ -95,22 +95,25 @@ aiops_pat_...`, hashed at rest and scoped to your own role. This is the clean pa
 for CI and scripts, and it resolves to your user even when `AUTH_REQUIRED` is off,
 so calls stay attributed and cost-fenced.
 
-## Extensions (roadmap)
+## Extensions
 
-The plan is a packaged plugin system so you can add capability without forking:
+**Custom tools via plugins are available today**, off by default. Third-party
+packages contribute tools through a Python entry point group
+(`constitutional_aiops.tools`), loaded at startup only when `AIOPS_ENABLE_PLUGINS`
+is set on the backend; with it unset the plugin surface does not exist. A plugin
+tool is registered into the same catalogue, listing and dispatch as the built-in
+tools and runs through the identical constitutional gate (kill-switch, validator,
+human approval, audit). A plugin cannot supply its own gate, cannot shadow a
+built-in tool name, and any action that changes infrastructure requires human
+approval. A malformed plugin is logged and skipped rather than breaking the tool
+surface. See [MCP tools](/features/mcp) for the full contract.
 
-- **Custom tools** via a `@tool` decorator and Python entry points, discovered at
-  startup only when plugins are explicitly enabled. Any tool that changes
-  infrastructure must declare a destructive risk tier and passes the same
-  constitutional gate (kill-switch, validator, human approval, audit) as the
-  built-in tools. A plugin cannot supply its own gate.
-- **Tool result cards.** A plugin returns a small, stable result shape and the
-  chat UI renders it, so a plugin gets a usable surface without shipping frontend
-  code.
+A plugin tool returns a small, stable result shape that the chat UI renders, so
+it gets a usable surface without shipping frontend code.
 
 Custom agents and custom React widgets are not runtime-pluggable and are not
 presented as if they were. The supported extension path is custom prompts plus
-custom tools. Pluggable agents are a future major-version item.
+custom tools. Pluggable agents remain a future major-version item.
 
 ## The safety contract
 

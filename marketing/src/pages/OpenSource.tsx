@@ -81,9 +81,16 @@ export function OpenSource() {
         <>
           <H2 id="release">Source release</H2>
           <P>
-            The project is finishing its pre-release hardening. The public repository, the self-host
-            walkthrough and the client SDKs all open together at the source release. The licence and the
-            no-lock-in commitments on this page hold now and will not change at that point.
+            The source is public under AGPL-3.0 at{' '}
+            <a
+              href="https://github.com/Partha-dev01/Constitutional-AIOps"
+              className="font-medium text-primary hover:underline"
+            >
+              github.com/Partha-dev01/Constitutional-AIOps
+            </a>
+            , and the Python and TypeScript client SDKs are published on PyPI and npm. This build did not
+            include the step-by-step self-host walkthrough; the licence and no-lock-in commitments on this
+            page hold regardless.
           </P>
         </>
       )}

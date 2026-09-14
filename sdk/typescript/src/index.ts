@@ -1,7 +1,7 @@
 /**
  * Official TypeScript client for the Constitutional AIOps REST API.
  *
- * Pre-release scaffold, no runtime dependencies (global fetch). See ../README.md.
+ * Published, dependency-free ergonomic client (global fetch). See ../README.md.
  *
  * ```ts
  * import { AIOpsClient } from '@constitutional-aiops/sdk'

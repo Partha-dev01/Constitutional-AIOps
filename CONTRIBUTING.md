@@ -33,7 +33,7 @@ pip install -r requirements.txt
 cp .env.example .env        # set your LLM endpoint + key
 ```
 
-### Frontend (Node 18+)
+### Frontend (Node 20.19+ or 22.12+)
 
 ```bash
 cd frontend
