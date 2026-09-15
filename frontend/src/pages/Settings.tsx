@@ -132,9 +132,11 @@ const ACTION_TOOL_OPTIONS: { name: ActionToolName; label: string; description: s
 function DockerSourceCard({
   telemetry,
   setTelemetry,
+  isAdmin,
 }: {
   telemetry: TelemetrySettings
   setTelemetry: (t: TelemetrySettings) => void
+  isAdmin: boolean
 }) {
   const [testing, setTesting] = useState(false)
   const [result, setResult] = useState<{ ok: boolean; detail: string } | null>(null)
@@ -170,24 +172,28 @@ function DockerSourceCard({
         testId="toggle-docker-source"
         onChange={(checked) => setTelemetry({ ...telemetry, dockerEnabled: checked })}
       />
-      <div className="mt-4 flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          onClick={runTest}
-          disabled={testing}
-          data-testid="test-docker-source"
-          className="flex items-center gap-2 rounded-lg border border-border bg-muted px-3 py-1.5 text-sm hover:bg-muted/80 disabled:opacity-50"
-        >
-          {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-          Test connection
-        </button>
-        {result && (
-          <span className={`inline-flex items-center gap-1.5 text-sm ${result.ok ? 'text-green-500' : 'text-red-500'}`}>
-            {result.ok ? <CheckCircle className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
-            {result.detail}
-          </span>
-        )}
-      </div>
+      {/* The socket probe hits an admin-only endpoint (backend 403s non-admins),
+          so only admins see it. The toggle stays visible either way. */}
+      {isAdmin && (
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={runTest}
+            disabled={testing}
+            data-testid="test-docker-source"
+            className="flex items-center gap-2 rounded-lg border border-border bg-muted px-3 py-1.5 text-sm hover:bg-muted/80 disabled:opacity-50"
+          >
+            {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+            Test connection
+          </button>
+          {result && (
+            <span className={`inline-flex items-center gap-1.5 text-sm ${result.ok ? 'text-green-500' : 'text-red-500'}`}>
+              {result.ok ? <CheckCircle className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+              {result.detail}
+            </span>
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -1137,7 +1143,7 @@ export function Settings() {
               </div>
             </div>
           </div>
-          <DockerSourceCard telemetry={telemetry} setTelemetry={setTelemetry} />
+          <DockerSourceCard telemetry={telemetry} setTelemetry={setTelemetry} isAdmin={isAdmin} />
           </div>
         )}
 
