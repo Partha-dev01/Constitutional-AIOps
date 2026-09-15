@@ -34,9 +34,9 @@ export function Benchmark() {
         Root-cause analysis is where the approach pulls ahead. On the same cases, it scores meaningfully
         higher than two strong open baselines run under identical conditions.
       </P>
-      <div className="mb-6 overflow-x-auto rounded-xl border border-border">
+      <div className="glass mb-6 overflow-x-auto rounded-xl">
         <table className="w-full text-left text-sm">
-          <thead className="bg-card/70 text-muted-foreground">
+          <thead className="bg-white/[0.04] text-muted-foreground">
             <tr>
               <th className="px-4 py-3 font-semibold">Model</th>
               <th className="px-4 py-3 font-semibold">RCA accuracy</th>
@@ -45,7 +45,7 @@ export function Benchmark() {
           </thead>
           <tbody>
             {BASELINES.map((row) => (
-              <tr key={row.model} className="border-t border-border">
+              <tr key={row.model} className="border-t border-white/10">
                 <td className="px-4 py-3 font-medium text-foreground">{row.model}</td>
                 <td className="px-4 py-3 text-muted-foreground">{row.rca}</td>
                 <td className="px-4 py-3 text-muted-foreground">{row.delta}</td>

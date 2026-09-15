@@ -59,9 +59,9 @@ export function UseCases() {
     >
       <div className="space-y-6">
         {SCENARIOS.map((s, i) => (
-          <article key={s.title} className="rounded-xl border border-border bg-card/50 p-6">
+          <article key={s.title} className="glass rounded-xl p-6">
             <div className="mb-4 flex flex-wrap items-baseline gap-3">
-              <span className="rounded-full border border-border bg-background px-2.5 py-0.5 text-xs font-medium text-primary">
+              <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary ring-1 ring-inset ring-primary/20">
                 {String(i + 1).padStart(2, '0')} · {s.tag}
               </span>
               <h2 className="text-xl font-semibold tracking-tight">{s.title}</h2>

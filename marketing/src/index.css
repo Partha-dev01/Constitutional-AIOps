@@ -1,3 +1,9 @@
+/* Display + mono faces for the translucent redesign (Inter, the body face, is
+ * linked from each page's <head>). Bricolage Grotesque gives the headlines a
+ * distinctive, designed voice; IBM Plex Mono is the control-room instrument face
+ * for eyebrows, labels, data and code. Google Fonts only, zero npm deps. */
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -54,6 +60,17 @@ html {
 body {
   @apply bg-background text-foreground;
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+/* Headings carry the display face. Applied globally so every h1/h2/h3 across the
+ * landing and content pages picks it up without per-component classes. The hero
+ * h1 text content stays exactly "Constitutional AIOps"; only the face changes. */
+h1,
+h2,
+h3 {
+  font-family: 'Bricolage Grotesque', 'Inter', system-ui, sans-serif;
+  letter-spacing: -0.025em;
+  font-weight: 700;
 }
 
 /* Custom scrollbar */

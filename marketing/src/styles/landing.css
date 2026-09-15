@@ -142,18 +142,22 @@
   z-index: -10;
   pointer-events: none;
   overflow: hidden;
-  background: hsl(var(--background));
+  background-color: hsl(var(--background));
+  background-image:
+    radial-gradient(60% 50% at 12% -4%, hsl(var(--primary) / 0.26), transparent 60%),
+    radial-gradient(56% 46% at 104% 4%, hsl(258 92% 66% / 0.22), transparent 58%),
+    radial-gradient(52% 44% at 50% 112%, hsl(200 95% 50% / 0.16), transparent 60%);
 }
 
 .aurora::before,
 .aurora::after {
   content: '';
   position: absolute;
-  width: 58vw;
-  height: 58vw;
+  width: 60vw;
+  height: 60vw;
   border-radius: 9999px;
-  filter: blur(110px);
-  opacity: 0.22;
+  filter: blur(120px);
+  opacity: 0.4;
   will-change: transform;
 }
 
@@ -169,8 +173,78 @@
 .aurora::after {
   right: -16vw;
   bottom: -26vw;
-  background: radial-gradient(circle at center, hsl(214 90% 32% / 0.4), transparent 60%);
+  background: radial-gradient(circle at center, hsl(258 88% 62% / 0.42), transparent 60%);
   animation: aurora-b 28s ease-in-out infinite;
+}
+
+/* ----------------------------- Glass surfaces --------------------------- */
+/* The core translucent panel of the redesign: real see-through glass, NOT a
+   white film. The look comes from a strong blur + saturation of the coloured
+   mesh behind it, plus a faint COOL smoke tint (dark navy, not white) that only
+   darkens the bright mesh enough to keep text legible, a hairline edge and a 1px
+   inner top sheen. Static (no animation) so it needs no reduced-motion handling;
+   the optional .glass-hover adds a transition that IS killed under reduced motion
+   (see the block at the foot of this file). Mirrors .shot-frame's approach so
+   every surface across the marketing pages reads as one system. */
+.glass {
+  position: relative;
+  border: 1px solid hsl(var(--foreground) / 0.12);
+  /* Mostly-transparent cool smoke tint (lets the blurred mesh show through and
+     reads as clear tinted glass), with a barely-there brighter top sheen for the
+     glass edge — deliberately no white wash. */
+  background-color: hsl(222 52% 8% / 0.30);
+  background-image: linear-gradient(
+    180deg,
+    hsl(var(--foreground) / 0.07),
+    hsl(var(--foreground) / 0.015)
+  );
+  backdrop-filter: blur(20px) saturate(1.7);
+  -webkit-backdrop-filter: blur(20px) saturate(1.7);
+  box-shadow:
+    0 24px 64px -24px hsl(222 70% 2% / 0.85),
+    0 2px 8px -2px hsl(222 70% 2% / 0.4),
+    inset 0 1px 0 hsl(var(--foreground) / 0.10);
+}
+
+/* A more present surface for hero panels and figures that carry a screenshot:
+   a touch more tint and sheen, still transparent glass rather than white. */
+.glass-strong {
+  border-color: hsl(var(--foreground) / 0.16);
+  background-color: hsl(222 52% 9% / 0.36);
+  background-image: linear-gradient(
+    180deg,
+    hsl(var(--foreground) / 0.10),
+    hsl(var(--foreground) / 0.03)
+  );
+}
+
+/* Interactive glass (feature cards, tiers, steps): lifts toward the accent on
+   hover. Kept as a raw transition so it is explicitly killed under reduced
+   motion below (Tailwind's .transition clamp does not cover this class). */
+.glass-hover {
+  transition:
+    border-color 0.3s ease,
+    background-color 0.3s ease,
+    box-shadow 0.3s ease,
+    transform 0.3s ease;
+}
+
+.glass-hover:hover {
+  border-color: hsl(var(--primary) / 0.5);
+  transform: translateY(-3px);
+  box-shadow:
+    0 34px 72px -26px hsl(var(--primary) / 0.4),
+    inset 0 1px 0 hsl(var(--foreground) / 0.16);
+}
+
+/* Soft accent glow halo, sat behind hero figures/panels for depth. Decorative,
+   static, always aria-hidden by its consumer. */
+.glow-halo {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(80px);
+  background: radial-gradient(circle at center, hsl(var(--primary) / 0.5), hsl(258 88% 62% / 0.3) 45%, transparent 72%);
+  pointer-events: none;
 }
 
 @keyframes aurora-a {
@@ -222,6 +296,7 @@
   .hero-word,
   .hero-enter,
   .glass-header,
+  .glass-hover,
   .flow-line,
   .flow-return,
   .validator-ring,

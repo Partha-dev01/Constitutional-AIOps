@@ -2,6 +2,7 @@ import { Check } from 'lucide-react'
 import { useReveal } from '../../hooks/useReveal'
 import { ShotFrame } from './ShotFrame'
 import { SectionKicker } from './SectionKicker'
+import { Reveal } from '../ui'
 
 interface ProofRow {
   shot: string
@@ -74,9 +75,9 @@ const ROWS: ProofRow[] = [
  */
 export function ProofSection() {
   return (
-    <section id="live" className="border-b border-border py-20 sm:py-28">
+    <section id="live" className="scroll-mt-24 py-20 sm:py-28">
       <div className="mx-auto max-w-6xl px-6">
-        <div className="mx-auto mb-16 max-w-2xl text-center">
+        <Reveal className="mx-auto mb-16 max-w-2xl text-center">
           <SectionKicker>Live platform</SectionKicker>
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
             See it running
@@ -84,7 +85,7 @@ export function ProofSection() {
           <p className="mt-4 text-muted-foreground">
             Real screens from the running platform.
           </p>
-        </div>
+        </Reveal>
 
         <div className="flex flex-col gap-20 sm:gap-24">
           {ROWS.map((row, i) => (

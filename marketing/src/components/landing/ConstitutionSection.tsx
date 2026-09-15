@@ -2,6 +2,7 @@ import { ShieldCheck, UserCheck, GraduationCap } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useReveal } from '../../hooks/useReveal'
 import { SectionKicker } from './SectionKicker'
+import { GlassCard, Reveal } from '../ui'
 
 /**
  * "The constitution, in three tiers" — the substance behind the "12 principles ·
@@ -69,9 +70,9 @@ export function ConstitutionSection() {
   const { ref, visible } = useReveal<HTMLDivElement>()
 
   return (
-    <section id="constitution" className="border-b border-border py-20 sm:py-28">
+    <section id="constitution" className="scroll-mt-24 py-20 sm:py-28">
       <div className="mx-auto max-w-6xl px-6">
-        <div className="mx-auto mb-14 max-w-2xl text-center">
+        <Reveal className="mx-auto mb-14 max-w-2xl text-center">
           <SectionKicker>Safety model</SectionKicker>
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
             Twelve principles. Three tiers.
@@ -81,7 +82,7 @@ export function ConstitutionSection() {
             fixed constitution, and the tier a principle sits in decides what
             happens when it is at stake.
           </p>
-        </div>
+        </Reveal>
 
         <div ref={ref} className="grid gap-6 lg:grid-cols-3">
           {TIERS.map((tier, i) => {
@@ -92,7 +93,7 @@ export function ConstitutionSection() {
                 className={`reveal${visible ? ' reveal-visible' : ''}`}
                 style={{ animationDelay: `${i * 100}ms` }}
               >
-                <div className="flex h-full flex-col rounded-lg border border-border bg-card p-6 transition-colors hover:border-primary/40">
+                <GlassCard hover className="flex h-full flex-col p-6">
                   <div className="mb-4 flex items-center gap-3">
                     <span className="inline-flex h-11 w-11 items-center justify-center rounded-lg bg-primary/10 text-primary">
                       <Icon className="h-6 w-6" aria-hidden="true" />
@@ -122,7 +123,7 @@ export function ConstitutionSection() {
                       </li>
                     ))}
                   </ul>
-                </div>
+                </GlassCard>
               </div>
             )
           })}

@@ -57,7 +57,7 @@ export function Architecture() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {STAGES.map((s) => (
             <Card key={s.n}>
-              <div className="mb-3 flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-background text-sm font-bold text-primary">
+              <div className="mb-3 flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-sm font-bold text-primary ring-1 ring-inset ring-primary/20">
                 {s.n}
               </div>
               <h3 className="mb-1.5 text-base font-semibold">{s.title}</h3>

@@ -44,8 +44,8 @@ export function OpenSource() {
       <section>
         <div className="grid gap-4 sm:grid-cols-2">
           {PRINCIPLES.map((p) => (
-            <div key={p.title} className="rounded-xl border border-border bg-card/50 p-5">
-              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-background text-primary">
+            <div key={p.title} className="glass glass-hover rounded-xl p-5">
+              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-inset ring-primary/20">
                 {p.icon}
               </div>
               <h3 className="mb-1.5 text-base font-semibold">{p.title}</h3>
@@ -70,7 +70,7 @@ export function OpenSource() {
             Point <Code>FAST_AGENT_URL</Code> and <Code>REASONING_AGENT_URL</Code> at your model endpoint
             and you are running.
           </P>
-          <div className="mb-6 overflow-x-auto rounded-xl border border-border bg-card/70 p-4 font-mono text-sm text-muted-foreground">
+          <div className="glass mb-6 overflow-x-auto rounded-xl p-4 font-mono text-sm text-muted-foreground">
             <div>git clone https://github.com/Partha-dev01/Constitutional-AIOps</div>
             <div>cd Constitutional-AIOps</div>
             <div>cp .env.example .env</div>
@@ -95,7 +95,7 @@ export function OpenSource() {
         </>
       )}
 
-      <div className="rounded-xl border border-border bg-card/50 p-5">
+      <div className="glass rounded-xl p-5">
         <div className="mb-2 flex items-center gap-2 text-sm font-semibold">
           <Lock className="h-4 w-4 text-primary" aria-hidden="true" />
           Why AGPL and not something more permissive

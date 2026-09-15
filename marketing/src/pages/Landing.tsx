@@ -7,6 +7,7 @@ import { ConstitutionSection } from '../components/landing/ConstitutionSection'
 import { ProofSection } from '../components/landing/ProofSection'
 import { SelfHostSection } from '../components/landing/SelfHostSection'
 import { TeamFooter } from '../components/landing/TeamFooter'
+import { GlassBackdrop } from '../components/ui'
 import { SHOW_SELFHOST } from '../config'
 
 /**
@@ -22,8 +23,8 @@ import { SHOW_SELFHOST } from '../config'
 export function Landing() {
   return (
     <div className="relative min-h-screen overflow-x-hidden font-sans text-foreground">
-      {/* Animated colour-field backdrop (fixed, decorative, behind everything). */}
-      <div className="aurora" aria-hidden="true" />
+      {/* Translucent mesh + drifting colour-field backdrop (fixed, decorative). */}
+      <GlassBackdrop />
       <LandingHeader />
       <HeroSection />
       <StatsBand />

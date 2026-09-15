@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
-import { ArrowRight } from 'lucide-react'
 import { LandingHeader } from './landing/LandingHeader'
 import { TeamFooter } from './landing/TeamFooter'
+import { GlassBackdrop, GlassCard, GlassPill, CtaButton } from './ui'
 import { APP_URL, DEMO_URL } from '../config'
 
 /**
@@ -37,7 +37,7 @@ export function PageShell({
 }) {
   return (
     <div className="relative min-h-screen overflow-x-hidden font-sans text-foreground">
-      <div className="aurora" aria-hidden="true" />
+      <GlassBackdrop />
       <LandingHeader />
 
       <main className={`mx-auto ${MAXW[maxWidth]} px-6 pb-16 pt-28 sm:pt-32`}>
@@ -55,12 +55,7 @@ export function PageShell({
 }
 
 export function Pill({ icon, children }: { icon?: ReactNode; children: ReactNode }) {
-  return (
-    <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-3 py-1 text-xs font-medium text-muted-foreground">
-      {icon}
-      {children}
-    </span>
-  )
+  return <GlassPill icon={icon}>{children}</GlassPill>
 }
 
 export function H2({ id, children }: { id?: string; children: ReactNode }) {
@@ -84,22 +79,26 @@ export function P({ children }: { children: ReactNode }) {
 
 export function Code({ children }: { children: ReactNode }) {
   return (
-    <code className="rounded bg-card px-1.5 py-0.5 font-mono text-[0.85em] text-primary">{children}</code>
+    <code className="rounded bg-white/[0.06] px-1.5 py-0.5 font-mono text-[0.85em] text-primary">{children}</code>
   )
 }
 
-/** Bordered surface used for feature cards, scenario blocks and the like. */
+/** Translucent glass surface used for feature cards, scenario blocks and the like. */
 export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <div className={`rounded-xl border border-border bg-card/50 p-5 ${className}`}>{children}</div>
+  return (
+    <GlassCard radius="xl" hover className={`p-5 ${className}`}>
+      {children}
+    </GlassCard>
+  )
 }
 
 /** A large number with a small caption, for the benchmark headline figures. */
 export function Stat({ value, label }: { value: string; label: ReactNode }) {
   return (
-    <div className="rounded-xl border border-border bg-card/50 p-6">
+    <GlassCard radius="xl" className="p-6">
       <div className="text-4xl font-bold tracking-tight text-foreground">{value}</div>
       <div className="mt-2 text-sm text-muted-foreground">{label}</div>
-    </div>
+    </GlassCard>
   )
 }
 
@@ -110,19 +109,12 @@ export function Stat({ value, label }: { value: string; label: ReactNode }) {
 export function CTARow() {
   return (
     <div className="mb-2 mt-10 flex flex-wrap gap-3">
-      <a
-        href={DEMO_URL}
-        className="group inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
-      >
+      <CtaButton href={DEMO_URL} arrow>
         See it in Demo mode
-        <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
-      </a>
-      <a
-        href={APP_URL}
-        className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-5 py-2.5 text-sm font-semibold text-foreground transition-colors hover:border-primary/50 hover:text-primary"
-      >
+      </CtaButton>
+      <CtaButton href={APP_URL} variant="secondary">
         Sign in
-      </a>
+      </CtaButton>
     </div>
   )
 }

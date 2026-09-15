@@ -2,6 +2,7 @@ import { Cpu, ShieldCheck, Network, Activity, Satellite, UserCheck } from 'lucid
 import type { LucideIcon } from 'lucide-react'
 import { useReveal } from '../../hooks/useReveal'
 import { SectionKicker } from './SectionKicker'
+import { GlassCard, Reveal } from '../ui'
 
 interface Feature {
   icon: LucideIcon
@@ -46,9 +47,9 @@ export function FeatureGrid() {
   const { ref, visible } = useReveal<HTMLDivElement>()
 
   return (
-    <section id="features" className="border-b border-border py-20 sm:py-28">
+    <section id="features" className="scroll-mt-24 py-20 sm:py-28">
       <div className="mx-auto max-w-6xl px-6">
-        <div className="mx-auto mb-14 max-w-2xl text-center">
+        <Reveal className="mx-auto mb-14 max-w-2xl text-center">
           <SectionKicker>Subsystems</SectionKicker>
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
             Core subsystems
@@ -57,33 +58,28 @@ export function FeatureGrid() {
             Each subsystem is designed to be inspectable, safe, and grounded in
             real telemetry.
           </p>
-        </div>
+        </Reveal>
 
-        {/* Seamless hairline grid: one outer frame, 1px dividers between cells
-            (gap-px over a border-coloured backing), no per-card boxes. */}
-        <div
-          ref={ref}
-          className="grid gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-2 lg:grid-cols-3"
-        >
+        {/* Translucent glass cards on the shared system; each lifts toward the
+            accent on hover. */}
+        <div ref={ref} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {FEATURES.map((feature, i) => {
             const Icon = feature.icon
             return (
-              <div
+              <GlassCard
                 key={feature.title}
-                className={`reveal${visible ? ' reveal-visible' : ''} group relative bg-background p-8 transition-colors duration-300 hover:bg-card`}
+                hover
+                className={`reveal${visible ? ' reveal-visible' : ''} p-7`}
                 style={{ animationDelay: `${i * 80}ms` }}
               >
-                {/* Hairline that draws in on hover, in place of a boxed card. */}
-                <span
-                  aria-hidden="true"
-                  className="pointer-events-none absolute inset-x-0 top-0 h-px origin-left scale-x-0 bg-gradient-to-r from-primary/0 via-primary to-primary/0 opacity-0 transition-all duration-300 group-hover:scale-x-100 group-hover:opacity-100"
-                />
-                <Icon className="h-5 w-5 text-primary" strokeWidth={1.5} aria-hidden="true" />
+                <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-inset ring-primary/20">
+                  <Icon className="h-5 w-5" strokeWidth={1.5} aria-hidden="true" />
+                </span>
                 <h3 className="mt-5 text-base font-semibold tracking-tight">{feature.title}</h3>
                 <p className="mt-2.5 text-sm leading-relaxed text-muted-foreground">
                   {feature.copy}
                 </p>
-              </div>
+              </GlassCard>
             )
           })}
         </div>

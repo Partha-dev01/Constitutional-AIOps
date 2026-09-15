@@ -82,8 +82,8 @@ export function Features() {
       <section>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {FEATURES.map((f) => (
-            <div key={f.title} className="rounded-xl border border-border bg-card/50 p-5">
-              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-background text-primary">
+            <div key={f.title} className="glass glass-hover rounded-xl p-5">
+              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-inset ring-primary/20">
                 {f.icon}
               </div>
               <h3 className="mb-1.5 text-base font-semibold">{f.title}</h3>

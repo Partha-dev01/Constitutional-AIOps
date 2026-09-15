@@ -96,9 +96,9 @@ export function Faq() {
       title="Questions, answered"
       lead="The things people ask first. If safety is your main concern, start with the first answer, then read the safety page in full."
     >
-      <div className="divide-y divide-border overflow-hidden rounded-xl border border-border">
+      <div className="glass divide-y divide-white/10 overflow-hidden rounded-xl">
         {QA.map((item) => (
-          <details key={item.q} className="group bg-card/40 open:bg-card/60">
+          <details key={item.q} className="group open:bg-white/[0.04]">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 text-base font-semibold marker:content-none">
               {item.q}
               <ChevronDown

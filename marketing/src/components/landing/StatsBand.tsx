@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useReveal } from '../../hooks/useReveal'
+import { GlassCard, Reveal } from '../ui'
 
 interface Stat {
   value: number
@@ -60,19 +61,23 @@ const STATS: Stat[] = [
 export function StatsBand() {
   const { ref, visible } = useReveal<HTMLDivElement>()
   return (
-    <section className="border-b border-border bg-card/30">
-      <div className="mx-auto max-w-6xl px-6 py-14 sm:py-16">
-        <p className="mb-10 text-center font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
-          The system at a glance
-        </p>
-        <div
-          ref={ref}
-          className="grid grid-cols-2 gap-x-6 gap-y-10 md:grid-cols-3 lg:grid-cols-5"
-        >
-          {STATS.map((stat) => (
-            <StatItem key={stat.label} stat={stat} run={visible} />
-          ))}
-        </div>
+    <section className="py-16 sm:py-20">
+      <div className="mx-auto max-w-6xl px-6">
+        <Reveal>
+          <p className="mb-8 text-center font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+            The system at a glance
+          </p>
+          <GlassCard className="px-6 py-10 sm:px-10">
+            <div
+              ref={ref}
+              className="grid grid-cols-2 gap-x-6 gap-y-10 md:grid-cols-3 lg:grid-cols-5"
+            >
+              {STATS.map((stat) => (
+                <StatItem key={stat.label} stat={stat} run={visible} />
+              ))}
+            </div>
+          </GlassCard>
+        </Reveal>
       </div>
     </section>
   )
@@ -103,7 +108,7 @@ function StatItem({ stat, run }: { stat: Stat; run: boolean }) {
 
   return (
     <div className="text-center">
-      <div className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
+      <div className="font-display text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl">
         {display.toFixed(stat.decimals)}
         <span className="text-primary">{stat.suffix}</span>
       </div>

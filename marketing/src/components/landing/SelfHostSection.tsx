@@ -1,6 +1,7 @@
 import { Check } from 'lucide-react'
 import { useReveal } from '../../hooks/useReveal'
 import { ShotFrame } from './ShotFrame'
+import { GlassCard, Reveal } from '../ui'
 
 interface Step {
   title: string
@@ -47,9 +48,9 @@ export function SelfHostSection() {
   const { ref, visible } = useReveal<HTMLDivElement>()
 
   return (
-    <section id="self-host" className="border-b border-border py-20 sm:py-28">
+    <section id="self-host" className="scroll-mt-24 py-20 sm:py-28">
       <div className="mx-auto max-w-6xl px-6">
-        <div className="mx-auto mb-16 max-w-2xl text-center">
+        <Reveal className="mx-auto mb-16 max-w-2xl text-center">
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
             Self-host in minutes
           </h2>
@@ -57,7 +58,7 @@ export function SelfHostSection() {
             Run the whole platform on your own infrastructure. Bring any
             OpenAI-compatible model endpoint. Nothing is locked to a vendor.
           </p>
-        </div>
+        </Reveal>
 
         <div
           ref={ref}
@@ -65,10 +66,7 @@ export function SelfHostSection() {
         >
           <ol className="w-full space-y-5 lg:w-7/12">
             {STEPS.map((step, i) => (
-              <li
-                key={step.title}
-                className="rounded-xl border border-border bg-card/60 p-5 transition-colors hover:border-primary/40"
-              >
+              <GlassCard key={step.title} as="li" hover radius="xl" className="p-5">
                 <div className="flex items-start gap-4">
                   <span className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/15 text-sm font-semibold text-primary">
                     {i + 1}
@@ -81,7 +79,7 @@ export function SelfHostSection() {
                     </pre>
                   </div>
                 </div>
-              </li>
+              </GlassCard>
             ))}
           </ol>
 
