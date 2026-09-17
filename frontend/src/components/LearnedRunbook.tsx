@@ -58,7 +58,7 @@ export function LearnedRunbook({ max = 6 }: { max?: number }) {
     let cancelled = false
     const run = async () => {
       try {
-        const res = await api.actions.list({ page_size: 200 })
+        const res = await api.actions.list({ page_size: 100 })
         if (cancelled) return
         const rows = (res?.items ?? []).map((a) => ({
           action_type: a.action_type,
