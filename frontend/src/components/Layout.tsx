@@ -224,9 +224,13 @@ export function Layout({ children }: LayoutProps) {
   }, [])
 
   // First-run: auto-open the product tour once (non-demo). The store records it
-  // as completed on any close, so it never re-opens on later visits.
+  // as completed on any close, so it never re-opens on later visits. Skipped
+  // under browser automation (navigator.webdriver) so E2E and synthetic sessions
+  // are not hijacked by the modal; the tour stays available via the command
+  // palette ("Take the product tour").
   useEffect(() => {
     if (DEMO_MODE) return
+    if (typeof navigator !== 'undefined' && navigator.webdriver) return
     if (!shouldAutoStartTour()) return
     const t = window.setTimeout(() => useProductTour.getState().start(true), 600)
     return () => window.clearTimeout(t)
