@@ -33,6 +33,10 @@ import { SetupNudge } from './SetupNudge'
 import { DEMO_MODE } from '../lib/demo/flag'
 import { CommandPalette } from './CommandPalette'
 import { ShortcutsHelp } from './ShortcutsHelp'
+import { ProductTour } from './ProductTour'
+import { WhatsNew } from './WhatsNew'
+import { useProductTour } from '../lib/tour/store'
+import { shouldAutoStartTour } from '../lib/tour/whatsNew'
 import type { PaletteCommand } from '../lib/commandPalette'
 
 interface LayoutProps {
@@ -123,6 +127,13 @@ export function Layout({ children }: LayoutProps) {
         keywords: ['keys', 'hotkeys', 'help'],
         action: () => setHelpOpen(true),
       },
+      {
+        id: 'product-tour',
+        title: 'Take the product tour',
+        group: 'Help',
+        keywords: ['tour', 'intro', 'walkthrough', 'guide', 'getting started'],
+        action: () => useProductTour.getState().start(),
+      },
     ],
     [isAdmin],
   )
@@ -210,6 +221,15 @@ export function Layout({ children }: LayoutProps) {
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
+
+  // First-run: auto-open the product tour once (non-demo). The store records it
+  // as completed on any close, so it never re-opens on later visits.
+  useEffect(() => {
+    if (DEMO_MODE) return
+    if (!shouldAutoStartTour()) return
+    const t = window.setTimeout(() => useProductTour.getState().start(true), 600)
+    return () => window.clearTimeout(t)
   }, [])
 
   // Fetch health status periodically
@@ -486,6 +506,7 @@ export function Layout({ children }: LayoutProps) {
 
         <main className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
           {!DEMO_MODE && <SetupNudge />}
+          {!DEMO_MODE && <WhatsNew />}
           {children}
         </main>
       </div>
@@ -497,6 +518,8 @@ export function Layout({ children }: LayoutProps) {
       />
 
       <ShortcutsHelp open={helpOpen} onClose={() => setHelpOpen(false)} />
+
+      <ProductTour />
     </div>
   )
 }

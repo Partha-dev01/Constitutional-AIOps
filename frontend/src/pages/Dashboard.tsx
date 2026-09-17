@@ -17,6 +17,8 @@ import { ApprovalTicker } from '../components/ApprovalTicker'
 import { BlastRadiusPreview } from '../components/BlastRadiusPreview'
 import { WhatChangedDiff } from '../components/WhatChangedDiff'
 import { AnomalyScan } from '../components/AnomalyScan'
+import { CapacityForecast } from '../components/CapacityForecast'
+import { MetricCorrelation } from '../components/MetricCorrelation'
 import { IncidentNarrative } from '../components/IncidentNarrative'
 import { LearnedRunbook } from '../components/LearnedRunbook'
 import { narrativeFromEvent } from '../lib/incidentNarrative'
@@ -329,6 +331,15 @@ export function Dashboard() {
         <BlastRadiusPreview />
         <WhatChangedDiff />
         <AnomalyScan />
+      </div>
+
+      {/* Forward-looking insight widgets (Track 2, reasoning tier): a linear
+          capacity forecast and a metric co-movement scan. Client-side maths over
+          the same live metrics; each degrades to an honest empty state on a
+          fresh / quiet instance, and the opt-in Explain is cost-fenced. */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <CapacityForecast />
+        <MetricCorrelation />
       </div>
 
       {/* Live incident narrative (event-triggered, fed from the WS handler above)

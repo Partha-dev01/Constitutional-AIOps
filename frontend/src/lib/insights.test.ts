@@ -6,10 +6,14 @@ import {
   learnedRunbookExplainPayload,
   graphCopilotExplainPayload,
   incidentExplainPayload,
+  capacityForecastExplainPayload,
+  metricCorrelationExplainPayload,
   reasonLabel,
   type AnomalyItem,
   type GraphCopilotInput,
   type IncidentExplainInput,
+  type CapacityForecastItem,
+  type CorrelationPairLite,
 } from './insights'
 
 const item = (over: Partial<AnomalyItem> = {}): AnomalyItem => ({
@@ -270,5 +274,50 @@ describe('reasonLabel', () => {
   it('falls back for unknown / null reasons', () => {
     expect(reasonLabel(null)).toMatch(/unavailable/i)
     expect(reasonLabel('something-new')).toMatch(/unavailable/i)
+  })
+})
+
+describe('capacityForecastExplainPayload', () => {
+  const fi = (over: Partial<CapacityForecastItem> = {}): CapacityForecastItem => ({
+    series: 'api · cpu',
+    current: 68.4321,
+    threshold: 90,
+    samplesToThreshold: 11,
+    etaLabel: '~11 min',
+    ...over,
+  })
+
+  it('reports the full count, caps the top list, and rounds current to one place', () => {
+    const items = Array.from({ length: 9 }, (_, i) => fi({ series: `s${i}` }))
+    const out = capacityForecastExplainPayload(items, 5)
+    expect(out.count).toBe(9)
+    expect(out.top).toHaveLength(5)
+    expect(out.top[0].current).toBe(68.4)
+    expect(out.top[0].etaSamples).toBe(11)
+    expect(out.top[0].eta).toBe('~11 min')
+  })
+
+  it('is empty-safe', () => {
+    expect(capacityForecastExplainPayload([])).toEqual({ count: 0, top: [] })
+  })
+})
+
+describe('metricCorrelationExplainPayload', () => {
+  const pair = (over: Partial<CorrelationPairLite> = {}): CorrelationPairLite => ({
+    a: 'api · cpu',
+    b: 'db · cpu',
+    r: 0.913_7,
+    ...over,
+  })
+
+  it('caps to max and rounds r to two places', () => {
+    const pairs = Array.from({ length: 10 }, (_, i) => pair({ a: `s${i}` }))
+    const out = metricCorrelationExplainPayload(pairs, 6)
+    expect(out.pairs).toHaveLength(6)
+    expect(out.pairs[0].r).toBe(0.91)
+  })
+
+  it('is empty-safe', () => {
+    expect(metricCorrelationExplainPayload([])).toEqual({ pairs: [] })
   })
 })

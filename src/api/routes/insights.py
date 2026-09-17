@@ -121,6 +121,20 @@ _KIND_INSTRUCTIONS: dict[str, str] = {
         "most useful next step. Ground every claim in the fields shown and do not "
         "invent services, causes or steps that are not listed."
     ),
+    "capacity_forecast": (
+        "The utilization series below were fitted with a naive linear trend and "
+        "projected to an estimated time to reach the threshold. In 2 to 4 "
+        "sentences, say which series is most urgent and the single most likely "
+        "driver to check. Treat every projection as a linear extrapolation, not a "
+        "guarantee, and do not invent series that are not listed."
+    ),
+    "correlation": (
+        "The pairs below are metric series that moved together over the window, "
+        "each with a Pearson coefficient r. In 2 to 4 sentences, suggest what a "
+        "strong correlation might indicate (a shared cause or a dependency) and "
+        "one concrete check to confirm it. Correlation is not causation: frame "
+        "the answer as a hypothesis, not a conclusion."
+    ),
     "generic": (
         "In 2 to 4 sentences, give a plain-language explanation of the data below "
         "for an on-call engineer. Do not speculate beyond what the data shows."

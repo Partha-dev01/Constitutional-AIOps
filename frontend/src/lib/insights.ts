@@ -236,6 +236,61 @@ export function incidentExplainPayload(
   return out
 }
 
+/** One projected utilization series, the shape the CapacityForecast widget holds. */
+export interface CapacityForecastItem {
+  series: string
+  current: number
+  threshold: number
+  samplesToThreshold: number
+  /** Human ETA label the widget already rendered, e.g. "~3 h". */
+  etaLabel: string
+}
+
+/**
+ * Build a bounded payload for `kind: "capacity_forecast"` from the projected
+ * series. Reports the full count but caps the top list, and rounds the current
+ * value, so a busy dashboard cannot drive a huge prompt (the server also
+ * truncates). The projection is a linear extrapolation; the prompt says so.
+ */
+export function capacityForecastExplainPayload(
+  items: CapacityForecastItem[],
+  max = 5,
+): {
+  count: number
+  top: { series: string; current: number; threshold: number; etaSamples: number; eta: string }[]
+} {
+  const top = items.slice(0, Math.max(0, max)).map((it) => ({
+    series: it.series,
+    current: Number(it.current.toFixed(1)),
+    threshold: it.threshold,
+    etaSamples: it.samplesToThreshold,
+    eta: it.etaLabel,
+  }))
+  return { count: items.length, top }
+}
+
+/** One correlated pair, the shape the MetricCorrelation widget holds. */
+export interface CorrelationPairLite {
+  a: string
+  b: string
+  r: number
+}
+
+/**
+ * Build a bounded payload for `kind: "correlation"` from the correlated pairs.
+ * Rounds each coefficient and caps to the strongest `max` pairs (the server also
+ * truncates). Correlation is not causation; the prompt frames it as a hypothesis.
+ */
+export function metricCorrelationExplainPayload(
+  pairs: CorrelationPairLite[],
+  max = 6,
+): { pairs: { a: string; b: string; r: number }[] } {
+  const top = pairs
+    .slice(0, Math.max(0, max))
+    .map((p) => ({ a: p.a, b: p.b, r: Number(p.r.toFixed(2)) }))
+  return { pairs: top }
+}
+
 /**
  * Map an explain `reason` (available=false) to a short user-facing message.
  * Keeps the widget on its computed view and tells the user what to do next.
@@ -264,5 +319,7 @@ export default {
   learnedRunbookExplainPayload,
   graphCopilotExplainPayload,
   incidentExplainPayload,
+  capacityForecastExplainPayload,
+  metricCorrelationExplainPayload,
   reasonLabel,
 }
