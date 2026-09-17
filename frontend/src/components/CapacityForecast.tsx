@@ -10,6 +10,7 @@
 import { useEffect, useState } from 'react'
 import { TrendingUp, AlertTriangle, Sparkles, Loader2 } from 'lucide-react'
 import { api } from '../lib/api'
+import { fetchMetrics1h } from '../lib/metrics1h'
 import { groupSeries } from '../lib/metricSeries'
 import { forecastSeries, isUtilizationSeries, type Forecast } from '../lib/capacityForecast'
 import { useAiWidgets } from '../lib/useAiWidgets'
@@ -53,9 +54,8 @@ export function CapacityForecast({ max = 6 }: { max?: number }) {
     let cancelled = false
     const run = async () => {
       try {
-        const res = await api.telemetry.metrics({ range: '1h' })
+        const points = await fetchMetrics1h()
         if (cancelled) return
-        const points = res?.metrics ?? []
         setHasMetrics(points.length > 0)
         const found: Projected[] = []
         for (const [series, seriesPoints] of groupSeries(points)) {

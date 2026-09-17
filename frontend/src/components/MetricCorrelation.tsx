@@ -9,6 +9,7 @@
 import { useEffect, useState } from 'react'
 import { Activity, Sparkles, Loader2 } from 'lucide-react'
 import { api } from '../lib/api'
+import { fetchMetrics1h } from '../lib/metrics1h'
 import { groupSeries } from '../lib/metricSeries'
 import { correlateSeries, type CorrelationPair } from '../lib/metricCorrelation'
 import { useAiWidgets } from '../lib/useAiWidgets'
@@ -29,9 +30,8 @@ export function MetricCorrelation({ max = 6 }: { max?: number }) {
     let cancelled = false
     const run = async () => {
       try {
-        const res = await api.telemetry.metrics({ range: '1h' })
+        const points = await fetchMetrics1h()
         if (cancelled) return
-        const points = res?.metrics ?? []
         setHasMetrics(points.length > 0)
         setPairs(correlateSeries(groupSeries(points), { max }))
       } catch {

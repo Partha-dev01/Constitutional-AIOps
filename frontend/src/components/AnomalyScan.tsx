@@ -11,6 +11,7 @@ import { useEffect, useState } from 'react'
 import { Activity, TrendingUp, TrendingDown, AlertTriangle, Sparkles, Loader2 } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { api, type TelemetryMetricPoint } from '../lib/api'
+import { fetchMetrics1h } from '../lib/metrics1h'
 import { scanSeries, type Anomaly, type SeriesPoint } from '../lib/anomalyScan'
 import { useAiWidgets } from '../lib/useAiWidgets'
 import { AiGenerated } from './ui/AiGenerated'
@@ -61,9 +62,8 @@ export function AnomalyScan({ max = 6 }: { max?: number }) {
     let cancelled = false
     const run = async () => {
       try {
-        const res = await api.telemetry.metrics({ range: '1h' })
+        const points = await fetchMetrics1h()
         if (cancelled) return
-        const points = res?.metrics ?? []
         setHasMetrics(points.length > 0)
         const found: FlaggedPoint[] = []
         for (const [name, seriesPoints] of groupSeries(points)) {
