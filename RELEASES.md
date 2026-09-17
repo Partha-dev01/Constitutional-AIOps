@@ -12,6 +12,18 @@ Versions follow the `frontend/package.json` version. Dates are the merge date.
 Improvements on `main` since v1.0.0, not yet cut into a tagged release.
 
 ### Added
+- **Guided first-run product tour and a What's-new banner.** A fresh browser gets
+  a short guided tour of the main screens on first sign-in; a returning browser
+  gets a dismissible banner listing what changed since it last visited, gated on
+  the app version. Both are per-browser and fail-soft, the tour is replayable any
+  time from the command palette, and neither opens under browser automation.
+- **Two reasoning-tier insight widgets on the Dashboard.** *Capacity forecast*
+  fits a linear trend to each utilization series and estimates when it would
+  reach a threshold, labelled as an extrapolation rather than a guarantee.
+  *Metric correlation* surfaces the series that moved together over the last hour
+  by Pearson coefficient, labelled as correlation not causation. Both compute in
+  the browser with no LLM and carry the same opt-in, cost-fenced "Explain" button
+  as the other insight widgets.
 - **Quick-Setup "Safety" step.** The first-run wizard now has a dedicated step to
   pick the remediation mode (diagnose / approve / auto) and keep the audit log
   on, so new operators meet the constitutional safety model during setup instead
@@ -36,6 +48,13 @@ Improvements on `main` since v1.0.0, not yet cut into a tagged release.
   who previously saw editors that refused to save.
 
 ### Fixed
+- The Dashboard learned-runbook widget asked for more action history than the API
+  returns in a single page, so the request was rejected and the widget showed
+  empty on a live instance. It now requests within the page-size limit and renders
+  real remediation history.
+- The Dashboard insight widgets that read the last hour of metrics now share one
+  request instead of each fetching the same series, so they settle together
+  rather than one lagging noticeably behind the others.
 - Shared-instance mutation routes (topology, prompts, settings reset, model test)
   are now admin-gated on multi-user instances (SEC-004).
 - The audit-trail query no longer raises at month boundaries when reading a

@@ -34,6 +34,11 @@ showing a plausible-looking placeholder.
 - **Anomaly Scan**: a statistical pass over the current series. It flags points
   by z-score and direction (unusually high or low). This is arithmetic on your
   numbers, not a model opinion.
+- **Capacity forecast**: a linear trend fitted to each utilization series, with an
+  estimate of when it would cross a threshold. It is an extrapolation, labelled as
+  such, and only surfaces series that are actually rising toward a limit.
+- **Metric correlation**: the metric series that moved together over the window,
+  ranked by Pearson coefficient. It is explicit that correlation is not causation.
 - **Live Incident Narrative**: a running, plain-language account of an incident
   assembled from the event stream as events arrive.
 - **Learned Runbook**: the steps that resolved similar incidents before,
@@ -72,11 +77,12 @@ and it is deliberately fenced:
 
 ### Where the "Explain" button appears
 
-Seven widgets carry an opt-in "Explain" button. Each button reads the same
+Nine widgets carry an opt-in "Explain" button. Each button reads the same
 computed result the widget already shows, then asks a model to put it in words.
 The wording is specific to the widget, so you always know what you are asking
-about. Most explain on the cheap fast tier. The three incident and graph reads
-that need deeper reasoning use the reasoning tier.
+about. Most explain on the cheap fast tier. Five reads that need deeper reasoning
+use the reasoning tier: the incident and graph copilots, the live narrative's
+next-best-action, and the capacity and correlation widgets.
 
 | Widget | Page | Button label | Tier |
 | --- | --- | --- | --- |
@@ -87,6 +93,8 @@ that need deeper reasoning use the reasoning tier.
 | Live Incident Narrative | [Dashboard](/features/dashboard) | Suggest next best action | Reasoning |
 | Incident Copilot | [Incidents](/features/incidents) detail | Explain this incident | Reasoning |
 | Graph Copilot | [Graph Explorer](/features/graph-explorer) | Explain this graph | Reasoning |
+| Capacity forecast | [Dashboard](/features/dashboard) | Explain this forecast | Reasoning |
+| Metric correlation | [Dashboard](/features/dashboard) | Explain these correlations | Reasoning |
 
 A button shows only when two things are true at once: you have AI widgets turned
 on, and the widget actually has data to explain. An empty widget offers no
@@ -112,7 +120,7 @@ wording.
 1. **Idle.** A small outlined button with a sparkle icon and the widget's label,
    for example `Explain these anomalies`. Nothing has been sent yet.
 2. **Working.** On click the sparkle becomes a spinner and the label switches to
-   `Explaining…`. The reasoning-tier widgets read `Thinking…`,
+   `Explaining…`. Some reasoning-tier widgets read `Thinking…`,
    `Reading the incident…` or `Reading the graph…` instead. The button is
    disabled while it runs, so a second click cannot fire a second call.
 3. **Explained.** The button is replaced in place by an explanation panel. The
@@ -134,6 +142,10 @@ large prompt. The server truncates again on its own side.
 - **Blast-Radius Preview**: up to 12 services per hop, with empty hops dropped.
 - **Live Incident Narrative**: up to 3 incidents, 12 stages each.
 - **Learned Runbook**: the strongest 6 rows.
+- **Capacity forecast**: the full series count plus the 5 series closest to a
+  threshold, each with its current value, threshold and estimated time to breach.
+- **Metric correlation**: the strongest 6 correlated pairs, each with its rounded
+  coefficient.
 - **Graph Copilot**: the top 6 root causes, actions and services, plus 5
   incidents worth attention.
 - **Incident Copilot**: up to 8 services, causal-chain steps and remediation

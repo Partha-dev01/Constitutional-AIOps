@@ -25,10 +25,10 @@ without a manual reload.
 - **A live connection indicator**. When the WebSocket is connected the view
   updates as events arrive. When it drops you see the disconnected state instead
   of stale data pretending to be live.
-- **The event-driven widgets**: Approval Ticker, Blast-Radius Preview,
-  What-Changed Diff, Anomaly Scan, Live Incident Narrative, Learned Runbook, and
-  Recent Activity. These are covered in depth in
-  [Generative UI](/features/generative-ui).
+- **The event-driven and insight widgets**: Approval Ticker, Blast-Radius
+  Preview, What-Changed Diff, Anomaly Scan, Capacity forecast, Metric
+  correlation, Live Incident Narrative, Learned Runbook, and Recent Activity.
+  These are covered in depth in [Generative UI](/features/generative-ui).
 
 ### Measured agent latency
 
@@ -48,6 +48,20 @@ straight from the Docker socket and keeps a rolling client-side window, so each
 card shows a real trend rather than a single frozen number. A service that stops
 reporting simply stops growing its line, and when no source is present the panel
 says so instead of drawing a fabricated one.
+
+## First-run tour and What's new
+
+The first time a browser signs in, a short guided tour introduces the main
+screens, one step at a time, and ends by pointing at Settings. It is a plain
+modal walkthrough rather than fragile spotlight overlays, so it behaves the same
+whether the sidebar is expanded, collapsed to icons, or a drawer on mobile. You
+can skip it at any step, and replay it any time from the command palette
+(<kbd>Cmd</kbd>/<kbd>Ctrl</kbd> + <kbd>K</kbd>, "Take the product tour").
+
+A returning browser that has already seen the tour instead gets a small,
+dismissible "What's new" banner listing what changed since the app version it
+last saw. Both are remembered per browser and fail soft, so a cleared cache
+simply shows the tour again, and neither ever opens under browser automation.
 
 ## How to use it
 
