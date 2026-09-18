@@ -10,6 +10,7 @@ import { Signup } from './pages/Signup'
 import { Dashboard } from './pages/Dashboard'
 import { useAuthStore } from './lib/auth'
 import { useEndpointStatus, byokSetupSeen } from './lib/useEndpointStatus'
+import { useOnboardingStatus, onboardingSetupSeen } from './lib/useOnboardingStatus'
 import { DEMO_MODE } from './lib/demo/flag'
 
 // Heavy pages — code-split so they don't bloat the initial bundle
@@ -71,15 +72,24 @@ function RootGate() {
   const user = useAuthStore((s) => s.user)
   const authRequired = useAuthStore((s) => s.authRequired)
   const status = useAuthStore((s) => s.status)
+  const onboardingStatus = useOnboardingStatus()
   const endpointStatus = useEndpointStatus()
 
   if (status !== 'ready') return null
   if (authRequired && !user) return <Navigate to="/login" replace />
-  // BYOK onboarding gate: a regular tenant with no working endpoint is sent to
-  // /setup once, to connect their own model before landing on a chat that would
-  // 400. Admin / self-host always resolve 'configured' and skip this. The redirect
-  // fires at most once per session (byokSetupSeen), so "continue anyway" from the
-  // setup view never loops back here.
+  // Setup-first gate: a newly signed-up (regular) tenant who has not finished or
+  // skipped the wizard is sent to /setup before landing in the app, so the guided
+  // setup is the first thing they see. Admin / self-host always resolve 'ok' and
+  // skip this (they configure via Settings). Fires at most once per session
+  // (onboardingSetupSeen), so leaving the wizard early never loops back here.
+  if (onboardingStatus === 'loading') return null
+  if (onboardingStatus === 'needs-setup' && !onboardingSetupSeen()) {
+    return <Navigate to="/setup" replace />
+  }
+  // BYOK gate: a regular tenant with no working endpoint is sent to /setup once,
+  // to connect their own model before landing on a chat that would 400. Admin /
+  // self-host always resolve 'configured' and skip this. Fires at most once per
+  // session (byokSetupSeen), so "continue anyway" never loops back here.
   if (endpointStatus === 'loading') return null
   if (endpointStatus === 'missing' && !byokSetupSeen()) {
     return <Navigate to="/setup" replace />

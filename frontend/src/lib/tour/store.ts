@@ -1,23 +1,24 @@
 /**
- * Product-tour store (zustand). Holds the modal's open/step state and the
- * navigation actions. Kept tiny and framework-agnostic so the command palette
- * can start it imperatively via `useProductTour.getState().start()` (the
- * supported zustand-v5 out-of-React pattern).
+ * Product-tour store (zustand). Holds the tour's open/step state and the
+ * navigation actions for the SpotlightTour overlay. Kept tiny and
+ * framework-agnostic so the command palette can start it imperatively via
+ * `useProductTour.getState().start()` (the supported zustand-v5 out-of-React
+ * pattern).
  *
- * Closing the tour (finish, skip, Esc or backdrop) always records it as
+ * Closing the tour (finish, skip, Esc) always records the spotlight tour as
  * completed so it never re-auto-opens; an auto-started run also marks the
- * current what's-new as seen, so a first-run user is never double-prompted with
- * the banner right after the tour.
+ * current what's-new as seen, so a freshly set-up user is never double-prompted
+ * with the banner right after the tour.
  */
 import { create } from 'zustand'
 
-import { TOUR_STEPS } from './steps'
-import { APP_VERSION, markTourCompleted, markWhatsNewSeen } from './whatsNew'
+import { SPOTLIGHT_STEPS } from './spotlightSteps'
+import { APP_VERSION, markSpotlightTourCompleted, markWhatsNewSeen } from './whatsNew'
 
 interface ProductTourState {
   open: boolean
   index: number
-  /** True when this run was auto-started on first visit (vs. user-invoked). */
+  /** True when this run was auto-started after setup (vs. user-invoked). */
   autoStarted: boolean
   start: (auto?: boolean) => void
   close: () => void
@@ -33,14 +34,14 @@ export const useProductTour = create<ProductTourState>((set, get) => ({
   start: (auto = false) => set({ open: true, index: 0, autoStarted: auto }),
 
   close: () => {
-    markTourCompleted()
+    markSpotlightTourCompleted()
     if (get().autoStarted) markWhatsNewSeen(APP_VERSION)
     set({ open: false, autoStarted: false })
   },
 
   next: () => {
     const { index, close } = get()
-    if (index >= TOUR_STEPS.length - 1) {
+    if (index >= SPOTLIGHT_STEPS.length - 1) {
       close()
     } else {
       set({ index: index + 1 })

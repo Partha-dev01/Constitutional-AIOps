@@ -33,10 +33,14 @@ import { SetupNudge } from './SetupNudge'
 import { DEMO_MODE } from '../lib/demo/flag'
 import { CommandPalette } from './CommandPalette'
 import { ShortcutsHelp } from './ShortcutsHelp'
-import { ProductTour } from './ProductTour'
+import { SpotlightTour } from './SpotlightTour'
 import { WhatsNew } from './WhatsNew'
 import { useProductTour } from '../lib/tour/store'
-import { shouldAutoStartTour } from '../lib/tour/whatsNew'
+import {
+  spotlightTourPending,
+  spotlightTourCompleted,
+  clearSpotlightTourPending,
+} from '../lib/tour/whatsNew'
 import type { PaletteCommand } from '../lib/commandPalette'
 
 interface LayoutProps {
@@ -50,22 +54,24 @@ interface NavItem {
   group: string
   /** Hidden from the sidebar for non-admin users (route also self-guards). */
   adminOnly?: boolean
+  /** data-tour target id, for the spotlight tour to highlight this nav item. */
+  tourId?: string
 }
 
 const navigation: NavItem[] = [
-  { name: 'Dashboard', href: '/', icon: LayoutDashboard, group: 'Overview' },
+  { name: 'Dashboard', href: '/', icon: LayoutDashboard, group: 'Overview', tourId: 'dashboard' },
   { name: 'Command Center', href: '/console', icon: LayoutPanelLeft, group: 'Operate' },
-  { name: 'Incidents', href: '/incidents', icon: AlertTriangle, group: 'Operate' },
+  { name: 'Incidents', href: '/incidents', icon: AlertTriangle, group: 'Operate', tourId: 'incidents' },
   { name: 'Chat', href: '/chat', icon: MessageSquare, group: 'Operate' },
   { name: 'Telemetry', href: '/telemetry', icon: Network, group: 'Observe' },
   { name: 'Metrics', href: '/metrics', icon: BarChart3, group: 'Observe' },
-  { name: 'Graph', href: '/graph', icon: GitBranch, group: 'Observe' },
+  { name: 'Graph', href: '/graph', icon: GitBranch, group: 'Observe', tourId: 'graph' },
   { name: 'Infrastructure', href: '/infrastructure', icon: Server, group: 'Observe' },
   { name: 'Local Model', href: '/local-chat', icon: Laptop, group: 'AI' },
   { name: 'Agents', href: '/agents', icon: Cpu, group: 'AI' },
   { name: 'MCP Tools', href: '/mcp', icon: Wrench, group: 'AI' },
   { name: 'Benchmark', href: '/benchmark', icon: FlaskConical, group: 'AI' },
-  { name: 'Settings', href: '/settings', icon: Settings, group: 'Admin' },
+  { name: 'Settings', href: '/settings', icon: Settings, group: 'Admin', tourId: 'settings' },
   { name: 'Notifications', href: '/notifications', icon: Bell, group: 'Admin', adminOnly: true },
   { name: 'Audit Log', href: '/audit', icon: ScrollText, group: 'Admin', adminOnly: true },
   { name: 'Docs', href: '/guide', icon: BookOpen, group: 'Admin' },
@@ -223,16 +229,18 @@ export function Layout({ children }: LayoutProps) {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [])
 
-  // First-run: auto-open the product tour once (non-demo). The store records it
-  // as completed on any close, so it never re-opens on later visits. Skipped
-  // under browser automation (navigator.webdriver) so E2E and synthetic sessions
-  // are not hijacked by the modal; the tour stays available via the command
-  // palette ("Take the product tour").
+  // Post-setup: start the spotlight tour once, only when setup just handed off
+  // to it (a session-scoped pending flag), not on every first visit. Skipped in
+  // demo builds and under browser automation (navigator.webdriver) so E2E and
+  // synthetic sessions are never hijacked; the tour stays available on demand
+  // from the command palette ("Take the product tour").
   useEffect(() => {
     if (DEMO_MODE) return
     if (typeof navigator !== 'undefined' && navigator.webdriver) return
-    if (!shouldAutoStartTour()) return
-    const t = window.setTimeout(() => useProductTour.getState().start(true), 600)
+    if (!spotlightTourPending()) return
+    clearSpotlightTourPending()
+    if (spotlightTourCompleted()) return
+    const t = window.setTimeout(() => useProductTour.getState().start(true), 500)
     return () => window.clearTimeout(t)
   }, [])
 
@@ -374,6 +382,7 @@ export function Layout({ children }: LayoutProps) {
               )}
               <Link
                 to={item.href}
+                data-tour={item.tourId}
                 onClick={() => setMobileOpen(false)}
                 title={isRail ? item.name : undefined}
                 className={cn(
@@ -523,7 +532,7 @@ export function Layout({ children }: LayoutProps) {
 
       <ShortcutsHelp open={helpOpen} onClose={() => setHelpOpen(false)} />
 
-      <ProductTour />
+      <SpotlightTour />
     </div>
   )
 }

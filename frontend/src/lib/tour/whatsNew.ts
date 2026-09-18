@@ -105,6 +105,47 @@ export function markWhatsNewSeen(version: string = APP_VERSION): void {
   writeLS(WHATSNEW_KEY, version)
 }
 
+const SPOTLIGHT_KEY = 'aiops.tour.spotlight.completed'
+const SPOTLIGHT_PENDING_KEY = 'aiops.tour.spotlight.pending'
+
+/** The upgraded spotlight tour has been completed or skipped once (per browser). */
+export function spotlightTourCompleted(): boolean {
+  return readLS(SPOTLIGHT_KEY) === 'true'
+}
+
+export function markSpotlightTourCompleted(): void {
+  writeLS(SPOTLIGHT_KEY, 'true')
+}
+
+/**
+ * Session-scoped handoff: "the user just finished setup, start the tour on the
+ * next app view". sessionStorage (not localStorage) so it fires once, right
+ * after setup, and never re-arms in a later session.
+ */
+export function markSpotlightTourPending(): void {
+  try {
+    window.sessionStorage.setItem(SPOTLIGHT_PENDING_KEY, '1')
+  } catch {
+    /* ignore storage failures (private mode / disabled) */
+  }
+}
+
+export function spotlightTourPending(): boolean {
+  try {
+    return window.sessionStorage.getItem(SPOTLIGHT_PENDING_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+export function clearSpotlightTourPending(): void {
+  try {
+    window.sessionStorage.removeItem(SPOTLIGHT_PENDING_KEY)
+  } catch {
+    /* ignore storage failures (private mode / disabled) */
+  }
+}
+
 /** First-run: auto-open the tour until it has been completed or skipped once. */
 export function shouldAutoStartTour(): boolean {
   return !tourCompleted()

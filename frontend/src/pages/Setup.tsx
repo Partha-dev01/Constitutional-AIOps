@@ -42,6 +42,8 @@ import type {
 } from '../lib/api'
 import { useAuthStore } from '../lib/auth'
 import { markByokSetupSeen } from '../lib/useEndpointStatus'
+import { markOnboardingSetupSeen } from '../lib/useOnboardingStatus'
+import { markSpotlightTourPending } from '../lib/tour/whatsNew'
 import { useWizardStore } from '../lib/onboarding/store'
 import { cleanServices } from '../lib/onboarding/services'
 import {
@@ -1144,6 +1146,8 @@ function AdminWizard() {
 
   const onFinish = async () => {
     await complete()
+    // Hand off to the post-setup spotlight tour on the next app view.
+    markSpotlightTourPending()
     leaveToApp()
   }
 
@@ -1234,10 +1238,11 @@ function AdminWizard() {
 function ByokOnlySetup() {
   const navigate = useNavigate()
 
-  // Spend the one-shot onboarding redirect the moment this view opens, so a
+  // Spend the one-shot setup redirects the moment this view opens, so a
   // "Continue to app" that returns to "/" is never bounced back here.
   useEffect(() => {
     markByokSetupSeen()
+    markOnboardingSetupSeen()
   }, [])
 
   const leaveToApp = () => navigate('/', { replace: true })
@@ -1249,8 +1254,12 @@ function ByokOnlySetup() {
         cfg.reasoningAgentUrl.trim() &&
         cfg.reasoningAgentModel.trim(),
     )
-    // A complete endpoint is all that is needed — drop straight into the app.
-    if (complete) leaveToApp()
+    // A complete endpoint is all that is needed — drop straight into the app,
+    // handing off to the post-setup spotlight tour on the next view.
+    if (complete) {
+      markSpotlightTourPending()
+      leaveToApp()
+    }
   }
 
   return (
