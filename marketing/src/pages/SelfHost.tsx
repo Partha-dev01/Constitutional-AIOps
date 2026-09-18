@@ -1,5 +1,5 @@
-import { ArrowRight, Check, Github, Server } from 'lucide-react'
-import { PageShell, Pill, H2, P, Code } from '../components/prose'
+import { ArrowRight, Check, Github } from 'lucide-react'
+import { PageShell, H2, P, Code } from '../components/prose'
 import { GlassCard, CtaButton } from '../components/ui'
 import { DEMO_URL } from '../config'
 
@@ -89,7 +89,6 @@ const NEEDS = [
 export function SelfHost() {
   return (
     <PageShell
-      pill={<Pill icon={<Server className="h-3.5 w-3.5" aria-hidden="true" />}>Deploy</Pill>}
       title="Self-host or use the hosted demo"
       lead="Same software either way. Constitutional AIOps is AGPL open source with no paid tier. Try it instantly on the hosted demo, or run the exact same stack on your own infrastructure. This page helps you pick."
     >

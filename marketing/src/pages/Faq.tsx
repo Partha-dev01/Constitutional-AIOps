@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
-import { HelpCircle, ChevronDown } from 'lucide-react'
-import { PageShell, Pill, CTARow } from '../components/prose'
+import { ChevronDown } from 'lucide-react'
+import { PageShell, CTARow } from '../components/prose'
 
 /**
  * Standalone "FAQ" page (/faq.html, a Vite entry). Native <details> accordions,
@@ -92,7 +92,6 @@ export function Faq() {
   return (
     <PageShell
       maxWidth="3xl"
-      pill={<Pill icon={<HelpCircle className="h-3.5 w-3.5" aria-hidden="true" />}>FAQ</Pill>}
       title="Questions, answered"
       lead="The things people ask first. If safety is your main concern, start with the first answer, then read the safety page in full."
     >

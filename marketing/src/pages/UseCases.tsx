@@ -1,5 +1,4 @@
-import { Layers } from 'lucide-react'
-import { PageShell, Pill, P, CTARow } from '../components/prose'
+import { PageShell, P, CTARow } from '../components/prose'
 
 /**
  * Standalone "Use cases" page (/usecases.html, a Vite entry). Concrete
@@ -53,7 +52,6 @@ export function UseCases() {
   return (
     <PageShell
       maxWidth="5xl"
-      pill={<Pill icon={<Layers className="h-3.5 w-3.5" aria-hidden="true" />}>Use cases</Pill>}
       title="What it looks like in practice"
       lead="Four situations an operations team runs into, and how the system reads each one. The pattern is always the same: it explains before it acts, and the gate decides what it is allowed to do on its own."
     >

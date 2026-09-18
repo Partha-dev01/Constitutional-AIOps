@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { LandingHeader } from './landing/LandingHeader'
 import { TeamFooter } from './landing/TeamFooter'
-import { GlassBackdrop, GlassCard, GlassPill, CtaButton } from './ui'
+import { GlassBackdrop, GlassCard, CtaButton } from './ui'
 import { APP_URL, DEMO_URL } from '../config'
 
 /**
@@ -24,13 +24,11 @@ const MAXW = {
 
 export function PageShell({
   maxWidth = '3xl',
-  pill,
   title,
   lead,
   children,
 }: {
   maxWidth?: keyof typeof MAXW
-  pill?: ReactNode
   title: string
   lead: ReactNode
   children: ReactNode
@@ -42,8 +40,7 @@ export function PageShell({
 
       <main className={`mx-auto ${MAXW[maxWidth]} px-6 pb-16 pt-28 sm:pt-32`}>
         <div className="mb-10">
-          {pill}
-          <h1 className="mt-4 text-4xl font-bold tracking-tight">{title}</h1>
+          <h1 className="text-4xl font-bold tracking-tight">{title}</h1>
           <p className="mt-3 max-w-3xl text-lg text-muted-foreground">{lead}</p>
         </div>
         {children}
@@ -52,10 +49,6 @@ export function PageShell({
       <TeamFooter />
     </div>
   )
-}
-
-export function Pill({ icon, children }: { icon?: ReactNode; children: ReactNode }) {
-  return <GlassPill icon={icon}>{children}</GlassPill>
 }
 
 export function H2({ id, children }: { id?: string; children: ReactNode }) {

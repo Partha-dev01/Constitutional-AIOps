@@ -1,5 +1,4 @@
-import { Workflow } from 'lucide-react'
-import { PageShell, Pill, H2, P, Code, Card, CTARow } from '../components/prose'
+import { PageShell, H2, P, Code, Card, CTARow } from '../components/prose'
 
 /**
  * Standalone "How it works" page (/architecture.html, a Vite entry). Walks the
@@ -44,7 +43,6 @@ export function Architecture() {
   return (
     <PageShell
       maxWidth="5xl"
-      pill={<Pill icon={<Workflow className="h-3.5 w-3.5" aria-hidden="true" />}>How it works</Pill>}
       title="From telemetry to a safe fix"
       lead="Constitutional AIOps reads your observability data, finds the likely cause, and proposes a fix that has to clear a safety gate before anything runs. Here is the whole path."
     >

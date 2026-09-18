@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { Scale, Server, KeyRound, HeartHandshake, Lock } from 'lucide-react'
-import { PageShell, Pill, H2, P, Code, CTARow } from '../components/prose'
+import { PageShell, H2, P, Code, CTARow } from '../components/prose'
 import { SHOW_SELFHOST } from '../config'
 
 /**
@@ -37,7 +37,6 @@ export function OpenSource() {
   return (
     <PageShell
       maxWidth="4xl"
-      pill={<Pill icon={<Scale className="h-3.5 w-3.5" aria-hidden="true" />}>Open source</Pill>}
       title="Free software, no lock-in"
       lead="Constitutional AIOps is released as free software under AGPL-3.0. You run it, you own the deployment, and you decide which model it talks to. This is not a pricing page, because there is nothing to buy."
     >

@@ -1,5 +1,4 @@
-import { ShieldCheck } from 'lucide-react'
-import { PageShell, Pill, H2, P, Code, Card, CTARow } from '../components/prose'
+import { PageShell, H2, P, Code, Card, CTARow } from '../components/prose'
 
 /**
  * Standalone public "Safety" page (served as /safety.html, a Vite entry). The
@@ -53,7 +52,6 @@ const MATRIX: { confidence: string; action: string; review: string }[] = [
 export function Safety() {
   return (
     <PageShell
-      pill={<Pill icon={<ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />}>Safety</Pill>}
       title="The constitutional layer"
       lead="An AIOps system that can act on your infrastructure needs a reason to be trusted. Every proposed action here passes a fixed set of principles and a graduated-trust gate before anything runs, and every decision is recorded."
     >

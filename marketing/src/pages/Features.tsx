@@ -10,7 +10,7 @@ import {
   ScanLine,
   LayoutDashboard,
 } from 'lucide-react'
-import { PageShell, Pill, H2, P, CTARow } from '../components/prose'
+import { PageShell, H2, P, CTARow } from '../components/prose'
 
 /**
  * Standalone "Features" deep-dive (/features.html, a Vite entry). A grid of the
@@ -75,7 +75,6 @@ export function Features() {
   return (
     <PageShell
       maxWidth="6xl"
-      pill={<Pill icon={<Boxes className="h-3.5 w-3.5" aria-hidden="true" />}>Features</Pill>}
       title="What it does"
       lead="An autonomous operations assistant that watches your telemetry, explains what broke, and proposes a fix you can trust. The capabilities below are the real surface of the product."
     >

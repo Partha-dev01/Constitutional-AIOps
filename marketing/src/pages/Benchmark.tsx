@@ -1,5 +1,4 @@
-import { BarChart3 } from 'lucide-react'
-import { PageShell, Pill, H2, P, Stat, CTARow } from '../components/prose'
+import { PageShell, H2, P, Stat, CTARow } from '../components/prose'
 
 /**
  * Standalone "Benchmark" page (/benchmark.html, a Vite entry). Reports only the
@@ -17,7 +16,6 @@ export function Benchmark() {
   return (
     <PageShell
       maxWidth="4xl"
-      pill={<Pill icon={<BarChart3 className="h-3.5 w-3.5" aria-hidden="true" />}>Benchmark</Pill>}
       title="Measured, not asserted"
       lead="The numbers below come from the project's evaluation corpus and are reported exactly as they appear in the paper. You can re-run the same harness against any endpoint you point the app at."
     >

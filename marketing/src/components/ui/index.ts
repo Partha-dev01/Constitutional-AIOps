@@ -6,5 +6,4 @@
 export { GlassCard } from './GlassCard'
 export { GlassBackdrop } from './GlassBackdrop'
 export { CtaButton } from './CtaButton'
-export { GlassPill } from './GlassPill'
 export { Reveal } from './Reveal'
