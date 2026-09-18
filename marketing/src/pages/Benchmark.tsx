@@ -62,18 +62,21 @@ export function Benchmark() {
         own model and score it against the same cases.
       </P>
 
-      <figure className="m-0">
-        <div className="shot-frame">
-          <img
-            src="/screenshots/benchmark.png"
-            alt="The in-app benchmark view scoring a model against the evaluation corpus"
-            loading="lazy"
-            className="block w-full"
-          />
-        </div>
-        <figcaption className="mt-2 text-center text-xs text-muted-foreground">
-          The benchmark harness, running inside the app
+      <figure className="glass m-0 rounded-xl p-5">
+        <figcaption className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Peer-reviewed source
         </figcaption>
+        <p className="mt-2 text-sm leading-relaxed text-foreground">
+          Parthabrata Ganguly.{' '}
+          <cite className="font-medium not-italic">
+            Constitutional AIOps: A Dual-Agent Architecture with Deterministic Inference and
+            Graph-Episodic Memory
+          </cite>
+          . COMSYS 2026, Paper #29.
+        </p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Every figure on this page is reported from the camera-ready paper.
+        </p>
       </figure>
 
       <CTARow />
