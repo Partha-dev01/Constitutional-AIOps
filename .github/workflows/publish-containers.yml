@@ -47,10 +47,17 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # GHCR rejects uppercase image paths and the owner here is mixed case.
+      # Both values reach the script through env rather than ${{ }} interpolation,
+      # so nothing is ever spliced into the shell text itself. Neither is
+      # attacker-controlled, but keeping run blocks free of interpolation means
+      # the rule never has to be re-argued per workflow.
       - name: Resolve the image path
         id: img
+        env:
+          REPO: ${{ github.repository }}
+          COMPONENT: ${{ matrix.component }}
         run: |
-          echo "name=ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')-${{ matrix.component }}" >> "$GITHUB_OUTPUT"
+          echo "name=ghcr.io/$(echo "$REPO" | tr '[:upper:]' '[:lower:]')-$COMPONENT" >> "$GITHUB_OUTPUT"
 
       # Also emits org.opencontainers.image.source, which is what links the
       # published package back to this repository in the sidebar.

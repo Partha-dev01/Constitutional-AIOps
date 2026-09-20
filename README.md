@@ -115,8 +115,8 @@ The dashboard is shown at the top of this README. A few more of the surfaces
 
 | | |
 |---|---|
-| **Chat + remediation** | **Graph-episodic memory** |
-| ![Chat](marketing/public/screenshots/chat.png) | ![Graph explorer](marketing/public/screenshots/graph-explorer.png) |
+| **Command Center** | **Graph-episodic memory** |
+| ![Command Center: live topology, active incidents awaiting approval, and the assistant side by side](marketing/public/screenshots/console.png) | ![Graph explorer](marketing/public/screenshots/graph-explorer.png) |
 | **Incidents** | **Infrastructure** |
 | ![Incidents](marketing/public/screenshots/incidents.png) | ![Infrastructure](marketing/public/screenshots/infrastructure.png) |
 
