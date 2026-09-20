@@ -3,31 +3,31 @@
 
 # Web Framework
 fastapi>=0.109.1
-uvicorn[standard]>=0.52.4
+uvicorn[standard]>=0.53.0
 websockets>=12.0
 python-multipart>=0.0.32
 
 # Configuration
-pydantic>=2.5.0
-pydantic-settings>=2.1.0
+pydantic>=2.13.5
+pydantic-settings>=2.15.0
 python-dotenv>=1.2.2
 
 # At-rest secret encryption (Fernet) for bring-your-own LLM API keys —
 # src/auth/crypto.py derives the key from AUTH_SECRET_KEY via HKDF-SHA256.
-cryptography>=48.0.1
+cryptography>=50.0.1
 
 # HTTP Client
 httpx>=0.28.1
 aiohttp>=3.14.3
 
 # Database
-neo4j>=5.14.0
+neo4j>=6.3.1
 influxdb-client>=1.38.0
 
 # Telemetry
-opentelemetry-api>=1.21.0
+opentelemetry-api>=1.44.0
 opentelemetry-sdk>=1.44.0
-opentelemetry-exporter-otlp>=1.21.0
+opentelemetry-exporter-otlp>=1.44.0
 opentelemetry-instrumentation-fastapi>=0.42b0
 
 # Logging

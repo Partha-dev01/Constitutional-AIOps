@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+requires = ["setuptools>=84.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -25,17 +25,17 @@ classifiers = [
 ]
 dependencies = [
     "fastapi>=0.109.1",
-    "uvicorn[standard]>=0.52.4",
+    "uvicorn[standard]>=0.53.0",
     "httpx>=0.28.1",
-    "pydantic>=2.5.0",
-    "pydantic-settings>=2.1.0",
-    "neo4j>=5.15.0",
+    "pydantic>=2.13.5",
+    "pydantic-settings>=2.15.0",
+    "neo4j>=6.3.1",
     "python-dotenv>=1.2.2",
     "structlog>=24.1.0",
     "prometheus-client>=0.26.0",
-    "opentelemetry-api>=1.22.0",
+    "opentelemetry-api>=1.44.0",
     "opentelemetry-sdk>=1.44.0",
-    "opentelemetry-exporter-otlp>=1.22.0",
+    "opentelemetry-exporter-otlp>=1.44.0",
     # numpy is imported at module top by src/memory/embedding_service.py and
     # src/benchmark/evaluator.py, so it is a real package dependency. It lived
     # only in requirements.txt, which `pip install -e ".[dev]"` (used by CI)
@@ -58,7 +58,7 @@ dependencies = [
     # unseen. Declaring it here makes CI exercise the real encryption path.
     # Kept in requirements.txt too, same as numpy/langgraph above (prod/Docker
     # installs from there); this is the CI/pip install surface.
-    "cryptography>=48.0.1",
+    "cryptography>=50.0.1",
 ]
 
 [project.optional-dependencies]
@@ -67,10 +67,10 @@ dev = [
     "pytest-asyncio>=1.4.0",
     "pytest-cov>=7.1.0",
     "black>=26.5.1",
-    "isort>=5.13.0",
+    "isort>=9.0.1",
     "mypy>=2.3.1",
     "ruff>=0.1.0",
-    "pre-commit>=3.6.0",
+    "pre-commit>=4.6.2",
 ]
 
 [project.urls]
