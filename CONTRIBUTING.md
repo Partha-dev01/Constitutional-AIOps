@@ -29,9 +29,14 @@ guide is in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 ```bash
 python -m venv .venv
 . .venv/bin/activate        # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-cp .env.example .env        # set your LLM endpoint + key
+pip install -r requirements.txt   # runtime dependencies
+pip install -e ".[dev]"           # the package itself, plus test and lint tooling
+cp .env.example .env              # set your LLM endpoint + key
 ```
+
+Both installs are needed. Without the editable install, `pytest` cannot import
+`src` and every test fails to collect; without `requirements.txt`, the app is
+missing runtime dependencies.
 
 ### Frontend (Node 20.19+ or 22.12+)
 
