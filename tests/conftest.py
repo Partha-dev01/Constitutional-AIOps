@@ -27,13 +27,23 @@ def _reset_rate_limit_windows():
     until an unrelated test tripped a 429. Resetting per test keeps the limiter
     always-on in CI (rather than disabled under TESTING, which would ship an
     unexercised limiter) while staying deterministic.
-    """
-    from src.api import rate_limit
 
-    for window in (rate_limit.CHAT, rate_limit.TOOLS, rate_limit.ACTIONS):
+    This fixture is autouse, so it also runs in golden-smoke, which deliberately
+    installs only pytest and pytest-asyncio and never installs the package. There
+    `src` is not importable and there are no windows to reset, so skip rather than
+    erroring every test in that job.
+    """
+    try:
+        from src.api import rate_limit
+    except ModuleNotFoundError:
+        yield
+        return
+
+    windows = (rate_limit.CHAT, rate_limit.TOOLS, rate_limit.ACTIONS)
+    for window in windows:
         window.reset()
     yield
-    for window in (rate_limit.CHAT, rate_limit.TOOLS, rate_limit.ACTIONS):
+    for window in windows:
         window.reset()
 
 
