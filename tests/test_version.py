@@ -33,3 +33,31 @@ def test_pyproject_declares_dynamic_version() -> None:
     # version is sourced from src/version.py, not hardcoded in [project]
     assert 'dynamic = ["version"]' in text
     assert 'attr = "src.version.__version__"' in text
+
+
+def test_openapi_snapshot_version_matches() -> None:
+    """The committed API snapshot is served to SDK consumers and Swagger.
+
+    It is `app.version` fed from the single source, so a bump that misses it
+    publishes a schema claiming the previous release.
+    """
+    schema = json.loads((REPO_ROOT / "openapi" / "openapi.json").read_text(encoding="utf-8"))
+    assert schema["info"]["version"] == VERSION
+
+
+def test_docs_site_nav_version_matches() -> None:
+    """The docs site's nav advertises the release to every public reader.
+
+    This surface had no gate and sat at v1.0.0 for the whole v1.1.0 release,
+    because nothing tied it to src/version.py.
+    """
+    config = (REPO_ROOT / "docs-site" / ".vitepress" / "config.ts").read_text(encoding="utf-8")
+    assert f"text: 'v{VERSION}'" in config
+
+
+def test_frontend_whats_new_version_matches() -> None:
+    """A returning browser is told what changed by comparing against APP_VERSION."""
+    source = (
+        REPO_ROOT / "frontend" / "src" / "lib" / "tour" / "whatsNew.ts"
+    ).read_text(encoding="utf-8")
+    assert f"export const APP_VERSION = '{VERSION}'" in source

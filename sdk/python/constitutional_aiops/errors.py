@@ -30,7 +30,35 @@ class NotFound(AIOpsError):
 
 
 class RateLimited(AIOpsError):
-    """429. A per-user cost fence or throttle rejected the call."""
+    """429. A per-user cost fence or throttle rejected the call.
+
+    ``retry_after`` is the server's ``Retry-After`` header in seconds when it
+    sent one, and ``None`` otherwise. The hourly windows on chat, tools and
+    actions send it, so a caller that catches this can wait the stated time
+    instead of guessing.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        status: Optional[int] = None,
+        details: Any = None,
+        retry_after: Optional[float] = None,
+    ) -> None:
+        super().__init__(message, status=status, details=details)
+        self.retry_after = retry_after
+
+
+#: The gate's refusal codes, mirrored from the server. Public so a caller can
+#: test ``err.error_code`` against the canonical set instead of hardcoding a
+#: string. Matches ``CONSTITUTIONAL_CODES`` in the TypeScript client.
+CONSTITUTIONAL_CODES = (
+    "action_tools_disabled",
+    "approval_required",
+    "validation_blocked",
+    "container_not_whitelisted",
+)
 
 
 class ConstitutionalRefusal(AIOpsError):

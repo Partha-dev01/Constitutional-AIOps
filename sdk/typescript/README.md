@@ -93,6 +93,24 @@ if (res.available) {
 any method and 5xx or network failures on GET only, with exponential backoff that
 honors a `Retry-After` header. The default (`maxRetries: 0`) never retries.
 
+**Handling a 429 yourself.** `RateLimited` carries `retryAfter`, the server's
+`Retry-After` in seconds (`undefined` if it sent none). The hourly windows on
+chat, tools and actions always send it.
+
+```ts
+import { CONSTITUTIONAL_CODES, ConstitutionalRefusal, RateLimited } from '@constitutional-aiops/sdk'
+
+try {
+  await client.executeAction('act-123')
+} catch (error) {
+  if (error instanceof RateLimited) {
+    console.log('throttled, retry in', error.retryAfter, 'seconds')
+  } else if (error instanceof ConstitutionalRefusal) {
+    console.log('gate held it:', error.errorCode) // one of CONSTITUTIONAL_CODES
+  }
+}
+```
+
 ## Use — typed core
 
 For full type safety over every endpoint, use the generated client. Paths, path

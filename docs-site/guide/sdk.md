@@ -108,14 +108,21 @@ Both clients raise a typed error hierarchy on an HTTP error response.
 | `AIOpsError` | any | Base error. Carries `message`, `status`, `details`. |
 | `AuthError` | 401 | Missing or invalid credentials. |
 | `NotFound` | 404 | The resource does not exist. |
-| `RateLimited` | 429 | A per-user cost fence or throttle rejected the call. |
+| `RateLimited` | 429 | A per-user cost fence or throttle rejected the call. Carries `retry_after` / `retryAfter`. |
 | `ConstitutionalRefusal` | 4xx | The safety gate blocked an action or requires approval. |
+
+`RateLimited` carries `retry_after` (Python) / `retryAfter` (TypeScript): the
+server's `Retry-After` in seconds, or `None` / `undefined` when it sent none. The
+hourly windows on chat, tools and actions always send it, so a caller can wait
+the stated time rather than guess.
 
 `ConstitutionalRefusal` carries `error_code` (Python) / `errorCode` (TypeScript) —
 one of `action_tools_disabled`, `approval_required`, `validation_blocked`,
-`container_not_whitelisted` — and the gate's structured `verdict`. It is raised by
-the action endpoints (for example `create_action`, `approve_action`,
-`execute_action`) when the API returns one of those codes.
+`container_not_whitelisted` — and the gate's structured `verdict`. Both clients
+export that list as `CONSTITUTIONAL_CODES`, so you can test against it instead of
+hardcoding a string. It is raised by the action endpoints (for example
+`create_action`, `approve_action`, `execute_action`) when the API returns one of
+those codes.
 
 ```python
 from constitutional_aiops import ConstitutionalRefusal

@@ -62,6 +62,17 @@ const RETRY_ANY_METHOD = new Set([429])
 const RETRY_GET_ONLY = new Set([502, 503, 504])
 
 /**
+ * Parse a Retry-After header into seconds, or undefined. The server's rate
+ * limiter sends the delta-seconds form (3600). The HTTP date form is legal but
+ * is not produced here, so it reads as undefined rather than being mis-parsed.
+ */
+function retryAfterSeconds(header: string | null | undefined): number | undefined {
+  if (!header) return undefined
+  const seconds = Number(header)
+  return Number.isFinite(seconds) ? seconds : undefined
+}
+
+/**
  * Generative-UI `explain` vocabulary, mirrored from the server. `kind` selects a
  * bounded server-side prompt template; an unknown kind falls back to "generic"
  * rather than erroring, so a new widget can ship its client first.
@@ -525,11 +536,8 @@ export class AIOpsClient {
 
   private async sleep(attempt: number, response: Response | null): Promise<void> {
     let delay = this.backoffMs * 2 ** attempt
-    const retryAfter = response?.headers.get('Retry-After')
-    if (retryAfter) {
-      const seconds = Number(retryAfter)
-      if (!Number.isNaN(seconds)) delay = Math.min(seconds * 1000, 60_000)
-    }
+    const seconds = retryAfterSeconds(response?.headers.get('Retry-After'))
+    if (seconds !== undefined) delay = Math.min(seconds * 1000, 60_000)
     if (delay > 0) await new Promise((resolve) => setTimeout(resolve, delay))
   }
 
@@ -556,7 +564,13 @@ export class AIOpsClient {
     }
     if (status === 401) return new AuthError(message, { status, details: detail })
     if (status === 404) return new NotFound(message, { status, details: detail })
-    if (status === 429) return new RateLimited(message, { status, details: detail })
+    if (status === 429) {
+      return new RateLimited(message, {
+        status,
+        details: detail,
+        retryAfter: retryAfterSeconds(response.headers.get('Retry-After')),
+      })
+    }
     return new AIOpsError(message, { status, details: detail })
   }
 }

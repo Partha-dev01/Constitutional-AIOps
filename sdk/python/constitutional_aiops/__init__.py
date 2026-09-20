@@ -32,6 +32,7 @@ from .client import (
 from .errors import (
     AIOpsError,
     AuthError,
+    CONSTITUTIONAL_CODES,
     ConstitutionalRefusal,
     NotFound,
     RateLimited,
@@ -44,6 +45,7 @@ __all__ = [
     "ConstitutionalRefusal",
     "NotFound",
     "RateLimited",
+    "CONSTITUTIONAL_CODES",
     "INSIGHT_KINDS",
     "INSIGHT_TIERS",
     "INSIGHT_UNAVAILABLE_REASONS",

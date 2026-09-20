@@ -99,6 +99,22 @@ else:
 and 5xx or network failures on GET only, with exponential backoff that honors a
 `Retry-After` header. The default (`max_retries=0`) never retries.
 
+**Handling a 429 yourself.** `RateLimited` carries `retry_after`, the server's
+`Retry-After` in seconds (`None` if it sent none). The hourly windows on chat,
+tools and actions always send it.
+
+```python
+from constitutional_aiops import CONSTITUTIONAL_CODES, ConstitutionalRefusal, RateLimited
+
+try:
+    client.execute_action("act-123")
+except RateLimited as limit:
+    print("throttled, retry in", limit.retry_after, "seconds")
+except ConstitutionalRefusal as refusal:
+    assert refusal.error_code in CONSTITUTIONAL_CODES
+    print("gate held it:", refusal.error_code)
+```
+
 ## Use — typed core
 
 With the `typed` extra installed, every path, parameter, request body and response

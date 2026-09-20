@@ -8,7 +8,38 @@ Versions follow the `frontend/package.json` version. Dates are the merge date.
 
 ## Unreleased
 
-Nothing yet.
+Maintenance. Three places where two things were supposed to agree and nothing
+checked that they did.
+
+### Fixed
+
+- **The documentation site advertised v1.0.0 through the whole v1.1.0 release.**
+  The version label in the docs navigation was the one version surface not tied
+  to `src/version.py`, so the release bump passed it by. `tests/test_version.py`
+  now covers it, along with the OpenAPI snapshot's `info.version` and the app's
+  what's-new marker, which were also unguarded.
+- **`RateLimited` now tells you when to retry.** v1.1.0 added per-caller hourly
+  windows that answer `429` with a `Retry-After` header, but both SDKs read that
+  header only for their own optional backoff and dropped it before raising. It
+  is now on the error as `retry_after` / `retryAfter`, in seconds.
+- **`CONSTITUTIONAL_CODES` is exported from the Python SDK**, matching
+  TypeScript, so a caller can test a refusal against the canonical list instead
+  of hardcoding the string. The Python `execute_action` docstring now also
+  states the admin requirement its TypeScript twin already documented.
+
+### Changed
+
+- **The two SDK clients are now held to each other in CI.** `sdk-drift` checked
+  each generated core against the API schema, but nothing compared the two
+  hand-written clients, and only the Python one has a test suite. A new `parity`
+  job reads both with real parsers and fails if a method, an error class or a
+  shared server vocabulary list reaches one client and not the other.
+- **The documentation site builds on VitePress 2 and Vite 8**, matching the app
+  and marketing trees. VitePress 1 pins Vite 5, which is end-of-life, so four
+  build-time advisories had no upgrade path while it stayed. None of them ever
+  affected the published site, which is static HTML; they applied to the local
+  development server. The publish workflow also installs from the lockfile now,
+  so what reaches the site is the resolution CI approved.
 
 ## v1.1.0 - 2026-09-20
 

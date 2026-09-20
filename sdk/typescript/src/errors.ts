@@ -31,10 +31,24 @@ export class NotFound extends AIOpsError {
   }
 }
 
+/**
+ * 429. A per-user cost fence or throttle rejected the call.
+ *
+ * `retryAfter` is the server's Retry-After header in seconds when it sent one,
+ * and undefined otherwise. The hourly windows on chat, tools and actions send
+ * it, so a caller that catches this can wait the stated time instead of
+ * guessing.
+ */
 export class RateLimited extends AIOpsError {
-  constructor(message: string, options: { status?: number; details?: unknown } = {}) {
+  readonly retryAfter?: number
+
+  constructor(
+    message: string,
+    options: { status?: number; details?: unknown; retryAfter?: number } = {},
+  ) {
     super(message, options)
     this.name = 'RateLimited'
+    this.retryAfter = options.retryAfter
   }
 }
 

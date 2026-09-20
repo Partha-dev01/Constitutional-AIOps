@@ -5,6 +5,11 @@ name: sdk-drift
 # drift, so `constitutional_aiops_client` and `schema.d.ts` can never silently lag
 # `openapi/openapi.json`. The snapshot itself is checked against the live app by
 # ci-backend (`python scripts/dump_openapi.py --check`).
+#
+# The `parity` job covers the other half. The two generated cores were held to
+# the schema, but the two HAND-WRITTEN ergonomic clients were held to nothing,
+# and only one of them has a test suite. That is how the TypeScript client came
+# to lag the Python one by a release with every gate green.
 on:
   push:
     branches: [main, thread-b-deploy]
@@ -81,3 +86,40 @@ jobs:
 
       - name: Typecheck
         run: npm run typecheck
+
+  parity:
+    # Both clients are published under one version and documented as the same
+    # surface, so a method, error class or server-vocabulary constant that
+    # reaches one and not the other is a defect. Each side is read with its own
+    # real parser (Python `ast`, the TypeScript compiler API) rather than by
+    # matching on text, so formatting cannot change the answer.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '20'
+
+      # Only to get the `typescript` package; the extractor needs the compiler,
+      # not a build.
+      - name: Install TypeScript
+        working-directory: sdk/typescript
+        run: npm ci
+
+      - name: Extract the Python surface
+        working-directory: sdk/python
+        run: python scripts/extract_surface.py > "$RUNNER_TEMP/surface.python.json"
+
+      - name: Extract the TypeScript surface
+        working-directory: sdk/typescript
+        run: node scripts/extract-surface.mjs > "$RUNNER_TEMP/surface.typescript.json"
+
+      - name: Compare
+        run: |
+          python sdk/scripts/check_parity.py \
+            "$RUNNER_TEMP/surface.python.json" \
+            "$RUNNER_TEMP/surface.typescript.json"

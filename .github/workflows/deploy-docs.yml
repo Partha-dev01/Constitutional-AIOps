@@ -34,8 +34,15 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '20'
+          cache: npm
+          cache-dependency-path: docs-site/package-lock.json
+      # `npm ci`, not `npm install`: ci-sites gates this tree against the
+      # lockfile, so the publisher has to install the same resolution the gate
+      # proved. `npm install` is free to resolve something newer at publish
+      # time, which means the build that reaches Pages is not the build CI
+      # approved.
       - name: Install
-        run: npm install
+        run: npm ci
       - name: Build
         run: npm run docs:build
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0

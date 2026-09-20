@@ -59,7 +59,7 @@ export default defineConfig({
       { text: 'Self-Host', link: '/guide/self-hosting' },
       { text: 'Architecture', link: '/guide/architecture' },
       {
-        text: 'v1.0.0',
+        text: 'v1.1.0',
         items: [
           { text: 'Releases', link: REPO + '/releases' },
           { text: 'Changelog', link: REPO + '/blob/main/RELEASES.md' },

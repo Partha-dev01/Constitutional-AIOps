@@ -19,8 +19,27 @@ Tracks a server-side behaviour change. No SDK version has been cut for it yet.
   Python, so `approveAction(id, { approved: true })` type-checks. Passing it
   still compiles and still works, it simply has no effect.
 - **A new `429` is reachable** on chat, tool and action calls once a per-caller
-  hourly window fills. The response carries a `Retry-After` header. The SDK
-  surfaces it as an ordinary HTTP error, so retry logic is yours to add.
+  hourly window fills. The response carries a `Retry-After` header. Both clients
+  raise the typed `RateLimited`, which now exposes that header as `retry_after`
+  (Python) / `retryAfter` (TypeScript) in seconds, so a caller that handles the
+  throttle can wait the stated time instead of guessing. Automatic retries stay
+  opt-in (`max_retries` / `maxRetries`, default 0) and already honoured the
+  header internally.
+
+Parity work, both clients:
+
+- **`CONSTITUTIONAL_CODES` is now exported from Python too.** TypeScript has
+  always exported it; Python kept the same list private, so a Python caller had
+  to hardcode a refusal code string to test against. Same four values, same
+  order, in both.
+- **`execute_action`'s Python docstring now states it requires an admin
+  session**, which the TypeScript twin and both READMEs already said.
+- **A parity gate runs in CI** (`sdk-drift`, job `parity`). It reads each client
+  with a real parser and fails if a method, an error class or a shared server
+  vocabulary constant exists in one client and not the other. `sdk-drift`
+  already held each generated core to `openapi.json`; nothing held the two
+  hand-written clients to each other, which is how the TypeScript one came to
+  lag by a release with every gate green.
 
 ## 0.3.0
 

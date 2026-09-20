@@ -17,6 +17,7 @@ from unittest import mock
 from constitutional_aiops import (
     AIOpsClient,
     AuthError,
+    CONSTITUTIONAL_CODES,
     ConstitutionalRefusal,
     NotFound,
     RateLimited,
@@ -227,6 +228,31 @@ class ErrorMappingTests(unittest.TestCase):
             with self.assertRaises(ConstitutionalRefusal) as ctx:
                 self.client.execute_action("a")
         self.assertEqual(ctx.exception.error_code, "approval_required")
+
+    def test_rate_limited_carries_retry_after(self) -> None:
+        """The hourly windows send Retry-After; a caller should not have to guess."""
+        err = _http_error(429, '{"detail": "slow down"}', headers={"Retry-After": "3600"})
+        with mock.patch("urllib.request.urlopen", self._raise(err)):
+            with self.assertRaises(RateLimited) as ctx:
+                self.client.get_incident("i")
+        self.assertEqual(ctx.exception.retry_after, 3600.0)
+
+    def test_rate_limited_retry_after_absent_or_unparseable(self) -> None:
+        """No header, or the legal-but-unused HTTP date form, reads as None."""
+        for headers in ({}, {"Retry-After": "Wed, 21 Oct 2026 07:28:00 GMT"}):
+            with mock.patch("urllib.request.urlopen", self._raise(_http_error(429, "{}", headers=headers))):
+                with self.assertRaises(RateLimited) as ctx:
+                    self.client.get_incident("i")
+            self.assertIsNone(ctx.exception.retry_after)
+
+    def test_constitutional_codes_is_public(self) -> None:
+        """Callers check err.error_code against this rather than hardcoding a string.
+
+        The TypeScript client has always exported its equivalent; Python kept the
+        set private, which is the kind of asymmetry the parity gate now catches.
+        """
+        self.assertIn("approval_required", CONSTITUTIONAL_CODES)
+        self.assertEqual(len(CONSTITUTIONAL_CODES), 4)
 
 
 class RetryPolicyTests(unittest.TestCase):

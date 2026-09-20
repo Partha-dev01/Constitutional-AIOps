@@ -27,17 +27,11 @@ from typing import Any, Callable, Dict, Iterator, List, Optional
 from .errors import (
     AIOpsError,
     AuthError,
+    CONSTITUTIONAL_CODES,
     ConstitutionalRefusal,
     NotFound,
     RateLimited,
 )
-
-_CONSTITUTIONAL_CODES = {
-    "action_tools_disabled",
-    "approval_required",
-    "validation_blocked",
-    "container_not_whitelisted",
-}
 
 # Statuses worth retrying, split by safety. 429 means the request was rejected
 # before it did anything, so it is safe to retry on any method. 5xx/network
@@ -45,6 +39,21 @@ _CONSTITUTIONAL_CODES = {
 # retried for idempotent GETs, never for a POST that might double-submit an action.
 _RETRY_ANY_METHOD = {429}
 _RETRY_GET_ONLY = {502, 503, 504}
+
+
+def _retry_after_seconds(header: Optional[str]) -> Optional[float]:
+    """Parse a ``Retry-After`` header into seconds, or ``None``.
+
+    The server's rate limiter sends the delta-seconds form (``3600``). The HTTP
+    date form is legal but is not produced here, so it reads as ``None`` rather
+    than being mis-parsed as a number.
+    """
+    if not header:
+        return None
+    try:
+        return float(header)
+    except ValueError:
+        return None
 
 # Generative UI (``explain``) vocabulary, mirrored from the server. ``kind``
 # selects a bounded server-side prompt template; an unknown kind falls back to
@@ -235,7 +244,10 @@ class AIOpsClient:
         return self.request("POST", f"/actions/{action_id}/approve", body=body)
 
     def execute_action(self, action_id: str) -> Any:
-        """Execute an approved action. The kill-switch and validator still apply."""
+        """Execute an approved action. Requires an admin session.
+
+        The kill-switch and validator still apply.
+        """
         return self.request("POST", f"/actions/{action_id}/execute")
 
     def cancel_action(self, action_id: str, *, reason: Optional[str] = None) -> Any:
@@ -509,12 +521,9 @@ class AIOpsClient:
     def _sleep(self, attempt: int, exc: "Optional[urllib.error.HTTPError]") -> None:
         delay = self._backoff * (2 ** attempt)
         if exc is not None:
-            retry_after = exc.headers.get("Retry-After") if exc.headers else None
-            if retry_after:
-                try:
-                    delay = min(float(retry_after), 60.0)
-                except ValueError:
-                    pass
+            seconds = _retry_after_seconds(exc.headers.get("Retry-After") if exc.headers else None)
+            if seconds is not None:
+                delay = min(seconds, 60.0)
         if delay > 0:
             time.sleep(delay)
 
@@ -531,12 +540,17 @@ class AIOpsClient:
             detail = None
         message = str(detail) if detail else exc.reason
 
-        if error_code in _CONSTITUTIONAL_CODES:
+        if error_code in CONSTITUTIONAL_CODES:
             return ConstitutionalRefusal(message, error_code=error_code, verdict=detail, status=status)
         if status == 401:
             return AuthError(message, status=status, details=detail)
         if status == 404:
             return NotFound(message, status=status, details=detail)
         if status == 429:
-            return RateLimited(message, status=status, details=detail)
+            return RateLimited(
+                message,
+                status=status,
+                details=detail,
+                retry_after=_retry_after_seconds(exc.headers.get("Retry-After") if exc.headers else None),
+            )
         return AIOpsError(message, status=status, details=detail)
