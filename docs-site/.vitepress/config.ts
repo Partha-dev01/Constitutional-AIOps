@@ -24,6 +24,12 @@ export default defineConfig({
 
   head: [
     ['meta', { name: 'theme-color', content: '#050c1c' }],
+    // Same icon set the marketing site and the app serve, so the docs tab
+    // matches the rest of the brand instead of falling back to a 404.
+    ['link', { rel: 'icon', href: BASE + 'favicon.ico', sizes: 'any' }],
+    ['link', { rel: 'icon', type: 'image/png', sizes: '32x32', href: BASE + 'favicon-32.png' }],
+    ['link', { rel: 'icon', type: 'image/png', sizes: '16x16', href: BASE + 'favicon-16.png' }],
+    ['link', { rel: 'apple-touch-icon', href: BASE + 'apple-touch-icon.png' }],
     // Inter, to match the marketing/app wordmark and body type.
     ['link', { rel: 'preconnect', href: 'https://fonts.googleapis.com' }],
     ['link', { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' }],
