@@ -34,7 +34,7 @@ dependencies = [
     "structlog>=24.1.0",
     "prometheus-client>=0.19.0",
     "opentelemetry-api>=1.22.0",
-    "opentelemetry-sdk>=1.22.0",
+    "opentelemetry-sdk>=1.44.0",
     "opentelemetry-exporter-otlp>=1.22.0",
     # numpy is imported at module top by src/memory/embedding_service.py and
     # src/benchmark/evaluator.py, so it is a real package dependency. It lived
