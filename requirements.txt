@@ -14,7 +14,7 @@ python-dotenv>=1.2.2
 
 # At-rest secret encryption (Fernet) for bring-your-own LLM API keys —
 # src/auth/crypto.py derives the key from AUTH_SECRET_KEY via HKDF-SHA256.
-cryptography>=48.0.1
+cryptography>=50.0.1
 
 # HTTP Client
 httpx>=0.28.1
