@@ -12,7 +12,7 @@
  */
 
 /** Current app version. Bump alongside frontend/package.json "version". */
-export const APP_VERSION = '1.0.0'
+export const APP_VERSION = '1.1.0'
 
 export interface ReleaseNote {
   version: string
@@ -23,6 +23,17 @@ export interface ReleaseNote {
 
 /** Newest first. Only list real, shipped, user-facing changes. */
 export const WHATS_NEW: ReleaseNote[] = [
+  {
+    version: '1.1.0',
+    date: 'September 2026',
+    title: "What's new in 1.1",
+    items: [
+      'Approving, executing and remediating now require an admin account',
+      'The approver in the audit trail is taken from your session, so it always names the real person',
+      'Chat, tool calls and actions now have hourly limits, which keeps a runaway loop from running up a bill',
+      'A personal LLM endpoint has to be a public address; an admin can still point the whole instance at localhost',
+    ],
+  },
   {
     version: '1.0.0',
     date: 'September 2026',

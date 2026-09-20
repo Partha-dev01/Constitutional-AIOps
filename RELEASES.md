@@ -8,7 +8,14 @@ Versions follow the `frontend/package.json` version. Dates are the merge date.
 
 ## Unreleased
 
-Improvements on `main` since v1.0.0, not yet cut into a tagged release.
+Nothing yet.
+
+## v1.1.0 - 2026-09-20
+
+A security release. The headline is that the action and incident routes now
+check who you are, not just that you are signed in, and that the constitutional
+gate can no longer be waived by the caller it exists to constrain. It also picks
+up the interface work that had accumulated on `main` since v1.0.0.
 
 ### Security
 

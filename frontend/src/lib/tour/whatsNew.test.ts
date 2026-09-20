@@ -59,11 +59,15 @@ describe('compareVersions', () => {
 })
 
 describe('entriesSince', () => {
-  const notes = [note('2.0.0'), note('1.1.0'), note('1.0.0')]
+  // Derived from APP_VERSION rather than pinned to a literal, so a release bump
+  // does not have to come back and fix this test. The fixture brackets the
+  // current version: one entry above it (must be capped out), the current one
+  // (must be returned), and one below the lastSeen floor (must be excluded).
+  const nextMajor = `${(parseVersion(APP_VERSION)[0] ?? 0) + 1}.0.0`
+  const notes = [note(nextMajor), note(APP_VERSION), note('0.5.0')]
 
   it('returns only notes strictly newer than lastSeen, capped at APP_VERSION', () => {
-    // APP_VERSION is 1.0.0 in this build, so 1.1.0/2.0.0 are future-capped out.
-    expect(entriesSince('0.9.0', notes).map((n) => n.version)).toEqual(['1.0.0'])
+    expect(entriesSince('0.9.0', notes).map((n) => n.version)).toEqual([APP_VERSION])
   })
 
   it('is empty when lastSeen is at or past every capped note', () => {
