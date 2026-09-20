@@ -55,6 +55,16 @@ def test_docs_site_nav_version_matches() -> None:
     assert f"text: 'v{VERSION}'" in config
 
 
+def test_marketing_footer_version_matches() -> None:
+    """Every marketing page footer shows this, so a stale value is public.
+
+    It sat at v1.0.0 through the whole v1.1.0 release as an inline literal in
+    TeamFooter.tsx. It is a named constant now so this test can reach it.
+    """
+    config = (REPO_ROOT / "marketing" / "src" / "config.ts").read_text(encoding="utf-8")
+    assert f"export const APP_VERSION = '{VERSION}'" in config
+
+
 def test_frontend_whats_new_version_matches() -> None:
     """A returning browser is told what changed by comparing against APP_VERSION."""
     source = (

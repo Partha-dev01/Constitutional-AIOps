@@ -57,3 +57,14 @@ export const DOCS_SITE_URL: string =
  * VITE_SHOW_SELFHOST=true for the build made at the public-source flip.
  */
 export const SHOW_SELFHOST: boolean = import.meta.env.VITE_SHOW_SELFHOST === 'true'
+
+/**
+ * The released app version, shown in the site footer.
+ *
+ * It lives here rather than inline in the footer because it is a version
+ * surface: `src/version.py` is the single source, and `tests/test_version.py`
+ * asserts this constant against it. The footer previously carried the literal
+ * and sat at v1.0.0 through the whole v1.1.0 release, because nothing tied the
+ * two together. Bump `src/version.py`, then run that test.
+ */
+export const APP_VERSION = '1.1.0'

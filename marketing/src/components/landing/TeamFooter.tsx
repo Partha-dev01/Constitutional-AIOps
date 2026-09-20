@@ -1,5 +1,5 @@
 import { ArrowRight } from 'lucide-react'
-import { APP_URL, DOCS_SITE_URL } from '../../config'
+import { APP_URL, APP_VERSION, DOCS_SITE_URL } from '../../config'
 import { Reveal } from '../ui'
 
 // Full page sitemap. Standalone content pages by their own URL; the live demo
@@ -83,7 +83,7 @@ export function TeamFooter() {
           </a>
 
           <p className="font-mono text-xs text-muted-foreground">
-            Constitutional AIOps · v1.0.0 · AGPL-3.0
+            Constitutional AIOps · v{APP_VERSION} · AGPL-3.0
           </p>
         </Reveal>
       </div>
