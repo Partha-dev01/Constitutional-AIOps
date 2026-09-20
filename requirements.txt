@@ -25,7 +25,7 @@ neo4j>=5.14.0
 influxdb-client>=1.38.0
 
 # Telemetry
-opentelemetry-api>=1.21.0
+opentelemetry-api>=1.44.0
 opentelemetry-sdk>=1.44.0
 opentelemetry-exporter-otlp>=1.21.0
 opentelemetry-instrumentation-fastapi>=0.42b0
