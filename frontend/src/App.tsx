@@ -209,6 +209,10 @@ function App() {
                       <Route path="/notifications" element={<Notifications />} />
                       <Route path="/settings" element={<Settings />} />
                       <Route path="/guide" element={<Docs />} />
+                      {/* Unknown in-app paths (stale bookmark, typo, renamed
+                          route) would otherwise render an empty content pane
+                          with no error, so send them to the dashboard. */}
+                      <Route path="*" element={<Navigate to="/" replace />} />
                     </Routes>
                   </Suspense>
                 </ErrorBoundary>
