@@ -18,11 +18,11 @@
     "test:e2e:schema": "playwright test --config=playwright.config.schema.ts"
   },
   "dependencies": {
-    "@mlc-ai/web-llm": "0.2.84",
+    "@mlc-ai/web-llm": "0.2.85",
     "@tanstack/react-query": "^5.102.8",
     "clsx": "^2.1.0",
     "date-fns": "^4.4.0",
-    "lucide-react": "^1.41.0",
+    "lucide-react": "^1.45.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-force-graph-2d": "^1.29.1",
@@ -47,8 +47,8 @@
     "postcss": "^8.5.28",
     "tailwindcss": "^4.3.3",
     "typescript": "^5.3.0",
-    "typescript-eslint": "^8.69.0",
-    "vite": "^8.2.2",
+    "typescript-eslint": "^8.70.0",
+    "vite": "^8.3.0",
     "vitest": "^5.0.0"
   }
 }
