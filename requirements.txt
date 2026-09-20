@@ -2,7 +2,7 @@
 # Python 3.11+ required
 
 # Web Framework
-fastapi>=0.104.0
+fastapi>=0.109.1
 uvicorn[standard]>=0.52.4
 websockets>=12.0
 python-multipart>=0.0.32
@@ -10,11 +10,11 @@ python-multipart>=0.0.32
 # Configuration
 pydantic>=2.5.0
 pydantic-settings>=2.1.0
-python-dotenv>=1.0.0
+python-dotenv>=1.2.2
 
 # At-rest secret encryption (Fernet) for bring-your-own LLM API keys —
 # src/auth/crypto.py derives the key from AUTH_SECRET_KEY via HKDF-SHA256.
-cryptography>=42.0.0
+cryptography>=48.0.1
 
 # HTTP Client
 httpx>=0.28.1
@@ -34,12 +34,10 @@ opentelemetry-instrumentation-fastapi>=0.42b0
 loguru>=0.7.3
 
 # Async
-asyncio>=3.4.3
 aiofiles>=23.2.1
 
 # Utilities
 pyyaml>=6.0.3
-orjson>=3.9.10
 python-dateutil>=2.9.0.post0
 
 # Data Processing
@@ -57,16 +55,16 @@ docker>=7.2.0
 # NOTE: torch with CUDA support requires separate install:
 #   pip install torch --index-url https://download.pytorch.org/whl/cu118
 # For NVIDIA GTX 1650, use CUDA 11.8 or higher
-torch>=2.0.0
+torch>=2.6.0
 sentence-transformers>=2.2.0
 
 # Benchmark Evaluation (BERTScore for semantic similarity)
 bert-score>=0.3.13
-transformers>=4.30.0
+transformers>=5.10.0
 
 # HuggingFace Datasets (for LEMMA-RCA benchmark download)
 datasets>=2.14.0
 huggingface-hub>=0.17.0
 
 # Agent Orchestration (LangGraph state machine for dual-agent pipeline)
-langgraph>=0.2.0
+langgraph>=1.0.10

@@ -35,12 +35,8 @@ updates:
       - dependency-name: "websockets"
       - dependency-name: "opentelemetry-instrumentation-fastapi"
       - dependency-name: "scipy"
-      - dependency-name: "orjson"
       - dependency-name: "pandas"
       - dependency-name: "transformers"
-      # `asyncio` on PyPI is a pre-3.4 stdlib backport that must NOT be installed
-      # on modern Python; the requirements pin is stale, so never auto-bump it.
-      - dependency-name: "asyncio"
       # Dev-only tools (requirements-dev.txt; not shipped, not CI-installed).
       - dependency-name: "ipython"
       - dependency-name: "rich"
