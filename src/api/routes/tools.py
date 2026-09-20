@@ -250,6 +250,46 @@ async def get_tool(request: Request, tool_name: str) -> ToolInfo:
     ))
 
 
+# Context keys the constitutional validator treats as assertions ABOUT the
+# request (src/constitutional/validator.py reads every one of these), plus
+# "source", which is what decides whether the gate derives active_incident.
+#
+# Over HTTP these arrive as arbitrary client JSON. A caller that sends
+# {"human_approved": true} authorises its own action and the gate stops being a
+# gate; {"telemetry_evidence": true} does the same for the Tier-2 evidence
+# principle. So the trust boundary drops them here rather than trying to reason
+# about which one is exploitable this month.
+#
+# Server-side callers (incidents.py, actions.py, chat.py) reach the identical
+# tool ladder through execute_tool_call() and are deliberately NOT affected:
+# their context is built in-process from real approval state, which is the
+# distinction that makes an approval mean anything.
+_CALLER_DENIED_CONTEXT_KEYS = frozenset(
+    {
+        "human_approved",
+        "telemetry_evidence",
+        "audit_enabled",
+        "active_incident",
+        "action_scope",
+        "confidence",
+        "resource_usage",
+        "outcome_tracking",
+        "is_temporary_fix",
+        "permanent_fix_planned",
+        "source",
+    }
+)
+
+
+def _sanitize_caller_context(context: Any) -> dict[str, Any]:
+    """Strip validator-trusted assertions from an untrusted HTTP context."""
+    if not isinstance(context, dict):
+        return {}
+    return {
+        k: v for k, v in context.items() if k not in _CALLER_DENIED_CONTEXT_KEYS
+    }
+
+
 @router.post(
     "/call",
     response_model=ToolCallResponse,
@@ -285,7 +325,7 @@ async def call_tool(
         ctx = _ToolExecContext(
             request=request,
             tool_name=tool_call.tool_name,
-            caller_context=tool_call.context,
+            caller_context=_sanitize_caller_context(tool_call.context),
         )
         return await handler(ctx, tool_call.parameters, start_time)
 
@@ -801,10 +841,12 @@ def _action_tool_gate(request: Request, tool_call: "ToolCallRequest") -> ActionG
         "target_replicas": params.get("target_replicas"),
     }
     # Layer order: gate-derived defaults < caller-supplied context < gate-owned
-    # keys. Callers (e.g. agents) may supply extra validation context such as
-    # telemetry_evidence/human_approved/resource_usage; the UI sends none, so
-    # P2.2 keeps it at approval. The gate-owned keys above always win for the
-    # service/parameters/source/target_replicas identity fields.
+    # keys. In-process callers (incidents.py, actions.py, chat.py) may supply
+    # real validation context such as telemetry_evidence/human_approved, built
+    # from actual approval state. HTTP callers cannot: POST /tools/call runs its
+    # body through _sanitize_caller_context first, which drops every key the
+    # validator treats as an assertion. The gate-owned keys above always win for
+    # the service/parameters/source/target_replicas identity fields.
     context = {**derived_context, **caller_context, **context}
     report = validator.validate(
         action_id=f"tool-{tool_call.tool_name}-{int(time.time() * 1000)}",

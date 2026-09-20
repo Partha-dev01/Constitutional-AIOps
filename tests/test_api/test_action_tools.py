@@ -808,14 +808,20 @@ class TestDispatchTable:
         resp = await tools_mod.call_tool(
             MagicMock(),
             tools_mod.ToolCallRequest(
-                tool_name="find_similar", parameters={"title": "x"}, context={"source": "unit"},
+                tool_name="find_similar",
+                parameters={"title": "x"},
+                # "origin" is an ordinary passthrough key. "source" is NOT: it
+                # steers the gate's active_incident derivation, so the HTTP
+                # boundary strips it along with the rest of the validator's
+                # trusted inputs (see _sanitize_caller_context).
+                context={"origin": "unit", "source": "incident_remediate"},
             ),
         )
         assert resp.success is True and resp.data == {"ok": 1}
         assert seen == {
             "tool_name": "find_similar",
             "params": {"title": "x"},
-            "caller_context": {"source": "unit"},
+            "caller_context": {"origin": "unit"},
         }
 
     @pytest.mark.asyncio

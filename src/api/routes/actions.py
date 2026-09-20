@@ -18,7 +18,7 @@ import uuid
 from datetime import datetime, timedelta
 from typing import Any, Optional
 
-from fastapi import APIRouter, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
 from src.api.schemas.action import (
     Action,
@@ -34,7 +34,13 @@ from src.api.schemas.action import (
     ConstitutionalValidation,
     PendingApprovals,
 )
-from src.auth.deps import auth_required, get_current_user
+from src.auth.deps import (
+    User,
+    auth_required,
+    coerce_user,
+    get_current_user,
+    require_admin,
+)
 from src.confidence import ConfidenceCalculator, ConfidenceBreakdown
 from src.notifications.store import notify
 
@@ -504,9 +510,15 @@ async def get_action(action_id: str) -> Action:
 async def approve_action(
     action_id: str,
     approval: ActionApproval,
+    admin: User = Depends(require_admin),
 ) -> Action:
     """
-    Approve or reject an action.
+    Approve or reject an action. Admin only.
+
+    The approver is taken from the authenticated session, never from the
+    request body: an approval that the caller can name themselves is not an
+    approval, and it lands in the audit log. ``approval.approved_by`` is
+    accepted for backwards compatibility and ignored.
 
     Args:
         action_id: Action to approve/reject
@@ -515,6 +527,7 @@ async def approve_action(
     Returns:
         Updated action
     """
+    approver = coerce_user(admin).username
     if action_id not in _actions:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -545,7 +558,7 @@ async def approve_action(
             detail=f"Action {action_id} approval window has expired",
         )
 
-    action.approved_by = approval.approved_by
+    action.approved_by = approver
     action.approved_at = now
     action.approval_comments = approval.comments
     action.updated_at = now
@@ -560,23 +573,23 @@ async def approve_action(
             "timestamp": now.isoformat(),
             "event": "approved",
             "details": {
-                "approved_by": approval.approved_by,
+                "approved_by": approver,
                 "comments": approval.comments,
                 "modifications": approval.modifications,
             },
         })
-        logger.info(f"Action {action_id} approved by {approval.approved_by}")
+        logger.info(f"Action {action_id} approved by {approver}")
     else:
         action.status = ActionStatus.REJECTED
         action.audit_log.append({
             "timestamp": now.isoformat(),
             "event": "rejected",
             "details": {
-                "rejected_by": approval.approved_by,
+                "rejected_by": approver,
                 "reason": approval.comments,
             },
         })
-        logger.info(f"Action {action_id} rejected by {approval.approved_by}")
+        logger.info(f"Action {action_id} rejected by {approver}")
 
     return action
 
@@ -590,6 +603,7 @@ async def approve_action(
 async def execute_action(
     request: Request,
     action_id: str,
+    admin: User = Depends(require_admin),
 ) -> Action:
     """
     Execute an approved action.

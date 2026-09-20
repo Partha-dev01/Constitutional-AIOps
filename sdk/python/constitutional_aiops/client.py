@@ -215,13 +215,24 @@ class AIOpsClient:
         """Propose an action. The validator may hold it for approval or block it."""
         return self.request("POST", "/actions/", body=data)
 
-    def approve_action(self, action_id: str, *, approved: bool, approved_by: str, comments: str = "") -> Any:
-        """Approve or reject a pending action. Still passes the constitutional gate."""
-        return self.request(
-            "POST",
-            f"/actions/{action_id}/approve",
-            body={"approved": approved, "approved_by": approved_by, "comments": comments},
-        )
+    def approve_action(
+        self,
+        action_id: str,
+        *,
+        approved: bool,
+        approved_by: Optional[str] = None,
+        comments: str = "",
+    ) -> Any:
+        """Approve or reject a pending action. Still passes the constitutional gate.
+
+        Requires an admin session. ``approved_by`` is accepted for backwards
+        compatibility and ignored by the server, which records the approver from
+        the authenticated session instead.
+        """
+        body: Dict[str, Any] = {"approved": approved, "comments": comments}
+        if approved_by is not None:
+            body["approved_by"] = approved_by
+        return self.request("POST", f"/actions/{action_id}/approve", body=body)
 
     def execute_action(self, action_id: str) -> Any:
         """Execute an approved action. The kill-switch and validator still apply."""

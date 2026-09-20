@@ -2731,9 +2731,10 @@ export interface components {
             approved: boolean;
             /**
              * Approved By
-             * @description Approver username or ID
+             * @deprecated
+             * @description Ignored. The approver is recorded from the authenticated session.
              */
-            approved_by: string;
+            approved_by?: string | null;
             /** Comments */
             comments?: string | null;
             /**

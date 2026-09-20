@@ -12,7 +12,9 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+
+from src.auth.deps import User, require_admin
 
 from src.api.schemas.incident import (
     Incident,
@@ -527,7 +529,10 @@ async def update_incident(
     summary="Delete Incident",
     description="Delete an incident (soft delete in production)",
 )
-async def delete_incident(incident_id: str) -> None:
+async def delete_incident(
+    incident_id: str,
+    admin: User = Depends(require_admin),
+) -> None:
     """
     Delete an incident.
 
@@ -597,7 +602,11 @@ async def analyze_incident(
         "all still apply). The verdict is surfaced in the response."
     ),
 )
-async def remediate_incident(request: Request, incident_id: str) -> dict[str, Any]:
+async def remediate_incident(
+    request: Request,
+    incident_id: str,
+    admin: User = Depends(require_admin),
+) -> dict[str, Any]:
     """Run the remediation for an incident and resolve it on success.
 
     Demo incidents (source ``demo-mode`` / a scenario tag) call the matching t3
@@ -702,6 +711,13 @@ async def remediate_incident(request: Request, incident_id: str) -> dict[str, An
                     # rather than hardcoding True regardless.
                     "telemetry_evidence": bool(incident.rca),
                     "audit_enabled": _audit_enabled(),
+                    # Truthful because the route itself is admin-gated: reaching
+                    # this line means an authenticated admin called
+                    # POST /incidents/{id}/remediate. Before that gate existed
+                    # this was an unverified assertion that any logged-in caller
+                    # could trigger. Do not lift this into a caller-supplied
+                    # value; tools.py strips these keys off HTTP requests for
+                    # exactly that reason.
                     "human_approved": True,
                     "source": "incident_remediate",
                 },
@@ -766,7 +782,10 @@ async def remediate_incident(request: Request, incident_id: str) -> dict[str, An
     summary="Dismiss Incident",
     description="Reject remediation and archive the incident (status -> closed).",
 )
-async def dismiss_incident(incident_id: str) -> Incident:
+async def dismiss_incident(
+    incident_id: str,
+    admin: User = Depends(require_admin),
+) -> Incident:
     """Operator rejected the remediation: archive the incident (CLOSED)."""
     incident = _incidents.get(incident_id) or _load_incident_from_persistence(incident_id)
     if incident is None:

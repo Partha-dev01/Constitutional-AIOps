@@ -219,9 +219,17 @@
             "type": "boolean"
           },
           "approved_by": {
-            "description": "Approver username or ID",
-            "title": "Approved By",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "deprecated": true,
+            "description": "Ignored. The approver is recorded from the authenticated session.",
+            "title": "Approved By"
           },
           "comments": {
             "anyOf": [
@@ -250,8 +258,7 @@
           }
         },
         "required": [
-          "approved",
-          "approved_by"
+          "approved"
         ],
         "title": "ActionApproval",
         "type": "object"

@@ -132,7 +132,15 @@ class ActionCreate(ActionBase):
 class ActionApproval(BaseModel):
     """Human approval for an action."""
     approved: bool = Field(..., description="Whether action is approved")
-    approved_by: str = Field(..., description="Approver username or ID")
+    # Accepted for backwards compatibility and IGNORED. The approver is taken
+    # from the authenticated session, because a self-declared approver in the
+    # request body is not an approval and it was being written to the audit log
+    # verbatim (the UI sent the literal string "current-user").
+    approved_by: Optional[str] = Field(
+        default=None,
+        deprecated=True,
+        description="Ignored. The approver is recorded from the authenticated session.",
+    )
     comments: Optional[str] = Field(None, max_length=500)
     modifications: Optional[dict[str, Any]] = Field(
         default=None,

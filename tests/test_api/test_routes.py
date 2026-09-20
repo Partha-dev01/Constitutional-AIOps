@@ -425,13 +425,19 @@ class TestActionRoutes:
                 action.id,
                 ActionApproval(
                     approved=True,
-                    approved_by="test-user",
+                    # Deliberately a lie: the body must NOT decide who approved.
+                    approved_by="somebody-else",
                     comments="Approved for testing",
                 ),
             )
 
             assert approved.status == ActionStatus.APPROVED
-            assert approved.approved_by == "test-user"
+            # The approver is taken from the authenticated session, so the
+            # body's value is ignored. Calling the handler directly leaves the
+            # admin dependency uninjected, which coerce_user() resolves to the
+            # synthetic admin exactly as it does everywhere else in this suite.
+            assert approved.approved_by == "admin"
+            assert approved.approved_by != "somebody-else"
 
     @pytest.mark.asyncio
     async def test_get_pending_approvals(self):

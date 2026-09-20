@@ -26,13 +26,13 @@ class ActionApproval:
 
     Attributes:
         approved (bool): Whether action is approved
-        approved_by (str): Approver username or ID
+        approved_by (None | str | Unset): Ignored. The approver is recorded from the authenticated session.
         comments (None | str | Unset):
         modifications (ActionApprovalModificationsType0 | None | Unset): Optional modifications to action parameters
     """
 
     approved: bool
-    approved_by: str
+    approved_by: None | str | Unset = UNSET
     comments: None | str | Unset = UNSET
     modifications: ActionApprovalModificationsType0 | None | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
@@ -44,7 +44,11 @@ class ActionApproval:
 
         approved = self.approved
 
-        approved_by = self.approved_by
+        approved_by: None | str | Unset
+        if isinstance(self.approved_by, Unset):
+            approved_by = UNSET
+        else:
+            approved_by = self.approved_by
 
         comments: None | str | Unset
         if isinstance(self.comments, Unset):
@@ -65,9 +69,10 @@ class ActionApproval:
         field_dict.update(
             {
                 "approved": approved,
-                "approved_by": approved_by,
             }
         )
+        if approved_by is not UNSET:
+            field_dict["approved_by"] = approved_by
         if comments is not UNSET:
             field_dict["comments"] = comments
         if modifications is not UNSET:
@@ -84,7 +89,14 @@ class ActionApproval:
         d = dict(src_dict)
         approved = d.pop("approved")
 
-        approved_by = d.pop("approved_by")
+        def _parse_approved_by(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        approved_by = _parse_approved_by(d.pop("approved_by", UNSET))
 
         def _parse_comments(data: object) -> None | str | Unset:
             if data is None:

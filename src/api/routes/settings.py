@@ -680,6 +680,30 @@ async def update_models_config(
     # stored per-user + encrypted, never touching the global router. Only admins
     # (and the synthetic self-host admin) change the shared/global endpoint.
     if not is_synthetic(user) and user.role != "admin":
+        # These URLs come from an ordinary tenant user and the server itself
+        # makes the outbound call, so they get the same SSRF guard the webhook
+        # targets get. Without it any logged-in non-admin can aim the backend at
+        # loopback, at a LAN host, or at link-local 169.254.169.254 and read the
+        # instance role's credentials back out of the model response.
+        #
+        # The admin/global branch below is deliberately NOT guarded: pointing at
+        # a self-hosted Ollama or vLLM on localhost or a LAN address is a
+        # supported deployment (see docs/ARCHITECTURE.md), and an admin already
+        # controls the host, so there is no privilege boundary to cross there.
+        # getaddrinfo blocks, so it runs off the event loop.
+        import asyncio as _asyncio
+
+        for _label, _candidate in (
+            ("fastAgentUrl", body.fastAgentUrl),
+            ("reasoningAgentUrl", body.reasoningAgentUrl),
+        ):
+            _guard = await _asyncio.to_thread(_webhook_target_error, _candidate.strip())
+            if _guard is not None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"{_label}: {_guard}",
+                )
+
         key_plain = (
             body.apiKey
             if body.apiKey is not None
