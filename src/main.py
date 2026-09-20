@@ -730,19 +730,30 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str = None, token:
         Send: {"type": "subscribe", "payload": {"room": "incident:123"}}
         To subscribe to specific incident updates
     """
-    # App-layer guard: Caddy can't basic_auth the WS upgrade. A connection is
-    # accepted when EITHER (a) the browser presents a valid in-app session
-    # cookie (set by /api/v1/auth/login — sent automatically on same-origin WS
-    # upgrades), OR (b) the legacy WS_TOKEN query token matches (kept as the
-    # fallback for token-fetching clients). An empty WS_TOKEN (local/dev)
-    # still allows unauthenticated connections as before.
+    # App-layer guard: Caddy can't basic_auth the WS upgrade, so the socket
+    # authenticates itself. Which credential counts depends on whether in-app
+    # auth is on, rather than accepting either one whenever both exist.
     session_cookie = websocket.cookies.get(SESSION_COOKIE_NAME)
     session_ok = bool(session_cookie) and verify_session(session_cookie) is not None
-    expected = os.getenv("WS_TOKEN", "")
-    token_ok = token is not None and hmac.compare_digest(token, expected)
-    if not session_ok and expected and not token_ok:
-        await websocket.close(code=1008)
-        return
+    if auth_required():
+        # The session cookie is the only credential accepted here. Browsers send
+        # it automatically on a same-origin upgrade, so nothing needs a token.
+        # The legacy WS_TOKEN travelled in the query string, which Caddy writes
+        # to its access log in plaintext, and it was ONE shared value handed to
+        # every authenticated user that never rotated. Dropping it on this path
+        # removes a standing secret from the logs.
+        if not session_ok:
+            await websocket.close(code=1008)
+            return
+    else:
+        # No in-app auth (local dev, or a self-host running without it): the
+        # shared token is the only gate available, so it stays. An empty
+        # WS_TOKEN still allows unauthenticated connections, as before.
+        expected = os.getenv("WS_TOKEN", "")
+        token_ok = token is not None and hmac.compare_digest(token, expected)
+        if expected and not token_ok:
+            await websocket.close(code=1008)
+            return
 
     connection_id = await ws_manager.connect(websocket, client_id)
 
@@ -771,10 +782,18 @@ async def get_websocket_connections():
 
 @app.get("/api/v1/ws/token", tags=["websocket"], dependencies=[Depends(require_user)])
 async def get_ws_token():
-    """Return the app-layer WebSocket token (empty string if unset). This route
-    is gated by Caddy basic_auth like all /api/* paths, plus the in-app session
-    once AUTH_REQUIRED is on."""
+    """Return the app-layer WebSocket token, or "" when in-app auth is on.
+
+    With AUTH_REQUIRED the socket authenticates from the session cookie, so
+    handing out a URL-borne secret would put it in Caddy's access log for no
+    benefit. Self-host and local runs without in-app auth still need it, and
+    still get it. The route stays gated by Caddy basic_auth like all /api/*
+    paths, plus the in-app session.
+    """
     import os
+
+    if auth_required():
+        return {"token": ""}
     return {"token": os.getenv("WS_TOKEN", "")}
 
 

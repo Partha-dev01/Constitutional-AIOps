@@ -47,9 +47,13 @@ def sync_detailed(
 ) -> Response[Any]:
     """Get Ws Token
 
-     Return the app-layer WebSocket token (empty string if unset). This route
-    is gated by Caddy basic_auth like all /api/* paths, plus the in-app session
-    once AUTH_REQUIRED is on.
+     Return the app-layer WebSocket token, or "" when in-app auth is on.
+
+    With AUTH_REQUIRED the socket authenticates from the session cookie, so
+    handing out a URL-borne secret would put it in Caddy's access log for no
+    benefit. Self-host and local runs without in-app auth still need it, and
+    still get it. The route stays gated by Caddy basic_auth like all /api/*
+    paths, plus the in-app session.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -74,9 +78,13 @@ async def asyncio_detailed(
 ) -> Response[Any]:
     """Get Ws Token
 
-     Return the app-layer WebSocket token (empty string if unset). This route
-    is gated by Caddy basic_auth like all /api/* paths, plus the in-app session
-    once AUTH_REQUIRED is on.
+     Return the app-layer WebSocket token, or "" when in-app auth is on.
+
+    With AUTH_REQUIRED the socket authenticates from the session cookie, so
+    handing out a URL-borne secret would put it in Caddy's access log for no
+    benefit. Self-host and local runs without in-app auth still need it, and
+    still get it. The route stays gated by Caddy basic_auth like all /api/*
+    paths, plus the in-app session.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.

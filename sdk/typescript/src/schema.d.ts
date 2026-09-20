@@ -2602,9 +2602,13 @@ export interface paths {
         };
         /**
          * Get Ws Token
-         * @description Return the app-layer WebSocket token (empty string if unset). This route
-         *     is gated by Caddy basic_auth like all /api/* paths, plus the in-app session
-         *     once AUTH_REQUIRED is on.
+         * @description Return the app-layer WebSocket token, or "" when in-app auth is on.
+         *
+         *     With AUTH_REQUIRED the socket authenticates from the session cookie, so
+         *     handing out a URL-borne secret would put it in Caddy's access log for no
+         *     benefit. Self-host and local runs without in-app auth still need it, and
+         *     still get it. The route stays gated by Caddy basic_auth like all /api/*
+         *     paths, plus the in-app session.
          */
         get: operations["websocket-get_ws_token"];
         put?: never;

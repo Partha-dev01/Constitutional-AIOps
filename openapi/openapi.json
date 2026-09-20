@@ -11704,7 +11704,7 @@
     },
     "/api/v1/ws/token": {
       "get": {
-        "description": "Return the app-layer WebSocket token (empty string if unset). This route\nis gated by Caddy basic_auth like all /api/* paths, plus the in-app session\nonce AUTH_REQUIRED is on.",
+        "description": "Return the app-layer WebSocket token, or \"\" when in-app auth is on.\n\nWith AUTH_REQUIRED the socket authenticates from the session cookie, so\nhanding out a URL-borne secret would put it in Caddy's access log for no\nbenefit. Self-host and local runs without in-app auth still need it, and\nstill get it. The route stays gated by Caddy basic_auth like all /api/*\npaths, plus the in-app session.",
         "operationId": "websocket-get_ws_token",
         "responses": {
           "200": {

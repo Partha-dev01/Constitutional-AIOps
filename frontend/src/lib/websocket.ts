@@ -212,8 +212,12 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     clearReconnectTimeout()
     setConnectionState('connecting')
 
-    // Fetch the app-layer token (cached) before opening the socket. The token
-    // rides as a query param because Caddy basic_auth can't gate the WS upgrade.
+    // Fetch the app-layer token (cached) before opening the socket. When in-app
+    // auth is ON the backend returns "" here and the session cookie (sent
+    // automatically on a same-origin upgrade) authenticates instead, so no
+    // secret ends up in the URL or in Caddy's access log. The token is still
+    // issued for self-host/local runs without in-app auth, where Caddy
+    // basic_auth cannot gate a WS upgrade and it is the only gate available.
     const token = await getWsToken()
     const params = new URLSearchParams()
     if (clientId) {
