@@ -32,6 +32,7 @@ from src.api.schemas.incident import (
 # the read fast-path; these helpers mirror each mutation into SQLite so incidents
 # and the incident-id counter survive a backend restart/redeploy.
 from src.persistence import store as persistence_store
+from src.api import rate_limit
 
 logger = logging.getLogger(__name__)
 
@@ -617,6 +618,7 @@ async def remediate_incident(
     success, or back to PENDING_APPROVAL when the gate/executor declines so the
     incident stays actionable (retry / open in chat).
     """
+    rate_limit.ACTIONS.check(rate_limit.caller_key(request, admin))
     incident = _incidents.get(incident_id) or _load_incident_from_persistence(incident_id)
     if incident is None:
         raise HTTPException(

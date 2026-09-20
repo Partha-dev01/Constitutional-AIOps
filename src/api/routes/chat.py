@@ -19,6 +19,7 @@ from typing import Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import StreamingResponse
 
+from src.api import rate_limit
 from src.auth.deps import User, coerce_user, is_synthetic, require_user
 from src.agents.user_router import resolve_model_router, resolve_reasoning_agent
 from src.api.routes.settings import get_remediation_settings
@@ -1692,6 +1693,7 @@ async def chat(
     Returns:
         Assistant's response with confidence and suggestions
     """
+    rate_limit.CHAT.check(rate_limit.caller_key(request, user))
     user = coerce_user(user)
 
     # Phase 0 (Mode 2 plan): per-stage wall-clock timings for this turn, exposed
@@ -2022,6 +2024,7 @@ async def chat_stream(
     chat_request: ChatRequest,
     user: User = Depends(require_user),
 ) -> StreamingResponse:
+    rate_limit.CHAT.check(rate_limit.caller_key(request, user))
     user = coerce_user(user)
 
     # Per-user routing (see the blocking endpoint): a regular tenant streams

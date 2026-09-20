@@ -17,6 +17,26 @@ os.environ["TESTING"] = "true"
 os.environ["LOG_LEVEL"] = "DEBUG"
 
 
+@pytest.fixture(autouse=True)
+def _reset_rate_limit_windows():
+    """Keep the shared throttles from leaking between tests.
+
+    The sliding windows in src/api/rate_limit.py are module-level and keyed per
+    caller. Tests call route handlers directly with mock requests, so they all
+    share the "ip:unknown" key and would otherwise accumulate across the suite
+    until an unrelated test tripped a 429. Resetting per test keeps the limiter
+    always-on in CI (rather than disabled under TESTING, which would ship an
+    unexercised limiter) while staying deterministic.
+    """
+    from src.api import rate_limit
+
+    for window in (rate_limit.CHAT, rate_limit.TOOLS, rate_limit.ACTIONS):
+        window.reset()
+    yield
+    for window in (rate_limit.CHAT, rate_limit.TOOLS, rate_limit.ACTIONS):
+        window.reset()
+
+
 @pytest.fixture(scope="session")
 def event_loop() -> Generator[asyncio.AbstractEventLoop, None, None]:
     """Create event loop for async tests."""

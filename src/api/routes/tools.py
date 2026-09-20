@@ -27,6 +27,7 @@ from pydantic import BaseModel, Field
 
 from src.tools.registry import ACTION_TOOL_NAMES, TOOLS, TOOLS_BY_NAME
 from src.utils.audit import get_audit_logger
+from src.api import rate_limit
 
 logger = logging.getLogger(__name__)
 
@@ -311,6 +312,10 @@ async def call_tool(
     Returns:
         Tool execution result from actual system queries
     """
+    # Outside the try below on purpose: that except returns a 200 with
+    # success=False, which would silently swallow the 429.
+    rate_limit.TOOLS.check(rate_limit.caller_key(request))
+
     start_time = time.time()
 
     try:

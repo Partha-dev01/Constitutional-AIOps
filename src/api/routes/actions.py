@@ -43,6 +43,7 @@ from src.auth.deps import (
 )
 from src.confidence import ConfidenceCalculator, ConfidenceBreakdown
 from src.notifications.store import notify
+from src.api import rate_limit
 
 logger = logging.getLogger(__name__)
 
@@ -528,6 +529,7 @@ async def approve_action(
         Updated action
     """
     approver = coerce_user(admin).username
+    rate_limit.ACTIONS.check(f"user:{approver}")
     if action_id not in _actions:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -616,6 +618,7 @@ async def execute_action(
     Returns:
         Updated action with execution result
     """
+    rate_limit.ACTIONS.check(rate_limit.caller_key(request, admin))
     if action_id not in _actions:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

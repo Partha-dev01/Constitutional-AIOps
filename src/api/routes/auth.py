@@ -37,6 +37,7 @@ from src.auth.deps import (
     require_user,
 )
 from src.auth.tokens import COOKIE_NAME, SESSION_TTL_SECONDS, sign_session
+from src.api import rate_limit
 
 logger = logging.getLogger(__name__)
 
@@ -71,32 +72,14 @@ _signup_attempts: dict[str, list[float]] = {}
 def _client_ip(request: Request) -> str:
     """Resolve the real client IP for the login throttle key.
 
-    Security (Batch F #2): the login lockout MUST key off an address the
-    attacker cannot forge. A raw client-supplied ``X-Forwarded-For`` is fully
-    spoofable, so reading its left-most element let an attacker rotate the key
-    on every request and never trip the lockout. Behind our single trusted
-    Caddy hop the genuine peer is the value Caddy APPENDED to the RIGHT of the
-    header, so we parse from the right by ``_TRUSTED_PROXY_HOPS`` and ignore any
-    attacker-prepended entries. We fall back to ``request.client.host`` (the TCP
-    peer) when no forwarded header is present.
+    Delegates to :func:`src.api.rate_limit.client_ip`, which owns the single
+    implementation of this parsing. A raw client-supplied ``X-Forwarded-For`` is
+    fully spoofable, so the genuine peer is the value the trusted proxy APPENDED
+    to the RIGHT; reading the left-most element would let an attacker rotate the
+    throttle key on every request and never trip the lockout. Kept as a module
+    attribute because the suite calls it by this name.
     """
-    forwarded = ""
-    try:
-        forwarded = request.headers.get("x-forwarded-for") or ""
-    except Exception:  # noqa: BLE001 - tolerate mock/partial request objects
-        forwarded = ""
-    if forwarded:
-        parts = [p.strip() for p in forwarded.split(",") if p.strip()]
-        if parts:
-            # Index from the right by the number of trusted hops. With 1 trusted
-            # Caddy hop this is parts[-1] (the address Caddy observed). If the
-            # client sent fewer hops than we trust, clamp to the left-most real
-            # entry rather than indexing out of range.
-            idx = max(0, len(parts) - _TRUSTED_PROXY_HOPS)
-            return parts[idx]
-    client = getattr(request, "client", None)
-    host = getattr(client, "host", None)
-    return host if isinstance(host, str) and host else "unknown"
+    return rate_limit.client_ip(request)
 
 
 def _recent_failures(ip: str, now: float) -> list[float]:
