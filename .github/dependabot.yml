@@ -96,3 +96,66 @@ updates:
       github-actions-all:
         patterns:
           - "*"
+
+  # Node / npm — marketing site (Vite + Tailwind static marketing build).
+  # Added 2026-09-20: this tree was previously unwatched, which is why it sat on
+  # vite 5.4.21 while /frontend moved to a clean vite 8. Majors are deliberately
+  # NOT ignored here: the vite and vitest majors ARE the advisory fix, since the
+  # 5.x and 1.x lines have none.
+  - package-ecosystem: "npm"
+    directory: "/marketing"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "javascript"
+    groups:
+      marketing-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # Node / npm — VitePress documentation site.
+  # Added 2026-09-20. Note vitepress hard-depends on vite 5, so a vite major PR
+  # here will not resolve until vitepress itself moves; close those rather than
+  # forcing them.
+  - package-ecosystem: "npm"
+    directory: "/docs-site"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "javascript"
+    groups:
+      docs-site-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # Node / npm — the published TypeScript SDK.
+  # Added 2026-09-20. This tree carried an in-range js-yaml advisory fix that
+  # nothing was watching for, which is the reason it went untaken.
+  - package-ecosystem: "npm"
+    directory: "/sdk/typescript"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "javascript"
+    groups:
+      sdk-typescript-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
