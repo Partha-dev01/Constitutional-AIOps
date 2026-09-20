@@ -1,0 +1,83 @@
+name: ci-sites
+
+# Gates the two npm trees that ship a site rather than the app: `marketing/`
+# (built and synced to S3) and `docs-site/` (VitePress on GitHub Pages).
+#
+# Why this exists: dependabot was widened to watch all six dependency trees, but
+# CI only ever covered `src/`, `frontend/` and `sdk/`. That left marketing with
+# no gate at all, so a dependency PR against it could only be judged by reading
+# the diff. docs-site was built by deploy-docs, but only after a merge to main,
+# which is the wrong side of the decision.
+#
+# deploy-docs still owns publishing. This workflow only proves the trees build.
+
+on:
+  push:
+    branches: [main, thread-b-deploy]
+    paths:
+      - 'marketing/**'
+      - 'docs-site/**'
+      - '.github/workflows/ci-sites.yml'
+  pull_request:
+    paths:
+      - 'marketing/**'
+      - 'docs-site/**'
+      - '.github/workflows/ci-sites.yml'
+
+# Least-privilege GITHUB_TOKEN: any scope named here forces all others to none.
+permissions:
+  contents: read
+
+# Cancel superseded runs on the same branch / PR.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  marketing:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: marketing
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: marketing/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Unit tests (vitest)
+        run: npm run test
+
+      # `build` is `tsc && vite build`, so this is the typecheck too.
+      - name: Typecheck + build
+        run: npm run build
+
+  docs-site:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: docs-site
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: docs-site/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      # VitePress runs with ignoreDeadLinks false, so this also catches a broken
+      # internal link or a stale anchor before it reaches Pages.
+      - name: Build
+        run: npm run docs:build
