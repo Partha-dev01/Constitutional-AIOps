@@ -22,7 +22,7 @@ from building something that then needs a rethink in review.
 
 The recommended stack is the **lite** profile: backend plus frontend plus your
 own OpenAI-compatible LLM endpoint. No GPU, no bundled models, no Neo4j. The full
-guide is in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+guide is [Self-hosting](https://partha-dev01.github.io/Constitutional-AIOps/guide/self-hosting).
 
 ### Backend (Python 3.11+)
 

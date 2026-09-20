@@ -1,9 +1,8 @@
 # Release notes
 
 Operator-facing release notes for Constitutional AIOps. This is the summary you
-read to decide whether to upgrade. For the full development log see
-`docs/CHANGELOG.md`, and for the exact commits see the Git history and the
-GitHub Releases page.
+read to decide whether to upgrade. For the exact commits see the Git history and
+the GitHub Releases page.
 
 Versions follow the `frontend/package.json` version. Dates are the merge date.
 
@@ -11,7 +10,55 @@ Versions follow the `frontend/package.json` version. Dates are the merge date.
 
 Improvements on `main` since v1.0.0, not yet cut into a tagged release.
 
+### Security
+
+> **Breaking for API callers.** Approving, executing, remediating, deleting and
+> dismissing now require an **admin** session. Any integration that performed
+> those calls with a non-admin account will start receiving `403`. Grant the
+> account the admin role, or move the call to an admin one. Single-user
+> installs are unaffected, because the only account is already an admin.
+
+- **The constitutional validator can no longer be overridden by the caller.**
+  `POST /tools/call` accepted a request body whose `context` was merged into the
+  validator's own context, so a client could send `"human_approved": true` and
+  skip the approval gate entirely. The HTTP entry point now strips every key the
+  validator reads before the merge. Remediation started from inside the app is
+  unaffected, because it derives those values from a real approval record rather
+  than from a request body.
+- **Approve, execute, remediate, delete and dismiss now require an admin.** These
+  five routes previously checked only that you were signed in, never who you
+  were, so any account could approve and run a remediation. They are now gated on
+  the admin role, consistent with the rest of the app.
+- **The approver is recorded from your session.** `approved_by` in the approval
+  body was free text written straight into the audit trail, so the trail could be
+  made to name anyone. The field is now accepted and ignored, and the audit entry
+  names the authenticated user. Both SDKs still accept the argument so existing
+  code keeps working.
+- **Self-service LLM endpoints are checked before they are stored.** A non-admin
+  setting their own endpoint under Bring your own endpoint could point the server
+  at an internal address, including cloud instance metadata. Those URLs now pass
+  the same guard the webhook targets already use, which rejects loopback,
+  private, link-local and reserved addresses. An **admin** setting the
+  instance-wide endpoint is deliberately still allowed to use a private address,
+  because a self-hosted Ollama or vLLM on localhost or a LAN is a supported
+  deployment.
+- **The websocket no longer carries a token in its URL.** When in-app auth is on,
+  `GET /ws/token` returns an empty string and the socket accepts the session
+  cookie only, so the shared secret stops appearing in query strings and proxy
+  logs. With auth off, the token behaves as before, since it is the only gate
+  available there.
+
 ### Added
+- **Rate limits on the endpoints that cost money or change infrastructure.**
+  Chat, tool calls and the action group each get a per-caller sliding window:
+  120 chat requests an hour, 120 tool calls an hour, and 60 action requests an
+  hour. Exceeding one returns `429` with a `Retry-After` header. The limit is
+  keyed on the signed-in user where there is one and on the address otherwise,
+  so a single abusive session cannot throttle everyone behind the same NAT. All
+  three ceilings are tunable, see
+  [Configuration](https://partha-dev01.github.io/Constitutional-AIOps/guide/configuration).
+  Chat is the one that matters most on a hosted instance, since it is billed per
+  token and previously had no ceiling at all.
 - **Guided first-run product tour and a What's-new banner.** A fresh browser gets
   a short guided tour of the main screens on first sign-in; a returning browser
   gets a dismissible banner listing what changed since it last visited, gated on
@@ -41,6 +88,16 @@ Improvements on `main` since v1.0.0, not yet cut into a tagged release.
 - **Community health docs:** CONTRIBUTING, SECURITY and CODE_OF_CONDUCT.
 
 ### Changed
+- **Python dependency floors raised off versions with known advisories.** `torch`
+  to 2.6.0, `transformers` to 5.10.0, `cryptography` to 48.0.1, `python-dotenv`
+  to 1.2.2, and `langgraph` to 1.0.10. The `fastapi` floor disagreed between
+  `pyproject.toml` and `requirements.txt` and both now say 0.109.1. Two entries
+  were removed outright: `orjson`, which is never imported, and `asyncio`, which
+  is the pre-3.4 standard-library backport rather than the standard library and
+  would shadow it if a resolver ever picked it up.
+- **Dependabot now watches all six dependency trees.** It covered three, which is
+  why the frontend sat on a current toolchain while `marketing`, `docs-site` and
+  `sdk/typescript` drifted.
 - Marketing statistics now match the camera-ready paper (82.4% overall, root-cause
   analysis framed as the win over Llama-3.3-70B, preliminary vLLM speedup) and the
   hosted demo explains its sleep-when-idle cold start as a feature.
@@ -81,4 +138,6 @@ First open-source release.
 - **Hosted demo** with no login, plus a hosted app front that sleeps when idle
   and wakes on the first visit to keep running costs near zero.
 
-See `README.md` for setup and `docs/DEPLOYMENT.md` for deployment details.
+See `README.md` for setup and the published
+[Self-hosting](https://partha-dev01.github.io/Constitutional-AIOps/guide/self-hosting)
+guide for deployment details.

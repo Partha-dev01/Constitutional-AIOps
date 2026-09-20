@@ -37,9 +37,10 @@ for await (const incident of client.paginate('/incidents/', { severity: 'critica
   console.log(incident.id, incident.title)
 }
 
-// Approve a pending action. This still passes the constitutional gate.
+// Approve a pending action. Needs an admin session, and it still passes the
+// constitutional gate. The approver is recorded from your session.
 try {
-  await client.approveAction('act-123', { approved: true, approvedBy: 'me' })
+  await client.approveAction('act-123', { approved: true })
 } catch (error) {
   if (error instanceof ConstitutionalRefusal) console.log('gate held the action:', error.errorCode)
 }

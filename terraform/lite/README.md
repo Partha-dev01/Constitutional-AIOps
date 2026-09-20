@@ -8,8 +8,8 @@
 
 Like `../legacy/`, this module **adopts** already-running infrastructure — it does
 **not** provision from scratch. The lite tier is stood up by hand (see `../../aws/`
-and `../../docs/DEPLOYMENT.md`); Terraform's job here is to track it and make drift
-visible.
+and the published [Self-hosting](https://partha-dev01.github.io/Constitutional-AIOps/guide/self-hosting)
+guide); Terraform's job here is to track it and make drift visible.
 
 ## What it manages vs. references
 
@@ -73,5 +73,5 @@ permission that should already exist, STOP and re-check `terraform.tfvars` — a
 - State is local (`terraform.tfstate`) and gitignored (shared `../.gitignore`), as is
   `terraform.tfvars`. Move to an S3+DynamoDB backend for team use.
 - This module intentionally does not recreate the front door; treat the hand-build
-  steps in `aws/` + `docs/DEPLOYMENT.md` as the source of truth for provisioning, and
-  this module as the tracker/guardrail.
+  steps in `aws/` plus the published Self-hosting guide as the source of truth for
+  provisioning, and this module as the tracker/guardrail.

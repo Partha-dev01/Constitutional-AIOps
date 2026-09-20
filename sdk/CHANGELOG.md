@@ -4,6 +4,24 @@ Both packages (`constitutional-aiops` on PyPI, `@constitutional-aiops/sdk` on np
 share a version. Releases are cut by pushing an `sdk-v<version>` tag, which
 publishes both tokenlessly via OIDC Trusted Publishing.
 
+## Unreleased
+
+Tracks a server-side behaviour change. No SDK version has been cut for it yet.
+
+- **`approve_action` / `approveAction` and `execute_action` / `executeAction` now
+  require an admin session.** The server gained a role check on these routes, so
+  a non-admin token gets `403` where it previously succeeded. Nothing in the SDK
+  changed to cause this; the note is here because it changes what your existing
+  code can do.
+- **The approver is recorded from the session, not the request body.**
+  `approved_by` / `approvedBy` is still accepted and is ignored by the server.
+  In TypeScript the field is now **optional** rather than required, matching
+  Python, so `approveAction(id, { approved: true })` type-checks. Passing it
+  still compiles and still works, it simply has no effect.
+- **A new `429` is reachable** on chat, tool and action calls once a per-caller
+  hourly window fills. The response carries a `Retry-After` header. The SDK
+  surfaces it as an ordinary HTTP error, so retry logic is yours to add.
+
 ## 0.3.0
 
 Generative UI reaches the SDK, the tool and chat surface grows, and the generated

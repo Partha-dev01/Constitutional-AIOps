@@ -48,6 +48,24 @@ You can change all of this live from **Settings, Models** in the app: the
 endpoint, model names, and a write-only API key apply without a restart. That is
 the quickest way to try a different model against your telemetry.
 
+### Private addresses, and who may use one
+
+Where the endpoint is allowed to live depends on who is setting it.
+
+- **An admin setting the instance-wide endpoint may point anywhere**, including
+  `localhost`, a LAN address or a container name. This is deliberate. A
+  self-hosted vLLM or Ollama beside the app is the reference configuration, and
+  an admin already controls the host.
+- **A signed-in non-admin setting their own personal endpoint must use a public
+  address.** The URL is resolved and refused if it lands on a loopback, private,
+  link-local, reserved or multicast address, which is the same check the webhook
+  targets already pass. Without it, a user on a shared instance could aim the
+  server's outbound calls at internal services or at cloud instance metadata.
+
+So on a single-user self-host nothing changes: you are the admin, and
+`http://localhost:11434/v1` works exactly as the table above shows. On a shared
+instance, personal endpoints have to be reachable from the public internet.
+
 ## Two models or one?
 
 - **One endpoint** is the simplest self-host. Both agents share a URL and model.

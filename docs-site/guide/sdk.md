@@ -179,14 +179,18 @@ Every method below returns decoded JSON. Python uses `snake_case`; TypeScript us
 
 Every action method still passes the constitutional gate.
 
+**Approve and execute require an admin session.** A non-admin token gets `403`.
+The approver written to the audit trail is taken from the session, so
+`approved_by` / `approvedBy` is accepted for backwards compatibility and ignored.
+
 | Purpose | Python | TypeScript | Endpoint |
 | --- | --- | --- | --- |
 | One page of actions | `list_actions(**filters)` | `listActions(filters?)` | `GET /actions/` |
 | One action | `get_action(id)` | `getAction(id)` | `GET /actions/{id}` |
 | Pending approvals | `pending_actions()` | `pendingActions()` | `GET /actions/pending` |
 | Propose an action | `create_action(data)` | `createAction(data)` | `POST /actions/` |
-| Approve / reject | `approve_action(id, approved=, approved_by=, comments="")` | `approveAction(id, {approved, approvedBy, comments?})` | `POST /actions/{id}/approve` |
-| Execute an approved action | `execute_action(id)` | `executeAction(id)` | `POST /actions/{id}/execute` |
+| Approve / reject (admin) | `approve_action(id, approved=, comments="")` | `approveAction(id, {approved, comments?})` | `POST /actions/{id}/approve` |
+| Execute an approved action (admin) | `execute_action(id)` | `executeAction(id)` | `POST /actions/{id}/execute` |
 | Cancel | `cancel_action(id, reason=)` | `cancelAction(id, {reason?})` | `POST /actions/{id}/cancel` |
 | Summary counts | `action_stats()` | `actionStats()` | `GET /actions/stats` |
 | Confidence formula | `confidence_formula()` | `confidenceFormula()` | `GET /actions/confidence/formula` |

@@ -44,9 +44,10 @@ for incident in client.paginate("/incidents/", severity="critical"):
 inc = client.get_incident("INC-2026-0007")
 print(inc.get("rca", {}).get("root_cause"))
 
-# Approve a pending action. This still passes the constitutional gate.
+# Approve a pending action. Needs an admin session, and it still passes the
+# constitutional gate. The approver is recorded from your session.
 try:
-    client.approve_action("act-123", approved=True, approved_by="me")
+    client.approve_action("act-123", approved=True)
 except ConstitutionalRefusal as refusal:
     print("gate held the action:", refusal.error_code)
 

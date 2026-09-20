@@ -218,17 +218,22 @@ export class AIOpsClient {
     return this.request('POST', '/actions/', { body: data })
   }
 
-  /** Approve or reject a pending action. Still passes the constitutional gate. */
+  /** Approve or reject a pending action. Still passes the constitutional gate.
+   *
+   * Requires an admin session. `approvedBy` is accepted for backwards
+   * compatibility and ignored by the server, which records the approver from
+   * the authenticated session instead. */
   approveAction(
     id: string,
-    input: { approved: boolean; approvedBy: string; comments?: string },
+    input: { approved: boolean; approvedBy?: string; comments?: string },
   ): Promise<unknown> {
-    return this.request('POST', `/actions/${id}/approve`, {
-      body: { approved: input.approved, approved_by: input.approvedBy, comments: input.comments ?? '' },
-    })
+    const body: Json = { approved: input.approved, comments: input.comments ?? '' }
+    if (input.approvedBy !== undefined) body.approved_by = input.approvedBy
+    return this.request('POST', `/actions/${id}/approve`, { body })
   }
 
-  /** Execute an approved action. The kill-switch and validator still apply. */
+  /** Execute an approved action. Requires an admin session. The kill-switch and
+   * validator still apply. */
   executeAction(id: string): Promise<unknown> {
     return this.request('POST', `/actions/${id}/execute`)
   }

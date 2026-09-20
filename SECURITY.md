@@ -3,11 +3,12 @@
 ## Supported versions
 
 Constitutional AIOps is at an early release. Security fixes land on the latest
-`1.0.x` line. Please run a current version before reporting an issue.
+`1.1.x` line. Please run a current version before reporting an issue.
 
 | Version | Supported |
 | ------- | --------- |
-| 1.0.x   | Yes       |
+| 1.1.x   | Yes       |
+| 1.0.x   | No        |
 | < 1.0   | No        |
 
 ## Reporting a vulnerability
@@ -40,9 +41,14 @@ A good report includes:
 - This is a self-hostable system. Many security properties depend on how an
   operator configures it (for example `AUTH_REQUIRED`, the reverse proxy, TLS,
   and which action tools are enabled). Configuration hardening advice lives in
-  [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+  the [Configuration](https://partha-dev01.github.io/Constitutional-AIOps/guide/configuration)
+  and [Self-hosting](https://partha-dev01.github.io/Constitutional-AIOps/guide/self-hosting)
+  guides.
 - Action tools that change infrastructure are OFF by default and are always
   gated by the constitutional validator and, where enabled, human approval.
+  Approving, executing and remediating require an admin account; the gate cannot
+  be waived by a request body. See
+  [Constitutional Safety](https://partha-dev01.github.io/Constitutional-AIOps/guide/safety).
 - Reports about a deployment you do not operate should go to that deployment's
   owner, not here.
 

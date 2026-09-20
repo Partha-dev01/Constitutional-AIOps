@@ -48,12 +48,15 @@ console.log((detail.rca as any)?.root_cause)
 
 Approving does not bypass the constitutional validator. Handle the refusal.
 
+This call needs an **admin** session; a non-admin token gets `403`. The approver
+recorded in the audit trail comes from that session, so there is nothing to pass.
+
 ```python
 from constitutional_aiops import ConstitutionalRefusal
 
 for action in client.pending_actions().get("items", []):
     try:
-        client.approve_action(action["id"], approved=True, approved_by="me")
+        client.approve_action(action["id"], approved=True)
         print("approved", action["id"])
     except ConstitutionalRefusal as r:
         print("gate held", action["id"], r.error_code)
@@ -65,7 +68,7 @@ import { ConstitutionalRefusal } from '@constitutional-aiops/sdk'
 const pending = await client.pendingActions()
 for (const action of (pending.items as any[]) ?? []) {
   try {
-    await client.approveAction(action.id, { approved: true, approvedBy: 'me' })
+    await client.approveAction(action.id, { approved: true })
     console.log('approved', action.id)
   } catch (e) {
     if (e instanceof ConstitutionalRefusal) console.log('gate held', action.id, e.errorCode)

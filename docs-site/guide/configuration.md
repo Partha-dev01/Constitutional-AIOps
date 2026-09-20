@@ -26,7 +26,7 @@ sliders.
 | `FAST_AGENT_API_KEY` | falls back to `LLM_API_KEY` | Per-agent bearer override for the fast endpoint |
 | `REASONING_AGENT_API_KEY` | falls back to `LLM_API_KEY` | Per-agent bearer override for the reasoning endpoint |
 | `AUTH_REQUIRED` | `false` | Gate the app behind the built-in session login |
-| `WS_TOKEN` | unset | Required when `ENVIRONMENT=production`. Guards the `/ws` websocket |
+| `WS_TOKEN` | unset | Required when `ENVIRONMENT=production`. Guards the `/ws` websocket when `AUTH_REQUIRED=false`. With auth on, the session cookie is the gate and this value is neither issued nor accepted |
 | `APP_DOMAIN` | unset | Domain for the Caddy `edge` profile |
 | `ACME_EMAIL` | `admin@example.com` | Let's Encrypt contact for the `edge` profile |
 | `PUBLIC_API_URL` | `http://localhost:8000/api/v1` | SPA build-time API base. Set to `/api/v1` for same-origin edge |
@@ -78,8 +78,67 @@ to toggle it.
 
 Set `AUTH_REQUIRED=true` to gate the app behind the built-in session login, then
 set `AUTH_ADMIN_USER`, `AUTH_ADMIN_PASSWORD`, and `AUTH_SECRET_KEY`. When
-`ENVIRONMENT=production` you must also set `WS_TOKEN`, which guards the
-websocket. The admin credentials seed only on an empty users table.
+`ENVIRONMENT=production` you must also set `WS_TOKEN`. The admin credentials seed
+only on an empty users table.
+
+`WS_TOKEN` guards the websocket when the app runs **without** login, which is the
+only gate available in that mode. With `AUTH_REQUIRED=true` the session cookie
+rides the upgrade request and is the gate instead: `GET /ws/token` returns an
+empty string and the socket refuses a token, so the shared secret never reaches a
+URL or a proxy access log. The variable is still required at boot in production
+so that switching auth off does not silently leave the socket open.
+
+### Who can do what
+
+Signing in is not the same as being allowed to act. Beyond the confidence
+thresholds in [Constitutional Safety](/guide/safety), these operations require
+the **admin** role rather than merely a signed-in session:
+
+| Operation | Endpoint | Role |
+|-----------|----------|------|
+| Approve an action | `POST /actions/{id}/approve` | admin |
+| Execute an approved action | `POST /actions/{id}/execute` | admin |
+| Remediate an incident | `POST /incidents/{id}/remediate` | admin |
+| Delete an incident | `DELETE /incidents/{id}` | admin |
+| Dismiss an incident | `POST /incidents/{id}/dismiss` | admin |
+| Update an incident (triage notes, assignee) | `PATCH /incidents/{id}` | any signed-in user |
+
+Triage stays open to any signed-in user on purpose, because notes and assignment
+are what a non-admin operator legitimately changes. Anything that runs a command
+against your infrastructure does not.
+
+The approver recorded in the audit trail comes from the authenticated session.
+An `approved_by` field in the request body is accepted for backwards
+compatibility and ignored.
+
+## Rate limits
+
+The endpoints that cost money or change infrastructure carry a per-caller
+sliding window. Going over one returns `429` with a `Retry-After` header.
+
+| Variable | Default | Covers |
+|----------|---------|--------|
+| `AIOPS_RATE_CHAT_PER_HOUR` | `120` | `POST /chat` and `POST /chat/stream` |
+| `AIOPS_RATE_TOOLS_PER_HOUR` | `120` | `POST /tools/call` |
+| `AIOPS_RATE_ACTIONS_PER_HOUR` | `60` | action approve and execute, and incident remediate |
+| `TRUSTED_PROXY_HOPS` | `1` | How many reverse proxies sit in front of the app |
+
+Chat matters most on a hosted instance, because an OpenAI-compatible endpoint is
+billed per token and a runaway loop against an unbounded `/chat` is the cheapest
+way to produce a surprising bill.
+
+The window is keyed on the signed-in user where there is one, and on the client
+address otherwise, so one noisy session cannot throttle everyone sharing an
+outbound address. It is in-process, so it is per worker and it resets on
+restart. Treat it as a floor that bounds a runaway loop and a single abusive
+session, not as a distributed rate limiter.
+
+`TRUSTED_PROXY_HOPS` decides how `X-Forwarded-For` is read. A client can put
+anything at the front of that header, so the genuine peer is the value your own
+proxy appended at the **right**, and the header is parsed from the right by this
+many hops. The default of 1 is correct for the bundled Caddy `edge` profile. Set
+it higher only if you run additional proxies in front, and never lower than the
+number you actually run, or a caller can rotate its own throttle key.
 
 ## Action tools (remediation)
 

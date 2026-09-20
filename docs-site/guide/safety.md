@@ -22,6 +22,35 @@ The two thresholds are configurable with `CONFIDENCE_THRESHOLD_AUTO` (default
 0.90) and `CONFIDENCE_THRESHOLD_APPROVAL` (default 0.70). See
 [Configuration](/guide/configuration).
 
+## Who may approve and run
+
+The matrix above decides **whether** a human has to approve. Your role decides
+**who** that human can be. Approving an action, executing an approved one, and
+remediating, deleting or dismissing an incident all require the **admin** role,
+not merely a signed-in session. Updating an incident's triage notes or assignee
+does not. The full table is under
+[Who can do what](/guide/configuration#who-can-do-what).
+
+The approval recorded against an action is taken from the authenticated session,
+so the audit trail names the account that actually clicked Approve. A caller
+cannot label the approval with someone else's name.
+
+## The gate cannot be waived by the caller
+
+The approval flag the validator reads is derived by the server from a real
+approval record. It is not something a client can assert.
+
+This matters because the tool endpoint accepts a `context` object, and callers
+may legitimately pass hints through it. Every key the validator itself reads is
+stripped from that object before it reaches the validator, so a request that
+claims its action was already approved gets the full principle check anyway.
+Remediation started from inside the app keeps working, because it builds that
+context from the approval record rather than from a request body.
+
+The same holds for an action a model proposes during a chat turn. Nothing on
+that path asserts prior approval, so a model steered by adversarial text in your
+telemetry still meets the gate rather than going around it.
+
 ## Confidence score
 
 Confidence combines the model's own confidence, the historical success rate of
