@@ -58,7 +58,7 @@ dependencies = [
     # unseen. Declaring it here makes CI exercise the real encryption path.
     # Kept in requirements.txt too, same as numpy/langgraph above (prod/Docker
     # installs from there); this is the CI/pip install surface.
-    "cryptography>=48.0.1",
+    "cryptography>=50.0.1",
 ]
 
 [project.optional-dependencies]
