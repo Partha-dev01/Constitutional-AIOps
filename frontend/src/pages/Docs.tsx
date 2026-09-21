@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight, BookOpen, Code2, ExternalLink } from 'lucide-react'
+import { ArrowRight, BookOpen, Code2, ExternalLink, FileText } from 'lucide-react'
 
 /**
  * In-app documentation for signed-in users. Renders inside the app shell
@@ -14,6 +14,15 @@ import { ArrowRight, BookOpen, Code2, ExternalLink } from 'lucide-react'
 
 // The self-host section is only meaningful on the open-source / self-host build.
 const SHOW_SELFHOST = (import.meta.env.VITE_SHOW_SELFHOST as string | undefined) === 'true'
+
+// The published documentation site (VitePress on GitHub Pages). This in-app guide
+// is a deliberately condensed mirror, so it points at the complete set rather than
+// duplicating it. Env-overridable so a fork can publish its own; the committed
+// default MUST match `DOCS_SITE_URL` in `marketing/src/config.ts` (the same link on
+// the marketing site) - `tests/test_docs_site_url.py` asserts the two agree.
+const DOCS_SITE_URL =
+  (import.meta.env.VITE_DOCS_SITE_URL as string | undefined) ??
+  'https://partha-dev01.github.io/Constitutional-AIOps/'
 
 // ── markdown-style prose primitives (no typography plugin in this project) ──
 function H2({ id, children }: { id: string; children: ReactNode }) {
@@ -44,6 +53,7 @@ function Code({ children }: { children: ReactNode }) {
 
 const TOC: { id: string; label: string }[] = [
   { id: 'overview', label: 'Overview' },
+  { id: 'full-docs', label: 'Full documentation' },
   { id: 'quick-start', label: 'Quick start' },
   { id: 'configure-model', label: 'Configure your model' },
   { id: 'monitoring', label: 'Connect monitoring' },
@@ -119,6 +129,33 @@ export function Docs() {
             gate before anything runs. Incidents, root causes and services are correlated in a
             Neo4j graph-episodic memory.
           </P>
+
+          <H2 id="full-docs">Full documentation</H2>
+          <P>
+            This page is the short version. The published documentation site carries the complete
+            guides, the per-feature tutorials, the full configuration reference and the SDK
+            documentation for both Python and TypeScript.
+          </P>
+          <div className="mb-4 flex flex-col items-start gap-4 rounded-xl border border-border bg-card/60 p-6 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
+                <FileText className="h-5 w-5" aria-hidden="true" />
+              </span>
+              <p className="text-sm text-muted-foreground">
+                Read the full published documentation: guides, tutorials, configuration and the
+                Python and TypeScript SDKs.
+              </p>
+            </div>
+            <a
+              href={DOCS_SITE_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+            >
+              Open the documentation
+              <ExternalLink className="h-4 w-4" aria-hidden="true" />
+            </a>
+          </div>
 
           <H2 id="quick-start">Quick start</H2>
           <P>You are already signed in. Two steps get you to a fully working instance:</P>
