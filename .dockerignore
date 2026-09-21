@@ -1,0 +1,36 @@
+# Build context for every image built from the repo root (backend, frontend,
+# mock LLM). Keep it to tracked source so an untracked runtime file is never
+# baked into an image. data/ matters most: a local run without AIOPS_DATA_DIR
+# writes users.db and auth_secret.key there, and Dockerfile.backend copies data/.
+
+# Version control and environment files
+.git
+**/.env
+**/.env.*
+
+# Runtime data: only the seeded benchmark set ships
+data/*
+!data/benchmark
+!data/benchmark/**
+
+# Dependencies, build output and caches (each image builds its own)
+**/node_modules
+**/dist
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.ruff_cache
+**/.mypy_cache
+htmlcov
+.coverage
+
+# Test output
+frontend/test-results
+frontend/playwright-report*
+frontend/e2e/__console__
+frontend/e2e/__screenshots__
+
+# Local-only folders
+_local
+_scratch
+.predeploy-backup

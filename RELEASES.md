@@ -13,6 +13,15 @@ two things were supposed to agree and nothing checked that they did.
 
 ### Security
 
+- **A locally built backend image could carry that machine's login data.**
+  `Dockerfile.backend` copies `data/` so the seeded benchmark set ships, and a
+  local run without `AIOPS_DATA_DIR` writes `users.db` (password hashes) and
+  `auth_secret.key` (the session-signing key) into that same folder. Git ignored
+  them, but nothing kept them out of the Docker build context, so an image built
+  after a local run and pushed to a registry would publish both. A new
+  `.dockerignore` keeps only `data/benchmark` from `data/`, and leaves out `.env`
+  files, caches and test output. The published images were not affected: they
+  are built from a clean checkout.
 - **Breaking: actions and incidents are now scoped to the account that created
   them.** Both were held in process-global stores with no notion of an owner, so
   any signed-in account could list every record and fetch any record by id.
