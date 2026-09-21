@@ -2,7 +2,7 @@
 # Python 3.11+ required
 
 # Web Framework
-fastapi>=0.109.1
+fastapi>=0.141.1
 uvicorn[standard]>=0.53.0
 websockets>=12.0
 python-multipart>=0.0.32
