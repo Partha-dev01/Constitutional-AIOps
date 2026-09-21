@@ -198,7 +198,7 @@ def test_no_registered_tool_is_blocked_during_an_approved_remediation():
 
 
 # --------------------------------------------------------------------------
-# ISS-110: P1.2 and P1.3 matched action names EXACTLY
+# ISS-112: P1.2 and P1.3 matched action names EXACTLY
 #
 # `action_type in ["restart", ...]` never matches the names the system actually
 # uses. Every ActionType value is a compound (`restart_service`, `kill_process`,
@@ -237,7 +237,7 @@ def _p12(action_type: str, **ctx):
 )
 def test_unapproved_disruptive_action_during_incident_violates_p12(action_type):
     """P1.2 is 'never take destructive actions during active incidents without
-    explicit approval'. Before ISS-110 only the bare literals fired."""
+    explicit approval'. Before ISS-112 only the bare literals fired."""
     report = _p12(action_type)
     assert report.tier1_passed is False, f"{action_type} did not trigger P1.2"
     assert any(v.principle.id == "P1.2" for v in report.violations)

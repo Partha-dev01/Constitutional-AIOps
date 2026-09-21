@@ -20,7 +20,7 @@ tokenises to `{analyze, oracle, logs}`, which does not contain `acl`, while
 `purge_index` tokenises to `{purge, index}`, which does contain a destructive
 verb.
 
-**ISS-110 (2026-09-21) brought P1.2 and P1.3 in too.** They matched action names
+**ISS-112 (2026-09-21) brought P1.2 and P1.3 in too.** They matched action names
 by exact equality, `action_type in ["restart", "deploy", "scale_down"]`, and
 nothing in the system is named that way: every `ActionType` value is a compound
 (`restart_service`, `kill_process`, `rollback`) and so is every registered tool
@@ -39,7 +39,7 @@ The two principles are NOT symmetric and the vocabularies reflect that:
 Known limit, stated rather than hidden: classification reads the NAME only. A
 `scale_service` call is not classified either way because the name cannot say
 which direction it scales; the replica count lives in the parameters. Widening
-the gate to parameters is a larger change than ISS-110 and is deliberately not
+the gate to parameters is a larger change than ISS-112 and is deliberately not
 attempted here.
 """
 

@@ -274,7 +274,7 @@ class ConstitutionalValidator:
             # human_approved). Without this, wiring active_incident into the live
             # remediation context would block the very approve-to-run path it guards.
             #
-            # ISS-110: this matched action names EXACTLY, and nothing is named
+            # ISS-112: this matched action names EXACTLY, and nothing is named
             # the way the literal list expected. `restart_service` (the
             # ActionType value AND the tool name) never equalled "restart", so
             # the check was inert for it, while `scale_down` matched and looked
@@ -288,7 +288,7 @@ class ConstitutionalValidator:
                 reason = "Destructive action during active incident without explicit approval"
 
         elif principle.id == "P1.3":  # Cascade Prevention
-            # ISS-110, same exact-match gap: `spawn_worker` never equalled
+            # ISS-112, same exact-match gap: `spawn_worker` never equalled
             # "spawn". Unlike P1.2 this principle has NO approval route, so the
             # vocabulary is narrow and direction-aware: {scale, up} matches,
             # a bare `scale` does not.

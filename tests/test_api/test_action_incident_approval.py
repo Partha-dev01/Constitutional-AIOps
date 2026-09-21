@@ -1,4 +1,4 @@
-"""P1.2's approval route must survive the validator (ISS-110 follow-on).
+"""P1.2's approval route must survive the validator (ISS-112 follow-on).
 
 P1.2 is the only Tier-1 principle whose text carries its own remedy: "Never
 take destructive actions during active incidents WITHOUT EXPLICIT APPROVAL."
@@ -12,7 +12,7 @@ Tier 1 failed, and the status decision mapped that to REJECTED. `approve_action`
 refuses anything not AWAITING_APPROVAL, so the action could never be approved:
 the principle demanded an approval that the flow had already made unreachable.
 
-Before ISS-110 this was mostly invisible because P1.2 matched action names
+Before ISS-112 this was mostly invisible because P1.2 matched action names
 exactly, so only a literal `scale_down` reached it. Token matching makes
 `restart_service` reach it too, which is the entire remediation surface, so the
 deadlock has to be closed in the same change.
@@ -92,8 +92,8 @@ async def test_a_security_change_is_still_rejected_outright():
     verb). P1.4's published text also ends "without explicit approval", but the
     validator does NOT implement that clause for it, unlike P1.2. So the route
     must keep rejecting it rather than inventing an approval route the gate does
-    not recognise. The asymmetry itself is logged as ISS-111; it is a safety
-    decision, not something to settle inside an ISS-110 fix.
+    not recognise. The asymmetry itself is logged as ISS-113; it is a safety
+    decision, not something to settle inside an ISS-112 fix.
     """
     from src.api.routes import actions as actions_route
     from src.api.schemas.action import ActionCreate, ActionStatus, ActionType
