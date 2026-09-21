@@ -10,7 +10,7 @@ python-multipart>=0.0.32
 # Configuration
 pydantic>=2.13.5
 pydantic-settings>=2.15.0
-python-dotenv>=1.2.2
+python-dotenv>=1.2.3
 
 # At-rest secret encryption (Fernet) for bring-your-own LLM API keys —
 # src/auth/crypto.py derives the key from AUTH_SECRET_KEY via HKDF-SHA256.
