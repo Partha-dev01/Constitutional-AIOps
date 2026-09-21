@@ -45,7 +45,7 @@ dependencies = [
     # `from langgraph.graph import END, START, StateGraph`). Without it,
     # `src/main.py` is unimportable in CI and orchestration/* sits at 0%
     # coverage. Moved from requirements.txt (P0 #6 fix).
-    "langgraph>=1.0.10",
+    "langgraph>=1.2.11",
     # python-multipart is required by FastAPI for any form/file upload handling.
     # Its absence from pyproject means CI cannot fully validate the app's
     # request-parsing capabilities. Moved from requirements.txt (P0 #6 fix).

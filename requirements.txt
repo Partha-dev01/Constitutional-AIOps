@@ -67,4 +67,4 @@ datasets>=2.14.0
 huggingface-hub>=0.17.0
 
 # Agent Orchestration (LangGraph state machine for dual-agent pipeline)
-langgraph>=1.0.10
+langgraph>=1.2.11
