@@ -19,6 +19,8 @@ from typing import Any, Optional
 from src.config import config
 from src.constitutional.action_semantics import (
     is_data_destructive,
+    is_resource_amplifying,
+    is_service_disruptive,
     modifies_security_config,
 )
 from src.constitutional.principles import (
@@ -271,17 +273,27 @@ class ConstitutionalValidator:
             # (the validator core still blocks Tier-1 violations regardless of
             # human_approved). Without this, wiring active_incident into the live
             # remediation context would block the very approve-to-run path it guards.
+            #
+            # ISS-110: this matched action names EXACTLY, and nothing is named
+            # the way the literal list expected. `restart_service` (the
+            # ActionType value AND the tool name) never equalled "restart", so
+            # the check was inert for it, while `scale_down` matched and looked
+            # alive. Token matching now, same classifier as P1.1/P1.4.
             if (
                 context.get("active_incident")
-                and action_type in ["restart", "deploy", "scale_down"]
+                and is_service_disruptive(action_type)
                 and not context.get("human_approved")
             ):
                 violated = True
                 reason = "Destructive action during active incident without explicit approval"
-        
+
         elif principle.id == "P1.3":  # Cascade Prevention
+            # ISS-110, same exact-match gap: `spawn_worker` never equalled
+            # "spawn". Unlike P1.2 this principle has NO approval route, so the
+            # vocabulary is narrow and direction-aware: {scale, up} matches,
+            # a bare `scale` does not.
             if context.get("resource_usage", 0) > 90:
-                if action_type in ["scale_up", "spawn", "fork"]:
+                if is_resource_amplifying(action_type):
                     violated = True
                     reason = "Action could exhaust resources"
         

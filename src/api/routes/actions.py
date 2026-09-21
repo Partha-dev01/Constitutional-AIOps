@@ -95,7 +95,11 @@ async def create_action(
     Create and validate a new action.
 
     The action goes through Constitutional AI validation:
-    1. Tier 1 (Safety) - Must pass or action is blocked
+    1. Tier 1 (Safety) - Must pass or action is blocked. The one exception is
+       P1.2 on its own: its text is "...during active incidents WITHOUT
+       EXPLICIT APPROVAL", so a new action that trips only P1.2 is routed to
+       AWAITING_APPROVAL rather than REJECTED. Anything else critical, and any
+       combination that includes something else, still blocks outright.
     2. Tier 2 (Operational) - Violations require approval
     3. Tier 3 (Learning) - Soft warnings logged
 
@@ -230,7 +234,34 @@ async def create_action(
     # blocking): auto-approved actions proceed silently, everything else surfaces
     # in the alert center. notify() is best-effort and never raises.
     target = action.target_service or "a service"
-    if not validation.passed:
+    if not validation.passed and _only_blocked_pending_approval(validation):
+        # P1.2 is the one Tier-1 principle whose text carries its own remedy:
+        # "...during active incidents WITHOUT EXPLICIT APPROVAL". The validator
+        # implements that, an approved remediation does not violate it. But a
+        # brand new action has no approval by definition, so P1.2 fires here on
+        # every incident-linked remediation, and mapping that to REJECTED made
+        # the approval it asks for unreachable: approve_action only accepts
+        # AWAITING_APPROVAL. Route it to the human instead of to a dead end.
+        # Deliberately narrow: this applies only when P1.2 is the SOLE critical
+        # violation, so data loss (P1.1), resource cascade (P1.3) and security
+        # changes (P1.4) keep failing closed with no approval path.
+        action.status = ActionStatus.AWAITING_APPROVAL
+        action.requires_approval = True
+        action.expires_at = now + timedelta(hours=4)
+        logger.info(
+            f"Action {action_id} awaiting approval (P1.2: destructive action "
+            f"during an active incident needs explicit approval)"
+        )
+        notify(
+            type="action.approval",
+            severity="warning",
+            title="Action awaiting approval",
+            message=f"{action.action_type.value} on {target} is a destructive "
+            f"action during an active incident and needs explicit approval.",
+            source="constitutional-ai",
+            resource_id=action_id,
+        )
+    elif not validation.passed:
         action.status = ActionStatus.REJECTED
         logger.info(f"Action {action_id} rejected: {validation.explanation}")
         notify(
@@ -814,6 +845,28 @@ async def _validate_action(
             explanation=f"Validation error: {str(e)}",
             validated_at=now,
         )
+
+
+def _only_blocked_pending_approval(validation: ConstitutionalValidation) -> bool:
+    """True when the ONLY thing standing in the way is a missing approval.
+
+    That means exactly one shape: Tier 1 failed, and every critical violation is
+    P1.2, whose own text ("without explicit approval") names approval as the
+    remedy and whose validator check clears once `human_approved` is set. Any
+    other critical violation, or a Tier-1 pass, and this returns False so the
+    caller falls through to its normal decision.
+
+    Tier-2 violations are not consulted: they already route to approval on their
+    own, and they are not what failed `validation.passed` here.
+    """
+    if validation.tier1_passed:
+        return False
+    critical = {
+        v.get("principle_id")
+        for v in validation.violations
+        if v.get("severity") == "critical"
+    }
+    return critical == {"P1.2"}
 
 
 # Action types that map onto a real, whitelisted tool executor. Everything

@@ -27,7 +27,29 @@ two things were supposed to agree and nothing checked that they did.
   security word matched, so `get_certificate_expiry` was blocked. A violation
   now needs a security term **and** a verb that is not a known read. Unknown
   verbs still count as modifications, so the default stays closed.
-- None of the nine shipped tools change behaviour; a test asserts that.
+- **Two more Tier-1 principles were inert on every real action name.** P1.2
+  (active incident safety) and P1.3 (cascade prevention) compared the action
+  name for *exact equality* against `["restart", "deploy", "scale_down"]` and
+  `["scale_up", "spawn", "fork"]`. Nothing in the system is named that way: every
+  action type and every tool name is a compound, so an unapproved
+  `restart_service`, `kill_process`, `rollback` or `block_ip` during an active
+  incident passed the check untouched. `scale_down` and `scale_up` matched the
+  literals, which is why the checks looked alive. Both principles now use the
+  same word-token classification as P1.1 and P1.4.
+- **Breaking, and the reason the above is safe to ship: a destructive action
+  proposed during an active incident is now queued for approval instead of
+  being rejected.** P1.2's own text ends "without explicit approval", and the
+  gate has always cleared it for an approved remediation. But a newly proposed
+  action has no approval yet by definition, so P1.2 fired, Tier 1 failed, and
+  the action was marked REJECTED, which the approval endpoint refuses to act on.
+  The approval the principle asked for was unreachable. `POST /actions` now
+  routes a violation that is **only** P1.2 to `awaiting_approval`. Every other
+  Tier-1 violation, and any combination involving one, still blocks outright.
+  If you have tooling that treats `rejected` as the terminal state for incident
+  remediations, it will now see `awaiting_approval` instead.
+- None of the nine shipped tools change behaviour; two tests assert that, one
+  against an empty context and one against the context a live approved
+  remediation actually carries.
 
 ### Added
 

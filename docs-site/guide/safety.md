@@ -77,6 +77,21 @@ Principles are grouped into three tiers by how strictly they are enforced.
 - **P1.3 Cascade Prevention.** Never exceed resource limits that could cause cascade failures.
 - **P1.4 Security Integrity.** Never modify security configurations without explicit approval.
 
+A Tier 1 violation blocks the action outright. P1.2 is the one principle whose
+own wording names a way through, "without explicit approval", and the gate
+honours that: a destructive action proposed during an active incident is queued
+for a human decision rather than refused, and it runs only once an admin
+approves it. Every other Tier 1 violation is final, and an approval does not
+lift it.
+
+The gate classifies an action by the **words in its name**, not by substring.
+`restart_service` and `restartService` are read the same way, while
+`analyze_oracle_logs` is a read rather than an ACL change and `undelete_backup`
+is a restore rather than a deletion. Direction matters where a name carries it:
+`scale_up` can trip the cascade principle, `scale_down` cannot, and a bare
+`scale_service` is not classified either way because the name alone does not say
+which way it scales.
+
 ### Tier 2, operational (require approval to violate)
 
 - **P2.1 Minimal Intervention.** Prefer the smallest effective action to resolve issues.

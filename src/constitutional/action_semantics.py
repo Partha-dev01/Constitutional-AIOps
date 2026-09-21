@@ -20,11 +20,27 @@ tokenises to `{analyze, oracle, logs}`, which does not contain `acl`, while
 `purge_index` tokenises to `{purge, index}`, which does contain a destructive
 verb.
 
-Scope note: this module deliberately covers **P1.1 and P1.4 only**, the two
-principles that used substring matching. P1.2 and P1.3 use exact equality
-(`action_type in [...]`), which has its own gap (`restart_service` never matches
-`"restart"`, so the active-incident check does not fire). That is tracked
-separately as ISS-110 and is intentionally NOT changed here.
+**ISS-110 (2026-09-21) brought P1.2 and P1.3 in too.** They matched action names
+by exact equality, `action_type in ["restart", "deploy", "scale_down"]`, and
+nothing in the system is named that way: every `ActionType` value is a compound
+(`restart_service`, `kill_process`, `rollback`) and so is every registered tool
+name. `scale_down` and `scale_up` happened to match the literals, which is
+precisely why the gap stayed invisible, the checks looked alive. In practice an
+unapproved `restart_service` during an active incident passed P1.2 untouched.
+
+The two principles are NOT symmetric and the vocabularies reflect that:
+
+* **P1.2 has an approval route** ("without explicit approval" is in the
+  principle text, and the validator implements it), so a slightly generous
+  disruptive vocabulary costs an approval prompt, not an outright block.
+* **P1.3 has none.** Amplifying an exhausted system is blocked with no appeal,
+  the same shape as P1.1, so its vocabulary stays narrow and direction-aware.
+
+Known limit, stated rather than hidden: classification reads the NAME only. A
+`scale_service` call is not classified either way because the name cannot say
+which direction it scales; the replica count lives in the parameters. Widening
+the gate to parameters is a larger change than ISS-110 and is deliberately not
+attempted here.
 """
 
 import re
@@ -34,9 +50,13 @@ __all__ = [
     "action_tokens",
     "is_data_destructive",
     "modifies_security_config",
+    "is_service_disruptive",
+    "is_resource_amplifying",
     "DATA_DESTRUCTIVE_VERBS",
     "SECURITY_NOUNS",
     "READ_ONLY_VERBS",
+    "SERVICE_DISRUPTIVE_VERBS",
+    "RESOURCE_AMPLIFYING_VERBS",
 ]
 
 _TOKEN_SPLIT = re.compile(r"[^a-z0-9]+")
@@ -101,9 +121,60 @@ READ_ONLY_VERBS: FrozenSet[str] = frozenset({
 })
 
 
+# Verbs that interrupt a RUNNING service, as opposed to destroying its data.
+# P1.2 reaches these only during an active incident and only when nobody has
+# approved, and approval clears it, so the bar is "would an operator want to be
+# asked mid-incident", not "is this irreversible".
+SERVICE_DISRUPTIVE_VERBS: FrozenSet[str] = frozenset({
+    # the original literals
+    "restart", "deploy",
+    # stopping or removing capacity
+    "reboot", "stop", "halt", "kill", "terminate", "shutdown",
+    "drain", "cordon", "detach", "unmount", "disable", "disconnect",
+    # replacing what is running
+    "redeploy", "rollback", "revert", "failover", "migrate", "evacuate",
+    # cutting something off
+    "block", "quarantine", "isolate", "blackhole",
+})
+
+# Verbs that ADD load or capacity. P1.3 blocks these outright when the system is
+# already past its resource ceiling, with no approval route, so this set stays
+# small and every member is unambiguous about direction.
+RESOURCE_AMPLIFYING_VERBS: FrozenSet[str] = frozenset({
+    "spawn", "fork", "provision", "replicate", "clone", "duplicate", "expand",
+})
+
+
 def is_data_destructive(action_type: str) -> bool:
     """True when the action name says it destroys durable data (P1.1)."""
     return bool(action_tokens(action_type) & DATA_DESTRUCTIVE_VERBS)
+
+
+def is_service_disruptive(action_type: str) -> bool:
+    """True when the action interrupts a running service (P1.2).
+
+    Anything that destroys data is disruptive too, so P1.1's vocabulary is
+    included rather than duplicated. `scale_down` is matched as the PAIR
+    {scale, down}: a bare `scale` says nothing about direction, so
+    `scale_service` is deliberately not classified here.
+    """
+    tokens = action_tokens(action_type)
+    if tokens & SERVICE_DISRUPTIVE_VERBS or tokens & DATA_DESTRUCTIVE_VERBS:
+        return True
+    return {"scale", "down"} <= tokens
+
+
+def is_resource_amplifying(action_type: str) -> bool:
+    """True when the action would add load to an already exhausted system (P1.3).
+
+    Same pair rule in the other direction: {scale, up} matches, a bare `scale`
+    does not. `deprovision` is a single token and so cannot collide with
+    `provision`.
+    """
+    tokens = action_tokens(action_type)
+    if tokens & RESOURCE_AMPLIFYING_VERBS:
+        return True
+    return {"scale", "up"} <= tokens
 
 
 def modifies_security_config(action_type: str) -> bool:
