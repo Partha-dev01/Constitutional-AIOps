@@ -6,7 +6,7 @@ an explicit allow-list of variables, not the whole `.env`, so a variable left
 off that list is silently ignored in a Docker deploy. That is how the three
 `AIOPS_RATE_*` limits went unforwarded while the published configuration page
 listed them as settings. This holds the code defaults, the lite compose
-allow-list and the published table to one another.
+allow-list, the published table and `.env.example` to one another.
 """
 
 import re
@@ -68,6 +68,19 @@ def test_published_defaults_match_the_code() -> None:
         assert match is not None, f"{var} is missing from the configuration table"
         assert match.group(1) == defaults[var], (
             f"{var}: the docs say {match.group(1)}, the code says {defaults[var]}"
+        )
+
+
+def test_env_example_lists_the_defaults_commented_out() -> None:
+    # Commented, so a copied .env keeps following the code if a default changes.
+    text = (REPO_ROOT / ".env.example").read_text(encoding="utf-8")
+    defaults = _code_defaults()
+    for var in VARS:
+        match = re.search(rf"^(#\s*)?{var}=(\S+)\s*$", text, re.MULTILINE)
+        assert match is not None, f"{var} is missing from .env.example"
+        assert match.group(1), f"{var} is set live in .env.example, not commented out"
+        assert match.group(2) == defaults[var], (
+            f"{var}: .env.example says {match.group(2)}, the code says {defaults[var]}"
         )
 
 

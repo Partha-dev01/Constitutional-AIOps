@@ -99,9 +99,20 @@ two things were supposed to agree and nothing checked that they did.
   `.env`, and `AIOPS_RATE_CHAT_PER_HOUR`, `AIOPS_RATE_TOOLS_PER_HOUR` and
   `AIOPS_RATE_ACTIONS_PER_HOUR` were not on it, so setting them did nothing and
   the defaults always applied. All three are forwarded now, with the same
-  defaults, and `.env.example` documents them alongside `TRUSTED_PROXY_HOPS`.
-  A new test holds the code defaults, the compose file and the configuration
-  page to one another.
+  defaults. `.env.example` lists them and `TRUSTED_PROXY_HOPS` commented out at
+  their defaults, so a copied `.env` keeps following the code. A new test holds
+  the code defaults, the compose file, the configuration page and `.env.example`
+  to one another.
+- **The configuration page had the `TRUSTED_PROXY_HOPS` risk backwards.** It
+  warned against setting the value too low so a caller could not rotate its
+  throttle key, but that happens when the value is too HIGH, because the parser
+  then reads the part of `X-Forwarded-For` the client wrote. Too low merges
+  every caller behind a proxy into one key. The page now says both, and it
+  documents the CDN case, which also needs the CDN's ranges in
+  `CF_ORIGIN_RANGES` or Caddy drops the CDN's header. The lite Caddyfile's
+  header comment no longer claims that no proxy is trusted.
+- **`.env.example` pointed at a guide that is not in the repository.** It now
+  links to the self-hosting page on the docs site.
 - **The documentation site advertised v1.0.0 through the whole v1.1.0 release.**
   The version label in the docs navigation was the one version surface not tied
   to `src/version.py`, so the release bump passed it by. `tests/test_version.py`

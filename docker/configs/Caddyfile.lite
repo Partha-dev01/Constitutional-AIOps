@@ -11,9 +11,9 @@
 
 {
 	email {$ACME_EMAIL}
-	# Single-Caddy topology: no CDN/LB in front, so no inbound peer is a trusted
-	# proxy — Caddy treats the connecting client as the real client (mirrors the
-	# full Caddyfile's XFF hardening).
+	# Caddy keeps an incoming X-Forwarded-For only when the peer is a trusted
+	# proxy. Any other peer is treated as the real client, so a caller cannot
+	# forge its own address.
 	servers {
 		# Trust private ranges (plain Caddy-only self-host) PLUS any CDN
 		# origin-facing ranges passed in CF_ORIGIN_RANGES (empty for a plain

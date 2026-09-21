@@ -149,7 +149,8 @@ sliding window. Going over one returns `429` with a `Retry-After` header.
 | `TRUSTED_PROXY_HOPS` | `1` | How many reverse proxies sit in front of the app |
 
 In a Docker deploy, set them in `.env` next to the compose file. The lite compose
-file forwards all four to the backend; `.env.example` lists them with their defaults.
+file forwards all four to the backend; `.env.example` lists them commented out at
+their defaults.
 
 Chat matters most on a hosted instance, because an OpenAI-compatible endpoint is
 billed per token and a runaway loop against an unbounded `/chat` is the cheapest
@@ -165,8 +166,16 @@ session, not as a distributed rate limiter.
 anything at the front of that header, so the genuine peer is the value your own
 proxy appended at the **right**, and the header is parsed from the right by this
 many hops. The default of 1 is correct for the bundled Caddy `edge` profile. Set
-it higher only if you run additional proxies in front, and never lower than the
-number you actually run, or a caller can rotate its own throttle key.
+it to exactly the number of proxies you run. Too high and the parser reaches into
+the part the client wrote, so a caller can rotate its own throttle key. Too low
+and every caller behind a proxy shares that proxy's address as one key.
+
+A CDN in front of the bundled Caddy is one more hop, so set 2. Caddy also has to
+trust the CDN: pass its origin-facing IP ranges, space separated, in
+`CF_ORIGIN_RANGES`. Caddy keeps an incoming `X-Forwarded-For` only from a peer it
+trusts, so without those ranges it drops the CDN's header and every visitor looks
+like the CDN. If the CDN reaches the box on a second hostname, name it in
+`ORIGIN_DOMAIN` so Caddy obtains a certificate for it too.
 
 ## Action tools (remediation)
 
