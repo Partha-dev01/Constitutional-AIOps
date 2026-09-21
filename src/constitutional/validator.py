@@ -17,6 +17,10 @@ from enum import Enum
 from typing import Any, Optional
 
 from src.config import config
+from src.constitutional.action_semantics import (
+    is_data_destructive,
+    modifies_security_config,
+)
 from src.constitutional.principles import (
     ALL_PRINCIPLES,
     PRINCIPLES_BY_ID,
@@ -251,8 +255,9 @@ class ConstitutionalValidator:
         
         # Tier 1 checks
         if principle.id == "P1.1":  # Data Protection
-            dangerous_actions = ["delete", "drop", "truncate", "remove"]
-            if any(d in action_type.lower() for d in dangerous_actions):
+            # Token match, not substring: "delete" is a substring of "undelete",
+            # so a restore used to be blocked as data loss. See action_semantics.
+            if is_data_destructive(action_type):
                 violated = True
                 reason = f"Action '{action_type}' could cause data loss"
         
@@ -281,8 +286,10 @@ class ConstitutionalValidator:
                     reason = "Action could exhaust resources"
         
         elif principle.id == "P1.4":  # Security Integrity
-            security_actions = ["firewall", "auth", "tls", "certificate", "acl"]
-            if any(s in action_type.lower() for s in security_actions):
+            # The principle is "never MODIFY security configurations", so a read
+            # of security state is not a violation. Substring matching also made
+            # "acl" match "oracle", blocking read-only Oracle log analysis.
+            if modifies_security_config(action_type):
                 violated = True
                 reason = "Security configuration change requires explicit approval"
         

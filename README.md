@@ -139,14 +139,19 @@ sign off.
 
 **Principle tiers (12 total)**
 
-- **Tier 1 — Safety (never violate):** no data deletion without confirmation,
-  keep a minimum of healthy replicas, no cascade affecting many services, and
-  every action reversible within 60 seconds.
-- **Tier 2 — Operational (approval to override):** prefer minimal intervention,
-  require evidence, check historical precedent, and degrade gracefully rather
-  than shut down.
-- **Tier 3 — Learning (soft guidelines):** attribute outcomes to actions, analyze
-  failures, reinforce what worked, and keep solution diversity.
+- **Tier 1 — Safety (never violate):** never cause data loss or corruption,
+  never take destructive actions during an active incident without explicit
+  approval, never exceed resource limits that could cascade, and never modify
+  security configuration without explicit approval.
+- **Tier 2 — Operational (approval to override):** prefer the smallest effective
+  action, require telemetry evidence, log everything for audit and rollback, and
+  escalate to a human below the confidence threshold.
+- **Tier 3 — Learning (soft guidelines):** track outcomes, learn from human
+  corrections, optimise for long-term health over short-term fixes, and keep
+  exploring alternative solutions.
+
+The exact wording of all twelve lives in `src/constitutional/principles.py`, and
+`tests/test_principles_docs.py` fails if this list drifts from it.
 
 The confidence score itself blends model self-confidence, historical success
 rate, and similarity to past incidents:

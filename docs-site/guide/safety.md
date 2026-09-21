@@ -72,24 +72,24 @@ Principles are grouped into three tiers by how strictly they are enforced.
 
 ### Tier 1, safety-critical (never violate)
 
-- **P1.1 Data protection.** No data deletion without confirmation.
-- **P1.2 Active incident safety.** Maintain a minimum of healthy replicas.
-- **P1.3 Cascade prevention.** No action that affects too many services at once.
-- **P1.4 Security integrity.** All actions reversible within a short window.
+- **P1.1 Data Protection.** Never execute actions that could cause data loss or corruption.
+- **P1.2 Active Incident Safety.** Never take destructive actions during active incidents without explicit approval.
+- **P1.3 Cascade Prevention.** Never exceed resource limits that could cause cascade failures.
+- **P1.4 Security Integrity.** Never modify security configurations without explicit approval.
 
 ### Tier 2, operational (require approval to violate)
 
-- **P2.1 Minimal intervention.** Prefer the smallest effective change.
-- **P2.2 Evidence-based actions.** Decisions must be grounded in evidence.
-- **P2.3 Audit trail.** Every action is recorded.
-- **P2.4 Uncertainty escalation.** Prefer graceful degradation over shutdown.
+- **P2.1 Minimal Intervention.** Prefer the smallest effective action to resolve issues.
+- **P2.2 Evidence-Based Actions.** Require telemetry evidence before taking action.
+- **P2.3 Audit Trail.** Log all actions for audit and rollback capability.
+- **P2.4 Uncertainty Escalation.** Escalate to humans when confidence is below threshold.
 
 ### Tier 3, learning (soft guidelines)
 
-- **P3.1 Outcome tracking.** Attribute outcomes to the actions that caused them.
-- **P3.2 Failure analysis.** Analyze failures systematically.
-- **P3.3 Pattern reinforcement.** Reinforce successful patterns.
-- **P3.4 Solution diversity.** Keep a diverse set of solutions.
+- **P3.1 Outcome Tracking.** Track outcomes of actions for continuous improvement.
+- **P3.2 Human Correction Learning.** Learn from human corrections and overrides.
+- **P3.3 Long-term Optimization.** Optimize for long-term system health over short-term fixes.
+- **P3.4 Solution Diversity.** Occasionally explore alternative solutions to prevent local optima.
 
 ## Remediation is opt-in
 
