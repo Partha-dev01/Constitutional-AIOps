@@ -148,6 +148,13 @@ async def lifespan(app: FastAPI):
 
         loaded_incidents = persistence_store.load_all_incidents()
         incident_routes._incidents.update(loaded_incidents)
+        # SEC-M1: restore who filed each incident. Without this every incident
+        # would come back unowned after a restart, which the scoping rule reads
+        # as admin-only — fail closed, but it would quietly hide a non-admin's
+        # own incidents from them.
+        incident_routes._incident_owner.update(
+            persistence_store.load_all_incident_owners()
+        )
 
         # Restore the incident counter so new IDs keep advancing past the
         # highest pre-restart value (set_counter persists the live max).

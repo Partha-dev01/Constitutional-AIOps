@@ -14,7 +14,8 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
-from src.auth.deps import User, require_admin
+from src.auth.deps import User, coerce_user, require_admin, require_user
+from src.api.scoping import can_access, owner_or_404
 
 from src.api.schemas.incident import (
     Incident,
@@ -41,6 +42,17 @@ router = APIRouter()
 # In-memory incident store (durable write-through to SQLite under AIOPS_DATA_DIR;
 # also correlated into Neo4j graph memory via /{id}/similar).
 _incidents: dict[str, Incident] = {}
+
+# SEC-M1: incident id -> username that filed it. A side index rather than a
+# field on the Incident model, so `openapi/openapi.json` and both generated SDK
+# cores stay unchanged. Anything the telemetry pipeline raised on its own is
+# simply absent here, which `can_access` reads as unowned and therefore
+# admin-only. Hydrated at startup from the `incidents.owner` column in
+# src/main.py, so it survives a restart the same way the incidents do.
+# Not evicted with the in-memory cache: an id/username pair is tiny, and the
+# owner must outlive eviction or an evicted-then-reloaded incident would come
+# back unowned and silently change who can see it.
+_incident_owner: dict[str, str] = {}
 
 # Maximum number of incidents kept in the in-memory fast-path dict.  Eviction
 # drops the oldest resolved/closed incidents first, then the oldest active ones,
@@ -174,12 +186,13 @@ async def _verify_scenario_healed(scenario: str, container: str | None) -> bool:
 def _persist_save_incident(incident: Incident) -> None:
     """Best-effort durable write of an incident — never break the request path."""
     try:
-        persistence_store.save_incident(incident)
+        persistence_store.save_incident(incident, _incident_owner.get(incident.id))
     except Exception as exc:  # noqa: BLE001
         logger.warning("Failed to persist incident %s: %s", incident.id, exc)
 
 
 def _persist_delete_incident(incident_id: str) -> None:
+    _incident_owner.pop(incident_id, None)
     try:
         persistence_store.delete_incident(incident_id)
     except Exception as exc:  # noqa: BLE001
@@ -242,6 +255,15 @@ def _load_incident_from_persistence(incident_id: str) -> Incident | None:
         logger.warning("Failed to query persistence for incident %s: %s", incident_id, exc)
         return None
 
+    if incident_id not in _incident_owner:
+        # SEC-M1: the owner column is the durable truth; re-read it here or an
+        # incident that was evicted and then reloaded would be treated as
+        # unowned (admin-only) for the rest of the process lifetime.
+        try:
+            _incident_owner.update(persistence_store.load_all_incident_owners())
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Failed to reload incident owners: %s", exc)
+
     incident = all_persisted.get(incident_id)
     if incident is not None:
         # Warm the cache so subsequent accesses are in-memory fast-path.
@@ -270,6 +292,7 @@ def _generate_incident_id() -> str:
 async def create_incident(
     request: Request,
     incident_create: IncidentCreate,
+    user: User = Depends(require_user),
 ) -> Incident:
     """
     Create a new incident.
@@ -302,6 +325,9 @@ async def create_incident(
     )
 
     _incidents[incident_id] = incident
+    # SEC-M1: record who filed it BEFORE the first persist, so the owner column
+    # is written in the same round trip rather than on some later update.
+    _incident_owner[incident_id] = coerce_user(user).username
     _persist_save_incident(incident)
     _evict_stale_incidents()
     logger.info(f"Created incident: {incident_id}")
@@ -322,6 +348,7 @@ async def create_incident(
     description="Get paginated list of incidents with optional filters",
 )
 async def list_incidents(
+    user: User = Depends(require_user),
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Items per page"),
     status: list[IncidentStatus] | None = Query(None, description="Filter by status"),
@@ -346,7 +373,14 @@ async def list_incidents(
         Paginated list of incidents
     """
     # Filter incidents
-    filtered = list(_incidents.values())
+    user = coerce_user(user)
+    # SEC-M1: scope before the other filters so paging counts only what this
+    # caller may see. Pipeline-raised incidents have no owner and are therefore
+    # admin-only: a public-signup account has no business reading the
+    # operator's infrastructure incidents.
+    filtered = [
+        i for i in _incidents.values() if can_access(_incident_owner.get(i.id), user)
+    ]
 
     if status:
         filtered = [i for i in filtered if i.status in status]
@@ -395,14 +429,19 @@ async def list_incidents(
     summary="Get Incident Statistics",
     description="Get aggregated statistics about incidents",
 )
-async def get_incident_stats() -> IncidentStats:
+async def get_incident_stats(
+    user: User = Depends(require_user),
+) -> IncidentStats:
     """
     Get incident statistics.
 
     Returns:
         Aggregated incident statistics
     """
-    incidents = list(_incidents.values())
+    user = coerce_user(user)
+    incidents = [
+        i for i in _incidents.values() if can_access(_incident_owner.get(i.id), user)
+    ]
 
     by_status: dict[str, int] = {}
     by_severity: dict[str, int] = {}
@@ -455,7 +494,10 @@ async def get_incident_stats() -> IncidentStats:
     summary="Get Incident",
     description="Get incident by ID",
 )
-async def get_incident(incident_id: str) -> Incident:
+async def get_incident(
+    incident_id: str,
+    user: User = Depends(require_user),
+) -> Incident:
     """
     Get incident by ID.
 
@@ -479,6 +521,9 @@ async def get_incident(incident_id: str) -> Incident:
             detail=f"Incident {incident_id} not found",
         )
 
+    # SEC-M1: 404 not 403, so an id owned by someone else is indistinguishable
+    # from one that never existed.
+    owner_or_404(_incident_owner.get(incident_id), coerce_user(user), f"Incident {incident_id} not found")
     return incident
 
 
@@ -491,6 +536,7 @@ async def get_incident(incident_id: str) -> Incident:
 async def update_incident(
     incident_id: str,
     incident_update: IncidentUpdate,
+    user: User = Depends(require_user),
 ) -> Incident:
     """
     Update an incident.
@@ -508,6 +554,13 @@ async def update_incident(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Incident {incident_id} not found",
         )
+    # SEC-M1: update_incident is authenticated-only by design (C2 left triage
+    # notes and assignee open to a non-admin operator), so ownership gates it
+    # rather than a role.
+    owner_or_404(
+        _incident_owner.get(incident_id), coerce_user(user),
+        f"Incident {incident_id} not found",
+    )
     update_data = incident_update.model_dump(exclude_unset=True)
 
     for field, value in update_data.items():
@@ -563,6 +616,7 @@ async def analyze_incident(
     request: Request,
     incident_id: str,
     enable_thinking: bool = Query(True, description="Enable extended thinking"),
+    user: User = Depends(require_user),
 ) -> Incident:
     """
     Trigger RCA for an incident.
@@ -582,6 +636,12 @@ async def analyze_incident(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Incident {incident_id} not found",
         )
+    # SEC-M1: analysis spends a real LLM call and writes RCA text back onto
+    # the record, so it is gated the same way as reading it.
+    owner_or_404(
+        _incident_owner.get(incident_id), coerce_user(user),
+        f"Incident {incident_id} not found",
+    )
     incident.status = IncidentStatus.ANALYZING
     incident.updated_at = datetime.utcnow()
 
@@ -813,6 +873,7 @@ async def find_similar_incidents(
     request: Request,
     incident_id: str,
     limit: int = Query(5, ge=1, le=20),
+    user: User = Depends(require_user),
 ) -> dict[str, Any]:
     """
     Find similar incidents using graph-episodic memory.
@@ -829,6 +890,7 @@ async def find_similar_incidents(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Incident {incident_id} not found",
         )
+    owner_or_404(_incident_owner.get(incident_id), coerce_user(user), f"Incident {incident_id} not found")
 
     # This will use Neo4j graph queries when implemented
     neo4j_client = getattr(request.app.state, "neo4j_client", None)

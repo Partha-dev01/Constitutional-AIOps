@@ -40,7 +40,9 @@ from src.auth.deps import (
     coerce_user,
     get_current_user,
     require_admin,
+    require_user,
 )
+from src.api.scoping import can_access, owner_or_404
 from src.confidence import ConfidenceCalculator, ConfidenceBreakdown
 from src.notifications.store import notify
 from src.api import rate_limit
@@ -90,6 +92,7 @@ def _generate_action_id() -> str:
 async def create_action(
     request: Request,
     action_create: ActionCreate,
+    user: User = Depends(require_user),
 ) -> Action:
     """
     Create and validate a new action.
@@ -125,6 +128,8 @@ async def create_action(
     # able to forge an auto-approved, unvalidated action record.) When auth
     # enforcement is off the request already runs as the synthetic admin, so the
     # dev/self-host default is unchanged.
+    user = coerce_user(user)
+
     if action_create.skip_validation and auth_required():
         current = get_current_user(request)
         if current is None or current.role != "admin":
@@ -187,7 +192,10 @@ async def create_action(
         status=ActionStatus.PENDING,
         created_at=now,
         updated_at=now,
-        created_by="system",
+        # SEC-M1: the owner. This field always existed and was described as
+        # "Creator (system or user ID)", but it was hardcoded, so nothing
+        # recorded who filed an action and nothing could scope on it.
+        created_by=user.username,
         audit_log=[{
             "timestamp": now.isoformat(),
             "event": "created",
@@ -315,6 +323,7 @@ async def create_action(
     description="Get paginated list of actions with optional filters",
 )
 async def list_actions(
+    user: User = Depends(require_user),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     status: list[ActionStatus] | None = Query(None),
@@ -338,7 +347,10 @@ async def list_actions(
     Returns:
         Paginated list of actions
     """
-    filtered = list(_actions.values())
+    user = coerce_user(user)
+    # SEC-M1: scope before any other filter, so paging counts only what this
+    # caller may see. An admin sees everything.
+    filtered = [a for a in _actions.values() if can_access(a.created_by, user)]
 
     if status:
         filtered = [a for a in filtered if a.status in status]
@@ -379,16 +391,19 @@ async def list_actions(
     summary="Get Pending Approvals",
     description="Get all actions awaiting human approval",
 )
-async def get_pending_approvals() -> PendingApprovals:
+async def get_pending_approvals(
+    user: User = Depends(require_user),
+) -> PendingApprovals:
     """
     Get all actions pending approval.
 
     Returns:
         Summary of pending approval requests
     """
+    user = coerce_user(user)
     pending = [
         a for a in _actions.values()
-        if a.status == ActionStatus.AWAITING_APPROVAL
+        if a.status == ActionStatus.AWAITING_APPROVAL and can_access(a.created_by, user)
     ]
 
     # Sort by creation time (oldest first for FIFO processing)
@@ -448,14 +463,19 @@ async def get_confidence_formula():
     summary="Get Action Statistics",
     description="Get aggregated action statistics",
 )
-async def get_action_stats() -> ActionStats:
+async def get_action_stats(
+    user: User = Depends(require_user),
+) -> ActionStats:
     """
     Get action statistics.
 
     Returns:
         Aggregated action statistics
     """
-    actions = list(_actions.values())
+    user = coerce_user(user)
+    # SEC-M1: statistics are a read of the same records, so they are scoped the
+    # same way. An unscoped count leaks how many actions other accounts filed.
+    actions = [a for a in _actions.values() if can_access(a.created_by, user)]
 
     by_status: dict[str, int] = {}
     by_type: dict[str, int] = {}
@@ -514,7 +534,10 @@ async def get_action_stats() -> ActionStats:
     summary="Get Action",
     description="Get action by ID",
 )
-async def get_action(action_id: str) -> Action:
+async def get_action(
+    action_id: str,
+    user: User = Depends(require_user),
+) -> Action:
     """
     Get action by ID.
 
@@ -530,6 +553,11 @@ async def get_action(action_id: str) -> Action:
             detail=f"Action {action_id} not found",
         )
 
+    # SEC-M1: 404 not 403, so an id that exists for someone else is
+    # indistinguishable from one that does not exist at all.
+    owner_or_404(
+        _actions[action_id].created_by, coerce_user(user), f"Action {action_id} not found"
+    )
     return _actions[action_id]
 
 
@@ -702,6 +730,7 @@ async def execute_action(
 async def cancel_action(
     action_id: str,
     reason: str = Query(None, description="Cancellation reason"),
+    user: User = Depends(require_user),
 ) -> Action:
     """
     Cancel an action.
@@ -720,6 +749,10 @@ async def cancel_action(
         )
 
     action = _actions[action_id]
+    # SEC-M1: cancelling is a mutation, and it is NOT admin-gated (C2 gated
+    # approve and execute, not cancel), so it is the one mutating route that
+    # needs the ownership check rather than an admin role.
+    owner_or_404(action.created_by, coerce_user(user), f"Action {action_id} not found")
 
     cancelable_statuses = [
         ActionStatus.PENDING,

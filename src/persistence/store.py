@@ -14,7 +14,8 @@ startup.
 Tables:
     conversations(id TEXT PK, owner TEXT, created_at TEXT, updated_at TEXT,
                   data_json TEXT NOT NULL)
-    incidents(id TEXT PK, created_at TEXT, updated_at TEXT, data_json TEXT NOT NULL)
+    incidents(id TEXT PK, owner TEXT, created_at TEXT, updated_at TEXT,
+              data_json TEXT NOT NULL)
     pending_actions(id TEXT PK, created_at TEXT, data_json TEXT NOT NULL)
     counters(name TEXT PK, value INTEGER NOT NULL)
 
@@ -81,6 +82,7 @@ def init_db() -> None:
             """
             CREATE TABLE IF NOT EXISTS incidents (
                 id TEXT PRIMARY KEY,
+                owner TEXT,
                 created_at TEXT,
                 updated_at TEXT,
                 data_json TEXT NOT NULL
@@ -116,6 +118,15 @@ def init_db() -> None:
             )
             """
         )
+        # SEC-M1 migration: `incidents.owner` is additive and arrived after the
+        # table shipped, so an existing box DB has the column missing rather
+        # than NULL. ALTER cannot be guarded by IF NOT EXISTS in sqlite, so the
+        # column list is read first. Existing rows get NULL, which the scoping
+        # rule treats as unowned and therefore admin-only: fail closed.
+        cols = {row[1] for row in conn.execute("PRAGMA table_info(incidents)")}
+        if "owner" not in cols:
+            conn.execute("ALTER TABLE incidents ADD COLUMN owner TEXT")
+            logger.info("persistence: added incidents.owner (SEC-M1 migration)")
 
 
 def _iso(value: Any) -> Optional[str]:
@@ -189,19 +200,27 @@ def load_all_conversations() -> dict[str, ConversationHistory]:
 # Incidents
 # ---------------------------------------------------------------------------
 
-def save_incident(incident: Incident) -> None:
-    """Write-through persist (insert-or-replace) a full incident."""
+def save_incident(incident: Incident, owner: Optional[str] = None) -> None:
+    """Write-through persist (insert-or-replace) a full incident.
+
+    ``owner`` is the username that filed it, or None for anything the telemetry
+    pipeline raised on its own. It is a column rather than a model field so the
+    public schema (and therefore both generated SDK cores) stays unchanged; see
+    ``src/api/scoping.py``.
+    """
     init_db()
     with closing(_connect()) as conn, conn:
         conn.execute(
-            "INSERT INTO incidents (id, created_at, updated_at, data_json)"
-            " VALUES (?, ?, ?, ?)"
+            "INSERT INTO incidents (id, owner, created_at, updated_at, data_json)"
+            " VALUES (?, ?, ?, ?, ?)"
             " ON CONFLICT(id) DO UPDATE SET"
+            "   owner = COALESCE(excluded.owner, incidents.owner),"
             "   created_at = excluded.created_at,"
             "   updated_at = excluded.updated_at,"
             "   data_json = excluded.data_json",
             (
                 incident.id,
+                owner,
                 _iso(incident.created_at),
                 _iso(incident.updated_at),
                 incident.model_dump_json(),
@@ -214,6 +233,23 @@ def delete_incident(incident_id: str) -> None:
     init_db()
     with closing(_connect()) as conn, conn:
         conn.execute("DELETE FROM incidents WHERE id = ?", (incident_id,))
+
+
+def load_all_incident_owners() -> dict[str, str]:
+    """Map incident id -> owning username, omitting rows with no owner.
+
+    Kept separate from :func:`load_all_incidents` so that function's signature,
+    and every existing caller of it, stay untouched.
+    """
+    init_db()
+    out: dict[str, str] = {}
+    with closing(_connect()) as conn:
+        rows = conn.execute(
+            "SELECT id, owner FROM incidents WHERE owner IS NOT NULL AND owner != ''"
+        ).fetchall()
+    for row in rows:
+        out[row["id"]] = row["owner"]
+    return out
 
 
 def load_all_incidents() -> dict[str, Incident]:

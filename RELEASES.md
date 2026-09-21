@@ -13,6 +13,19 @@ two things were supposed to agree and nothing checked that they did.
 
 ### Security
 
+- **Breaking: actions and incidents are now scoped to the account that created
+  them.** Both were held in process-global stores with no notion of an owner, so
+  any signed-in account could list every record and fetch any record by id.
+  Mutations were already gated on the admin role, so this was a read exposure
+  rather than a write one, but self-service signup means a second account can
+  exist at any time. An **admin still sees every record**, because operating the
+  system requires it. A non-admin now sees only what they created, and anything
+  the telemetry pipeline raised has no human owner and is visible to admins
+  only. A record owned by someone else answers **404 rather than 403**, so the
+  endpoints cannot be used to enumerate other accounts' record ids. Chat
+  conversations already worked this way and are unchanged, including the
+  stricter rule that an admin does not get to read them. If you run a
+  single-admin install nothing changes for you.
 - **The Tier-1 safety gate matched action names by substring, and now matches by
   word.** A Tier-1 violation blocks an action outright, with no approval path,
   so a mis-match was consequential in both directions. `"acl"` is a substring of

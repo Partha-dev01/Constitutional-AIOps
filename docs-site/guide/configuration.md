@@ -111,6 +111,31 @@ The approver recorded in the audit trail comes from the authenticated session.
 An `approved_by` field in the request body is accepted for backwards
 compatibility and ignored.
 
+### What you can see
+
+Roles decide what you may *do*. Ownership decides what you may *see*.
+
+Actions and incidents are scoped per account. You see the actions you created
+and the incidents you filed; an **admin sees every record**, because running the
+system requires it. Anything raised by the telemetry pipeline has no human owner
+and is **visible to admins only**, so a self-service account cannot read the
+operator's infrastructure incidents.
+
+| Endpoint | What a non-admin sees |
+|----------|----------------------|
+| `GET /actions` and `GET /actions/stats` | only actions they created |
+| `GET /actions/pending` | only their own awaiting-approval actions |
+| `GET /actions/{id}` and `POST /actions/{id}/cancel` | their own, otherwise `404` |
+| `GET /incidents` and `GET /incidents/stats` | only incidents they filed |
+| `GET /incidents/{id}`, `PATCH`, `analyze`, `similar` | their own, otherwise `404` |
+
+A record that belongs to someone else answers **404, not 403**. A 403 would
+confirm the id exists, which turns the endpoint into a way to enumerate other
+accounts' records one request at a time.
+
+Chat conversations follow a stricter rule and are unchanged: they are private to
+their author, and an admin does **not** get to read them.
+
 ## Rate limits
 
 The endpoints that cost money or change infrastructure carry a per-caller
