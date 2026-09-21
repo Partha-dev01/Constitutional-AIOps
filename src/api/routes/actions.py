@@ -44,6 +44,7 @@ from src.auth.deps import (
 )
 from src.api.scoping import can_access, owner_or_404
 from src.confidence import ConfidenceCalculator, ConfidenceBreakdown
+from src.constitutional.principles import APPROVAL_ROUTABLE_TIER1
 from src.notifications.store import notify
 from src.api import rate_limit
 
@@ -252,7 +253,8 @@ async def create_action(
         # AWAITING_APPROVAL. Route it to the human instead of to a dead end.
         # Deliberately narrow: this applies only when P1.2 is the SOLE critical
         # violation, so data loss (P1.1), resource cascade (P1.3) and security
-        # changes (P1.4) keep failing closed with no approval path.
+        # changes (P1.4) keep failing closed with no approval path. P1.4 is
+        # final by design (ISS-113), see APPROVAL_ROUTABLE_TIER1.
         action.status = ActionStatus.AWAITING_APPROVAL
         action.requires_approval = True
         action.expires_at = now + timedelta(hours=4)
@@ -884,10 +886,11 @@ def _only_blocked_pending_approval(validation: ConstitutionalValidation) -> bool
     """True when the ONLY thing standing in the way is a missing approval.
 
     That means exactly one shape: Tier 1 failed, and every critical violation is
-    P1.2, whose own text ("without explicit approval") names approval as the
-    remedy and whose validator check clears once `human_approved` is set. Any
-    other critical violation, or a Tier-1 pass, and this returns False so the
-    caller falls through to its normal decision.
+    in APPROVAL_ROUTABLE_TIER1. Today that is P1.2 alone, whose own text
+    ("without explicit approval") names approval as the remedy and whose
+    validator check clears once `human_approved` is set. Any other critical
+    violation, or a Tier-1 pass, and this returns False so the caller falls
+    through to its normal decision.
 
     Tier-2 violations are not consulted: they already route to approval on their
     own, and they are not what failed `validation.passed` here.
@@ -899,7 +902,7 @@ def _only_blocked_pending_approval(validation: ConstitutionalValidation) -> bool
         for v in validation.violations
         if v.get("severity") == "critical"
     }
-    return critical == {"P1.2"}
+    return bool(critical) and critical <= APPROVAL_ROUTABLE_TIER1
 
 
 # Action types that map onto a real, whitelisted tool executor. Everything

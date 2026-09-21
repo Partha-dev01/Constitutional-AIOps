@@ -301,9 +301,12 @@ class ConstitutionalValidator:
             # The principle is "never MODIFY security configurations", so a read
             # of security state is not a violation. Substring matching also made
             # "acl" match "oracle", blocking read-only Oracle log analysis.
+            # No approval route, by design (ISS-113): unlike P1.2 this check
+            # never consults `human_approved`, and the principle text no longer
+            # promises one.
             if modifies_security_config(action_type):
                 violated = True
-                reason = "Security configuration change requires explicit approval"
+                reason = "Action would modify a security configuration"
         
         # Tier 2 checks
         elif principle.id == "P2.1":  # Minimal Intervention

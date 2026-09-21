@@ -13,6 +13,8 @@ import { GlassCard, Reveal } from '../ui'
  *
  * Principles mirror the product's constitutional framework verbatim (Tier 1
  * safety-critical, Tier 2 operational, Tier 3 learning).
+ * tests/test_principles_docs.py fails if any line here drifts from
+ * src/constitutional/principles.py.
  */
 
 interface Tier {
@@ -32,10 +34,10 @@ const TIERS: Tier[] = [
     enforcement: 'Never violated',
     enforcementClass: 'bg-red-500/10 text-red-400 ring-1 ring-red-500/20',
     principles: [
-      'No data deletion without confirmation',
-      'Keep at least two healthy replicas per service',
-      'No cascade action touching more than five services',
-      'Every action reversible within 60 seconds',
+      'Never execute actions that could cause data loss or corruption',
+      'Never take destructive actions during active incidents without explicit approval',
+      'Never exceed resource limits that could cause cascade failures',
+      'Never modify security configurations',
     ],
   },
   {
@@ -45,10 +47,10 @@ const TIERS: Tier[] = [
     enforcement: 'Requires approval',
     enforcementClass: 'bg-primary/10 text-primary ring-1 ring-primary/20',
     principles: [
-      'Prefer the most minimal intervention',
-      'Decide from evidence, not assumption',
-      'Check historical precedent first',
-      'Degrade gracefully rather than shut down',
+      'Prefer the smallest effective action to resolve issues',
+      'Require telemetry evidence before taking action',
+      'Log all actions for audit and rollback capability',
+      'Escalate to humans when confidence is below threshold',
     ],
   },
   {
@@ -58,10 +60,10 @@ const TIERS: Tier[] = [
     enforcement: 'Soft guidance',
     enforcementClass: 'bg-muted text-muted-foreground ring-1 ring-border',
     principles: [
-      'Attribute outcomes back to actions',
-      'Analyze every failure systematically',
-      'Reinforce patterns that worked',
-      'Keep a diversity of solutions',
+      'Track outcomes of actions for continuous improvement',
+      'Learn from human corrections and overrides',
+      'Optimize for long-term system health over short-term fixes',
+      'Occasionally explore alternative solutions to prevent local optima',
     ],
   },
 ]

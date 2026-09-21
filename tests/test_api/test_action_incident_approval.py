@@ -89,11 +89,10 @@ async def test_a_security_change_is_still_rejected_outright():
     """The escape hatch is P1.2 ONLY, and this is the case that proves it.
 
     `rotate_credentials` is a P1.4 violation (a security noun with a non-read
-    verb). P1.4's published text also ends "without explicit approval", but the
-    validator does NOT implement that clause for it, unlike P1.2. So the route
-    must keep rejecting it rather than inventing an approval route the gate does
-    not recognise. The asymmetry itself is logged as ISS-113; it is a safety
-    decision, not something to settle inside an ISS-112 fix.
+    verb). P1.4 used to end "without explicit approval" like P1.2 while the gate
+    gave it no approval route. ISS-113 settled that the text was wrong: a
+    security change proposed by the system is final, so the route keeps
+    rejecting it.
     """
     from src.api.routes import actions as actions_route
     from src.api.schemas.action import ActionCreate, ActionStatus, ActionType
@@ -110,6 +109,48 @@ async def test_a_security_change_is_still_rejected_outright():
     )
     assert action.status == ActionStatus.REJECTED
     assert any(v["principle_id"] == "P1.4" for v in action.validation.violations)
+
+
+def test_an_approval_does_not_lift_a_security_violation():
+    """ISS-113, on the validator itself: even an approved action cannot pass P1.4."""
+    from src.constitutional.validator import ConstitutionalValidator
+
+    report = ConstitutionalValidator().validate(
+        action_id="sec-1",
+        action_description="rotate the database credentials",
+        action_type="rotate_credentials",
+        confidence=0.99,
+        context={"active_incident": True, "human_approved": True},
+    )
+    critical = {v.principle.id for v in report.violations if v.severity == "critical"}
+    assert "P1.4" in critical
+    assert not report.tier1_passed
+    assert not report.can_proceed
+
+
+@pytest.mark.parametrize("principle_id", ["P1.1", "P1.2", "P1.3", "P1.4"])
+def test_route_escape_hatch_follows_the_routable_set(principle_id):
+    """The route queues for approval exactly when the principle is routable."""
+    from datetime import datetime
+
+    from src.api.routes import actions as actions_route
+    from src.api.schemas.action import AuthorizationLevel, ConstitutionalValidation
+    from src.constitutional.principles import APPROVAL_ROUTABLE_TIER1
+
+    validation = ConstitutionalValidation(
+        passed=False,
+        authorization_level=AuthorizationLevel.APPROVAL_REQUIRED,
+        confidence=0.9,
+        tier1_passed=False,
+        tier2_passed=True,
+        tier3_passed=True,
+        violations=[{"principle_id": principle_id, "severity": "critical"}],
+        explanation="test",
+        validated_at=datetime.utcnow(),
+    )
+    assert actions_route._only_blocked_pending_approval(validation) is (
+        principle_id in APPROVAL_ROUTABLE_TIER1
+    )
 
 
 @pytest.mark.asyncio

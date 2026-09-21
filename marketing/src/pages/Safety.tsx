@@ -7,7 +7,8 @@ import { PageShell, H2, P, Code, Card, CTARow } from '../components/prose'
  * -trust authorization matrix. Fully static and public-safe, no network calls.
  *
  * Uses the shared glass PageShell + prose primitives so it reads as one system
- * with the rest of the marketing site.
+ * with the rest of the marketing site. tests/test_principles_docs.py fails if a
+ * principle line here drifts from src/constitutional/principles.py.
  */
 
 const TIERS: { tier: string; rule: string; principles: string[] }[] = [
@@ -15,30 +16,30 @@ const TIERS: { tier: string; rule: string; principles: string[] }[] = [
     tier: 'Tier 1: Safety critical',
     rule: 'Never violated',
     principles: [
-      'No data deletion without confirmation',
-      'Keep at least two healthy service replicas',
-      'No cascade action affecting more than five services',
-      'Every action reversible within 60 seconds',
+      'Never execute actions that could cause data loss or corruption',
+      'Never take destructive actions during active incidents without explicit approval',
+      'Never exceed resource limits that could cause cascade failures',
+      'Never modify security configurations',
     ],
   },
   {
     tier: 'Tier 2: Operational',
     rule: 'Require approval',
     principles: [
-      'Prefer the minimal intervention',
-      'Require evidence-based decisions',
-      'Check historical precedent first',
-      'Graceful degradation over shutdown',
+      'Prefer the smallest effective action to resolve issues',
+      'Require telemetry evidence before taking action',
+      'Log all actions for audit and rollback capability',
+      'Escalate to humans when confidence is below threshold',
     ],
   },
   {
     tier: 'Tier 3: Learning',
     rule: 'Soft guidelines',
     principles: [
-      'Attribute outcomes to the actions that caused them',
-      'Analyze failures systematically',
-      'Reinforce patterns that worked',
-      'Keep a diversity of solutions',
+      'Track outcomes of actions for continuous improvement',
+      'Learn from human corrections and overrides',
+      'Optimize for long-term system health over short-term fixes',
+      'Occasionally explore alternative solutions to prevent local optima',
     ],
   },
 ]
@@ -87,9 +88,11 @@ export function Safety() {
           ))}
         </div>
         <P>
-          Tier 1 is absolute. A proposal that would break a Tier 1 principle is refused outright, no
-          confidence score can override it. Tier 2 is where human approval lives. Tier 3 shapes how
-          the system learns from what happened.
+          Tier 1 is absolute and no confidence score can override it. A proposal that would break a
+          Tier 1 principle is refused outright. The one way through is written into the second
+          principle itself: a destructive action during an active incident waits for an admin to
+          approve it. Tier 2 is where the rest of human approval lives. Tier 3 shapes how the system
+          learns from what happened.
         </P>
 
         <H2 id="matrix">Graduated trust</H2>

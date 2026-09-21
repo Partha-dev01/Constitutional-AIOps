@@ -835,9 +835,10 @@ function answerFor(message: string): ChatAnswer {
     return {
       text:
         'Every proposed action passes a 3-tier constitutional gate before it can run. Confidence above 0.90 auto-executes ' +
-        '(audit only); 0.70-0.90 needs human approval; below 0.70 is alert-only. Tier-1 safety principles (no unconfirmed ' +
-        'data deletion, keep at least 2 healthy replicas, reversible within 60s) can never be violated. That is why the two ' +
-        'open restart/scale actions are waiting on your approval rather than firing on their own.',
+        '(audit only); 0.70-0.90 needs human approval; below 0.70 is alert-only. Tier-1 safety principles (no data loss, ' +
+        'no resource cascade, no security configuration changes) can never be overridden, and a destructive action during ' +
+        'an active incident always waits for explicit approval. That is why the two open restart/scale actions are waiting ' +
+        'on your approval rather than firing on their own.',
       confidence: 0.92, tokens_used: 640,
       suggested_actions: ['Review pending approvals', 'Open Settings -> Remediation'],
       related_incidents: ['inc-2043', 'inc-2039'],

@@ -75,14 +75,16 @@ Principles are grouped into three tiers by how strictly they are enforced.
 - **P1.1 Data Protection.** Never execute actions that could cause data loss or corruption.
 - **P1.2 Active Incident Safety.** Never take destructive actions during active incidents without explicit approval.
 - **P1.3 Cascade Prevention.** Never exceed resource limits that could cause cascade failures.
-- **P1.4 Security Integrity.** Never modify security configurations without explicit approval.
+- **P1.4 Security Integrity.** Never modify security configurations.
 
 A Tier 1 violation blocks the action outright. P1.2 is the one principle whose
 own wording names a way through, "without explicit approval", and the gate
 honours that: a destructive action proposed during an active incident is queued
 for a human decision rather than refused, and it runs only once an admin
 approves it. Every other Tier 1 violation is final, and an approval does not
-lift it.
+lift it. That includes P1.4: a proposed change to firewall rules, authentication,
+TLS certificates or access control is refused even with an admin present. Those
+changes stay with a person working on the system directly.
 
 The gate classifies an action by the **words in its name**, not by substring.
 `restart_service` and `restartService` are read the same way, while

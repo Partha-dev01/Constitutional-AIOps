@@ -79,7 +79,7 @@ PRINCIPLE_P1_4 = Principle(
     id="P1.4",
     tier=PrincipleTier.TIER_1_SAFETY,
     name="Security Integrity",
-    description="Never modify security configurations without explicit approval",
+    description="Never modify security configurations",
     violation_action="BLOCK_ALWAYS",
     examples=[
         "Changing firewall rules",
@@ -213,6 +213,16 @@ ALL_PRINCIPLES = TIER_1_PRINCIPLES + TIER_2_PRINCIPLES + TIER_3_PRINCIPLES
 # Quick lookup by ID
 PRINCIPLES_BY_ID = {p.id: p for p in ALL_PRINCIPLES}
 
+# Tier-1 principles whose own text names approval as the way through. A Tier-1
+# violation is otherwise final. P1.2 reads "...during active incidents without
+# explicit approval", its validator check clears once `human_approved` is set,
+# and the action route queues a P1.2-only violation for an admin instead of
+# rejecting it. P1.4 is deliberately NOT here (ISS-113): an AI-proposed change
+# to firewall rules, authentication, TLS or access control is refused even with
+# an admin present, so its text makes no approval promise either.
+# tests/test_principles_docs.py holds the principle text to this set.
+APPROVAL_ROUTABLE_TIER1: frozenset[str] = frozenset({"P1.2"})
+
 
 def get_principle(principle_id: str) -> Optional[Principle]:
     """Get a principle by its ID."""
@@ -232,6 +242,7 @@ __all__ = [
     "TIER_3_PRINCIPLES",
     "ALL_PRINCIPLES",
     "PRINCIPLES_BY_ID",
+    "APPROVAL_ROUTABLE_TIER1",
     "get_principle",
     "get_principles_by_tier",
 ]

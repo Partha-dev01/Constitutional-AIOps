@@ -15,8 +15,8 @@ const QA: { q: string; a: ReactNode }[] = [
       <>
         That is the whole design. Action tools are off by default, only containers you allowlist can be
         touched, and every proposal clears a twelve-principle safety gate. High-confidence, low-risk
-        actions can run and log themselves, anything uncertain waits for you, and tier-1 rules like keeping
-        healthy replicas can never be overridden.
+        actions can run and log themselves, anything uncertain waits for you, and tier-1 rules like never
+        touching security configurations can never be overridden.
       </>
     ),
   },

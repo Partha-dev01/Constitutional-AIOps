@@ -63,6 +63,15 @@ two things were supposed to agree and nothing checked that they did.
 - None of the nine shipped tools change behaviour; two tests assert that, one
   against an empty context and one against the context a live approved
   remediation actually carries.
+- **P1.4 no longer promises an approval it cannot give.** Its text ended
+  "without explicit approval", the same wording as P1.2, but the gate never
+  offered P1.4 an approval route, so a proposed security change such as
+  `rotate_credentials` was refused outright even with an admin present. That
+  refusal is the intended behaviour: a change to firewall rules, authentication,
+  TLS certificates or access control stays with a person working on the system
+  directly. So the text lost the clause and now reads "never modify security
+  configurations", and a test fails if a Tier-1 principle names approval without
+  the gate offering it. No behaviour changed.
 
 ### Added
 
@@ -70,9 +79,12 @@ two things were supposed to agree and nothing checked that they did.
   constitutional principles were described wrongly on the docs site and in this
   repository's README, including three of the four Tier-1 safety-critical ones.
   P1.4 was published as "all actions reversible within a short window" when the
-  implemented principle is "never modify security configurations without
-  explicit approval". `tests/test_principles_docs.py` now fails if the published
-  list drifts from `src/constitutional/principles.py` again.
+  implemented principle is "never modify security configurations". The
+  marketing site's landing page and Safety page carried the same retired list
+  and now state all twelve word for word, and the reference copy in
+  `configs/constitutional-principles.yaml` regained P3.4, which it had lost.
+  `tests/test_principles_docs.py` now fails if any of these drifts from
+  `src/constitutional/principles.py` again.
 - **The in-app guide links to the full documentation.** `Help & Docs` inside the
   app is a condensed mirror, and it offered no way through to the published
   documentation site, so a reader who wanted the complete guides, tutorials,

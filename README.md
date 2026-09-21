@@ -142,7 +142,7 @@ sign off.
 - **Tier 1 — Safety (never violate):** never cause data loss or corruption,
   never take destructive actions during an active incident without explicit
   approval, never exceed resource limits that could cascade, and never modify
-  security configuration without explicit approval.
+  security configuration.
 - **Tier 2 — Operational (approval to override):** prefer the smallest effective
   action, require telemetry evidence, log everything for audit and rollback, and
   escalate to a human below the confidence threshold.

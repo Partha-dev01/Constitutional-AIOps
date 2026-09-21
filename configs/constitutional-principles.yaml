@@ -1,7 +1,12 @@
 # Constitutional AIOps - Constitutional Principles Configuration
 # 
-# This file defines the 11 constitutional principles organized into 3 tiers.
+# This file describes the 12 constitutional principles organized into 3 tiers.
 # These principles govern all autonomous actions taken by the system.
+#
+# Reference copy. The running code does not read this file: the enforced
+# definitions live in src/constitutional/principles.py, and
+# tests/test_principles_docs.py fails if the id, name, description or
+# violation_action of any principle here drifts from them.
 #
 # Tier 1 (Safety-Critical): NEVER violate under any circumstances
 # Tier 2 (Operational): Best practices, require approval to violate
@@ -60,7 +65,7 @@ tier_1_safety:
       
   - id: P1.4
     name: Security Integrity
-    description: Never modify security configurations without explicit approval
+    description: Never modify security configurations
     violation_action: BLOCK_ALWAYS
     protected_resources:
       - firewall_rules
@@ -68,7 +73,8 @@ tier_1_safety:
       - tls_certificates
       - access_control_lists
       - encryption_keys
-    requires_explicit_approval: true
+    # No approval route: a violation is final even with an admin present.
+    requires_explicit_approval: false
 
 # Tier 2: Operational Principles
 # Best practices that require approval to violate
@@ -157,6 +163,16 @@ tier_3_learning:
       - prevention_planning
       - technical_debt_tracking
       - system_resilience_score
+
+  - id: P3.4
+    name: Solution Diversity
+    description: Occasionally explore alternative solutions to prevent local optima
+    violation_action: LOG_WARNING
+    considerations:
+      - alternative_remediation_approaches
+      - alternative_scaling_strategies
+      - new_diagnostic_paths
+      - periodic_assumption_checks
 
 # Action classification
 action_categories:

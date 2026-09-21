@@ -99,8 +99,9 @@ _EXCLUDED_AMBIGUOUS_VERBS: FrozenSet[str] = frozenset({
 })
 
 # Nouns that denote security configuration. P1.4 is "Never MODIFY security
-# configurations without explicit approval", so a noun alone is not enough:
-# reading security state is not modifying it.
+# configurations", so a noun alone is not enough: reading security state is
+# not modifying it. P1.4 has no approval route (ISS-113), the same shape as
+# P1.1 and P1.3.
 SECURITY_NOUNS: FrozenSet[str] = frozenset({
     "firewall", "auth", "authn", "authz", "tls", "ssl", "certificate", "cert",
     "acl", "iam", "policy", "permission", "permissions", "role", "roles",
