@@ -67,15 +67,6 @@ updates:
       # <6.1); revisit when typescript-eslint ships TS7 support.
       - dependency-name: "typescript"
         update-types: ["version-update:semver-major"]
-      # React 19 is a runtime migration handled as its own task.
-      - dependency-name: "react"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "react-dom"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "@types/react"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "@types/react-dom"
-        update-types: ["version-update:semver-major"]
 
   # GitHub Actions — covers .github/workflows/*.yml action pins (@v4 etc.).
   # Action bumps are low-risk and easy to review together, so batch them all.

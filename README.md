@@ -217,7 +217,7 @@ docker compose -f docker-compose.yml -f docker/docker-compose.gpu.yml up -d
 | Area | Technology |
 |---|---|
 | Backend | FastAPI (Python 3.11+), 21 API routers, OpenAPI 3.1 |
-| Frontend | React 18 + TypeScript 5 + Tailwind CSS 4 + Vite 8 |
+| Frontend | React 19 + TypeScript 5 + Tailwind CSS 4 + Vite 8 |
 | LLM runtime | Any OpenAI-compatible endpoint (vLLM, Ollama, AWS Bedrock, OpenAI, ...) |
 | Graph memory | Neo4j 5.x, or a persistent embedded SQLite store on lite (`AIOPS_GRAPH_BACKEND`) |
 | Observability | Loki, Grafana, Tempo, Prometheus + OpenTelemetry |

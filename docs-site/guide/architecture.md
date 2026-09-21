@@ -65,5 +65,5 @@ approve or reject decision, or only raises an alert. See
 | Graph memory | Neo4j 5.x, or an embedded SQLite store (`AIOPS_GRAPH_BACKEND`) |
 | Observability | Grafana, Loki, Tempo, Prometheus (full stack) |
 | Backend | FastAPI (Python 3.11+) |
-| Frontend | React 18 + TypeScript + Tailwind |
+| Frontend | React 19 + TypeScript + Tailwind |
 | Container | Docker Compose |

@@ -7,7 +7,7 @@ interface ChatComposerProps {
   onChange: (value: string) => void
   onSubmit: (e: FormEvent) => void
   isLoading: boolean
-  inputRef: RefObject<HTMLInputElement>
+  inputRef: RefObject<HTMLInputElement | null>
   placeholder: string
 }
 

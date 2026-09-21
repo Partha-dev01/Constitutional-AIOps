@@ -135,6 +135,10 @@ two things were supposed to agree and nothing checked that they did.
   `types-PyYAML>=6.0.12.20260906`. The `numpy` floor crosses a major version, so
   an environment that pins `numpy` 1.x alongside this package will no longer
   resolve. CI already installs numpy 2.4.6.
+- **The app and the marketing site run on React 19** (from 18.3). Neither tree
+  used an API that React 19 removes. The one code change is a ref prop type,
+  because React 19's typings return `RefObject<T | null>` from `useRef(null)`.
+  Nothing changes for users. Dependabot proposes React majors again.
 - **`structlog` is no longer a dependency.** Nothing in the package imported
   it, and the container image never installed it.
 - **The wake Lambda can read its Hostinger API token from AWS SSM.** Set
