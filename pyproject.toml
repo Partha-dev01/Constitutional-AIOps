@@ -40,7 +40,7 @@ dependencies = [
     # src/benchmark/evaluator.py, so it is a real package dependency. It lived
     # only in requirements.txt, which `pip install -e ".[dev]"` (used by CI)
     # does not read — leaving CI without numpy and failing 4 tests + coverage.
-    "numpy>=1.26.0",
+    "numpy>=2.4.6",
     # langgraph is top-level-imported by src/orchestration/graph.py (line 30:
     # `from langgraph.graph import END, START, StateGraph`). Without it,
     # `src/main.py` is unimportable in CI and orchestration/* sits at 0%
