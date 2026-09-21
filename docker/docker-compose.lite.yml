@@ -141,6 +141,12 @@ services:
       # of Caddy so the app reads the viewer IP, not the CDN's. See
       # src/api/routes/auth.py and the Caddy CF_ORIGIN_RANGES trust list.
       - TRUSTED_PROXY_HOPS=${TRUSTED_PROXY_HOPS:-1}
+      # Per-account hourly rate limits (chat, tool calls, action approve/execute).
+      # Defaults match src/api/rate_limit.py. Listed here because this block is an
+      # allow-list: a variable missing from it never reaches the container.
+      - AIOPS_RATE_CHAT_PER_HOUR=${AIOPS_RATE_CHAT_PER_HOUR:-120}
+      - AIOPS_RATE_TOOLS_PER_HOUR=${AIOPS_RATE_TOOLS_PER_HOUR:-120}
+      - AIOPS_RATE_ACTIONS_PER_HOUR=${AIOPS_RATE_ACTIONS_PER_HOUR:-60}
       # In-app auth (OFF by default; set AUTH_REQUIRED=true + admin creds to gate).
       - AUTH_REQUIRED=${AUTH_REQUIRED:-false}
       - AUTH_ADMIN_USER=${AUTH_ADMIN_USER:-}

@@ -148,6 +148,9 @@ sliding window. Going over one returns `429` with a `Retry-After` header.
 | `AIOPS_RATE_ACTIONS_PER_HOUR` | `60` | action approve and execute, and incident remediate |
 | `TRUSTED_PROXY_HOPS` | `1` | How many reverse proxies sit in front of the app |
 
+In a Docker deploy, set them in `.env` next to the compose file. The lite compose
+file forwards all four to the backend; `.env.example` lists them with their defaults.
+
 Chat matters most on a hosted instance, because an OpenAI-compatible endpoint is
 billed per token and a runaway loop against an unbounded `/chat` is the cheapest
 way to produce a surprising bill.

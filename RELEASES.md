@@ -94,6 +94,14 @@ two things were supposed to agree and nothing checked that they did.
 
 ### Fixed
 
+- **The rate limits could not be changed in a Docker deploy.** The lite compose
+  file hands the backend an explicit list of variables rather than the whole
+  `.env`, and `AIOPS_RATE_CHAT_PER_HOUR`, `AIOPS_RATE_TOOLS_PER_HOUR` and
+  `AIOPS_RATE_ACTIONS_PER_HOUR` were not on it, so setting them did nothing and
+  the defaults always applied. All three are forwarded now, with the same
+  defaults, and `.env.example` documents them alongside `TRUSTED_PROXY_HOPS`.
+  A new test holds the code defaults, the compose file and the configuration
+  page to one another.
 - **The documentation site advertised v1.0.0 through the whole v1.1.0 release.**
   The version label in the docs navigation was the one version surface not tied
   to `src/version.py`, so the release bump passed it by. `tests/test_version.py`
@@ -110,6 +118,12 @@ two things were supposed to agree and nothing checked that they did.
 
 ### Changed
 
+- **Python dependency floors raised** to the versions CI already installs:
+  `fastapi>=0.141.1`, `langgraph>=1.2.11`, `numpy>=2.4.6`, `structlog>=26.1.0`,
+  `python-dotenv>=1.2.3`, and on the development side `ruff>=0.16.8` and
+  `types-PyYAML>=6.0.12.20260906`. The `numpy` floor crosses a major version, so
+  an environment that pins `numpy` 1.x alongside this package will no longer
+  resolve. CI already installs numpy 2.4.6.
 - **The wake Lambda can read its Hostinger API token from AWS SSM.** Set
   `HOSTINGER_TOKEN_SSM_PARAM` to the name of a SecureString parameter and the
   token is fetched from there, decrypted, and cached for the life of the
