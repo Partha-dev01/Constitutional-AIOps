@@ -8,8 +8,42 @@ Versions follow the `frontend/package.json` version. Dates are the merge date.
 
 ## Unreleased
 
-Maintenance. Three places where two things were supposed to agree and nothing
-checked that they did.
+Maintenance, plus a correctness fix to the Tier-1 safety gate. Six places where
+two things were supposed to agree and nothing checked that they did.
+
+### Security
+
+- **The Tier-1 safety gate matched action names by substring, and now matches by
+  word.** A Tier-1 violation blocks an action outright, with no approval path,
+  so a mis-match was consequential in both directions. `"acl"` is a substring of
+  `"oracle"`, so a read-only `analyze_oracle_logs` was blocked as a security
+  configuration change; `"delete"` is a substring of `"undelete"`, so a restore
+  was blocked as data loss. In the other direction the vocabulary was four
+  English words per principle, so `purge_index` or `wipe_volume` were not
+  recognised as destructive at all. Classification now happens once, on word
+  tokens, in `src/constitutional/action_semantics.py`.
+- **Reading security configuration is no longer treated as changing it.** P1.4
+  is "never *modify* security configurations", but any name containing a
+  security word matched, so `get_certificate_expiry` was blocked. A violation
+  now needs a security term **and** a verb that is not a known read. Unknown
+  verbs still count as modifications, so the default stays closed.
+- None of the nine shipped tools change behaviour; a test asserts that.
+
+### Added
+
+- **The published safety documentation now matches the code.** Six of the twelve
+  constitutional principles were described wrongly on the docs site and in this
+  repository's README, including three of the four Tier-1 safety-critical ones.
+  P1.4 was published as "all actions reversible within a short window" when the
+  implemented principle is "never modify security configurations without
+  explicit approval". `tests/test_principles_docs.py` now fails if the published
+  list drifts from `src/constitutional/principles.py` again.
+- **The in-app guide links to the full documentation.** `Help & Docs` inside the
+  app is a condensed mirror, and it offered no way through to the published
+  documentation site, so a reader who wanted the complete guides, tutorials,
+  configuration reference or SDK docs had to go and find them. There is now a
+  link to them at the top of the page. The marketing site and the app read the
+  same URL, and a test holds the two to each other.
 
 ### Fixed
 
@@ -29,6 +63,14 @@ checked that they did.
 
 ### Changed
 
+- **The wake Lambda can read its Hostinger API token from AWS SSM.** Set
+  `HOSTINGER_TOKEN_SSM_PARAM` to the name of a SecureString parameter and the
+  token is fetched from there, decrypted, and cached for the life of the
+  execution context, instead of sitting in plaintext in the function's
+  environment. `HOSTINGER_API_TOKEN` still works and is used when the parameter
+  is unset or unreadable, so this changes nothing for an existing deployment
+  until you opt in. If neither is available the DNS sync is skipped and logged,
+  exactly as before, rather than failing the wake.
 - **The two SDK clients are now held to each other in CI.** `sdk-drift` checked
   each generated core against the API schema, but nothing compared the two
   hand-written clients, and only the Python one has a test suite. A new `parity`

@@ -47,7 +47,13 @@ Environment:
   TARGET_INSTANCE_ID   (required)  e.g. i-0123456789abcdef0
   APP_URL              (required)  the app host the visitor is handed to once up,
                                    e.g. https://aiops-node.example.com
-  HOSTINGER_API_TOKEN  (required)  Bearer token for the Hostinger DNS API
+  HOSTINGER_TOKEN_SSM_PARAM       Name of an SSM SecureString holding the
+                                  Hostinger API token. PREFERRED over
+                                  HOSTINGER_API_TOKEN; read lazily and cached
+                                  per execution context.
+  HOSTINGER_API_TOKEN  (fallback) Bearer token for the Hostinger DNS API, in
+                                  plaintext. Used only when the SSM parameter is
+                                  unset or unreadable.
   HOSTINGER_DOMAIN     (required)  the Hostinger-managed zone, e.g. example.com
   DNS_RECORD_NAME      (required)  the subdomain record to keep current, e.g. aiops-node
   DNS_TTL              optional, default 60 (Hostinger's minimum; low so a stale cached IP clears fast)
@@ -69,7 +75,14 @@ _INSTANCE_ID = os.environ.get("TARGET_INSTANCE_ID", "")
 _APP_URL = os.environ.get("APP_URL", "")
 _REFRESH = int(os.environ.get("HOLDING_REFRESH_SEC", "8"))
 
-_HOSTINGER_TOKEN = os.environ.get("HOSTINGER_API_TOKEN", "")
+# The Hostinger API token. PREFERRED source is an SSM SecureString named by
+# HOSTINGER_TOKEN_SSM_PARAM, so the secret is KMS-encrypted and access-controlled
+# instead of sitting in plaintext in the function's environment, where anyone
+# with lambda:GetFunction can read it. HOSTINGER_API_TOKEN remains as a fallback
+# so this deploy is reversible and so a self-hoster can still run without SSM;
+# it is read lazily, see _hostinger_token().
+_HOSTINGER_TOKEN_PARAM = os.environ.get("HOSTINGER_TOKEN_SSM_PARAM", "")
+_HOSTINGER_TOKEN_ENV = os.environ.get("HOSTINGER_API_TOKEN", "")
 _HOSTINGER_DOMAIN = os.environ.get("HOSTINGER_DOMAIN", "")
 _DNS_RECORD_NAME = os.environ.get("DNS_RECORD_NAME", "")
 # Kept as LOW as the DNS provider allows. The box has no Elastic IP, so its
@@ -128,6 +141,54 @@ def _get_ec2():
     if _ec2 is None:
         _ec2 = boto3.client("ec2")
     return _ec2
+
+
+# Same lazy pattern as the ec2 client: built on first use, not at import, so the
+# module imports without AWS credentials (the unit tests rely on that).
+_ssm = None
+_HOSTINGER_TOKEN_CACHE = None
+
+
+def _get_ssm():
+    global _ssm
+    if _ssm is None:
+        _ssm = boto3.client("ssm")
+    return _ssm
+
+
+def _hostinger_token() -> str:
+    """Resolve the Hostinger API token, preferring the SSM SecureString.
+
+    Cached for the life of the execution context, so a warm Lambda pays for the
+    SSM round trip at most once. The cache is only populated on success, so a
+    transient SSM failure is retried on the next invocation rather than being
+    remembered as "no token".
+
+    Fails SOFT in the same way the rest of the DNS path does: if SSM cannot be
+    read, fall back to the legacy environment variable, and if that is empty too
+    return "" so _sync_dns logs and skips rather than raising. A DNS sync that
+    does not happen degrades the wake (the visitor waits on the holding page and
+    can still continue manually); an exception here would break /launch outright.
+    """
+    global _HOSTINGER_TOKEN_CACHE
+    if _HOSTINGER_TOKEN_CACHE:
+        return _HOSTINGER_TOKEN_CACHE
+    if _HOSTINGER_TOKEN_PARAM:
+        try:
+            resp = _get_ssm().get_parameter(
+                Name=_HOSTINGER_TOKEN_PARAM, WithDecryption=True
+            )
+            value = resp["Parameter"]["Value"]
+            if value:
+                _HOSTINGER_TOKEN_CACHE = value
+                return value
+            print(f"ssm: {_HOSTINGER_TOKEN_PARAM} is empty; falling back to env")
+        except Exception as exc:  # noqa: BLE001
+            # Never log the parameter VALUE, only its name and the failure.
+            print(f"ssm: could not read {_HOSTINGER_TOKEN_PARAM}: {exc}")
+    if _HOSTINGER_TOKEN_ENV:
+        _HOSTINGER_TOKEN_CACHE = _HOSTINGER_TOKEN_ENV
+    return _HOSTINGER_TOKEN_CACHE or ""
 
 
 # Warm-context cache: the last IP we confirmed into DNS. While the execution
@@ -318,7 +379,7 @@ def _hostinger_upsert_a(ip: str) -> None:
         f"{_HOSTINGER_BASE}/{_HOSTINGER_DOMAIN}",
         data=body,
         headers={
-            "Authorization": f"Bearer {_HOSTINGER_TOKEN}",
+            "Authorization": f"Bearer {_hostinger_token()}",
             "Content-Type": "application/json",
             "Accept": "application/json",
             "User-Agent": _UA,
@@ -337,7 +398,7 @@ def _sync_dns(ip: str) -> bool:
     global _LAST_IP
     if ip == _LAST_IP:
         return True
-    if not (_HOSTINGER_TOKEN and _HOSTINGER_DOMAIN and _DNS_RECORD_NAME):
+    if not (_hostinger_token() and _HOSTINGER_DOMAIN and _DNS_RECORD_NAME):
         print("dns: Hostinger env not fully configured; skipping DNS sync")
         return False
     try:
