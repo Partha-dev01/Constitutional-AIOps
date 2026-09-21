@@ -130,11 +130,13 @@ two things were supposed to agree and nothing checked that they did.
 ### Changed
 
 - **Python dependency floors raised** to the versions CI already installs:
-  `fastapi>=0.141.1`, `langgraph>=1.2.11`, `numpy>=2.4.6`, `structlog>=26.1.0`,
+  `fastapi>=0.141.1`, `langgraph>=1.2.11`, `numpy>=2.4.6`,
   `python-dotenv>=1.2.3`, and on the development side `ruff>=0.16.8` and
   `types-PyYAML>=6.0.12.20260906`. The `numpy` floor crosses a major version, so
   an environment that pins `numpy` 1.x alongside this package will no longer
   resolve. CI already installs numpy 2.4.6.
+- **`structlog` is no longer a dependency.** Nothing in the package imported
+  it, and the container image never installed it.
 - **The wake Lambda can read its Hostinger API token from AWS SSM.** Set
   `HOSTINGER_TOKEN_SSM_PARAM` to the name of a SecureString parameter and the
   token is fetched from there, decrypted, and cached for the life of the
