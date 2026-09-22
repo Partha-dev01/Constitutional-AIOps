@@ -1,0 +1,37 @@
+# Constitutional AIOps - Caddy with the community rate-limit module (ENH-005).
+#
+# WHY THIS EXISTS
+# Stock Caddy ships no `rate_limit` directive, so per-source request throttling on
+# /ingest/* cannot be expressed in a Caddyfile that a stock binary can parse. The
+# frozen production stack pins `caddy:2.8-alpine` and must stay byte-identical, so
+# this image and its compose overlay are strictly OPT-IN: nothing here changes the
+# default deployment.
+#
+# The Caddy version deliberately matches the pin in docker/docker-compose.production.yml.
+# Only the binary changes, never the Caddy release, so adopting the overlay is not
+# also a Caddy upgrade.
+#
+# BUILD
+#   docker build -f docker/Dockerfile.caddy -t aiops-caddy-ratelimit:2.8 .
+#
+# USE (opt-in overlay, applied last so it wins)
+#   docker compose -f docker-compose.yml \
+#                  -f docker/docker-compose.production.yml \
+#                  -f docker/docker-compose.ingest-ratelimit.yml up -d
+
+ARG CADDY_VERSION=2.8
+# Pinned: v0.1.0 is the only released version of the module as of 2026-09-22.
+# Bump deliberately rather than tracking a moving target, since this binary
+# terminates TLS for the whole deployment.
+ARG RATELIMIT_VERSION=v0.1.0
+
+FROM caddy:${CADDY_VERSION}-builder-alpine AS builder
+ARG RATELIMIT_VERSION
+RUN xcaddy build --with github.com/mholt/caddy-ratelimit@${RATELIMIT_VERSION}
+
+FROM caddy:${CADDY_VERSION}-alpine
+COPY --from=builder /usr/bin/caddy /usr/bin/caddy
+
+# Fail the build rather than ship an image whose binary silently lacks the module.
+RUN caddy list-modules | grep -q '^http.handlers.rate_limit$' \
+    && echo "rate_limit module present"

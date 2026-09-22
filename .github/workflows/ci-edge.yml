@@ -1,0 +1,106 @@
+name: ci-edge
+
+# Edge-config CI (ENH-005). The repo carries two Caddyfiles: the stock one the
+# frozen production stack mounts, and a variant with a `rate_limit` block that only
+# parses under the custom image in docker/Dockerfile.caddy.
+#
+# A regex test (tests/test_ingest_ratelimit.py) holds the two files to each other,
+# but only the real Caddy parser can prove each file is valid for the binary that
+# mounts it. No job builds edge images on push otherwise (publish-containers is
+# release-only), so without this the overlay would ship unproven.
+on:
+  push:
+    branches: [main, thread-b-deploy]
+    paths:
+      - 'docker/Dockerfile.caddy'
+      - 'docker/configs/Caddyfile'
+      - 'docker/configs/Caddyfile.ingest-ratelimit'
+      - 'docker/docker-compose.ingest-ratelimit.yml'
+      - '.github/workflows/ci-edge.yml'
+  pull_request:
+    paths:
+      - 'docker/Dockerfile.caddy'
+      - 'docker/configs/Caddyfile'
+      - 'docker/configs/Caddyfile.ingest-ratelimit'
+      - 'docker/docker-compose.ingest-ratelimit.yml'
+
+# Least-privilege GITHUB_TOKEN: any scope named here forces all others to none.
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Caddyfiles substitute env at parse time, so validation needs every referenced
+  # variable present. These are throwaway values for a parse check, never secrets.
+  # The hash is the bcrypt sample from Caddy's own basic_auth documentation.
+  APP_DOMAIN: example.com
+  ACME_EMAIL: admin@example.com
+  APP_BASIC_AUTH_USER: admin
+  INGEST_BASIC_AUTH_USER: edge
+  SAMPLE_HASH: $2a$14$Zkx19XLiW6VYouLHR5NmfOFU0z2GTNmpkT/5qqR7hx4IjWJPDhjvG
+
+jobs:
+  caddy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # 1. The frozen stack's Caddyfile must stay valid for the STOCK image it pins.
+      - name: Stock Caddyfile validates under stock Caddy
+        run: |
+          docker run --rm \
+            -e APP_DOMAIN -e ACME_EMAIL \
+            -e APP_BASIC_AUTH_USER -e APP_BASIC_AUTH_HASH="$SAMPLE_HASH" \
+            -e INGEST_BASIC_AUTH_USER -e INGEST_BASIC_AUTH_HASH="$SAMPLE_HASH" \
+            -v "$PWD/docker/configs/Caddyfile:/etc/caddy/Caddyfile:ro" \
+            caddy:2.8-alpine \
+            caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+
+      # 2. Negative control. If stock Caddy ACCEPTED the variant, then either the
+      #    rate_limit block went missing or stock Caddy grew the directive, and in
+      #    both cases the custom image below would be pointless. Prove it rejects.
+      - name: Stock Caddy rejects the rate-limited variant
+        run: |
+          if docker run --rm \
+            -e APP_DOMAIN -e ACME_EMAIL \
+            -e APP_BASIC_AUTH_USER -e APP_BASIC_AUTH_HASH="$SAMPLE_HASH" \
+            -e INGEST_BASIC_AUTH_USER -e INGEST_BASIC_AUTH_HASH="$SAMPLE_HASH" \
+            -v "$PWD/docker/configs/Caddyfile.ingest-ratelimit:/etc/caddy/Caddyfile:ro" \
+            caddy:2.8-alpine \
+            caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile 2>/dev/null
+          then
+            echo "::error::stock Caddy accepted the rate-limited variant; the rate_limit block is missing or inert"
+            exit 1
+          fi
+          echo "stock Caddy rejected it, as expected"
+
+      # 3. The custom image must build, and the build itself asserts the module is
+      #    present (see the list-modules check in docker/Dockerfile.caddy).
+      - name: Build the rate-limited Caddy image
+        run: docker build -f docker/Dockerfile.caddy -t aiops-caddy-ratelimit:ci .
+
+      # 4. The variant must validate under the image that actually mounts it.
+      - name: Variant validates under the custom image
+        run: |
+          docker run --rm \
+            -e APP_DOMAIN -e ACME_EMAIL \
+            -e APP_BASIC_AUTH_USER -e APP_BASIC_AUTH_HASH="$SAMPLE_HASH" \
+            -e INGEST_BASIC_AUTH_USER -e INGEST_BASIC_AUTH_HASH="$SAMPLE_HASH" \
+            -e INGEST_RATE_EVENTS=600 -e INGEST_RATE_WINDOW=1m \
+            -v "$PWD/docker/configs/Caddyfile.ingest-ratelimit:/etc/caddy/Caddyfile:ro" \
+            aiops-caddy-ratelimit:ci \
+            caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+
+      # 5. The overlay must compose cleanly onto the frozen files without editing them.
+      - name: Overlay renders against the production stack
+        run: |
+          docker compose \
+            -f docker-compose.yml \
+            -f docker/docker-compose.production.yml \
+            -f docker/docker-compose.ingest-ratelimit.yml \
+            config --quiet
+          echo "overlay renders"

@@ -1,0 +1,187 @@
+# Constitutional AIOps - Caddyfile VARIANT with /ingest/* rate limiting (ENH-005).
+#
+# GENERATED FROM docker/configs/Caddyfile. Do not hand-edit: edit the base file and
+# re-apply the single documented insert. tests/test_ingest_ratelimit.py holds the two
+# files to exactly that relationship, so drift fails CI rather than reaching an edge.
+#
+# This file only parses under the custom Caddy image from docker/Dockerfile.caddy,
+# which bundles github.com/mholt/caddy-ratelimit. Use it through the opt-in overlay:
+#   docker compose -f docker-compose.yml #                  -f docker/docker-compose.production.yml #                  -f docker/docker-compose.ingest-ratelimit.yml up -d
+#
+# Constitutional AIOps — Caddy reverse proxy (Gate 6 app routing; Gate 7 ingest).
+#
+# One public host, path-routed, automatic Let's Encrypt TLS. Caddy is the only
+# service bound to 80/443; frontend / backend / grafana stay on the internal
+# aiops-network. AUTH POSTURE (2026-07-11): the app's own session login
+# (AUTH_REQUIRED=true) is the gate for the SPA and /api — no basic_auth there,
+# so users land on the in-app login page. /grafana KEEPS the basic_auth wall
+# (defense in depth on top of Grafana's own login). The /ingest/* path for the
+# remote Alloy agent keeps its SEPARATE machine credential.
+#
+# Routes:
+#   /grafana, /grafana/*  -> grafana:3000  (serve_from_sub_path keeps the prefix)
+#   /api/*, /ws           -> backend:8000  (REST + WebSocket)
+#   everything else "/"    -> frontend:3000 (the SPA)
+#
+# Env (from .env.production via docker-compose; substituted at parse time):
+#   APP_DOMAIN            e.g. aiops.example.com
+#   ACME_EMAIL           Let's Encrypt contact
+#   APP_BASIC_AUTH_USER  human login username
+#   APP_BASIC_AUTH_HASH  bcrypt hash from `docker run --rm caddy:2.8-alpine \
+#                        caddy hash-password --plaintext '<password>'`
+#                        IMPORTANT: escape every '$' as '$$' in .env.production,
+#                        otherwise docker-compose eats it during interpolation.
+
+{
+	email {$ACME_EMAIL}
+	# To dry-run against the LE staging CA while testing certs, uncomment:
+	# acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
+
+	# --- Trusted-proxy / X-Forwarded-For normalisation (Batch F #2) ---------
+	# Single-Caddy topology: Caddy is the ONLY hop in front of the backend.
+	# Without this block Caddy preserves any attacker-supplied inbound
+	# X-Forwarded-For and only appends the real peer, so the backend's
+	# left-most-IP parse was attacker-controlled (login-lockout bypass).
+	#
+	# `trusted_proxies static private_ranges` tells Caddy which upstream
+	# addresses are trustworthy. Since requests reach Caddy directly from the
+	# public internet (no CDN/LB in front), NO inbound peer is a trusted
+	# proxy, so Caddy treats the connecting client as the real client and
+	# does NOT honour any client-sent X-Forwarded-For when computing
+	# client_ip. The backend independently parses XFF from the RIGHT-most hop
+	# (the entry Caddy appends) — see src/api/routes/auth.py:_client_ip — so
+	# the throttle key is the address Caddy observed, not a spoofed prefix.
+	servers {
+		trusted_proxies static private_ranges
+		client_ip_headers X-Forwarded-For
+	}
+}
+
+# Reusable human-auth snippet so each route enforces the same credential and
+# Gate 7's /ingest route can use its own machine credential independently.
+(app_auth) {
+	basic_auth {
+		{$APP_BASIC_AUTH_USER} {$APP_BASIC_AUTH_HASH}
+	}
+}
+
+# Reusable security-response-headers snippet (Batch F #1). Applied to the
+# human-facing app routes (SPA, /api, /grafana). NOT applied to /ingest/*
+# (machine-to-machine telemetry push — these headers are meaningless there and
+# a restrictive CSP could interfere with store API responses).
+#
+# CSP note: this is a REAL-but-permissive policy, deliberately not locked down
+# to nonce-only. The Vite React bundle ships hashed JS but Tailwind/inlined
+# critical styles and Grafana (served under /grafana) both require
+# 'unsafe-inline' styles, and Grafana also uses inline/eval'd scripts and
+# blob/data workers. Everything is same-origin (/api, /ws, /grafana), so the
+# policy below keeps default-src 'self' while allowing the inline styles +
+# ws:/wss: connect the SPA and Grafana actually need. Tightening to a strict
+# nonce-based CSP would break Grafana and is left as a follow-up.
+(security_headers) {
+	header {
+		# HSTS: 1 year, include subdomains. (No `preload` — opt into that only
+		# after confirming every subdomain is HTTPS-only.)
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		# Clickjacking: deny framing entirely. CSP frame-ancestors 'self' is the
+		# modern equivalent and also covers Grafana's own embedded panels.
+		X-Frame-Options "DENY"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' ws: wss: https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'"
+		# Drop the server banner.
+		-Server
+	}
+}
+
+{$APP_DOMAIN} {
+	encode zstd gzip
+
+	log {
+		output stdout
+		format console
+	}
+
+	# --- Remote telemetry ingestion (Gate 7; SEPARATE machine credential) ---
+	# The edge Alloy agent (monitoring-agent/) pushes here over TLS. handle_path
+	# strips the /ingest/<sig> prefix so each store sees its native API path:
+	#   /ingest/loki/loki/api/v1/push -> loki:3100/loki/api/v1/push
+	#   /ingest/prom/api/v1/write     -> prometheus:9090/api/v1/write
+	#   /ingest/otlp/v1/traces        -> tempo:4318/v1/traces
+	@ingest path /ingest/*
+	handle @ingest {
+		basic_auth {
+			{$INGEST_BASIC_AUTH_USER} {$INGEST_BASIC_AUTH_HASH}
+		}
+		# Per-source request rate limit (ENH-005). REQUIRES the custom image built
+		# by docker/Dockerfile.caddy: stock Caddy has no `rate_limit` directive and
+		# would fail to parse this file. That is why this variant exists separately
+		# from docker/configs/Caddyfile, which stays stock-parseable.
+		#
+		# key {remote_host} is the TCP peer, not an X-Forwarded-For value, so a
+		# caller cannot raise its own ceiling by forging a header. The global block
+		# only trusts private ranges, and ingest arrives from the public internet.
+		#
+		# rate_limit runs BEFORE basic_auth by this plugin's default ordering, which
+		# is what we want: a flood is rejected without spending a bcrypt compare on
+		# every request.
+		#
+		# Defaults are generous for a handful of Alloy agents (10 req/s per source)
+		# and still bound a runaway pusher. Tune without rebuilding via
+		# INGEST_RATE_EVENTS / INGEST_RATE_WINDOW.
+		rate_limit {
+			zone ingest {
+				key    {remote_host}
+				events {$INGEST_RATE_EVENTS:600}
+				window {$INGEST_RATE_WINDOW:1m}
+			}
+		}
+		# Body cap (Batch F #3): keep the 10MB ceiling on telemetry pushes. The rate
+		# limit above bounds request COUNT; this bounds the size of each one.
+		request_body {
+			max_size 10MB
+		}
+		handle_path /ingest/loki/* {
+			reverse_proxy loki:3100
+		}
+		handle_path /ingest/prom/* {
+			reverse_proxy prometheus:9090
+		}
+		handle_path /ingest/otlp/* {
+			reverse_proxy tempo:4318
+		}
+		respond "unknown ingest route" 404
+	}
+
+	# Grafana under /grafana/ (GF_SERVER_SERVE_FROM_SUB_PATH keeps the prefix).
+	@grafana path /grafana /grafana/*
+	handle @grafana {
+		import security_headers
+		import app_auth
+		reverse_proxy grafana:3000
+	}
+
+	# Backend REST API. No basic_auth: the app's own session auth is the gate
+	# (AUTH_REQUIRED=true — login throttle + HMAC session cookies in the backend).
+	@api path /api/*
+	handle @api {
+		import security_headers
+		reverse_proxy backend:8000
+	}
+
+	# WebSocket stream. HTTP basic_auth cannot ride the WS upgrade handshake, so this
+	# route is NOT basic_auth-gated; the backend guards it with an app-layer token
+	# (WS_TOKEN) validated against the /api/v1/ws/token value the SPA fetches.
+	@ws path /ws
+	handle @ws {
+		import security_headers
+		reverse_proxy backend:8000
+	}
+
+	# SPA — everything else. Public static assets; the app redirects to its own
+	# /login when /api/v1/auth/me returns 401 (AUTH_REQUIRED=true).
+	handle {
+		import security_headers
+		reverse_proxy frontend:3000
+	}
+}

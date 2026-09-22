@@ -84,6 +84,25 @@ two things were supposed to agree and nothing checked that they did.
 
 ### Added
 
+- **Optional per-source rate limiting on the telemetry ingestion paths.** The
+  application's own rate limits only cover requests that reach it, and the full
+  observability stack proxies `/ingest/loki`, `/ingest/prom` and `/ingest/otlp`
+  straight to Loki, Prometheus and Tempo at the edge. A separate machine
+  credential and a 10MB body cap guarded those paths, but nothing bounded how
+  often a credential holder could push. Stock Caddy has no rate-limiting
+  directive, so this ships as an **opt-in overlay**: a custom Caddy image built
+  from the same pinned release plus `caddy-ratelimit`, a Caddyfile variant
+  carrying the `rate_limit` block, and `docker/docker-compose.ingest-ratelimit.yml`.
+  Defaults to 600 requests per source per minute, tunable with `INGEST_RATE_EVENTS`
+  and `INGEST_RATE_WINDOW` without rebuilding. The limit keys on the TCP peer
+  rather than `X-Forwarded-For`, so a caller cannot raise its own ceiling with a
+  forged header, and it runs before the credential check so a flood costs no
+  password comparisons. **Nothing changes unless you add the overlay**: the
+  existing compose files are untouched, and the stock Caddyfile stays valid for
+  the stock image. A new `ci-edge` job builds the image and validates both
+  Caddyfiles with the real parser, including a negative check that stock Caddy
+  rejects the variant.
+
 - **The published safety documentation now matches the code.** Six of the twelve
   constitutional principles were described wrongly on the docs site and in this
   repository's README, including three of the four Tier-1 safety-critical ones.

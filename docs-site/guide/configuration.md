@@ -177,6 +177,41 @@ trusts, so without those ranges it drops the CDN's header and every visitor look
 like the CDN. If the CDN reaches the box on a second hostname, name it in
 `ORIGIN_DOMAIN` so Caddy obtains a certificate for it too.
 
+### Telemetry ingestion (`/ingest/*`)
+
+The limits above are enforced by the application, so they only cover requests that
+reach it. The full observability stack also exposes `/ingest/loki`, `/ingest/prom`
+and `/ingest/otlp` at the edge, and those proxy straight to Loki, Prometheus and
+Tempo without touching the backend. They are guarded by a separate machine
+credential and a 10MB body cap, but a caller holding that credential could still
+push at any rate it liked.
+
+Stock Caddy has no rate-limiting directive, so this is opt-in and needs the custom
+image in `docker/Dockerfile.caddy`, which is the pinned Caddy release plus
+[caddy-ratelimit](https://github.com/mholt/caddy-ratelimit). Apply the overlay last
+so its keys win:
+
+```bash
+docker compose -f docker-compose.yml                -f docker/docker-compose.production.yml                -f docker/docker-compose.ingest-ratelimit.yml up -d --build caddy
+```
+
+| Variable | Default | Covers |
+|----------|---------|--------|
+| `INGEST_RATE_EVENTS` | `600` | Requests allowed per source address per window |
+| `INGEST_RATE_WINDOW` | `1m` | Length of the sliding window |
+
+The default is 10 requests per second per source, generous for a handful of agents
+and still a real ceiling on a runaway pusher. Going over returns `429` with a
+`Retry-After` header.
+
+Two details worth knowing. The limit keys on the **TCP peer**, not on
+`X-Forwarded-For`, so a caller cannot raise its own ceiling by forging a header.
+And it runs **before** the credential check, so a flood is rejected without
+spending a password comparison on every request.
+
+Leaving the overlay out gives you exactly the previous behaviour. It does not edit
+the compose files it layers onto.
+
 ## Action tools (remediation)
 
 Restart and scale remediation is off by default and fail-closed. Turn it on only

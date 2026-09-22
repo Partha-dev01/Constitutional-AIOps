@@ -1,0 +1,48 @@
+# Constitutional AIOps - OPT-IN overlay: per-source rate limiting on /ingest/* (ENH-005).
+#
+# WHY AN OVERLAY
+# docker-compose.yml, docker/docker-compose.gpu.yml, docker/docker-compose.production.yml
+# and docker/Dockerfile.backend are frozen byte-identical. This file adds the capability
+# without editing any of them: apply it LAST so its keys win, and leave it out to get
+# exactly the previous behaviour back.
+#
+# WHAT IT CHANGES
+#   1. caddy.image  -> caddy.build, the custom binary from docker/Dockerfile.caddy
+#   2. the mounted Caddyfile -> the variant carrying the rate_limit block
+#   3. two optional tuning variables, both with defaults
+# Nothing else. Ports, volumes, networks and every other service are inherited.
+#
+# USE
+#   docker compose -f docker-compose.yml \
+#                  -f docker/docker-compose.production.yml \
+#                  -f docker/docker-compose.ingest-ratelimit.yml up -d --build caddy
+#
+# TUNING (no rebuild needed, these are read at Caddyfile parse time)
+#   INGEST_RATE_EVENTS  max requests per source per window   (default 600)
+#   INGEST_RATE_WINDOW  the sliding window                   (default 1m)
+# The default is 10 requests per second per source address, generous for a handful
+# of Alloy agents and still a real ceiling on a runaway pusher. A rejected request
+# gets 429 with Retry-After.
+#
+# NOTE the limit keys on {remote_host}, the TCP peer, NOT on X-Forwarded-For, so a
+# caller cannot raise its own ceiling by forging a header.
+
+services:
+  caddy:
+    # Replaces `image: caddy:2.8-alpine` from the production file. Same Caddy
+    # release, plus github.com/mholt/caddy-ratelimit.
+    image: aiops-caddy-ratelimit:2.8
+    build:
+      context: .   # repo root (project dir); matches the base file's context
+      dockerfile: docker/Dockerfile.caddy
+      args:
+        CADDY_VERSION: "2.8"
+        RATELIMIT_VERSION: "v0.1.0"
+    environment:
+      - INGEST_RATE_EVENTS=${INGEST_RATE_EVENTS:-600}
+      - INGEST_RATE_WINDOW=${INGEST_RATE_WINDOW:-1m}
+    volumes:
+      # The stock Caddyfile cannot express rate_limit, so the variant is mounted
+      # in its place. It is generated from the base file and held to it by
+      # tests/test_ingest_ratelimit.py.
+      - ./docker/configs/Caddyfile.ingest-ratelimit:/etc/caddy/Caddyfile:ro
