@@ -24,7 +24,9 @@ up.
 - **Constitutional safety.** Twelve principles across three tiers score every
   proposed action. See [Constitutional Safety](/guide/safety).
 - **Graph-episodic memory.** Optional Neo4j memory correlates incidents. The
-  lite profile drops it and uses an in-memory episode store instead.
+  lite profile drops the Neo4j container and defaults to `AIOPS_GRAPH_BACKEND=embedded`,
+  a persistent SQLite store that survives restarts. A purely ephemeral store is
+  available as `AIOPS_GRAPH_BACKEND=memory` and is intended for tests.
 - **Human-in-the-loop.** Actions never execute inside the model loop. They queue
   for an approve or reject decision unless they are both auto-eligible and
   high-confidence.

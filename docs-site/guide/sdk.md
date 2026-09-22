@@ -429,7 +429,9 @@ lag the API.
 
 ## Versioning and releases
 
-Client `MAJOR.MINOR` tracks the API `MAJOR.MINOR`; `PATCH` is independent for
-client-only fixes. Both packages share a version and are released together by
+The clients version independently of the API: the SDKs are on `0.3.0` while the
+API is on `1.1.0`, and the two `MAJOR.MINOR` values are not intended to line up
+until the clients reach `1.0`. Each release records the API version it was
+generated against. Both packages share a version and are released together by
 pushing an `sdk-v<version>` tag, which publishes to PyPI and npm tokenlessly via
 OIDC Trusted Publishing. See `sdk/CHANGELOG.md` for the per-release history.

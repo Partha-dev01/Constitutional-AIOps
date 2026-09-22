@@ -159,8 +159,10 @@ and a per-user tenant both use for their own endpoint.
   health probe, plus reachable/unreachable from an on-demand connection
   test.
 - **Graph Memory** shows whether Neo4j is connected (persistent episodic
-  memory and dependency graphs) or the platform has fallen back to an
-  in-memory episode store with similarity search.
+  memory and dependency graphs) or the platform is using its built-in episode
+  store with similarity search. On the lite tier that built-in store is
+  `AIOPS_GRAPH_BACKEND=embedded`, a persistent SQLite store whose episodes
+  survive a restart; only `AIOPS_GRAPH_BACKEND=memory` is genuinely ephemeral.
 
 Saved endpoint changes apply live, with no restart required.
 

@@ -1,5 +1,13 @@
 # AWS VM One-Time Setup Runbook
 
+> **HISTORICAL (superseded 2026-09-09).** This document describes the original
+> GPU-tier deployment (`g6.xlarge` + Elastic IP + local vLLM engines). That tier was
+> terminated on 2026-09-09 and production now runs the **lite tier** against AWS
+> Bedrock, fronted by CloudFront and an on-demand wake Lambda with no fixed IP.
+> Kept for reference and for anyone self-hosting the GPU configuration. The current
+> deployment is described in [DEPLOYMENT.md](../docs/DEPLOYMENT.md) and
+> [terraform/lite/](../terraform/lite/). Verify every command before use.
+
 **Status**: PREPARED, awaiting user go-ahead to execute. The plan owner explicitly held VM launch until prep is complete and reviewed.
 
 This runbook covers the **one-time** AWS provisioning: IAM, EBS, SG, instance launch, vLLM bring-up. After this completes, daily ops are handled by `aws/start-vm.sh` / `aws/stop-vm.sh` / `aws/snapshot-vm.sh`.

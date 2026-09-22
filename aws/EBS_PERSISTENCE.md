@@ -1,5 +1,13 @@
 # EBS Persistence + systemd Lifecycle (Gate 3)
 
+> **HISTORICAL (superseded 2026-09-09).** This document describes the original
+> GPU-tier deployment (`g6.xlarge` + Elastic IP + local vLLM engines). That tier was
+> terminated on 2026-09-09 and production now runs the **lite tier** against AWS
+> Bedrock, fronted by CloudFront and an on-demand wake Lambda with no fixed IP.
+> Kept for reference and for anyone self-hosting the GPU configuration. The current
+> deployment is described in [DEPLOYMENT.md](../docs/DEPLOYMENT.md) and
+> [terraform/lite/](../terraform/lite/). Verify every command before use.
+
 How the Constitutional AIOps production stack keeps its state across instance
 stop/start, and how the three systemd units bring it up in order. This is the
 on-VM operations runbook; nothing here spends AWS money on its own.

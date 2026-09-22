@@ -73,5 +73,8 @@ packages. The public registries plus provenance give the same
 
 ## Versioning
 
-Client `MAJOR.MINOR` tracks the API `MAJOR.MINOR` (so a `1.0.x` client targets
-Constitutional AIOps API `1.0.x`); `PATCH` is independent for client-only fixes.
+Both clients version independently of the API and of each other's release
+cadence: the SDKs are on `0.3.0` while the API is on `1.1.0`. Each client follows
+ordinary SemVer for its own surface, and the API version it was generated against
+is recorded in `sdk/CHANGELOG.md` per release. The `MAJOR.MINOR` values are not
+intended to line up until the clients reach `1.0`.

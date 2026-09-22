@@ -1,5 +1,13 @@
 # AWS VM & Benchmark Monitoring Guide
 
+> **HISTORICAL (superseded 2026-09-09).** This document describes the original
+> GPU-tier deployment (`g6.xlarge` + Elastic IP + local vLLM engines). That tier was
+> terminated on 2026-09-09 and production now runs the **lite tier** against AWS
+> Bedrock, fronted by CloudFront and an on-demand wake Lambda with no fixed IP.
+> Kept for reference and for anyone self-hosting the GPU configuration. The current
+> deployment is described in [DEPLOYMENT.md](../docs/DEPLOYMENT.md) and
+> [terraform/lite/](../terraform/lite/). Verify every command before use.
+
 > **Quick reference** for checking progress on the running AWS deployment from your own terminal. Updated 2026-05-12.
 
 ## Resource IDs (live, current)

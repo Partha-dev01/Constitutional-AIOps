@@ -1893,14 +1893,14 @@ function LlmEndpointsCard({ health }: { health: HealthResponse | null }) {
                     : 'bg-yellow-500/10 text-yellow-500'
                 }`}
               >
-                {isComponentHealthy(health, 'neo4j') ? 'Connected' : 'In-memory fallback'}
+                {isComponentHealthy(health, 'neo4j') ? 'Connected' : 'Built-in store'}
               </span>
             </div>
           </div>
           <p className="text-sm text-muted-foreground">
             {isComponentHealthy(health, 'neo4j')
               ? 'Using Neo4j for persistent episodic memory and service dependency graphs.'
-              : 'Neo4j not deployed. Using the in-memory episode store with similarity search.'}
+              : 'Neo4j not deployed. Using the built-in episode store with similarity search; the lite tier default (AIOPS_GRAPH_BACKEND=embedded) persists episodes across restarts.'}
           </p>
         </div>
       </div>

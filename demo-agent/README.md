@@ -1,5 +1,11 @@
 # t3 chaos/remediation control agent
 
+> **HISTORICAL (superseded 2026-09-09).** This agent belonged to the two-host demo
+> topology, where the AIOps backend ran on the GPU VM and this agent ran on a separate
+> t3 host. The GPU tier was terminated on 2026-09-09 and production is now the single
+> lite box against AWS Bedrock, so the "GPU VM" below means whichever host runs the
+> backend. Kept for reference; verify the security-group and IP steps before use.
+
 A tiny, dependency-free (Python stdlib only) HTTP agent that runs **on the t3
 host** next to the `nextcloud` and `nextcloud-db` containers. The AIOps backend
 runs in a container on a **different** host (the GPU VM) and cannot reach the

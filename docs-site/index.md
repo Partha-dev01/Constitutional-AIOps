@@ -27,7 +27,7 @@ features:
   - title: One-command lite self-host
     details: The lite profile runs the backend and frontend on roughly 0.74 GiB of RAM, with no GPU and no bundled models. It degrades gracefully without Neo4j or the observability stack.
   - title: Graph-episodic memory
-    details: Optional Neo4j memory correlates incidents and retains context across time. Without it the app falls back to an in-memory episode store with similarity search.
+    details: Optional Neo4j memory correlates incidents and retains context across time. Without it the lite tier uses a persistent embedded SQLite episode store with similarity search, so episodes survive a restart.
 ---
 
 ## What it is
