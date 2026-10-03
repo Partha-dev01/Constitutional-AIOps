@@ -189,6 +189,10 @@ two things were supposed to agree and nothing checked that they did.
   affected the published site, which is static HTML; they applied to the local
   development server. The publish workflow also installs from the lockfile now,
   so what reaches the site is the resolution CI approved.
+- **`brace-expansion` moved past GHSA-q2hr-2g5m-vwhr** (a quadratic-time
+  expansion that can tie up a CPU) in the app and TypeScript SDK lockfiles, to
+  5.0.12 and 2.1.7. It arrives only through development tooling such as the
+  linter and test runner, so no published bundle or SDK build ever contained it.
 
 ## v1.1.0 - 2026-09-20
 
