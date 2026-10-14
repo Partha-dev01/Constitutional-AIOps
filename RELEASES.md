@@ -195,6 +195,10 @@ two things were supposed to agree and nothing checked that they did.
   expansion that can tie up a CPU) in the app and TypeScript SDK lockfiles, to
   5.0.12 and 2.1.7. It arrives only through development tooling such as the
   linter and test runner, so no published bundle or SDK build ever contained it.
+- **`source-map-js` moved past GHSA-68fv-2mgg-jv7q** (crafted source-map section
+  offsets could stall the event loop) in the documentation site's lockfile, to
+  1.2.2. It is used only while the site is built, so the published pages never
+  contained it.
 
 ## v1.1.0 - 2026-09-20
 
