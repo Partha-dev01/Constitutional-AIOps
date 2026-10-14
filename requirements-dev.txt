@@ -11,7 +11,7 @@ httpx>=0.28.1  # For TestClient
 black>=26.5.1
 isort>=9.0.1
 flake8>=6.1.0
-mypy>=2.3.1
+mypy>=2.4.0
 
 # Type Stubs
 types-PyYAML>=6.0.12.20260906
