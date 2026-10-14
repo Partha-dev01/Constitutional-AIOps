@@ -158,10 +158,12 @@ two things were supposed to agree and nothing checked that they did.
 ### Changed
 
 - **Python dependency floors raised** to the versions CI already installs:
-  `fastapi>=0.141.1`, `langgraph>=1.2.12`, `numpy>=2.4.6`,
-  `opentelemetry-api`, `opentelemetry-sdk` and `opentelemetry-exporter-otlp`
-  at `>=1.45.0`, `python-dotenv>=1.2.3`, `uvicorn>=0.54.0`, and on the
-  development side `ruff>=0.16.9` and `types-PyYAML>=6.0.12.20260906`. The `numpy` floor crosses a major version, so
+  `fastapi>=0.143.0`, `langgraph>=1.2.14`, `neo4j>=6.4.0`,
+  `cryptography>=50.0.2`, `numpy>=2.4.6`, `opentelemetry-api>=1.45.1` with
+  `opentelemetry-sdk` and `opentelemetry-exporter-otlp` at `>=1.45.0`,
+  `python-dotenv>=1.2.4`, `uvicorn>=0.54.0`, and `aiohttp>=3.14.4` in
+  `requirements.txt`. On the development side: `ruff>=0.17.0`,
+  `mypy>=2.4.0`, `isort>=9.0.2` and `types-PyYAML>=6.0.12.20260906`. The `numpy` floor crosses a major version, so
   an environment that pins `numpy` 1.x alongside this package will no longer
   resolve. CI already installs numpy 2.4.6.
 - **The app and the marketing site run on React 19** (from 18.3). Neither tree
